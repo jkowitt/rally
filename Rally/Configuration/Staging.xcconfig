@@ -1,0 +1,14 @@
+// Staging.xcconfig
+// Rally Staging Environment
+
+PRODUCT_BUNDLE_IDENTIFIER = com.vanwagner.rally.staging
+PRODUCT_NAME = Rally Staging
+RALLY_API_BASE_URL = https:/$()/api-staging.rally.app/v1
+RALLY_ENVIRONMENT = staging
+RALLY_VERBOSE_LOGGING = NO
+RALLY_MOCK_BEACONS = NO
+
+// Build Settings
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = STAGING
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+ENABLE_TESTABILITY = YES

@@ -1,0 +1,14 @@
+// Dev.xcconfig
+// Rally Development Environment
+
+PRODUCT_BUNDLE_IDENTIFIER = com.vanwagner.rally.dev
+PRODUCT_NAME = Rally Dev
+RALLY_API_BASE_URL = https:/$()/api-dev.rally.app/v1
+RALLY_ENVIRONMENT = development
+RALLY_VERBOSE_LOGGING = YES
+RALLY_MOCK_BEACONS = YES
+
+// Build Settings
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG DEV
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+ENABLE_TESTABILITY = YES

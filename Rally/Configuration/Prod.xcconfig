@@ -1,0 +1,15 @@
+// Prod.xcconfig
+// Rally Production Environment
+
+PRODUCT_BUNDLE_IDENTIFIER = com.vanwagner.rally
+PRODUCT_NAME = Rally
+RALLY_API_BASE_URL = https:/$()/api.rally.app/v1
+RALLY_ENVIRONMENT = production
+RALLY_VERBOSE_LOGGING = NO
+RALLY_MOCK_BEACONS = NO
+
+// Build Settings
+SWIFT_ACTIVE_COMPILATION_CONDITIONS =
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+ENABLE_TESTABILITY = NO
+SWIFT_COMPILATION_MODE = wholemodule

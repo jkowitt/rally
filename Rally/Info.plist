@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>Rally</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Rally needs your location to check you in at games and verify venue presence.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Rally uses your location to check you in at games and show nearby events.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Rally uses the microphone for the Noise Meter crowd volume feature.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Rally uses the camera for AR photo challenges and mascot filters.</string>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>Rally uses Bluetooth to detect venue beacons and verify game attendance.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Rally uses Face ID to secure reward redemptions and profile changes.</string>
+    <key>NSSupportsLiveActivities</key>
+    <true/>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>location</string>
+        <string>bluetooth-central</string>
+        <string>remote-notification</string>
+        <string>fetch</string>
+    </array>
+    <key>UIAppFonts</key>
+    <array>
+        <string>Outfit-Regular.ttf</string>
+        <string>Outfit-SemiBold.ttf</string>
+        <string>Outfit-Bold.ttf</string>
+        <string>Outfit-ExtraBold.ttf</string>
+        <string>Outfit-Black.ttf</string>
+    </array>
+    <key>RALLY_API_BASE_URL</key>
+    <string>$(RALLY_API_BASE_URL)</string>
+    <key>RALLY_ENVIRONMENT</key>
+    <string>$(RALLY_ENVIRONMENT)</string>
+</dict>
+</plist>

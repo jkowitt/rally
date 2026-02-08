@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../src/context/AppContext';
 
 const COLORS = {
@@ -27,7 +28,8 @@ type RedeemedEntry = {
   reward: {
     id: string;
     name: string;
-    emoji: string;
+    iconName: string;
+    iconFamily: string;
     points: number;
     category: string;
     description: string;
@@ -59,7 +61,7 @@ export default function MyRewardsScreen() {
     <View style={styles.card}>
       <View style={styles.cardLeft}>
         <View style={[styles.emojiCircle, { backgroundColor: item.reward.bgColor || COLORS.navyLight }]}>
-          <Text style={styles.cardEmoji}>{item.reward.emoji}</Text>
+          <Ionicons name={item.reward.iconName as any} size={24} color="#FFFFFF" />
         </View>
       </View>
       <View style={styles.cardCenter}>
@@ -80,7 +82,7 @@ export default function MyRewardsScreen() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyEmoji}>🎁</Text>
+      <Ionicons name="gift" size={48} color={COLORS.gray} />
       <Text style={styles.emptyTitle}>No rewards redeemed yet</Text>
       <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
         <Text style={styles.emptyLink}>Visit the Rewards tab</Text>
@@ -93,7 +95,7 @@ export default function MyRewardsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backArrow}>←</Text>
+          <Ionicons name="arrow-back" size={24} color={COLORS.offWhite} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Rewards</Text>
         <View style={styles.backButton} />

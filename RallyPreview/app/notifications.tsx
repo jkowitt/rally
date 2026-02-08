@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../src/context/AppContext';
 
 const COLORS = {
@@ -26,7 +27,8 @@ type Notification = {
   id: string;
   title: string;
   body: string;
-  emoji: string;
+  iconName: string;
+  iconFamily: string;
   timestamp: string;
   read: boolean;
 };
@@ -64,9 +66,9 @@ export default function NotificationsScreen() {
 
   const renderItem = ({ item }: { item: Notification }) => (
     <View style={[styles.row, !item.read && styles.rowUnread]}>
-      {/* Emoji icon */}
+      {/* Icon */}
       <View style={styles.emojiCircle}>
-        <Text style={styles.emoji}>{item.emoji}</Text>
+        <Ionicons name={item.iconName as any} size={20} color={COLORS.offWhite} />
       </View>
 
       {/* Content */}
@@ -90,14 +92,14 @@ export default function NotificationsScreen() {
         activeOpacity={0.6}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Text style={styles.dismissIcon}>✕</Text>
+        <Ionicons name="close" size={12} color={COLORS.gray} />
       </TouchableOpacity>
     </View>
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyEmoji}>🔔</Text>
+      <Ionicons name="notifications" size={48} color={COLORS.gray} />
       <Text style={styles.emptyTitle}>All caught up!</Text>
       <Text style={styles.emptySubtitle}>
         You have no notifications right now. Check back during game day!
@@ -110,7 +112,7 @@ export default function NotificationsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backArrow}>←</Text>
+          <Ionicons name="arrow-back" size={24} color={COLORS.offWhite} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Notifications</Text>

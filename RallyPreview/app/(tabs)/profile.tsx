@@ -9,24 +9,27 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius } from '../../src/theme/colors';
 import { useApp } from '../../src/context/AppContext';
 import { formatPointsShort, computeTierProgress } from '../../src/utils/points';
 
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
 interface MenuItem {
   id: string;
-  emoji: string;
+  iconName: IoniconsName;
   label: string;
   bgColor: string;
   route?: string;
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: 'points', emoji: '📈', label: 'Points History', bgColor: Colors.orangeAlpha(0.15), route: '/points-history' },
-  { id: 'rewards', emoji: '🎁', label: 'My Rewards', bgColor: Colors.blueAlpha(0.15), route: '/my-rewards' },
-  { id: 'notifications', emoji: '🔔', label: 'Notifications', bgColor: Colors.successAlpha(0.15), route: '/notifications' },
-  { id: 'settings', emoji: '⚙️', label: 'Settings', bgColor: Colors.grayAlpha(0.15) },
-  { id: 'help', emoji: '❓', label: 'Help & Support', bgColor: Colors.grayAlpha(0.15) },
+  { id: 'points', iconName: 'trending-up', label: 'Points History', bgColor: Colors.orangeAlpha(0.15), route: '/points-history' },
+  { id: 'rewards', iconName: 'gift', label: 'My Rewards', bgColor: Colors.blueAlpha(0.15), route: '/my-rewards' },
+  { id: 'notifications', iconName: 'notifications', label: 'Notifications', bgColor: Colors.successAlpha(0.15), route: '/notifications' },
+  { id: 'settings', iconName: 'settings', label: 'Settings', bgColor: Colors.grayAlpha(0.15) },
+  { id: 'help', iconName: 'help-circle', label: 'Help & Support', bgColor: Colors.grayAlpha(0.15) },
 ];
 
 export default function ProfileScreen() {
@@ -81,7 +84,8 @@ export default function ProfileScreen() {
             {state.user.handle} · Member since {state.user.memberSince}
           </Text>
           <View style={styles.tierBadge}>
-            <Text style={styles.tierBadgeText}>★ {state.tier.name}</Text>
+            <Ionicons name="star" size={13} color="#FFFFFF" />
+            <Text style={styles.tierBadgeText}>{state.tier.name}</Text>
           </View>
         </View>
 
@@ -131,7 +135,7 @@ export default function ProfileScreen() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.menuIconContainer, { backgroundColor: item.bgColor }]}>
-                  <Text style={styles.menuIconEmoji}>{item.emoji}</Text>
+                  <Ionicons name={item.iconName} size={18} color={Colors.offWhite} />
                 </View>
                 <Text style={styles.menuLabel}>{item.label}</Text>
                 {item.id === 'notifications' && unreadNotifications > 0 && (
@@ -139,7 +143,7 @@ export default function ProfileScreen() {
                     <Text style={styles.notifBadgeText}>{unreadNotifications}</Text>
                   </View>
                 )}
-                <Text style={styles.menuChevron}>›</Text>
+                <Ionicons name="chevron-forward" size={18} color={Colors.gray} />
               </TouchableOpacity>
               {index < MENU_ITEMS.length - 1 && <View style={styles.menuSeparator} />}
             </React.Fragment>
@@ -204,6 +208,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   tierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: Colors.orange,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,

@@ -10,6 +10,7 @@ export default function RootLayout() {
       <View style={{ flex: 1, backgroundColor: Colors.navy }}>
         <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.navy } }}>
+          <Stack.Screen name="select-school" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="trivia" options={{ presentation: 'modal' }} />
           <Stack.Screen name="prediction" options={{ presentation: 'modal' }} />

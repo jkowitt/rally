@@ -39,10 +39,13 @@ export default function GamedayScreen() {
     return () => pulse.stop();
   }, [pulseAnim]);
 
+  const schoolColor = state.school?.primaryColor ?? Colors.orange;
+
   const activations = [
     {
       id: 'trivia',
-      emoji: '🧠',
+      iconName: 'bulb' as const,
+      iconColor: Colors.blue,
       title: 'Trivia Challenge',
       points: '+50 pts',
       status: 'Live',
@@ -52,7 +55,8 @@ export default function GamedayScreen() {
     },
     {
       id: 'prediction',
-      emoji: '🏆',
+      iconName: 'trophy' as const,
+      iconColor: Colors.orange,
       title: 'Halftime Prediction',
       points: '+75 pts',
       status: 'Live',
@@ -62,7 +66,8 @@ export default function GamedayScreen() {
     },
     {
       id: 'noise',
-      emoji: '📢',
+      iconName: 'megaphone' as const,
+      iconColor: Colors.success,
       title: 'Noise Meter',
       points: '+25 pts',
       status: 'Live',
@@ -72,7 +77,8 @@ export default function GamedayScreen() {
     },
     {
       id: 'photo-challenge',
-      emoji: '📸',
+      iconName: 'camera' as const,
+      iconColor: Colors.gray,
       title: 'Photo Challenge',
       points: '+30 pts',
       status: 'Q4',
@@ -114,7 +120,7 @@ export default function GamedayScreen() {
           <View style={styles.scoreboardTeams}>
             {/* Home Team */}
             <View style={styles.teamColumn}>
-              <View style={styles.teamLogoHome}>
+              <View style={[styles.teamLogoHome, { backgroundColor: schoolColor }]}>
                 <Text style={styles.teamLogoText}>W</Text>
               </View>
               <Text style={styles.teamLabel}>HOME</Text>
@@ -178,11 +184,14 @@ export default function GamedayScreen() {
               </>
             )}
           </TouchableOpacity>
-          <Text style={styles.checkInSubtext}>
-            {state.gameday.checkedIn
-              ? '✓ You earned +100 pts!'
-              : '+100 pts for checking in'}
-          </Text>
+          {state.gameday.checkedIn ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md }}>
+              <Ionicons name="checkmark-circle" size={16} color={Colors.success} style={{ marginRight: 4 }} />
+              <Text style={[styles.checkInSubtext, { marginTop: 0 }]}>You earned +100 pts!</Text>
+            </View>
+          ) : (
+            <Text style={styles.checkInSubtext}>+100 pts for checking in</Text>
+          )}
         </View>
 
         {/* Activations Section */}
@@ -203,7 +212,7 @@ export default function GamedayScreen() {
                     { backgroundColor: item.bgColor },
                   ]}
                 >
-                  <Text style={styles.activationEmoji}>{item.emoji}</Text>
+                  <Ionicons name={item.iconName} size={22} color={item.iconColor} />
                 </View>
                 <View style={styles.activationInfo}>
                   <Text style={styles.activationTitle}>{item.title}</Text>
@@ -211,9 +220,12 @@ export default function GamedayScreen() {
                 </View>
                 {isCompleted ? (
                   <View style={[styles.activationStatus, { backgroundColor: Colors.successAlpha(0.15) }]}>
-                    <Text style={[styles.activationStatusText, { color: Colors.success }]}>
-                      Completed ✓
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={[styles.activationStatusText, { color: Colors.success }]}>
+                        Completed
+                      </Text>
+                      <Ionicons name="checkmark" size={14} color={Colors.success} style={{ marginLeft: 3 }} />
+                    </View>
                   </View>
                 ) : (
                   <View
@@ -515,8 +527,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: Spacing.md,
   },
-  activationEmoji: {
-    fontSize: 22,
+  activationIconStyle: {
+    // Replaced emoji with Ionicons component
   },
   activationInfo: {
     flex: 1,

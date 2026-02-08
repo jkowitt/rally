@@ -1,17 +1,21 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
+import { useApp } from '../../src/context/AppContext';
 
-const ORANGE = '#FF6B35';
 const GRAY = '#8B95A5';
 const NAVY_MID = '#1C2842';
+const DEFAULT_ACCENT = '#FF6B35';
 
 export default function TabLayout() {
+  const { state } = useApp();
+  const accent = state.school?.primaryColor || DEFAULT_ACCENT;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: ORANGE,
+        tabBarActiveTintColor: accent,
         tabBarInactiveTintColor: GRAY,
         tabBarStyle: {
           backgroundColor: NAVY_MID,
@@ -39,7 +43,7 @@ export default function TabLayout() {
         options={{
           title: 'Gameday',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time" size={size} color={color} />
+            <Ionicons name="american-football" size={size} color={color} />
           ),
         }}
       />

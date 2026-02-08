@@ -9,12 +9,14 @@ import {
   type PointsEntry,
   type NotificationItem,
 } from '../data/mockData';
+import { type School } from '../data/schools';
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
 interface AppState {
+  school: School | null;
   user: {
     name: string;
     handle: string;
@@ -61,6 +63,7 @@ interface AppState {
 // ---------------------------------------------------------------------------
 
 type Action =
+  | { type: 'SELECT_SCHOOL'; school: School }
   | { type: 'CHECK_IN' }
   | { type: 'ADD_POINTS'; amount: number; description: string; source: string }
   | { type: 'REDEEM_REWARD'; rewardId: string }
@@ -90,6 +93,7 @@ function makeHistoryEntry(description: string, amount: number, source: string): 
 
 function buildInitialState(): AppState {
   return {
+    school: null,
     user: {
       name: 'Jordan Mitchell',
       handle: '@jordanm',
@@ -135,6 +139,13 @@ const initialState: AppState = buildInitialState();
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case 'SELECT_SCHOOL': {
+      return {
+        ...state,
+        school: action.school,
+      };
+    }
+
     case 'CHECK_IN': {
       const amount = 100;
       const newTotalEarned = state.points.totalEarned + amount;
@@ -184,7 +195,6 @@ function reducer(state: AppState, action: Action): AppState {
         points: {
           ...state.points,
           balance: newBalance,
-          // totalEarned stays the same — redemptions don't reduce lifetime total
           history: [
             makeHistoryEntry(`Redeemed: ${reward.name}`, -reward.points, 'redemption'),
             ...state.points.history,

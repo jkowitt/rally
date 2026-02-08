@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../src/context/AppContext';
 import { TRIVIA_QUESTIONS } from '../src/data/mockData';
 
@@ -156,13 +157,16 @@ export default function TriviaScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>🧠 Trivia Challenge</Text>
+          <View style={styles.headerTitleRow}>
+            <Ionicons name="bulb" size={20} color={COLORS.offWhite} />
+            <Text style={styles.headerTitle}>Trivia Challenge</Text>
+          </View>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={16} color={COLORS.gray} />
           </TouchableOpacity>
         </View>
         <View style={styles.centeredContent}>
-          <Text style={styles.completedIcon}>✅</Text>
+          <Ionicons name="checkmark-circle" size={48} color={COLORS.success} style={styles.completedIcon} />
           <Text style={styles.completedTitle}>Already Completed</Text>
           <Text style={styles.completedSubtitle}>
             You've already finished this trivia challenge. Check back next gameday!
@@ -181,13 +185,16 @@ export default function TriviaScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>🧠 Trivia Challenge</Text>
+          <View style={styles.headerTitleRow}>
+            <Ionicons name="bulb" size={20} color={COLORS.offWhite} />
+            <Text style={styles.headerTitle}>Trivia Challenge</Text>
+          </View>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={16} color={COLORS.gray} />
           </TouchableOpacity>
         </View>
         <View style={styles.centeredContent}>
-          <Text style={styles.summaryEmoji}>🎉</Text>
+          <Ionicons name="ribbon" size={48} color={COLORS.orange} style={styles.summaryEmoji} />
           <Text style={styles.summaryTitle}>Great job!</Text>
           <Text style={styles.summaryScore}>{score} pts</Text>
           <Text style={styles.summaryDetail}>
@@ -216,13 +223,16 @@ export default function TriviaScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🧠 Trivia Challenge</Text>
+        <View style={styles.headerTitleRow}>
+          <Ionicons name="bulb" size={20} color={COLORS.offWhite} />
+          <Text style={styles.headerTitle}>Trivia Challenge</Text>
+        </View>
         <View style={styles.headerRight}>
           <View style={styles.pointsBadge}>
             <Text style={styles.pointsBadgeText}>+50 pts each</Text>
           </View>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={16} color={COLORS.gray} />
           </TouchableOpacity>
         </View>
       </View>
@@ -331,6 +341,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   headerTitle: {
     fontSize: 20,
@@ -485,7 +500,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   completedIcon: {
-    fontSize: 56,
     marginBottom: 16,
   },
   completedTitle: {
@@ -502,7 +516,6 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   summaryEmoji: {
-    fontSize: 56,
     marginBottom: 12,
   },
   summaryTitle: {

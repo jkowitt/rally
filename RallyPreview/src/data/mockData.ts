@@ -4,14 +4,17 @@
 
 export type RewardCategory = 'food' | 'merch' | 'experience' | 'exclusive';
 
+export type IconFamily = 'Ionicons' | 'MaterialCommunityIcons';
+
 export interface Reward {
   id: string;
   name: string;
-  emoji: string;
+  iconName: string;
+  iconFamily: IconFamily;
   points: number;
   category: RewardCategory;
   description: string;
-  bgColor: string; // dark background for card
+  bgColor: string;
 }
 
 export interface TriviaQuestion {
@@ -26,7 +29,8 @@ export interface FeedItem {
   type: 'article' | 'video' | 'poll';
   title: string;
   subtitle: string;
-  emoji: string;
+  iconName: string;
+  iconFamily: IconFamily;
   badge: string;
   bgColor: string;
 }
@@ -42,7 +46,7 @@ export interface LeaderboardEntry {
 export interface PointsEntry {
   id: string;
   description: string;
-  amount: number; // positive = earned, negative = spent
+  amount: number;
   source: string;
   timestamp: Date;
 }
@@ -51,7 +55,8 @@ export interface NotificationItem {
   id: string;
   title: string;
   body: string;
-  emoji: string;
+  iconName: string;
+  iconFamily: IconFamily;
   timestamp: Date;
   read: boolean;
 }
@@ -64,7 +69,8 @@ export const REWARDS: Reward[] = [
   {
     id: 'reward-1',
     name: 'Free Hot Dog',
-    emoji: '\u{1F354}',
+    iconName: 'fast-food',
+    iconFamily: 'Ionicons',
     points: 200,
     category: 'food',
     description: 'Redeem for a free hot dog at any concession stand on gameday.',
@@ -73,7 +79,8 @@ export const REWARDS: Reward[] = [
   {
     id: 'reward-2',
     name: 'Rally T-Shirt',
-    emoji: '\u{1F455}',
+    iconName: 'shirt',
+    iconFamily: 'Ionicons',
     points: 500,
     category: 'merch',
     description: 'Exclusive Rally-branded t-shirt available in all sizes.',
@@ -82,7 +89,8 @@ export const REWARDS: Reward[] = [
   {
     id: 'reward-3',
     name: 'Signed Football',
-    emoji: '\u{1F3C8}',
+    iconName: 'american-football',
+    iconFamily: 'Ionicons',
     points: 2000,
     category: 'experience',
     description: 'A football signed by the head coach and team captains.',
@@ -91,7 +99,8 @@ export const REWARDS: Reward[] = [
   {
     id: 'reward-4',
     name: 'Sideline Pass',
-    emoji: '\u{1F3AC}',
+    iconName: 'ticket',
+    iconFamily: 'Ionicons',
     points: 5000,
     category: 'exclusive',
     description: 'Get an exclusive sideline pass for pregame warm-ups.',
@@ -100,7 +109,8 @@ export const REWARDS: Reward[] = [
   {
     id: 'reward-5',
     name: 'Free Nachos',
-    emoji: '\u{1F32E}',
+    iconName: 'pizza',
+    iconFamily: 'Ionicons',
     points: 150,
     category: 'food',
     description: 'Enjoy a free plate of loaded nachos at any concession stand.',
@@ -109,7 +119,8 @@ export const REWARDS: Reward[] = [
   {
     id: 'reward-6',
     name: 'VIP Upgrade',
-    emoji: '\u26A1',
+    iconName: 'flash',
+    iconFamily: 'Ionicons',
     points: 3000,
     category: 'exclusive',
     description: 'Upgrade your seat to the VIP section for one game.',
@@ -156,7 +167,8 @@ export const FEED_ITEMS: FeedItem[] = [
     type: 'article',
     title: 'Season Opener Preview: What to Expect',
     subtitle: 'Breaking down the matchup, key players, and predictions for Saturday.',
-    emoji: '\u{1F4F0}',
+    iconName: 'newspaper',
+    iconFamily: 'Ionicons',
     badge: 'New',
     bgColor: '#131B2E',
   },
@@ -165,7 +177,8 @@ export const FEED_ITEMS: FeedItem[] = [
     type: 'video',
     title: 'Behind the Scenes: Game Week Practice',
     subtitle: 'Exclusive footage from the practice facility as the team prepares.',
-    emoji: '\u{1F3A5}',
+    iconName: 'videocam',
+    iconFamily: 'Ionicons',
     badge: 'Video',
     bgColor: '#1C2842',
   },
@@ -174,7 +187,8 @@ export const FEED_ITEMS: FeedItem[] = [
     type: 'poll',
     title: 'Fan Poll: Predict the Final Score',
     subtitle: 'Cast your prediction and see how other fans voted.',
-    emoji: '\u{1F4CA}',
+    iconName: 'bar-chart',
+    iconFamily: 'Ionicons',
     badge: 'Poll',
     bgColor: '#2A1A0E',
   },
@@ -194,105 +208,22 @@ export const INITIAL_LEADERBOARD: LeaderboardEntry[] = [
 ];
 
 export const INITIAL_POINTS_HISTORY: PointsEntry[] = [
-  {
-    id: 'pts-1',
-    description: 'Gameday Check-In',
-    amount: 100,
-    source: 'check-in',
-    timestamp: new Date('2025-10-18T13:00:00'),
-  },
-  {
-    id: 'pts-2',
-    description: 'Trivia Challenge Completed',
-    amount: 50,
-    source: 'trivia',
-    timestamp: new Date('2025-10-18T14:30:00'),
-  },
-  {
-    id: 'pts-3',
-    description: 'Redeemed: Free Hot Dog',
-    amount: -200,
-    source: 'redemption',
-    timestamp: new Date('2025-10-18T15:15:00'),
-  },
-  {
-    id: 'pts-4',
-    description: 'Noise Meter Bonus',
-    amount: 75,
-    source: 'noise-meter',
-    timestamp: new Date('2025-10-11T14:00:00'),
-  },
-  {
-    id: 'pts-5',
-    description: 'Gameday Check-In',
-    amount: 100,
-    source: 'check-in',
-    timestamp: new Date('2025-10-11T12:45:00'),
-  },
-  {
-    id: 'pts-6',
-    description: 'Prediction Correct',
-    amount: 150,
-    source: 'prediction',
-    timestamp: new Date('2025-10-04T16:30:00'),
-  },
-  {
-    id: 'pts-7',
-    description: 'Gameday Check-In',
-    amount: 100,
-    source: 'check-in',
-    timestamp: new Date('2025-10-04T12:30:00'),
-  },
-  {
-    id: 'pts-8',
-    description: 'Welcome Bonus',
-    amount: 875,
-    source: 'bonus',
-    timestamp: new Date('2025-09-20T10:00:00'),
-  },
+  { id: 'pts-1', description: 'Gameday Check-In', amount: 100, source: 'check-in', timestamp: new Date('2025-10-18T13:00:00') },
+  { id: 'pts-2', description: 'Trivia Challenge Completed', amount: 50, source: 'trivia', timestamp: new Date('2025-10-18T14:30:00') },
+  { id: 'pts-3', description: 'Redeemed: Free Hot Dog', amount: -200, source: 'redemption', timestamp: new Date('2025-10-18T15:15:00') },
+  { id: 'pts-4', description: 'Noise Meter Bonus', amount: 75, source: 'noise-meter', timestamp: new Date('2025-10-11T14:00:00') },
+  { id: 'pts-5', description: 'Gameday Check-In', amount: 100, source: 'check-in', timestamp: new Date('2025-10-11T12:45:00') },
+  { id: 'pts-6', description: 'Prediction Correct', amount: 150, source: 'prediction', timestamp: new Date('2025-10-04T16:30:00') },
+  { id: 'pts-7', description: 'Gameday Check-In', amount: 100, source: 'check-in', timestamp: new Date('2025-10-04T12:30:00') },
+  { id: 'pts-8', description: 'Welcome Bonus', amount: 875, source: 'bonus', timestamp: new Date('2025-09-20T10:00:00') },
 ];
 
 export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'notif-1',
-    title: 'Gameday Reminder',
-    body: 'Gates open in 2 hours! Don\'t forget to check in when you arrive.',
-    emoji: '\u{1F3C8}',
-    timestamp: new Date('2025-10-25T09:00:00'),
-    read: false,
-  },
-  {
-    id: 'notif-2',
-    title: 'Tier Upgrade!',
-    body: 'Congratulations! You\'ve reached Starter tier. Keep earning to unlock All-Star.',
-    emoji: '\u{1F31F}',
-    timestamp: new Date('2025-10-18T15:00:00'),
-    read: false,
-  },
-  {
-    id: 'notif-3',
-    title: 'New Reward Available',
-    body: 'The Rally T-Shirt is now available in the rewards store for 500 pts.',
-    emoji: '\u{1F381}',
-    timestamp: new Date('2025-10-15T12:00:00'),
-    read: true,
-  },
-  {
-    id: 'notif-4',
-    title: 'Trivia Challenge',
-    body: 'A new trivia challenge is live! Answer correctly to earn bonus points.',
-    emoji: '\u{1F9E0}',
-    timestamp: new Date('2025-10-12T11:30:00'),
-    read: true,
-  },
-  {
-    id: 'notif-5',
-    title: 'Points Earned',
-    body: 'You earned 150 pts for a correct halftime prediction. Nice call!',
-    emoji: '\u{1F4B0}',
-    timestamp: new Date('2025-10-04T16:35:00'),
-    read: true,
-  },
+  { id: 'notif-1', title: 'Gameday Reminder', body: 'Gates open in 2 hours! Don\'t forget to check in when you arrive.', iconName: 'american-football', iconFamily: 'Ionicons', timestamp: new Date('2025-10-25T09:00:00'), read: false },
+  { id: 'notif-2', title: 'Tier Upgrade!', body: 'Congratulations! You\'ve reached Starter tier. Keep earning to unlock All-Star.', iconName: 'star', iconFamily: 'Ionicons', timestamp: new Date('2025-10-18T15:00:00'), read: false },
+  { id: 'notif-3', title: 'New Reward Available', body: 'The Rally T-Shirt is now available in the rewards store for 500 pts.', iconName: 'gift', iconFamily: 'Ionicons', timestamp: new Date('2025-10-15T12:00:00'), read: true },
+  { id: 'notif-4', title: 'Trivia Challenge', body: 'A new trivia challenge is live! Answer correctly to earn bonus points.', iconName: 'bulb', iconFamily: 'Ionicons', timestamp: new Date('2025-10-12T11:30:00'), read: true },
+  { id: 'notif-5', title: 'Points Earned', body: 'You earned 150 pts for a correct halftime prediction. Nice call!', iconName: 'wallet', iconFamily: 'Ionicons', timestamp: new Date('2025-10-04T16:35:00'), read: true },
 ];
 
 export const POLL_DATA = {

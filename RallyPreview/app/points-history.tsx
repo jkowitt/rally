@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../src/context/AppContext';
 import { formatPointsShort } from '../src/utils/points';
 
@@ -90,9 +91,11 @@ export default function PointsHistoryScreen() {
             { backgroundColor: isEarned ? COLORS.success + '20' : COLORS.error + '20' },
           ]}
         >
-          <Text style={[styles.iconText, { color: isEarned ? COLORS.success : COLORS.error }]}>
-            {isEarned ? '+' : '−'}
-          </Text>
+          {isEarned ? (
+            <Ionicons name="arrow-up" size={18} color={COLORS.success} />
+          ) : (
+            <Ionicons name="arrow-down" size={18} color={COLORS.error} />
+          )}
         </View>
 
         {/* Details */}
@@ -116,7 +119,7 @@ export default function PointsHistoryScreen() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyEmoji}>📊</Text>
+      <Ionicons name="stats-chart" size={48} color={COLORS.gray} />
       <Text style={styles.emptyTitle}>No history yet</Text>
       <Text style={styles.emptySubtitle}>
         Start earning points by checking in to events, making predictions, and more!
@@ -129,7 +132,7 @@ export default function PointsHistoryScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backArrow}>←</Text>
+          <Ionicons name="arrow-back" size={24} color={COLORS.offWhite} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Points History</Text>
         <View style={styles.backButton} />

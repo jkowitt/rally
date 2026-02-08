@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../src/context/AppContext';
 
 const COLORS = {
@@ -197,13 +198,16 @@ export default function NoiseMeterScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>📢 Noise Meter</Text>
+          <View style={styles.headerTitleRow}>
+            <Ionicons name="megaphone" size={20} color={COLORS.offWhite} />
+            <Text style={styles.headerTitle}>Noise Meter</Text>
+          </View>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={16} color={COLORS.gray} />
           </TouchableOpacity>
         </View>
         <View style={styles.centeredContent}>
-          <Text style={styles.successIcon}>🎉</Text>
+          <Ionicons name="ribbon" size={64} color={COLORS.success} style={styles.successIcon} />
           <Text style={styles.successTitle}>Noise Goal Reached!</Text>
           <Text style={styles.successPoints}>+{POINTS} pts earned</Text>
           {peakDb > 0 && (
@@ -238,13 +242,16 @@ export default function NoiseMeterScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📢 Noise Meter</Text>
+        <View style={styles.headerTitleRow}>
+          <Ionicons name="megaphone" size={20} color={COLORS.offWhite} />
+          <Text style={styles.headerTitle}>Noise Meter</Text>
+        </View>
         <View style={styles.headerRight}>
           <View style={styles.pointsBadge}>
             <Text style={styles.pointsBadgeText}>+{POINTS} pts</Text>
           </View>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={16} color={COLORS.gray} />
           </TouchableOpacity>
         </View>
       </View>
@@ -252,7 +259,10 @@ export default function NoiseMeterScreen() {
       <View style={styles.content}>
         {/* Bonus banner */}
         <Animated.View style={[styles.bonusBanner, { opacity: bonusOpacity }]}>
-          <Text style={styles.bonusText}>🎉 BONUS!</Text>
+          <View style={styles.bonusTextRow}>
+            <Ionicons name="star" size={20} color={COLORS.success} />
+            <Text style={styles.bonusText}>BONUS!</Text>
+          </View>
         </Animated.View>
 
         {/* Gauge */}
@@ -334,7 +344,11 @@ export default function NoiseMeterScreen() {
             activeOpacity={1}
           >
             <View style={styles.recordButtonInner}>
-              <Text style={styles.recordIcon}>{isRecording ? '🔊' : '🎤'}</Text>
+              {isRecording ? (
+                <Ionicons name="volume-high" size={36} color="#FFFFFF" />
+              ) : (
+                <Ionicons name="mic" size={36} color="#FFFFFF" />
+              )}
               <Text style={styles.recordText}>
                 {isRecording ? 'Recording...' : 'Hold to Record'}
               </Text>
@@ -376,6 +390,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   headerTitle: {
     fontSize: 20,
@@ -422,6 +441,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     marginBottom: 16,
+  },
+  bonusTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   bonusText: {
     color: '#34C759',
@@ -565,7 +589,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   successIcon: {
-    fontSize: 64,
     marginBottom: 16,
   },
   successTitle: {

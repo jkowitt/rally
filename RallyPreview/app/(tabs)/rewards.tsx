@@ -8,18 +8,19 @@ import {
   SafeAreaView,
   Animated,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, Radius } from '../../src/theme/colors';
 import { useApp } from '../../src/context/AppContext';
 import { formatPointsShort } from '../../src/utils/points';
 import type { Reward, RewardCategory } from '../../src/data/mockData';
 
-const FILTERS: { id: string; label: string }[] = [
+const FILTERS: { id: string; label: string; iconName?: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { id: 'all', label: 'All' },
-  { id: 'food', label: '🍔 Food' },
-  { id: 'merch', label: '👕 Merch' },
-  { id: 'experience', label: '🎬 Experience' },
-  { id: 'exclusive', label: '⭐ Exclusive' },
+  { id: 'food', label: 'Food', iconName: 'fast-food' },
+  { id: 'merch', label: 'Merch', iconName: 'shirt' },
+  { id: 'experience', label: 'Experience', iconName: 'ticket' },
+  { id: 'exclusive', label: 'Exclusive', iconName: 'diamond' },
 ];
 
 function RewardCard({ reward, onPress }: { reward: Reward; onPress: () => void }) {
@@ -51,7 +52,7 @@ function RewardCard({ reward, onPress }: { reward: Reward; onPress: () => void }
         style={styles.rewardCard}
       >
         <View style={[styles.rewardEmojiArea, { backgroundColor: reward.bgColor }]}>
-          <Text style={styles.rewardEmoji}>{reward.emoji}</Text>
+          <Ionicons name={reward.iconName} size={32} color="#FFFFFF" />
         </View>
         <View style={styles.rewardInfo}>
           <Text style={styles.rewardName} numberOfLines={1}>
@@ -99,7 +100,10 @@ export default function RewardsScreen() {
             {formatPointsShort(state.points.balance)}
           </Text>
           <View style={styles.tierBadge}>
-            <Text style={styles.tierBadgeText}>★ {state.tier.name}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="star" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Text style={styles.tierBadgeText}>{state.tier.name}</Text>
+            </View>
           </View>
         </View>
 
@@ -121,14 +125,24 @@ export default function RewardsScreen() {
                   isActive && styles.filterChipActive,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    isActive && styles.filterChipTextActive,
-                  ]}
-                >
-                  {filter.label}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {filter.iconName && (
+                    <Ionicons
+                      name={filter.iconName}
+                      size={14}
+                      color={isActive ? Colors.orange : Colors.gray}
+                      style={{ marginRight: 4 }}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      isActive && styles.filterChipTextActive,
+                    ]}
+                  >
+                    {filter.label}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -151,7 +165,9 @@ export default function RewardsScreen() {
             <Text style={styles.sectionTitle}>Recently Redeemed</Text>
             {state.rewards.redeemed.map((entry, i) => (
               <View key={`${entry.reward.id}-${i}`} style={styles.redeemedRow}>
-                <Text style={styles.redeemedEmoji}>{entry.reward.emoji}</Text>
+                <View style={styles.redeemedIconCircle}>
+                  <Ionicons name={entry.reward.iconName as any} size={22} color="#FFFFFF" />
+                </View>
                 <View style={styles.redeemedInfo}>
                   <Text style={styles.redeemedName}>{entry.reward.name}</Text>
                   <Text style={styles.redeemedDate}>
@@ -311,8 +327,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     padding: Spacing.md,
   },
-  redeemedEmoji: {
-    fontSize: 28,
+  redeemedIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.navyLight,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: Spacing.md,
   },
   redeemedInfo: {

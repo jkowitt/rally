@@ -21,6 +21,14 @@ export default function HomeScreen() {
   const { state, dispatch } = useApp();
   const router = useRouter();
 
+  useEffect(() => {
+    if (state.school === null) {
+      router.replace('/select-school');
+    }
+  }, [state.school]);
+
+  const schoolColor = state.school?.primaryColor ?? Colors.orange;
+
   const [countdown, setCountdown] = useState({
     days: 2,
     hours: 14,
@@ -79,7 +87,9 @@ export default function HomeScreen() {
             <Image source={rallyLogo} style={styles.logoImage} resizeMode="contain" />
             <Text style={styles.subtitle}>Welcome back, Jordan!</Text>
           </View>
-          <Image source={rallyIcon} style={styles.avatarIcon} resizeMode="contain" />
+          <View style={[styles.avatar, { backgroundColor: schoolColor }]}>
+            <Image source={rallyIcon} style={styles.avatarIcon} resizeMode="contain" />
+          </View>
         </View>
 
         {/* Sponsor Banner */}
@@ -121,7 +131,10 @@ export default function HomeScreen() {
           </View>
           <View style={styles.tierCard}>
             <View style={styles.tierBadge}>
-              <Text style={styles.tierBadgeText}>★ {state.tier.name}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="star" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Text style={styles.tierBadgeText}>{state.tier.name}</Text>
+            </View>
             </View>
             <Text style={styles.tierSubLabel}>Current Tier</Text>
           </View>
@@ -156,7 +169,7 @@ export default function HomeScreen() {
             <View style={styles.feedBadge}>
               <Text style={styles.feedBadgeText}>Article</Text>
             </View>
-            <Text style={styles.feedEmoji}>🏈</Text>
+            <Ionicons name="american-football" size={48} color={Colors.gray} />
           </View>
           <View style={styles.feedContent}>
             <Text style={styles.feedTitle}>
@@ -172,7 +185,10 @@ export default function HomeScreen() {
         {/* Fan Poll Card */}
         <View style={styles.pollCard}>
           <View style={styles.pollHeader}>
-            <Text style={styles.pollHeaderText}>📊 Fan Poll</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="bar-chart" size={17} color={Colors.offWhite} style={{ marginRight: 6 }} />
+              <Text style={styles.pollHeaderText}>Fan Poll</Text>
+            </View>
             <Text style={styles.pollVotes}>{formatPointsShort(state.poll.totalVotes)} votes</Text>
           </View>
           <Text style={styles.pollQuestion}>
@@ -216,9 +232,14 @@ export default function HomeScreen() {
                       />
                     </View>
                     <View style={styles.pollBarContent}>
-                      <Text style={styles.pollOptionName}>
-                        {isUserVote ? `✓ ${option.name}` : option.name}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {isUserVote && (
+                          <Ionicons name="checkmark" size={16} color={Colors.offWhite} style={{ marginRight: 4 }} />
+                        )}
+                        <Text style={styles.pollOptionName}>
+                          {option.name}
+                        </Text>
+                      </View>
                       <Text
                         style={[styles.pollOptionPct, { color }]}
                       >
@@ -515,8 +536,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  feedEmoji: {
-    fontSize: 48,
+  feedIcon: {
+    // Replaced emoji with Ionicons component
   },
   feedContent: {
     padding: Spacing.lg,

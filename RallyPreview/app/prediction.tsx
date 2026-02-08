@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../src/context/AppContext';
 
 const COLORS = {
@@ -112,13 +113,16 @@ export default function PredictionScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>🏆 Halftime Prediction</Text>
+          <View style={styles.headerTitleRow}>
+            <Ionicons name="trophy" size={20} color={COLORS.offWhite} />
+            <Text style={styles.headerTitle}>Halftime Prediction</Text>
+          </View>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={16} color={COLORS.gray} />
           </TouchableOpacity>
         </View>
         <View style={styles.centeredContent}>
-          <Text style={styles.lockedIcon}>🔒</Text>
+          <Ionicons name="lock-closed" size={48} color={COLORS.gray} style={styles.lockedIcon} />
           <Text style={styles.lockedTitle}>Prediction Locked In!</Text>
           <Text style={styles.lockedSubtitle}>
             Your predictions have been submitted. Good luck!
@@ -146,9 +150,12 @@ export default function PredictionScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>🏆 Halftime Prediction</Text>
+          <View style={styles.headerTitleRow}>
+            <Ionicons name="trophy" size={20} color={COLORS.offWhite} />
+            <Text style={styles.headerTitle}>Halftime Prediction</Text>
+          </View>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={16} color={COLORS.gray} />
           </TouchableOpacity>
         </View>
         <View style={styles.centeredContent}>
@@ -158,7 +165,7 @@ export default function PredictionScreen() {
               { transform: [{ scale: checkmarkScale }] },
             ]}
           >
-            <Text style={styles.celebrationEmoji}>✅</Text>
+            <Ionicons name="checkmark-circle" size={64} color={COLORS.success} />
           </Animated.View>
           <Animated.Text style={[styles.celebrationPoints, { opacity: pointsFade }]}>
             +{POINTS} pts!
@@ -177,13 +184,16 @@ export default function PredictionScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🏆 Halftime Prediction</Text>
+        <View style={styles.headerTitleRow}>
+          <Ionicons name="trophy" size={20} color={COLORS.offWhite} />
+          <Text style={styles.headerTitle}>Halftime Prediction</Text>
+        </View>
         <View style={styles.headerRight}>
           <View style={styles.pointsBadge}>
             <Text style={styles.pointsBadgeText}>+{POINTS} pts</Text>
           </View>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={16} color={COLORS.gray} />
           </TouchableOpacity>
         </View>
       </View>
@@ -261,6 +271,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   headerTitle: {
     fontSize: 20,
@@ -391,7 +406,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   lockedIcon: {
-    fontSize: 56,
     marginBottom: 16,
   },
   lockedTitle: {

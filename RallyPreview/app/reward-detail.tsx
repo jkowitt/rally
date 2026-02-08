@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../src/context/AppContext';
 import { formatPointsShort, canAfford } from '../src/utils/points';
 
@@ -96,7 +97,7 @@ export default function RewardDetailScreen() {
               },
             ]}
           >
-            <Text style={styles.successCheck}>✓</Text>
+            <Ionicons name="checkmark" size={48} color="#FFFFFF" />
           </Animated.View>
           <Animated.Text style={[styles.successLabel, { opacity: checkOpacity }]}>
             Redeemed!
@@ -110,13 +111,13 @@ export default function RewardDetailScreen() {
     <SafeAreaView style={styles.container}>
       {/* Close button */}
       <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-        <Text style={styles.closeIcon}>✕</Text>
+        <Ionicons name="close" size={16} color={COLORS.offWhite} />
       </TouchableOpacity>
 
       <View style={styles.content}>
-        {/* Emoji */}
+        {/* Icon */}
         <View style={styles.emojiContainer}>
-          <Text style={styles.emoji}>{reward.emoji}</Text>
+          <Ionicons name={reward.iconName} size={64} color="#FFFFFF" />
         </View>
 
         {/* Name & Cost */}
@@ -134,7 +135,10 @@ export default function RewardDetailScreen() {
           <Text style={styles.balanceLabel}>Your Balance</Text>
           <Text style={styles.balanceValue}>{formatPointsShort(balance)} pts</Text>
           {affordable ? (
-            <Text style={styles.affordableText}>✓ Enough points</Text>
+            <View style={styles.affordableRow}>
+              <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
+              <Text style={styles.affordableText}>Enough points</Text>
+            </View>
           ) : (
             <Text style={styles.notAffordableText}>
               Need {formatPointsShort(deficit)} more points
@@ -253,6 +257,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.offWhite,
     marginBottom: 8,
+  },
+  affordableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   affordableText: {
     fontSize: 14,

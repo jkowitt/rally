@@ -10,11 +10,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius } from '../../src/theme/colors';
+import { useApp } from '../../src/context/AppContext';
+import { useRouter } from 'expo-router';
+import { formatPointsShort } from '../../src/utils/points';
 
 const rallyLogo = require('../../assets/rally-wordmark-white-transparent.png');
 const rallyIcon = require('../../assets/rally-icon-navy.png');
 
 export default function HomeScreen() {
+  const { state, dispatch } = useApp();
+  const router = useRouter();
+
   const [countdown, setCountdown] = useState({
     days: 2,
     hours: 14,
@@ -50,6 +56,16 @@ export default function HomeScreen() {
   }, []);
 
   const pad = (n: number) => String(n).padStart(2, '0');
+
+  const progressWidth = state.tier.nextMin
+    ? `${((state.points.balance - state.tier.min) / (state.tier.nextMin - state.tier.min)) * 100}%`
+    : '100%';
+
+  const tierRemaining = state.tier.nextMin
+    ? `${state.tier.nextMin - state.points.balance} to ${state.tier.next || 'Max'}`
+    : `0 to ${state.tier.next || 'Max'}`;
+
+  const pollColors = [Colors.orange, Colors.blue, Colors.gray, Colors.success];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -100,12 +116,12 @@ export default function HomeScreen() {
         {/* Points Summary - 2 Column Grid */}
         <View style={styles.pointsRow}>
           <View style={styles.pointsCard}>
-            <Text style={styles.pointsValue}>1,250</Text>
+            <Text style={styles.pointsValue}>{formatPointsShort(state.points.balance)}</Text>
             <Text style={styles.pointsLabel}>Your Points</Text>
           </View>
           <View style={styles.tierCard}>
             <View style={styles.tierBadge}>
-              <Text style={styles.tierBadgeText}>★ All-Star</Text>
+              <Text style={styles.tierBadgeText}>★ {state.tier.name}</Text>
             </View>
             <Text style={styles.tierSubLabel}>Current Tier</Text>
           </View>
@@ -115,14 +131,14 @@ export default function HomeScreen() {
         <View style={styles.tierProgressCard}>
           <View style={styles.tierProgressHeader}>
             <Text style={styles.tierProgressTitle}>Tier Progress</Text>
-            <Text style={styles.tierProgressRemaining}>3,750 to MVP</Text>
+            <Text style={styles.tierProgressRemaining}>{tierRemaining}</Text>
           </View>
           <View style={styles.progressBarTrack}>
-            <View style={styles.progressBarFill} />
+            <View style={[styles.progressBarFill, { width: progressWidth }]} />
           </View>
           <View style={styles.tierProgressLabels}>
-            <Text style={styles.tierProgressLabelText}>All-Star • 2,000</Text>
-            <Text style={styles.tierProgressLabelText}>MVP • 5,000</Text>
+            <Text style={styles.tierProgressLabelText}>{state.tier.name} • {formatPointsShort(state.tier.min)}</Text>
+            <Text style={styles.tierProgressLabelText}>{state.tier.next || 'Max'} • {state.tier.nextMin ? formatPointsShort(state.tier.nextMin) : '—'}</Text>
           </View>
         </View>
 
@@ -157,39 +173,61 @@ export default function HomeScreen() {
         <View style={styles.pollCard}>
           <View style={styles.pollHeader}>
             <Text style={styles.pollHeaderText}>📊 Fan Poll</Text>
-            <Text style={styles.pollVotes}>1,847 votes</Text>
+            <Text style={styles.pollVotes}>{formatPointsShort(state.poll.totalVotes)} votes</Text>
           </View>
           <Text style={styles.pollQuestion}>
-            Who will be Player of the Game?
+            {state.poll.question}
           </Text>
-          {[
-            { name: 'Marcus Johnson', pct: 42, color: Colors.orange },
-            { name: 'Devon Williams', pct: 31, color: Colors.blue },
-            { name: 'Chris Anderson', pct: 27, color: Colors.gray },
-          ].map((option) => (
-            <View key={option.name} style={styles.pollOption}>
-              <View style={styles.pollBarTrack}>
-                <View
-                  style={[
-                    styles.pollBarFill,
-                    {
-                      width: `${option.pct}%`,
-                      backgroundColor: option.color,
-                      opacity: 0.25,
-                    },
-                  ]}
-                />
-              </View>
-              <View style={styles.pollBarContent}>
-                <Text style={styles.pollOptionName}>{option.name}</Text>
-                <Text
-                  style={[styles.pollOptionPct, { color: option.color }]}
+          {state.poll.userVote === null
+            ? /* Voting view – tappable options */
+              state.poll.options.map((option, index) => (
+                <TouchableOpacity
+                  key={option.name}
+                  style={styles.pollOption}
+                  activeOpacity={0.7}
+                  onPress={() => dispatch({ type: 'VOTE_POLL', optionIndex: index })}
                 >
-                  {option.pct}%
-                </Text>
-              </View>
-            </View>
-          ))}
+                  <View style={styles.pollBarTrack} />
+                  <View style={styles.pollBarContent}>
+                    <Text style={styles.pollOptionName}>{option.name}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={Colors.gray} />
+                  </View>
+                </TouchableOpacity>
+              ))
+            : /* Results view – show percentages */
+              state.poll.options.map((option, index) => {
+                const pct = state.poll.totalVotes > 0
+                  ? Math.round((option.votes / state.poll.totalVotes) * 100)
+                  : 0;
+                const color = pollColors[index % pollColors.length];
+                const isUserVote = state.poll.userVote === index;
+                return (
+                  <View key={option.name} style={styles.pollOption}>
+                    <View style={styles.pollBarTrack}>
+                      <View
+                        style={[
+                          styles.pollBarFill,
+                          {
+                            width: `${pct}%`,
+                            backgroundColor: color,
+                            opacity: isUserVote ? 0.4 : 0.25,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <View style={styles.pollBarContent}>
+                      <Text style={styles.pollOptionName}>
+                        {isUserVote ? `✓ ${option.name}` : option.name}
+                      </Text>
+                      <Text
+                        style={[styles.pollOptionPct, { color }]}
+                      >
+                        {pct}%
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
         </View>
 
         <View style={{ height: Spacing.xxxl }} />
@@ -416,7 +454,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   progressBarFill: {
-    width: '25%',
     height: '100%',
     backgroundColor: Colors.orange,
     borderRadius: Radius.full,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
   ScrollView,
@@ -6,13 +6,18 @@ import {
   Text,
   TouchableOpacity,
   Animated,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius } from '../../src/theme/colors';
+import { useApp } from '../../src/context/AppContext';
+import { useRouter } from 'expo-router';
+import { formatPointsShort } from '../../src/utils/points';
 
 export default function GamedayScreen() {
-  const [checkedIn, setCheckedIn] = useState(false);
+  const { state, dispatch } = useApp();
+  const router = useRouter();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -36,44 +41,56 @@ export default function GamedayScreen() {
 
   const activations = [
     {
+      id: 'trivia',
       emoji: '🧠',
       title: 'Trivia Challenge',
       points: '+50 pts',
       status: 'Live',
       statusColor: Colors.success,
       bgColor: Colors.blueAlpha(0.15),
+      onPress: () => router.push('/trivia'),
     },
     {
+      id: 'prediction',
       emoji: '🏆',
       title: 'Halftime Prediction',
       points: '+75 pts',
       status: 'Live',
       statusColor: Colors.success,
       bgColor: Colors.orangeAlpha(0.15),
+      onPress: () => router.push('/prediction'),
     },
     {
+      id: 'noise',
       emoji: '📢',
       title: 'Noise Meter',
       points: '+25 pts',
       status: 'Live',
       statusColor: Colors.success,
       bgColor: Colors.successAlpha(0.15),
+      onPress: () => router.push('/noise-meter'),
     },
     {
+      id: 'photo-challenge',
       emoji: '📸',
       title: 'Photo Challenge',
       points: '+30 pts',
       status: 'Q4',
       statusColor: Colors.gray,
       bgColor: Colors.grayAlpha(0.15),
+      onPress: () => Alert.alert('Coming Soon', 'Available in Q4!'),
     },
   ];
 
   const leaderboard = [
     { rank: 1, name: 'MikeFan2026', points: '3,450', isYou: false },
     { rank: 2, name: 'SarahSports', points: '2,890', isYou: false },
-    { rank: 5, name: 'You', points: '1,250', isYou: true },
+    { rank: 5, name: 'You', points: formatPointsShort(state.points.balance), isYou: true },
   ];
+
+  const fanPointsPct = state.gameday.fanPointsTarget > 0
+    ? `${(state.gameday.fanPointsCurrent / state.gameday.fanPointsTarget) * 100}%`
+    : '0%';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -101,13 +118,13 @@ export default function GamedayScreen() {
                 <Text style={styles.teamLogoText}>W</Text>
               </View>
               <Text style={styles.teamLabel}>HOME</Text>
-              <Text style={styles.teamScore}>24</Text>
+              <Text style={styles.teamScore}>{state.gameday.homeScore}</Text>
             </View>
 
             {/* Center */}
             <View style={styles.scoreCenter}>
-              <Text style={styles.quarter}>Q3</Text>
-              <Text style={styles.gameClock}>8:42</Text>
+              <Text style={styles.quarter}>{state.gameday.quarter}</Text>
+              <Text style={styles.gameClock}>{state.gameday.clock}</Text>
               <Text style={styles.gameDate}>Feb 10, 2026</Text>
             </View>
 
@@ -117,7 +134,7 @@ export default function GamedayScreen() {
                 <Text style={styles.teamLogoText}>T</Text>
               </View>
               <Text style={styles.teamLabel}>AWAY</Text>
-              <Text style={styles.teamScore}>17</Text>
+              <Text style={styles.teamScore}>{state.gameday.awayScore}</Text>
             </View>
           </View>
 
@@ -125,10 +142,12 @@ export default function GamedayScreen() {
           <View style={styles.fanPointsGoal}>
             <View style={styles.fanPointsHeader}>
               <Text style={styles.fanPointsLabel}>Fan Points Goal</Text>
-              <Text style={styles.fanPointsValue}>850 / 1,000</Text>
+              <Text style={styles.fanPointsValue}>
+                {formatPointsShort(state.gameday.fanPointsCurrent)} / {formatPointsShort(state.gameday.fanPointsTarget)}
+              </Text>
             </View>
             <View style={styles.fanPointsBarTrack}>
-              <View style={styles.fanPointsBarFill} />
+              <View style={[styles.fanPointsBarFill, { width: fanPointsPct }]} />
             </View>
           </View>
         </View>
@@ -138,12 +157,16 @@ export default function GamedayScreen() {
           <TouchableOpacity
             style={[
               styles.checkInButton,
-              checkedIn && styles.checkInButtonChecked,
+              state.gameday.checkedIn && styles.checkInButtonChecked,
             ]}
-            onPress={() => setCheckedIn(!checkedIn)}
+            onPress={() => {
+              if (!state.gameday.checkedIn) {
+                dispatch({ type: 'CHECK_IN' });
+              }
+            }}
             activeOpacity={0.8}
           >
-            {checkedIn ? (
+            {state.gameday.checkedIn ? (
               <>
                 <Ionicons name="checkmark-circle" size={36} color="#FFFFFF" />
                 <Text style={styles.checkInButtonText}>CHECKED IN!</Text>
@@ -156,7 +179,7 @@ export default function GamedayScreen() {
             )}
           </TouchableOpacity>
           <Text style={styles.checkInSubtext}>
-            {checkedIn
+            {state.gameday.checkedIn
               ? '✓ You earned +100 pts!'
               : '+100 pts for checking in'}
           </Text>
@@ -165,49 +188,61 @@ export default function GamedayScreen() {
         {/* Activations Section */}
         <Text style={styles.sectionTitle}>Activations</Text>
         <View style={styles.activationsList}>
-          {activations.map((item) => (
-            <TouchableOpacity
-              key={item.title}
-              style={styles.activationRow}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.activationIcon,
-                  { backgroundColor: item.bgColor },
-                ]}
+          {activations.map((item) => {
+            const isCompleted = state.gameday.completedActivations.includes(item.id);
+            return (
+              <TouchableOpacity
+                key={item.title}
+                style={styles.activationRow}
+                activeOpacity={0.7}
+                onPress={item.onPress}
               >
-                <Text style={styles.activationEmoji}>{item.emoji}</Text>
-              </View>
-              <View style={styles.activationInfo}>
-                <Text style={styles.activationTitle}>{item.title}</Text>
-                <Text style={styles.activationPoints}>{item.points}</Text>
-              </View>
-              <View
-                style={[
-                  styles.activationStatus,
-                  {
-                    backgroundColor:
-                      item.statusColor === Colors.success
-                        ? Colors.successAlpha(0.15)
-                        : Colors.grayAlpha(0.15),
-                  },
-                ]}
-              >
-                {item.statusColor === Colors.success && (
-                  <View style={styles.activationLiveDot} />
-                )}
-                <Text
+                <View
                   style={[
-                    styles.activationStatusText,
-                    { color: item.statusColor },
+                    styles.activationIcon,
+                    { backgroundColor: item.bgColor },
                   ]}
                 >
-                  {item.status}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+                  <Text style={styles.activationEmoji}>{item.emoji}</Text>
+                </View>
+                <View style={styles.activationInfo}>
+                  <Text style={styles.activationTitle}>{item.title}</Text>
+                  <Text style={styles.activationPoints}>{item.points}</Text>
+                </View>
+                {isCompleted ? (
+                  <View style={[styles.activationStatus, { backgroundColor: Colors.successAlpha(0.15) }]}>
+                    <Text style={[styles.activationStatusText, { color: Colors.success }]}>
+                      Completed ✓
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.activationStatus,
+                      {
+                        backgroundColor:
+                          item.statusColor === Colors.success
+                            ? Colors.successAlpha(0.15)
+                            : Colors.grayAlpha(0.15),
+                      },
+                    ]}
+                  >
+                    {item.statusColor === Colors.success && (
+                      <View style={styles.activationLiveDot} />
+                    )}
+                    <Text
+                      style={[
+                        styles.activationStatusText,
+                        { color: item.statusColor },
+                      ]}
+                    >
+                      {item.status}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Leaderboard Preview */}
@@ -412,7 +447,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   fanPointsBarFill: {
-    width: '85%',
     height: '100%',
     backgroundColor: Colors.orange,
     borderRadius: Radius.full,

@@ -6,29 +6,15 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
   Animated,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Colors, Spacing, Radius } from '../../src/theme/colors';
+import { useApp } from '../../src/context/AppContext';
+import { formatPointsShort } from '../../src/utils/points';
+import type { Reward, RewardCategory } from '../../src/data/mockData';
 
-interface Reward {
-  id: string;
-  emoji: string;
-  name: string;
-  points: number;
-  bgColor: string;
-}
-
-const REWARDS: Reward[] = [
-  { id: '1', emoji: '🍔', name: 'Free Hot Dog', points: 200, bgColor: '#2A1F1A' },
-  { id: '2', emoji: '👕', name: 'Rally T-Shirt', points: 500, bgColor: '#1A2A2A' },
-  { id: '3', emoji: '🏈', name: 'Signed Football', points: 2000, bgColor: '#2A2A1A' },
-  { id: '4', emoji: '🎬', name: 'Sideline Pass', points: 5000, bgColor: '#1A1A2A' },
-  { id: '5', emoji: '🌮', name: 'Free Nachos', points: 150, bgColor: '#2A1A22' },
-  { id: '6', emoji: '⚡', name: 'VIP Upgrade', points: 3000, bgColor: '#1A2A22' },
-];
-
-const FILTERS = [
+const FILTERS: { id: string; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'food', label: '🍔 Food' },
   { id: 'merch', label: '👕 Merch' },
@@ -36,7 +22,7 @@ const FILTERS = [
   { id: 'exclusive', label: '⭐ Exclusive' },
 ];
 
-function RewardCard({ reward }: { reward: Reward }) {
+function RewardCard({ reward, onPress }: { reward: Reward; onPress: () => void }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -55,24 +41,13 @@ function RewardCard({ reward }: { reward: Reward }) {
     }).start();
   };
 
-  const handlePress = () => {
-    Alert.alert(
-      'Redeem Reward',
-      `Redeem ${reward.name} for ${reward.points.toLocaleString()} pts?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Redeem', style: 'default' },
-      ]
-    );
-  };
-
   return (
     <Animated.View style={[styles.rewardCardWrapper, { transform: [{ scale: scaleAnim }] }]}>
       <TouchableOpacity
         activeOpacity={0.9}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        onPress={handlePress}
+        onPress={onPress}
         style={styles.rewardCard}
       >
         <View style={[styles.rewardEmojiArea, { backgroundColor: reward.bgColor }]}>
@@ -92,7 +67,20 @@ function RewardCard({ reward }: { reward: Reward }) {
 }
 
 export default function RewardsScreen() {
+  const { state } = useApp();
+  const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState('all');
+
+  const filteredRewards =
+    selectedFilter === 'all'
+      ? state.rewards.catalog
+      : state.rewards.catalog.filter(
+          (r) => r.category === (selectedFilter as RewardCategory),
+        );
+
+  const handleRewardPress = (reward: Reward) => {
+    router.push({ pathname: '/reward-detail', params: { id: reward.id } });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -107,9 +95,11 @@ export default function RewardsScreen() {
         {/* Points Balance Card */}
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Available Points</Text>
-          <Text style={styles.balanceValue}>1,250</Text>
+          <Text style={styles.balanceValue}>
+            {formatPointsShort(state.points.balance)}
+          </Text>
           <View style={styles.tierBadge}>
-            <Text style={styles.tierBadgeText}>★ All-Star</Text>
+            <Text style={styles.tierBadgeText}>★ {state.tier.name}</Text>
           </View>
         </View>
 
@@ -146,10 +136,35 @@ export default function RewardsScreen() {
 
         {/* Rewards Grid */}
         <View style={styles.rewardsGrid}>
-          {REWARDS.map((reward) => (
-            <RewardCard key={reward.id} reward={reward} />
+          {filteredRewards.map((reward) => (
+            <RewardCard
+              key={reward.id}
+              reward={reward}
+              onPress={() => handleRewardPress(reward)}
+            />
           ))}
         </View>
+
+        {/* Redeemed section */}
+        {state.rewards.redeemed.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Recently Redeemed</Text>
+            {state.rewards.redeemed.map((entry, i) => (
+              <View key={`${entry.reward.id}-${i}`} style={styles.redeemedRow}>
+                <Text style={styles.redeemedEmoji}>{entry.reward.emoji}</Text>
+                <View style={styles.redeemedInfo}>
+                  <Text style={styles.redeemedName}>{entry.reward.name}</Text>
+                  <Text style={styles.redeemedDate}>
+                    {entry.date.toLocaleDateString()}
+                  </Text>
+                </View>
+                <View style={styles.redeemedBadge}>
+                  <Text style={styles.redeemedBadgeText}>Redeemed</Text>
+                </View>
+              </View>
+            ))}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -274,5 +289,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.orange,
+  },
+
+  // Section Title
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.offWhite,
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.xxl,
+    marginBottom: Spacing.md,
+  },
+
+  // Redeemed
+  redeemedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.navyMid,
+    borderRadius: Radius.md,
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.sm,
+    padding: Spacing.md,
+  },
+  redeemedEmoji: {
+    fontSize: 28,
+    marginRight: Spacing.md,
+  },
+  redeemedInfo: {
+    flex: 1,
+  },
+  redeemedName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.offWhite,
+  },
+  redeemedDate: {
+    fontSize: 13,
+    color: Colors.gray,
+    marginTop: 2,
+  },
+  redeemedBadge: {
+    backgroundColor: Colors.successAlpha(0.15),
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+  },
+  redeemedBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.success,
   },
 });

@@ -8,38 +8,59 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Colors, Spacing, Radius } from '../../src/theme/colors';
+import { useApp } from '../../src/context/AppContext';
+import { formatPointsShort, computeTierProgress } from '../../src/utils/points';
 
 interface MenuItem {
   id: string;
   emoji: string;
   label: string;
   bgColor: string;
+  route?: string;
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: 'points', emoji: '📈', label: 'Points History', bgColor: Colors.orangeAlpha(0.15) },
-  { id: 'rewards', emoji: '🎁', label: 'My Rewards', bgColor: Colors.blueAlpha(0.15) },
-  { id: 'notifications', emoji: '🔔', label: 'Notifications', bgColor: Colors.successAlpha(0.15) },
+  { id: 'points', emoji: '📈', label: 'Points History', bgColor: Colors.orangeAlpha(0.15), route: '/points-history' },
+  { id: 'rewards', emoji: '🎁', label: 'My Rewards', bgColor: Colors.blueAlpha(0.15), route: '/my-rewards' },
+  { id: 'notifications', emoji: '🔔', label: 'Notifications', bgColor: Colors.successAlpha(0.15), route: '/notifications' },
   { id: 'settings', emoji: '⚙️', label: 'Settings', bgColor: Colors.grayAlpha(0.15) },
   { id: 'help', emoji: '❓', label: 'Help & Support', bgColor: Colors.grayAlpha(0.15) },
 ];
 
-const STATS = [
-  { value: '12', label: 'Games' },
-  { value: '1,250', label: 'Points' },
-  { value: '8', label: 'Rewards' },
-];
-
 export default function ProfileScreen() {
+  const { state, dispatch } = useApp();
+  const router = useRouter();
+
+  const gamesAttended = 12;
+  const rewardsRedeemed = state.rewards.redeemed.length;
+  const unreadNotifications = state.notifications.filter((n) => !n.read).length;
+
+  const progress = state.tier.nextMin
+    ? computeTierProgress(state.points.totalEarned, state.tier.min, state.tier.nextMin)
+    : 1;
+  const progressPercent = Math.round(progress * 100);
+  const remaining = state.tier.nextMin
+    ? state.tier.nextMin - state.points.totalEarned
+    : 0;
+
   const handleMenuPress = (item: MenuItem) => {
-    Alert.alert(item.label, `Navigate to ${item.label}`);
+    if (item.route) {
+      router.push(item.route as any);
+    } else {
+      Alert.alert(item.label, `${item.label} coming soon!`);
+    }
   };
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: () => dispatch({ type: 'RESET' }),
+      },
     ]);
   };
 
@@ -53,36 +74,50 @@ export default function ProfileScreen() {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>J</Text>
+            <Text style={styles.avatarText}>{state.user.avatarInitial}</Text>
           </View>
-          <Text style={styles.profileName}>Jordan Mitchell</Text>
-          <Text style={styles.profileSubtitle}>@jordanm · Member since Sep 2025</Text>
+          <Text style={styles.profileName}>{state.user.name}</Text>
+          <Text style={styles.profileSubtitle}>
+            {state.user.handle} · Member since {state.user.memberSince}
+          </Text>
           <View style={styles.tierBadge}>
-            <Text style={styles.tierBadgeText}>★ All-Star</Text>
+            <Text style={styles.tierBadgeText}>★ {state.tier.name}</Text>
           </View>
         </View>
 
         {/* Stats Row */}
         <View style={styles.statsRow}>
-          {STATS.map((stat) => (
-            <View key={stat.label} style={styles.statCard}>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{gamesAttended}</Text>
+            <Text style={styles.statLabel}>Games</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>
+              {formatPointsShort(state.points.totalEarned)}
+            </Text>
+            <Text style={styles.statLabel}>Points</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{rewardsRedeemed}</Text>
+            <Text style={styles.statLabel}>Rewards</Text>
+          </View>
         </View>
 
         {/* Tier Progress Card */}
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressLabel}>Progress to MVP</Text>
-            <Text style={styles.progressPercent}>25%</Text>
+            <Text style={styles.progressLabel}>
+              Progress to {state.tier.next || 'Max'}
+            </Text>
+            <Text style={styles.progressPercent}>{progressPercent}%</Text>
           </View>
           <View style={styles.progressBarBg}>
-            <View style={styles.progressBarFill} />
+            <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
           </View>
           <Text style={styles.progressHint}>
-            3,750 more points to reach MVP tier
+            {state.tier.next
+              ? `${formatPointsShort(remaining)} more points to reach ${state.tier.next} tier`
+              : 'You\'ve reached the highest tier!'}
           </Text>
         </View>
 
@@ -99,6 +134,11 @@ export default function ProfileScreen() {
                   <Text style={styles.menuIconEmoji}>{item.emoji}</Text>
                 </View>
                 <Text style={styles.menuLabel}>{item.label}</Text>
+                {item.id === 'notifications' && unreadNotifications > 0 && (
+                  <View style={styles.notifBadge}>
+                    <Text style={styles.notifBadgeText}>{unreadNotifications}</Text>
+                  </View>
+                )}
                 <Text style={styles.menuChevron}>›</Text>
               </TouchableOpacity>
               {index < MENU_ITEMS.length - 1 && <View style={styles.menuSeparator} />}
@@ -233,7 +273,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   progressBarFill: {
-    width: '25%',
     height: '100%',
     backgroundColor: Colors.orange,
     borderRadius: Radius.full,
@@ -273,6 +312,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.offWhite,
+  },
+  notifBadge: {
+    backgroundColor: Colors.orange,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.sm,
+  },
+  notifBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   menuChevron: {
     fontSize: 22,

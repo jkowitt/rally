@@ -5,10 +5,14 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius } from '../../src/theme/colors';
+
+const rallyLogo = require('../../assets/rally-wordmark-white-transparent.png');
+const rallyIcon = require('../../assets/rally-icon-navy.png');
 
 export default function HomeScreen() {
   const [countdown, setCountdown] = useState({
@@ -56,12 +60,10 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerText}>
-            <Text style={styles.title}>Rally</Text>
+            <Image source={rallyLogo} style={styles.logoImage} resizeMode="contain" />
             <Text style={styles.subtitle}>Welcome back, Jordan!</Text>
           </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>J</Text>
-          </View>
+          <Image source={rallyIcon} style={styles.avatarIcon} resizeMode="contain" />
         </View>
 
         {/* Sponsor Banner */}
@@ -217,6 +219,10 @@ const styles = StyleSheet.create({
   headerText: {
     flex: 1,
   },
+  logoImage: {
+    width: 100,
+    height: 28,
+  },
   title: {
     fontSize: 28,
     fontWeight: '800',
@@ -225,7 +231,12 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 15,
     color: Colors.gray,
-    marginTop: 2,
+    marginTop: 4,
+  },
+  avatarIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   avatar: {
     width: 48,

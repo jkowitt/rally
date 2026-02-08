@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Rally - Fan Engagement Platform</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --orange: #FF6B35;
+    --navy: #131B2E;
+    --navy-mid: #1C2842;
+    --navy-light: #243052;
+    --blue: #2D9CDB;
+    --off-white: #F5F7FA;
+    --gray: #8B95A5;
+    --success: #34C759;
+    --error: #FF3B30;
+    --warning: #FFCC00;
+    --radius-card: 16px;
+    --radius-button: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0a0e1a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: var(--off-white);
+    overflow: hidden;
+  }
+
+  .phone-frame {
+    width: 390px;
+    height: 844px;
+    background: var(--navy);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 0 3px #2a2a2a, 0 0 0 6px #1a1a1a, 0 30px 80px rgba(0,0,0,0.6);
+  }
+
+  .status-bar {
+    height: 54px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 32px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--navy);
+    position: relative;
+    z-index: 100;
+  }
+  .status-bar .notch {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 126px;
+    height: 34px;
+    background: #000;
+    border-radius: 0 0 20px 20px;
+  }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+  .status-icons svg { width: 16px; height: 16px; fill: var(--off-white); }
+
+  .screen-container {
+    height: calc(100% - 54px - 83px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  .screen-container::-webkit-scrollbar { display: none; }
+
+  .screen { display: none; padding: 0 16px 20px; }
+  .screen.active { display: block; }
+
+  /* Tab Bar */
+  .tab-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 83px;
+    background: rgba(28, 40, 66, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    z-index: 100;
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 4px 16px;
+    transition: all 0.2s;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .tab svg { width: 24px; height: 24px; fill: var(--gray); transition: fill 0.2s; }
+  .tab span { font-size: 10px; color: var(--gray); font-weight: 500; transition: color 0.2s; }
+  .tab.active svg { fill: var(--orange); }
+  .tab.active span { color: var(--orange); }
+
+  /* Typography */
+  h1 { font-size: 28px; font-weight: 700; }
+  h2 { font-size: 22px; font-weight: 700; }
+  h3 { font-size: 18px; font-weight: 600; }
+  .subtitle { color: var(--gray); font-size: 14px; font-weight: 400; }
+
+  /* Cards */
+  .card {
+    background: var(--navy-mid);
+    border-radius: var(--radius-card);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-glow {
+    background: linear-gradient(135deg, var(--navy-mid), var(--navy-light));
+    border: 1px solid rgba(255,107,53,0.12);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 24px;
+    border-radius: var(--radius-button);
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    gap: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--orange), #FF8A5C);
+    color: white;
+    width: 100%;
+    box-shadow: 0 4px 16px rgba(255,107,53,0.3);
+  }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-secondary {
+    background: rgba(255,107,53,0.12);
+    color: var(--orange);
+    width: 100%;
+  }
+
+  /* Points Badge */
+  .points-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,107,53,0.15);
+    color: var(--orange);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  /* Tier Badge */
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--orange), var(--blue));
+    color: white;
+  }
+
+  /* Progress Bar */
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--navy);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--orange), var(--blue));
+    transition: width 1s ease-out;
+  }
+
+  /* Avatar */
+  .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--orange), var(--blue));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .avatar-lg { width: 80px; height: 80px; font-size: 32px; }
+
+  /* Chip */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--navy);
+    color: var(--gray);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .chip.active {
+    background: rgba(255,107,53,0.15);
+    color: var(--orange);
+    border-color: rgba(255,107,53,0.3);
+  }
+
+  /* List Row */
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .list-row:active { opacity: 0.7; }
+  .list-row:last-child { border-bottom: none; }
+  .list-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* Animations */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes checkInPulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,107,53,0.4); }
+    70% { box-shadow: 0 0 0 20px rgba(255,107,53,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,107,53,0); }
+  }
+  .anim-in { animation: fadeIn 0.4s ease-out forwards; }
+  .anim-delay-1 { animation-delay: 0.08s; opacity: 0; }
+  .anim-delay-2 { animation-delay: 0.16s; opacity: 0; }
+  .anim-delay-3 { animation-delay: 0.24s; opacity: 0; }
+  .anim-delay-4 { animation-delay: 0.32s; opacity: 0; }
+  .anim-delay-5 { animation-delay: 0.40s; opacity: 0; }
+  .anim-delay-6 { animation-delay: 0.48s; opacity: 0; }
+
+  /* Specific Components */
+  .score-board {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 24px;
+  }
+  .score-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .score-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 800;
+  }
+  .score-num { font-size: 36px; font-weight: 800; }
+  .score-mid {
+    text-align: center;
+    color: var(--gray);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .score-mid .quarter { font-size: 16px; font-weight: 700; color: var(--success); }
+
+  .check-in-btn {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--orange), #FF8A5C);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    color: white;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    gap: 4px;
+    animation: checkInPulse 2s infinite;
+    transition: transform 0.2s;
+  }
+  .check-in-btn:active { transform: scale(0.92); }
+  .check-in-btn svg { width: 32px; height: 32px; fill: white; }
+
+  .noise-meter {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 6px solid var(--navy-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin: 0 auto;
+  }
+  .noise-meter::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 6px solid transparent;
+    border-top-color: var(--orange);
+    border-right-color: var(--orange);
+    transform: rotate(-45deg);
+  }
+  .noise-value { font-size: 48px; font-weight: 800; }
+  .noise-label { font-size: 14px; color: var(--gray); }
+
+  .reward-card {
+    background: var(--navy-mid);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .reward-card:active { transform: scale(0.97); }
+  .reward-img {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+  }
+  .reward-info { padding: 12px; }
+  .reward-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .reward-info .pts { font-size: 13px; color: var(--orange); font-weight: 600; }
+
+  .stat-card {
+    flex: 1;
+    background: var(--navy-mid);
+    border-radius: var(--radius-card);
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-value { font-size: 24px; font-weight: 700; color: var(--orange); }
+  .stat-label { font-size: 12px; color: var(--gray); margin-top: 4px; }
+
+  .feed-card {
+    background: var(--navy-mid);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .feed-card:active { transform: scale(0.98); }
+  .feed-img {
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    position: relative;
+  }
+  .feed-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .feed-body { padding: 14px; }
+  .feed-body h4 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .feed-body p { font-size: 13px; color: var(--gray); line-height: 1.4; }
+
+  /* Sponsor banner */
+  .sponsor-banner {
+    background: rgba(255,107,53,0.06);
+    border: 1px solid rgba(255,107,53,0.1);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--gray);
+  }
+  .sponsor-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--navy-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  /* Modal / Sheet */
+  .sheet-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .sheet-overlay.active { display: flex; }
+  .sheet {
+    background: var(--navy-mid);
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    padding: 24px;
+    max-height: 70%;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease-out;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--gray);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+    opacity: 0.4;
+  }
+
+  /* Live indicator */
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    display: inline-block;
+    animation: pulse 1.5s infinite;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .flex-row { display: flex; gap: 12px; align-items: center; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .mt-8 { margin-top: 8px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .mt-20 { margin-top: 20px; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-12 { margin-bottom: 12px; }
+  .mb-16 { margin-bottom: 16px; }
+  .text-orange { color: var(--orange); }
+  .text-blue { color: var(--blue); }
+  .text-gray { color: var(--gray); }
+  .text-success { color: var(--success); }
+  .text-sm { font-size: 13px; }
+  .text-xs { font-size: 11px; }
+  .fw-600 { font-weight: 600; }
+  .fw-700 { font-weight: 700; }
+  .text-center { text-align: center; }
+
+  /* Trivia option */
+  .trivia-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: var(--navy);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .trivia-option:hover { border-color: rgba(255,107,53,0.3); }
+  .trivia-option.selected { border-color: var(--orange); background: rgba(255,107,53,0.08); }
+  .trivia-letter {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--navy-mid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* Countdown */
+  .countdown {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: center;
+  }
+  .countdown-unit { text-align: center; }
+  .countdown-num {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--orange);
+    line-height: 1;
+  }
+  .countdown-label {
+    font-size: 10px;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* Poll */
+  .poll-option {
+    position: relative;
+    padding: 12px 14px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .poll-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 10px;
+    transition: width 0.6s ease-out;
+  }
+  .poll-text {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* Activation */
+  .activation-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--navy);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .activation-row:active { transform: scale(0.98); }
+  .activation-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .activation-live {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--success);
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="notch"></div>
+    <div class="status-icons">
+      <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
+  </div>
+
+  <!-- Screen Container -->
+  <div class="screen-container" id="screenContainer">
+
+    <!-- HOME TAB -->
+    <div class="screen active" id="screen-home">
+      <div class="anim-in" style="padding: 4px 0 16px;">
+        <div class="flex-between">
+          <div>
+            <h1>Rally</h1>
+            <p class="subtitle">Welcome back, Jordan!</p>
+          </div>
+          <div class="avatar">J</div>
+        </div>
+      </div>
+
+      <div class="sponsor-banner anim-in anim-delay-1">
+        <div class="sponsor-logo">N</div>
+        <span>Presented by <strong style="color:var(--off-white)">Nike</strong></span>
+      </div>
+
+      <!-- Next Game Card -->
+      <div class="card card-glow anim-in anim-delay-1">
+        <div class="flex-between mb-8">
+          <span class="text-sm text-gray">NEXT GAME</span>
+          <span class="text-sm text-orange fw-600">In 2 days</span>
+        </div>
+        <div class="flex-row mb-12">
+          <div class="score-logo" style="background:var(--orange);font-size:18px;">W</div>
+          <div>
+            <h3>Wildcats vs Tigers</h3>
+            <p class="text-sm text-gray">Saturday, Feb 10 &bull; 7:00 PM</p>
+          </div>
+        </div>
+        <div class="countdown">
+          <div class="countdown-unit">
+            <div class="countdown-num" id="cd-days">2</div>
+            <div class="countdown-label">Days</div>
+          </div>
+          <div class="countdown-unit">
+            <div class="countdown-num" id="cd-hrs">14</div>
+            <div class="countdown-label">Hrs</div>
+          </div>
+          <div class="countdown-unit">
+            <div class="countdown-num" id="cd-min">32</div>
+            <div class="countdown-label">Min</div>
+          </div>
+          <div class="countdown-unit">
+            <div class="countdown-num" id="cd-sec">08</div>
+            <div class="countdown-label">Sec</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Points Summary -->
+      <div class="grid-2 anim-in anim-delay-2">
+        <div class="stat-card">
+          <div class="stat-value">1,250</div>
+          <div class="stat-label">Your Points</div>
+        </div>
+        <div class="stat-card">
+          <div class="tier-badge" style="margin:0 auto;"><span>&#9733;</span> All-Star</div>
+          <div class="stat-label mt-8">Current Tier</div>
+        </div>
+      </div>
+
+      <!-- Tier Progress -->
+      <div class="card anim-in anim-delay-3 mt-12">
+        <div class="flex-between mb-8">
+          <span class="text-sm fw-600">Tier Progress</span>
+          <span class="text-sm text-blue fw-600">3,750 to MVP</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:25%"></div>
+        </div>
+        <div class="flex-between mt-8">
+          <span class="text-xs text-gray">All-Star &bull; 2,000</span>
+          <span class="text-xs text-gray">MVP &bull; 5,000</span>
+        </div>
+      </div>
+
+      <!-- Content Feed -->
+      <div class="flex-between mt-20 mb-12 anim-in anim-delay-4">
+        <h3>Latest</h3>
+        <span class="text-sm text-orange fw-600" style="cursor:pointer;">See All</span>
+      </div>
+
+      <div class="feed-card anim-in anim-delay-4">
+        <div class="feed-img" style="background:linear-gradient(135deg,#1a3a5c,#0d1f33);">
+          <div class="feed-badge">Article</div>
+          &#127944;
+        </div>
+        <div class="feed-body">
+          <h4>Season Opener Preview: What to Expect</h4>
+          <p>Get ready for an electrifying season with key matchups and player spotlights...</p>
+        </div>
+      </div>
+
+      <!-- Poll -->
+      <div class="card anim-in anim-delay-5">
+        <div class="flex-row mb-12">
+          <span class="text-sm fw-600">&#128202; Fan Poll</span>
+          <span class="text-xs text-gray" style="margin-left:auto;">1,847 votes</span>
+        </div>
+        <p class="text-sm fw-600 mb-12">Who will be Player of the Game?</p>
+        <div class="poll-option" onclick="votePoll(this, 42)">
+          <div class="poll-fill" style="width:42%;background:rgba(255,107,53,0.15);"></div>
+          <div class="poll-text"><span>Marcus Johnson (#7)</span><span class="text-orange">42%</span></div>
+        </div>
+        <div class="poll-option" onclick="votePoll(this, 31)">
+          <div class="poll-fill" style="width:31%;background:rgba(45,156,219,0.12);"></div>
+          <div class="poll-text"><span>Tyler Brooks (#23)</span><span class="text-blue">31%</span></div>
+        </div>
+        <div class="poll-option" onclick="votePoll(this, 27)">
+          <div class="poll-fill" style="width:27%;background:rgba(139,149,165,0.1);"></div>
+          <div class="poll-text"><span>Derek Williams (#11)</span><span class="text-gray">27%</span></div>
+        </div>
+      </div>
+
+      <div class="feed-card anim-in anim-delay-6">
+        <div class="feed-img" style="background:linear-gradient(135deg,#2a1a0a,#1a0d05);">
+          <div class="feed-badge">Video</div>
+          &#127909;
+        </div>
+        <div class="feed-body">
+          <h4>Behind the Scenes: Team Practice</h4>
+          <p>Exclusive footage from yesterday's practice session...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAMEDAY TAB -->
+    <div class="screen" id="screen-gameday">
+      <div class="anim-in" style="padding: 4px 0 8px;">
+        <div class="flex-between">
+          <h1>Gameday</h1>
+          <div class="flex-row">
+            <span class="live-dot"></span>
+            <span class="text-sm text-success fw-600">LIVE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scoreboard -->
+      <div class="card card-glow anim-in anim-delay-1">
+        <div class="score-board">
+          <div class="score-team">
+            <div class="score-logo" style="background:var(--orange);">W</div>
+            <span class="text-xs text-gray">HOME</span>
+            <span class="score-num">24</span>
+          </div>
+          <div class="score-mid">
+            <div class="quarter">Q3</div>
+            <div style="font-size:20px;font-weight:700;color:var(--off-white);margin:4px 0;">8:42</div>
+            <div>Feb 10, 2026</div>
+          </div>
+          <div class="score-team">
+            <div class="score-logo" style="background:var(--blue);">T</div>
+            <span class="text-xs text-gray">AWAY</span>
+            <span class="score-num">17</span>
+          </div>
+        </div>
+        <!-- Fan Points -->
+        <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;margin-top:4px;">
+          <div class="flex-between mb-8">
+            <span class="text-sm text-gray">Fan Points Goal</span>
+            <span class="text-sm text-orange fw-600">850 / 1,000</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:85%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Check In Button -->
+      <div class="text-center mt-16 mb-16 anim-in anim-delay-2">
+        <button class="check-in-btn" id="checkInBtn" onclick="doCheckIn()">
+          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          CHECK IN
+        </button>
+        <p class="text-xs text-gray mt-8">+100 pts for checking in</p>
+      </div>
+
+      <!-- Activations -->
+      <h3 class="mb-12 anim-in anim-delay-3">Activations</h3>
+
+      <div class="activation-row anim-in anim-delay-3" onclick="showSheet('trivia')">
+        <div class="activation-icon" style="background:rgba(255,107,53,0.12);">&#129504;</div>
+        <div>
+          <div class="text-sm fw-600">Trivia Challenge</div>
+          <div class="text-xs text-gray">Test your knowledge &bull; +50 pts</div>
+        </div>
+        <div class="activation-live"><span class="live-dot"></span> Live</div>
+      </div>
+
+      <div class="activation-row anim-in anim-delay-4" onclick="showSheet('prediction')">
+        <div class="activation-icon" style="background:rgba(45,156,219,0.12);">&#127942;</div>
+        <div>
+          <div class="text-sm fw-600">Halftime Prediction</div>
+          <div class="text-xs text-gray">Predict the final score &bull; +75 pts</div>
+        </div>
+        <div class="activation-live"><span class="live-dot"></span> Live</div>
+      </div>
+
+      <div class="activation-row anim-in anim-delay-5" onclick="showSheet('noise')">
+        <div class="activation-icon" style="background:rgba(52,199,89,0.12);">&#128227;</div>
+        <div>
+          <div class="text-sm fw-600">Noise Meter</div>
+          <div class="text-xs text-gray">Get loud for bonus points &bull; +25 pts</div>
+        </div>
+        <div class="activation-live"><span class="live-dot"></span> Live</div>
+      </div>
+
+      <div class="activation-row anim-in anim-delay-6">
+        <div class="activation-icon" style="background:rgba(255,204,0,0.12);">&#128248;</div>
+        <div>
+          <div class="text-sm fw-600">Photo Challenge</div>
+          <div class="text-xs text-gray">Share your game photo &bull; +30 pts</div>
+        </div>
+        <span class="text-xs text-gray" style="margin-left:auto;">Q4</span>
+      </div>
+
+      <!-- Leaderboard preview -->
+      <div class="card mt-16 anim-in anim-delay-5">
+        <div class="flex-between mb-12">
+          <h3>Leaderboard</h3>
+          <span class="text-sm text-orange fw-600" style="cursor:pointer;">Full</span>
+        </div>
+        <div class="list-row">
+          <span class="text-sm fw-700 text-orange" style="width:24px;">1</span>
+          <div class="avatar" style="width:32px;height:32px;font-size:13px;">M</div>
+          <div style="flex:1;"><span class="text-sm fw-600">MikeFan2026</span></div>
+          <span class="text-sm fw-700">3,450</span>
+        </div>
+        <div class="list-row">
+          <span class="text-sm fw-700 text-gray" style="width:24px;">2</span>
+          <div class="avatar" style="width:32px;height:32px;font-size:13px;background:linear-gradient(135deg,var(--blue),#1a6b9e);">S</div>
+          <div style="flex:1;"><span class="text-sm fw-600">SarahSports</span></div>
+          <span class="text-sm fw-700">2,890</span>
+        </div>
+        <div class="list-row" style="background:rgba(255,107,53,0.06);border-radius:8px;padding:10px 8px;">
+          <span class="text-sm fw-700 text-orange" style="width:24px;">5</span>
+          <div class="avatar" style="width:32px;height:32px;font-size:13px;">J</div>
+          <div style="flex:1;"><span class="text-sm fw-600">You</span></div>
+          <span class="text-sm fw-700 text-orange">1,250</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- REWARDS TAB -->
+    <div class="screen" id="screen-rewards">
+      <div class="anim-in" style="padding: 4px 0 16px;">
+        <h1>Rewards</h1>
+      </div>
+
+      <!-- Points Header -->
+      <div class="card card-glow text-center anim-in anim-delay-1" style="padding:24px;">
+        <p class="text-sm text-gray mb-8">Available Points</p>
+        <h1 style="font-size:42px;letter-spacing:-1px;">1,250</h1>
+        <div class="tier-badge mt-12" style="margin:12px auto 0;"><span>&#9733;</span> All-Star</div>
+      </div>
+
+      <!-- Filter Chips -->
+      <div class="flex-row mt-16 mb-12 anim-in anim-delay-2" style="flex-wrap:wrap;gap:8px;">
+        <div class="chip active">All</div>
+        <div class="chip" onclick="this.parentElement.querySelector('.active').classList.remove('active');this.classList.add('active');">&#127828; Food</div>
+        <div class="chip" onclick="this.parentElement.querySelector('.active').classList.remove('active');this.classList.add('active');">&#128085; Merch</div>
+        <div class="chip" onclick="this.parentElement.querySelector('.active').classList.remove('active');this.classList.add('active');">&#127914; Experience</div>
+        <div class="chip" onclick="this.parentElement.querySelector('.active').classList.remove('active');this.classList.add('active');">&#9733; Exclusive</div>
+      </div>
+
+      <!-- Rewards Grid -->
+      <div class="grid-2 anim-in anim-delay-3">
+        <div class="reward-card" onclick="showSheet('reward')">
+          <div class="reward-img" style="background:linear-gradient(135deg,#2a1a0a,#1a0d05);">&#127828;</div>
+          <div class="reward-info">
+            <h4>Free Hot Dog</h4>
+            <div class="pts">200 pts</div>
+          </div>
+        </div>
+        <div class="reward-card" onclick="showSheet('reward')">
+          <div class="reward-img" style="background:linear-gradient(135deg,#0d1f33,#1a3a5c);">&#128085;</div>
+          <div class="reward-info">
+            <h4>Rally T-Shirt</h4>
+            <div class="pts">500 pts</div>
+          </div>
+        </div>
+        <div class="reward-card" onclick="showSheet('reward')">
+          <div class="reward-img" style="background:linear-gradient(135deg,#1a2a0a,#0d1a05);">&#9917;</div>
+          <div class="reward-info">
+            <h4>Signed Football</h4>
+            <div class="pts">2,000 pts</div>
+          </div>
+        </div>
+        <div class="reward-card" onclick="showSheet('reward')">
+          <div class="reward-img" style="background:linear-gradient(135deg,#2a0a1a,#1a0510);">&#127914;</div>
+          <div class="reward-info">
+            <h4>Sideline Pass</h4>
+            <div class="pts">5,000 pts</div>
+          </div>
+        </div>
+        <div class="reward-card" onclick="showSheet('reward')">
+          <div class="reward-img" style="background:linear-gradient(135deg,#1a0d33,#0d0520);">&#127871;</div>
+          <div class="reward-info">
+            <h4>Free Nachos</h4>
+            <div class="pts">150 pts</div>
+          </div>
+        </div>
+        <div class="reward-card" onclick="showSheet('reward')">
+          <div class="reward-img" style="background:linear-gradient(135deg,#0a1a2a,#050d1a);">&#9889;</div>
+          <div class="reward-info">
+            <h4>VIP Upgrade</h4>
+            <div class="pts">3,000 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE TAB -->
+    <div class="screen" id="screen-profile">
+      <div class="anim-in text-center" style="padding: 20px 0;">
+        <div class="avatar avatar-lg" style="margin:0 auto;">J</div>
+        <h2 class="mt-12">Jordan Mitchell</h2>
+        <p class="subtitle mt-8">@jordanm &bull; Member since Sep 2025</p>
+        <div class="tier-badge mt-12" style="margin:12px auto 0;"><span>&#9733;</span> All-Star</div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="grid-2 mt-16 anim-in anim-delay-1" style="grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div class="stat-card">
+          <div class="stat-value">12</div>
+          <div class="stat-label">Games</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">1,250</div>
+          <div class="stat-label">Points</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">8</div>
+          <div class="stat-label">Rewards</div>
+        </div>
+      </div>
+
+      <!-- Tier Progress -->
+      <div class="card mt-16 anim-in anim-delay-2">
+        <div class="flex-between mb-8">
+          <span class="text-sm fw-600">Progress to MVP</span>
+          <span class="text-sm text-blue fw-600">25%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:25%"></div>
+        </div>
+        <p class="text-xs text-gray mt-8">3,750 more points to reach MVP tier</p>
+      </div>
+
+      <!-- Menu Items -->
+      <div class="card mt-16 anim-in anim-delay-3" style="padding:4px 16px;">
+        <div class="list-row">
+          <div class="list-icon" style="background:rgba(255,107,53,0.12);">&#128200;</div>
+          <div style="flex:1;"><span class="text-sm fw-600">Points History</span></div>
+          <span class="text-gray">&#8250;</span>
+        </div>
+        <div class="list-row">
+          <div class="list-icon" style="background:rgba(45,156,219,0.12);">&#127873;</div>
+          <div style="flex:1;"><span class="text-sm fw-600">My Rewards</span></div>
+          <span class="text-gray">&#8250;</span>
+        </div>
+        <div class="list-row">
+          <div class="list-icon" style="background:rgba(52,199,89,0.12);">&#128276;</div>
+          <div style="flex:1;"><span class="text-sm fw-600">Notifications</span></div>
+          <span class="text-gray">&#8250;</span>
+        </div>
+        <div class="list-row">
+          <div class="list-icon" style="background:rgba(139,149,165,0.12);">&#9881;&#65039;</div>
+          <div style="flex:1;"><span class="text-sm fw-600">Settings</span></div>
+          <span class="text-gray">&#8250;</span>
+        </div>
+        <div class="list-row">
+          <div class="list-icon" style="background:rgba(139,149,165,0.12);">&#10067;</div>
+          <div style="flex:1;"><span class="text-sm fw-600">Help & Support</span></div>
+          <span class="text-gray">&#8250;</span>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary mt-16 anim-in anim-delay-4">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Bottom Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('home')">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Home</span>
+    </div>
+    <div class="tab" onclick="switchTab('gameday')">
+      <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+      <span>Gameday</span>
+    </div>
+    <div class="tab" onclick="switchTab('rewards')">
+      <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>
+      <span>Rewards</span>
+    </div>
+    <div class="tab" onclick="switchTab('profile')">
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <span>Profile</span>
+    </div>
+  </div>
+
+  <!-- Sheet Overlays -->
+  <div class="sheet-overlay" id="sheet-trivia" onclick="if(event.target===this)closeSheet('trivia')">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="flex-between mb-16">
+        <h2>&#129504; Trivia</h2>
+        <div class="points-badge">+50 pts</div>
+      </div>
+      <div style="background:var(--orange);height:4px;border-radius:2px;margin-bottom:16px;">
+        <div id="triviaTimer" style="width:100%;height:100%;background:var(--success);border-radius:2px;transition:width 15s linear;"></div>
+      </div>
+      <p class="text-sm text-gray mb-8">Question 3 of 5</p>
+      <p class="fw-600 mb-16">What year was the university's football program established?</p>
+      <div class="trivia-option" onclick="selectTrivia(this)">
+        <div class="trivia-letter">A</div>
+        <span>1892</span>
+      </div>
+      <div class="trivia-option" onclick="selectTrivia(this)">
+        <div class="trivia-letter">B</div>
+        <span>1905</span>
+      </div>
+      <div class="trivia-option" onclick="selectTrivia(this)">
+        <div class="trivia-letter">C</div>
+        <span>1921</span>
+      </div>
+      <div class="trivia-option" onclick="selectTrivia(this)">
+        <div class="trivia-letter">D</div>
+        <span>1934</span>
+      </div>
+      <button class="btn btn-primary mt-16" onclick="closeSheet('trivia')">Submit Answer</button>
+    </div>
+  </div>
+
+  <div class="sheet-overlay" id="sheet-prediction" onclick="if(event.target===this)closeSheet('prediction')">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="flex-between mb-16">
+        <h2>&#127942; Prediction</h2>
+        <div class="points-badge">+75 pts</div>
+      </div>
+      <p class="fw-600 mb-16">Predict the final score:</p>
+      <div class="grid-2 mb-16">
+        <div class="card text-center" style="margin:0;">
+          <p class="text-xs text-gray mb-8">Wildcats (HOME)</p>
+          <div style="font-size:36px;font-weight:800;color:var(--orange);">
+            <span onclick="adjustScore('home',-1)" style="cursor:pointer;opacity:0.5;font-size:24px;">&#9664;</span>
+            <span id="homeScore" style="margin:0 12px;">31</span>
+            <span onclick="adjustScore('home',1)" style="cursor:pointer;opacity:0.5;font-size:24px;">&#9654;</span>
+          </div>
+        </div>
+        <div class="card text-center" style="margin:0;">
+          <p class="text-xs text-gray mb-8">Tigers (AWAY)</p>
+          <div style="font-size:36px;font-weight:800;color:var(--blue);">
+            <span onclick="adjustScore('away',-1)" style="cursor:pointer;opacity:0.5;font-size:24px;">&#9664;</span>
+            <span id="awayScore" style="margin:0 12px;">24</span>
+            <span onclick="adjustScore('away',1)" style="cursor:pointer;opacity:0.5;font-size:24px;">&#9654;</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="closeSheet('prediction')">Lock In Prediction</button>
+    </div>
+  </div>
+
+  <div class="sheet-overlay" id="sheet-noise" onclick="if(event.target===this)closeSheet('noise')">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="flex-between mb-16">
+        <h2>&#128227; Noise Meter</h2>
+        <div class="points-badge">+25 pts</div>
+      </div>
+      <div class="noise-meter mb-16">
+        <div class="text-center">
+          <div class="noise-value" id="noiseVal">0</div>
+          <div class="noise-label">dB</div>
+        </div>
+      </div>
+      <p class="text-center text-sm text-gray mb-16">Get the crowd above 90 dB for bonus points!</p>
+      <button class="btn btn-primary" id="noiseBtn" onclick="toggleNoise()">Start Listening</button>
+    </div>
+  </div>
+
+  <div class="sheet-overlay" id="sheet-reward" onclick="if(event.target===this)closeSheet('reward')">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="text-center mb-16" style="font-size:64px;">&#127828;</div>
+      <h2 class="text-center mb-8">Free Hot Dog</h2>
+      <p class="text-center text-orange fw-600 mb-16">200 pts</p>
+      <p class="text-sm text-gray mb-16">Enjoy a complimentary hot dog from any concession stand in the stadium. Valid on gameday only. Show the QR code at the register.</p>
+      <div class="card text-center" style="background:var(--navy);">
+        <p class="text-xs text-gray mb-8">Your Balance</p>
+        <p class="fw-700" style="font-size:24px;">1,250 pts</p>
+        <p class="text-xs text-success mt-8">&#10003; Enough points to redeem</p>
+      </div>
+      <button class="btn btn-primary mt-16" onclick="closeSheet('reward')">Redeem for 200 pts</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Tab switching
+  function switchTab(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    event.currentTarget.classList.add('active');
+    document.getElementById('screenContainer').scrollTop = 0;
+
+    // Re-trigger animations
+    const screen = document.getElementById('screen-' + name);
+    screen.querySelectorAll('.anim-in').forEach(el => {
+      el.style.animation = 'none';
+      el.offsetHeight;
+      el.style.animation = '';
+    });
+  }
+
+  // Check-in
+  function doCheckIn() {
+    const btn = document.getElementById('checkInBtn');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:32px;height:32px;fill:white;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>CHECKED IN!';
+    btn.style.animation = 'none';
+    btn.style.background = 'linear-gradient(135deg, #34C759, #2aa648)';
+    btn.style.boxShadow = '0 4px 16px rgba(52,199,89,0.3)';
+  }
+
+  // Sheets
+  function showSheet(name) {
+    document.getElementById('sheet-' + name).classList.add('active');
+    if (name === 'trivia') {
+      setTimeout(() => {
+        document.getElementById('triviaTimer').style.width = '0%';
+      }, 100);
+    }
+  }
+  function closeSheet(name) {
+    document.getElementById('sheet-' + name).classList.remove('active');
+    if (name === 'trivia') {
+      document.getElementById('triviaTimer').style.transition = 'none';
+      document.getElementById('triviaTimer').style.width = '100%';
+      setTimeout(() => {
+        document.getElementById('triviaTimer').style.transition = 'width 15s linear';
+      }, 50);
+    }
+  }
+
+  // Trivia
+  function selectTrivia(el) {
+    el.parentElement.querySelectorAll('.trivia-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  // Prediction scores
+  let homeScore = 31, awayScore = 24;
+  function adjustScore(team, delta) {
+    if (team === 'home') {
+      homeScore = Math.max(0, homeScore + delta);
+      document.getElementById('homeScore').textContent = homeScore;
+    } else {
+      awayScore = Math.max(0, awayScore + delta);
+      document.getElementById('awayScore').textContent = awayScore;
+    }
+  }
+
+  // Noise meter
+  let noiseInterval = null;
+  function toggleNoise() {
+    const btn = document.getElementById('noiseBtn');
+    const val = document.getElementById('noiseVal');
+    if (noiseInterval) {
+      clearInterval(noiseInterval);
+      noiseInterval = null;
+      btn.textContent = 'Start Listening';
+      btn.style.background = '';
+      return;
+    }
+    btn.textContent = 'Stop';
+    btn.style.background = 'linear-gradient(135deg, #FF3B30, #cc2f26)';
+    let db = 0;
+    noiseInterval = setInterval(() => {
+      db += (Math.random() * 10 - 3);
+      db = Math.max(0, Math.min(100, db));
+      val.textContent = Math.round(db);
+      val.style.color = db > 90 ? '#34C759' : db > 60 ? '#FFCC00' : '#FF6B35';
+    }, 100);
+  }
+
+  // Live countdown timer
+  function updateCountdown() {
+    const el = document.getElementById('cd-sec');
+    if (!el) return;
+    let s = parseInt(el.textContent);
+    s--;
+    if (s < 0) {
+      s = 59;
+      const m = document.getElementById('cd-min');
+      let mv = parseInt(m.textContent) - 1;
+      if (mv < 0) mv = 59;
+      m.textContent = mv.toString().padStart(2,'0');
+    }
+    el.textContent = s.toString().padStart(2,'0');
+  }
+  setInterval(updateCountdown, 1000);
+
+  // Poll voting
+  function votePoll(el, pct) {
+    el.style.border = '1px solid var(--orange)';
+    el.querySelector('.poll-fill').style.background = 'rgba(255,107,53,0.2)';
+  }
+</script>
+</body>
+</html>

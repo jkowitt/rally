@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Rally" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/rally_navy</item>
+        <item name="android:navigationBarColor">@color/rally_navy_mid</item>
+        <item name="android:windowBackground">@color/rally_navy</item>
+    </style>
+
+    <style name="Theme.Rally.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_rally_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.Rally</item>
+    </style>
+</resources>

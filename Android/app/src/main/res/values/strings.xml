@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rally</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Home</string>
+    <string name="tab_gameday">Gameday</string>
+    <string name="tab_rewards">Rewards</string>
+    <string name="tab_profile">Profile</string>
+
+    <!-- Auth -->
+    <string name="sign_in_google">Continue with Google</string>
+    <string name="sign_in_apple">Continue with Apple</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="welcome_title">Welcome to Rally</string>
+    <string name="welcome_subtitle">Your fan engagement platform</string>
+
+    <!-- Home -->
+    <string name="next_game">Next Game</string>
+    <string name="your_balance">Your Balance</string>
+    <string name="see_all">See All</string>
+    <string name="latest">Latest</string>
+
+    <!-- Gameday -->
+    <string name="check_in">Check In</string>
+    <string name="checked_in">Checked In!</string>
+    <string name="activations">Activations</string>
+    <string name="halftime_prediction">Halftime Prediction</string>
+    <string name="trivia_challenge">Trivia Challenge</string>
+    <string name="noise_meter">Noise Meter</string>
+
+    <!-- Rewards -->
+    <string name="available_rewards">Available Rewards</string>
+    <string name="redeem">Redeem</string>
+    <string name="points_format">%s pts</string>
+
+    <!-- Profile -->
+    <string name="points_history">Points History</string>
+    <string name="my_rewards">My Rewards</string>
+    <string name="notifications">Notifications</string>
+    <string name="settings">Settings</string>
+    <string name="help_support">Help &amp; Support</string>
+
+    <!-- Tiers -->
+    <string name="tier_rookie">Rookie</string>
+    <string name="tier_starter">Starter</string>
+    <string name="tier_all_star">All-Star</string>
+    <string name="tier_mvp">MVP</string>
+    <string name="tier_hall_of_fame">Hall of Fame</string>
+
+    <!-- Location -->
+    <string name="location_permission_title">Location Access</string>
+    <string name="location_permission_message">Rally needs location access to verify you\'re at the venue for check-in.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_gameday">Gameday</string>
+    <string name="notification_channel_rewards">Rewards</string>
+    <string name="notification_channel_general">General</string>
+</resources>

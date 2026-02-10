@@ -28,15 +28,16 @@ const MENU_ITEMS: MenuItem[] = [
   { id: 'points', iconName: 'trending-up', label: 'Points History', bgColor: Colors.orangeAlpha(0.15), route: '/points-history' },
   { id: 'rewards', iconName: 'gift', label: 'My Rewards', bgColor: Colors.blueAlpha(0.15), route: '/my-rewards' },
   { id: 'notifications', iconName: 'notifications', label: 'Notifications', bgColor: Colors.successAlpha(0.15), route: '/notifications' },
-  { id: 'settings', iconName: 'settings', label: 'Settings', bgColor: Colors.grayAlpha(0.15) },
-  { id: 'help', iconName: 'help-circle', label: 'Help & Support', bgColor: Colors.grayAlpha(0.15) },
+  { id: 'leaderboard', iconName: 'podium', label: 'Leaderboard', bgColor: Colors.blueAlpha(0.15), route: '/leaderboard' },
+  { id: 'settings', iconName: 'settings', label: 'Settings', bgColor: Colors.grayAlpha(0.15), route: '/settings' },
+  { id: 'help', iconName: 'help-circle', label: 'Help & Support', bgColor: Colors.grayAlpha(0.15), route: '/help' },
 ];
 
 export default function ProfileScreen() {
   const { state, dispatch } = useApp();
   const router = useRouter();
 
-  const gamesAttended = 12;
+  const gamesAttended = state.gamesAttended;
   const rewardsRedeemed = state.rewards.redeemed.length;
   const unreadNotifications = state.notifications.filter((n) => !n.read).length;
 
@@ -51,8 +52,6 @@ export default function ProfileScreen() {
   const handleMenuPress = (item: MenuItem) => {
     if (item.route) {
       router.push(item.route as any);
-    } else {
-      Alert.alert(item.label, `${item.label} coming soon!`);
     }
   };
 

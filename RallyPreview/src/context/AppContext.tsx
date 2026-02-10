@@ -1,19 +1,32 @@
-import React, { createContext, useContext, useReducer, type ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getTierForPoints } from '../utils/points';
 import {
   REWARDS,
   INITIAL_POINTS_HISTORY,
   INITIAL_NOTIFICATIONS,
+  INITIAL_LEADERBOARD,
   POLL_DATA,
   type Reward,
   type PointsEntry,
   type NotificationItem,
+  type LeaderboardEntry,
 } from '../data/mockData';
 import { type School } from '../data/schools';
+
+const STORAGE_KEY = '@rally_app_state';
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
+
+export interface Settings {
+  pushNotifications: boolean;
+  gamedayAlerts: boolean;
+  soundEffects: boolean;
+  hapticFeedback: boolean;
+  shareActivity: boolean;
+}
 
 interface AppState {
   school: School | null;
@@ -44,6 +57,7 @@ interface AppState {
     fanPointsCurrent: number;
     fanPointsTarget: number;
     completedActivations: string[];
+    photoUri: string | null;
   };
   rewards: {
     catalog: Reward[];
@@ -56,6 +70,9 @@ interface AppState {
     userVote: number | null;
   };
   notifications: NotificationItem[];
+  leaderboard: LeaderboardEntry[];
+  settings: Settings;
+  gamesAttended: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,6 +87,11 @@ type Action =
   | { type: 'VOTE_POLL'; optionIndex: number }
   | { type: 'COMPLETE_ACTIVATION'; activationId: string; points: number; description: string }
   | { type: 'DISMISS_NOTIFICATION'; notificationId: string }
+  | { type: 'MARK_NOTIFICATION_READ'; notificationId: string }
+  | { type: 'SUBMIT_PHOTO'; uri: string }
+  | { type: 'UPDATE_SETTINGS'; key: keyof Settings; value: boolean }
+  | { type: 'UPDATE_PROFILE'; name: string; handle: string }
+  | { type: 'RESTORE_STATE'; state: AppState }
   | { type: 'RESET' };
 
 // ---------------------------------------------------------------------------
@@ -85,6 +107,14 @@ function makeHistoryEntry(description: string, amount: number, source: string): 
     source,
     timestamp: new Date(),
   };
+}
+
+function updateLeaderboard(leaderboard: LeaderboardEntry[], userPoints: number): LeaderboardEntry[] {
+  const updated = leaderboard.map((entry) =>
+    entry.isUser ? { ...entry, points: userPoints } : { ...entry },
+  );
+  updated.sort((a, b) => b.points - a.points);
+  return updated.map((entry, i) => ({ ...entry, rank: i + 1 }));
 }
 
 // ---------------------------------------------------------------------------
@@ -116,6 +146,7 @@ function buildInitialState(): AppState {
       fanPointsCurrent: 850,
       fanPointsTarget: 1000,
       completedActivations: [],
+      photoUri: null,
     },
     rewards: {
       catalog: [...REWARDS],
@@ -128,6 +159,15 @@ function buildInitialState(): AppState {
       userVote: null,
     },
     notifications: [...INITIAL_NOTIFICATIONS],
+    leaderboard: [...INITIAL_LEADERBOARD],
+    settings: {
+      pushNotifications: true,
+      gamedayAlerts: true,
+      soundEffects: true,
+      hapticFeedback: true,
+      shareActivity: false,
+    },
+    gamesAttended: 12,
   };
 }
 
@@ -152,7 +192,14 @@ function reducer(state: AppState, action: Action): AppState {
       const newBalance = state.points.balance + amount;
       return {
         ...state,
-        gameday: { ...state.gameday, checkedIn: true },
+        gameday: {
+          ...state.gameday,
+          checkedIn: true,
+          fanPointsCurrent: Math.min(
+            state.gameday.fanPointsCurrent + amount,
+            state.gameday.fanPointsTarget,
+          ),
+        },
         points: {
           balance: newBalance,
           totalEarned: newTotalEarned,
@@ -162,6 +209,8 @@ function reducer(state: AppState, action: Action): AppState {
           ],
         },
         tier: getTierForPoints(newTotalEarned),
+        leaderboard: updateLeaderboard(state.leaderboard, newBalance),
+        gamesAttended: state.gamesAttended + 1,
       };
     }
 
@@ -180,6 +229,7 @@ function reducer(state: AppState, action: Action): AppState {
           ],
         },
         tier: getTierForPoints(newTotalEarned),
+        leaderboard: updateLeaderboard(state.leaderboard, newBalance),
       };
     }
 
@@ -207,6 +257,7 @@ function reducer(state: AppState, action: Action): AppState {
             { reward, date: new Date() },
           ],
         },
+        leaderboard: updateLeaderboard(state.leaderboard, newBalance),
       };
     }
 
@@ -237,6 +288,10 @@ function reducer(state: AppState, action: Action): AppState {
         gameday: {
           ...state.gameday,
           completedActivations: [...state.gameday.completedActivations, activationId],
+          fanPointsCurrent: Math.min(
+            state.gameday.fanPointsCurrent + points,
+            state.gameday.fanPointsTarget,
+          ),
         },
         points: {
           balance: newBalance,
@@ -247,6 +302,7 @@ function reducer(state: AppState, action: Action): AppState {
           ],
         },
         tier: getTierForPoints(newTotalEarned),
+        leaderboard: updateLeaderboard(state.leaderboard, newBalance),
       };
     }
 
@@ -257,12 +313,95 @@ function reducer(state: AppState, action: Action): AppState {
       };
     }
 
+    case 'MARK_NOTIFICATION_READ': {
+      return {
+        ...state,
+        notifications: state.notifications.map((n) =>
+          n.id === action.notificationId ? { ...n, read: true } : n,
+        ),
+      };
+    }
+
+    case 'SUBMIT_PHOTO': {
+      return {
+        ...state,
+        gameday: {
+          ...state.gameday,
+          photoUri: action.uri,
+        },
+      };
+    }
+
+    case 'UPDATE_SETTINGS': {
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          [action.key]: action.value,
+        },
+      };
+    }
+
+    case 'UPDATE_PROFILE': {
+      return {
+        ...state,
+        user: {
+          ...state.user,
+          name: action.name,
+          handle: action.handle,
+          avatarInitial: action.name.charAt(0).toUpperCase(),
+        },
+      };
+    }
+
+    case 'RESTORE_STATE': {
+      return action.state;
+    }
+
     case 'RESET': {
+      AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
       return buildInitialState();
     }
 
     default:
       return state;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Serialization helpers for AsyncStorage
+// ---------------------------------------------------------------------------
+
+function serializeState(state: AppState): string {
+  return JSON.stringify(state, (key, value) => {
+    if (value instanceof Date) return { __date: value.toISOString() };
+    return value;
+  });
+}
+
+function deserializeState(json: string): AppState | null {
+  try {
+    const parsed = JSON.parse(json, (key, value) => {
+      if (value && typeof value === 'object' && value.__date) return new Date(value.__date);
+      return value;
+    });
+    // Merge with defaults to handle missing keys from older versions
+    const defaults = buildInitialState();
+    return {
+      ...defaults,
+      ...parsed,
+      user: { ...defaults.user, ...parsed.user },
+      points: { ...defaults.points, ...parsed.points },
+      tier: parsed.points ? getTierForPoints(parsed.points.totalEarned) : defaults.tier,
+      gameday: { ...defaults.gameday, ...parsed.gameday },
+      rewards: { ...defaults.rewards, ...parsed.rewards },
+      poll: { ...defaults.poll, ...parsed.poll },
+      settings: { ...defaults.settings, ...parsed.settings },
+      leaderboard: parsed.leaderboard || defaults.leaderboard,
+      gamesAttended: parsed.gamesAttended ?? defaults.gamesAttended,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -283,6 +422,26 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  // Load persisted state on mount
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((json) => {
+        if (json) {
+          const restored = deserializeState(json);
+          if (restored) dispatch({ type: 'RESTORE_STATE', state: restored });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Persist state on every change (debounced)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      AsyncStorage.setItem(STORAGE_KEY, serializeState(state)).catch(() => {});
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [state]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

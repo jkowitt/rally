@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   ScrollView,
@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   Image,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,7 @@ import { Colors, Spacing, Radius } from '../../src/theme/colors';
 import { useApp } from '../../src/context/AppContext';
 import { useRouter } from 'expo-router';
 import { formatPointsShort } from '../../src/utils/points';
+import { FEED_ITEMS, SPONSORS } from '../../src/data/mockData';
 
 const rallyLogo = require('../../assets/rally-wordmark-white-transparent.png');
 const rallyIcon = require('../../assets/rally-icon-navy.png');
@@ -29,6 +31,7 @@ export default function HomeScreen() {
 
   const schoolColor = state.school?.primaryColor ?? Colors.orange;
 
+  // Countdown timer
   const [countdown, setCountdown] = useState({
     days: 2,
     hours: 14,
@@ -63,17 +66,50 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  // Rotating sponsor banner
+  const [sponsorIndex, setSponsorIndex] = useState(0);
+  const sponsorFade = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(sponsorFade, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setSponsorIndex((prev) => (prev + 1) % SPONSORS.length);
+        Animated.timing(sponsorFade, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [sponsorFade]);
+
+  const currentSponsor = SPONSORS[sponsorIndex];
+
   const pad = (n: number) => String(n).padStart(2, '0');
 
   const progressWidth = state.tier.nextMin
-    ? `${((state.points.balance - state.tier.min) / (state.tier.nextMin - state.tier.min)) * 100}%`
+    ? `${((state.points.totalEarned - state.tier.min) / (state.tier.nextMin - state.tier.min)) * 100}%`
     : '100%';
 
   const tierRemaining = state.tier.nextMin
-    ? `${state.tier.nextMin - state.points.balance} to ${state.tier.next || 'Max'}`
-    : `0 to ${state.tier.next || 'Max'}`;
+    ? `${state.tier.nextMin - state.points.totalEarned} to ${state.tier.next || 'Max'}`
+    : 'Max tier reached';
 
   const pollColors = [Colors.orange, Colors.blue, Colors.gray, Colors.success];
+
+  // Feed badge icons
+  const getBadgeIcon = (type: string): React.ComponentProps<typeof Ionicons>['name'] => {
+    switch (type) {
+      case 'video': return 'play-circle';
+      case 'poll': return 'bar-chart';
+      default: return 'document-text';
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -85,26 +121,49 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Image source={rallyLogo} style={styles.logoImage} resizeMode="contain" />
-            <Text style={styles.subtitle}>Welcome back, Jordan!</Text>
+            <Text style={styles.subtitle}>
+              Welcome back, {state.user.name.split(' ')[0]}!
+            </Text>
           </View>
-          <View style={[styles.avatar, { backgroundColor: schoolColor }]}>
+          <TouchableOpacity
+            style={[styles.avatar, { backgroundColor: schoolColor }]}
+            onPress={() => router.push('/notifications')}
+          >
             <Image source={rallyIcon} style={styles.avatarIcon} resizeMode="contain" />
-          </View>
+            {state.notifications.filter((n) => !n.read).length > 0 && (
+              <View style={styles.notifDot} />
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Sponsor Banner */}
-        <View style={styles.sponsorBanner}>
+        <Animated.View style={[styles.sponsorBanner, { opacity: sponsorFade, backgroundColor: currentSponsor.bgColor }]}>
           <View style={styles.sponsorLogo}>
-            <Text style={styles.sponsorLogoText}>N</Text>
+            <Text style={[styles.sponsorLogoText, { color: currentSponsor.textColor }]}>
+              {currentSponsor.initial}
+            </Text>
           </View>
-          <Text style={styles.sponsorText}>Presented by Nike</Text>
-        </View>
+          <Text style={styles.sponsorText}>{currentSponsor.tagline}</Text>
+          <View style={styles.sponsorDots}>
+            {SPONSORS.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.sponsorDot,
+                  i === sponsorIndex && styles.sponsorDotActive,
+                ]}
+              />
+            ))}
+          </View>
+        </Animated.View>
 
         {/* Next Game Card */}
         <View style={styles.nextGameCard}>
           <Text style={styles.nextGameLabel}>NEXT GAME</Text>
-          <Text style={styles.nextGameTitle}>Wildcats vs Tigers</Text>
-          <Text style={styles.nextGameDate}>Saturday, Feb 10 • 7:00 PM</Text>
+          <Text style={styles.nextGameTitle}>
+            {state.school?.shortName || 'Wildcats'} vs Tigers
+          </Text>
+          <Text style={styles.nextGameDate}>Saturday, Feb 10 - 7:00 PM</Text>
           <View style={styles.countdownRow}>
             {[
               { value: countdown.days, label: 'Days' },
@@ -125,19 +184,27 @@ export default function HomeScreen() {
 
         {/* Points Summary - 2 Column Grid */}
         <View style={styles.pointsRow}>
-          <View style={styles.pointsCard}>
+          <TouchableOpacity
+            style={styles.pointsCard}
+            onPress={() => router.push('/points-history')}
+            activeOpacity={0.7}
+          >
             <Text style={styles.pointsValue}>{formatPointsShort(state.points.balance)}</Text>
             <Text style={styles.pointsLabel}>Your Points</Text>
-          </View>
-          <View style={styles.tierCard}>
-            <View style={styles.tierBadge}>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tierCard}
+            onPress={() => router.push('/leaderboard')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.tierBadge, { backgroundColor: schoolColor }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="star" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
-              <Text style={styles.tierBadgeText}>{state.tier.name}</Text>
-            </View>
+                <Ionicons name="star" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Text style={styles.tierBadgeText}>{state.tier.name}</Text>
+              </View>
             </View>
             <Text style={styles.tierSubLabel}>Current Tier</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Tier Progress Card */}
@@ -147,40 +214,37 @@ export default function HomeScreen() {
             <Text style={styles.tierProgressRemaining}>{tierRemaining}</Text>
           </View>
           <View style={styles.progressBarTrack}>
-            <View style={[styles.progressBarFill, { width: progressWidth }]} />
+            <View style={[styles.progressBarFill, { width: progressWidth, backgroundColor: schoolColor }]} />
           </View>
           <View style={styles.tierProgressLabels}>
-            <Text style={styles.tierProgressLabelText}>{state.tier.name} • {formatPointsShort(state.tier.min)}</Text>
-            <Text style={styles.tierProgressLabelText}>{state.tier.next || 'Max'} • {state.tier.nextMin ? formatPointsShort(state.tier.nextMin) : '—'}</Text>
+            <Text style={styles.tierProgressLabelText}>{state.tier.name} - {formatPointsShort(state.tier.min)}</Text>
+            <Text style={styles.tierProgressLabelText}>{state.tier.next || 'Max'} - {state.tier.nextMin ? formatPointsShort(state.tier.nextMin) : '--'}</Text>
           </View>
         </View>
 
         {/* Latest Section Header */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Latest</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllLink}>See All</Text>
-          </TouchableOpacity>
         </View>
 
-        {/* Feed Card */}
-        <View style={styles.feedCard}>
-          <View style={styles.feedImageArea}>
-            <View style={styles.feedBadge}>
-              <Text style={styles.feedBadgeText}>Article</Text>
+        {/* Feed Cards - All items */}
+        {FEED_ITEMS.map((item) => (
+          <TouchableOpacity key={item.id} style={styles.feedCard} activeOpacity={0.8}>
+            <View style={[styles.feedImageArea, { backgroundColor: item.bgColor }]}>
+              <View style={styles.feedBadge}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name={getBadgeIcon(item.type)} size={11} color={Colors.orange} style={{ marginRight: 3 }} />
+                  <Text style={styles.feedBadgeText}>{item.badge}</Text>
+                </View>
+              </View>
+              <Ionicons name={item.iconName as any} size={48} color={Colors.gray} />
             </View>
-            <Ionicons name="american-football" size={48} color={Colors.gray} />
-          </View>
-          <View style={styles.feedContent}>
-            <Text style={styles.feedTitle}>
-              Season Opener Preview: What to Expect
-            </Text>
-            <Text style={styles.feedSubtitle}>
-              Breaking down the matchups, key players, and predictions for
-              Saturday's big game.
-            </Text>
-          </View>
-        </View>
+            <View style={styles.feedContent}>
+              <Text style={styles.feedTitle}>{item.title}</Text>
+              <Text style={styles.feedSubtitle} numberOfLines={2}>{item.subtitle}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
 
         {/* Fan Poll Card */}
         <View style={styles.pollCard}>
@@ -195,8 +259,7 @@ export default function HomeScreen() {
             {state.poll.question}
           </Text>
           {state.poll.userVote === null
-            ? /* Voting view – tappable options */
-              state.poll.options.map((option, index) => (
+            ? state.poll.options.map((option, index) => (
                 <TouchableOpacity
                   key={option.name}
                   style={styles.pollOption}
@@ -210,8 +273,7 @@ export default function HomeScreen() {
                   </View>
                 </TouchableOpacity>
               ))
-            : /* Results view – show percentages */
-              state.poll.options.map((option, index) => {
+            : state.poll.options.map((option, index) => {
                 const pct = state.poll.totalVotes > 0
                   ? Math.round((option.votes / state.poll.totalVotes) * 100)
                   : 0;
@@ -282,11 +344,6 @@ const styles = StyleSheet.create({
     width: 100,
     height: 28,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: Colors.offWhite,
-  },
   subtitle: {
     fontSize: 15,
     color: Colors.gray,
@@ -304,11 +361,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.orange,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
+  notifDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#FF3B30',
+    borderWidth: 2,
+    borderColor: Colors.navy,
   },
 
   /* Sponsor Banner */
@@ -325,7 +389,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: Colors.navyLight,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.sm,
@@ -336,8 +400,22 @@ const styles = StyleSheet.create({
     color: Colors.offWhite,
   },
   sponsorText: {
+    flex: 1,
     fontSize: 13,
     color: Colors.gray,
+  },
+  sponsorDots: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  sponsorDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: Colors.grayAlpha(0.3),
+  },
+  sponsorDotActive: {
+    backgroundColor: Colors.orange,
   },
 
   /* Next Game Card */
@@ -500,11 +578,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.offWhite,
   },
-  seeAllLink: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.orange,
-  },
 
   /* Feed Card */
   feedCard: {
@@ -514,7 +587,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   feedImageArea: {
-    height: 140,
+    height: 120,
     backgroundColor: Colors.navyLight,
     justifyContent: 'center',
     alignItems: 'center',
@@ -536,14 +609,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  feedIcon: {
-    // Replaced emoji with Ionicons component
-  },
   feedContent: {
     padding: Spacing.lg,
   },
   feedTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: Colors.offWhite,
     marginBottom: Spacing.xs,

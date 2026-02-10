@@ -64,8 +64,18 @@ export default function NotificationsScreen() {
     dispatch({ type: 'DISMISS_NOTIFICATION', notificationId });
   };
 
+  const handleTap = (item: Notification) => {
+    if (!item.read) {
+      dispatch({ type: 'MARK_NOTIFICATION_READ', notificationId: item.id });
+    }
+  };
+
   const renderItem = ({ item }: { item: Notification }) => (
-    <View style={[styles.row, !item.read && styles.rowUnread]}>
+    <TouchableOpacity
+      style={[styles.row, !item.read && styles.rowUnread]}
+      onPress={() => handleTap(item)}
+      activeOpacity={0.8}
+    >
       {/* Icon */}
       <View style={styles.emojiCircle}>
         <Ionicons name={item.iconName as any} size={20} color={COLORS.offWhite} />
@@ -94,7 +104,7 @@ export default function NotificationsScreen() {
       >
         <Ionicons name="close" size={12} color={COLORS.gray} />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderEmpty = () => (

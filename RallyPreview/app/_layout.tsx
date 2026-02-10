@@ -15,10 +15,14 @@ export default function RootLayout() {
           <Stack.Screen name="trivia" options={{ presentation: 'modal' }} />
           <Stack.Screen name="prediction" options={{ presentation: 'modal' }} />
           <Stack.Screen name="noise-meter" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="photo-challenge" options={{ presentation: 'modal' }} />
           <Stack.Screen name="reward-detail" options={{ presentation: 'modal' }} />
           <Stack.Screen name="points-history" />
           <Stack.Screen name="my-rewards" />
           <Stack.Screen name="notifications" />
+          <Stack.Screen name="leaderboard" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="help" />
         </Stack>
       </View>
     </AppProvider>

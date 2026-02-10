@@ -6,7 +6,6 @@ import {
   Text,
   TouchableOpacity,
   Animated,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -78,21 +77,22 @@ export default function GamedayScreen() {
     {
       id: 'photo-challenge',
       iconName: 'camera' as const,
-      iconColor: Colors.gray,
+      iconColor: '#E040FB',
       title: 'Photo Challenge',
       points: '+30 pts',
-      status: 'Q4',
-      statusColor: Colors.gray,
-      bgColor: Colors.grayAlpha(0.15),
-      onPress: () => Alert.alert('Coming Soon', 'Available in Q4!'),
+      status: 'Live',
+      statusColor: Colors.success,
+      bgColor: 'rgba(224,64,251,0.15)',
+      onPress: () => router.push('/photo-challenge'),
     },
   ];
 
-  const leaderboard = [
-    { rank: 1, name: 'MikeFan2026', points: '3,450', isYou: false },
-    { rank: 2, name: 'SarahSports', points: '2,890', isYou: false },
-    { rank: 5, name: 'You', points: formatPointsShort(state.points.balance), isYou: true },
-  ];
+  const leaderboard = state.leaderboard.slice(0, 5).map((entry) => ({
+    rank: entry.rank,
+    name: entry.name,
+    points: formatPointsShort(entry.points),
+    isYou: entry.isUser,
+  }));
 
   const fanPointsPct = state.gameday.fanPointsTarget > 0
     ? `${(state.gameday.fanPointsCurrent / state.gameday.fanPointsTarget) * 100}%`
@@ -258,7 +258,12 @@ export default function GamedayScreen() {
         </View>
 
         {/* Leaderboard Preview */}
-        <Text style={styles.sectionTitle}>Leaderboard</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
+          <Text style={styles.sectionTitle}>Leaderboard</Text>
+          <TouchableOpacity onPress={() => router.push('/leaderboard')} activeOpacity={0.7}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.orange }}>See All</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.leaderboardCard}>
           {leaderboard.map((entry) => (
             <View

@@ -192,6 +192,46 @@ export const FEED_ITEMS: FeedItem[] = [
     badge: 'Poll',
     bgColor: '#2A1A0E',
   },
+  {
+    id: 'feed-4',
+    type: 'article',
+    title: 'Top 5 Moments from Last Week\'s Victory',
+    subtitle: 'Relive the best plays, celebrations, and fan moments from the weekend.',
+    iconName: 'trophy',
+    iconFamily: 'Ionicons',
+    badge: 'Recap',
+    bgColor: '#1A0E2A',
+  },
+  {
+    id: 'feed-5',
+    type: 'video',
+    title: 'Coach\'s Corner: Midseason Update',
+    subtitle: 'Head coach breaks down the season so far and what\'s ahead.',
+    iconName: 'mic',
+    iconFamily: 'Ionicons',
+    badge: 'Video',
+    bgColor: '#0E1A2A',
+  },
+  {
+    id: 'feed-6',
+    type: 'article',
+    title: 'Rally Rewards: New Items This Week',
+    subtitle: 'Check out the latest additions to the rewards store, including exclusive merch.',
+    iconName: 'gift',
+    iconFamily: 'Ionicons',
+    badge: 'Rewards',
+    bgColor: '#2A200E',
+  },
+  {
+    id: 'feed-7',
+    type: 'article',
+    title: 'Student Section Gets Louder Every Game',
+    subtitle: 'Noise meter data shows fans are bringing more energy than ever this season.',
+    iconName: 'megaphone',
+    iconFamily: 'Ionicons',
+    badge: 'Fan Zone',
+    bgColor: '#0E2A1A',
+  },
 ];
 
 export const INITIAL_LEADERBOARD: LeaderboardEntry[] = [
@@ -235,3 +275,48 @@ export const POLL_DATA = {
   ],
   totalVotes: 1847,
 };
+
+// ---------------------------------------------------------------------------
+// Sponsors
+// ---------------------------------------------------------------------------
+
+export interface Sponsor {
+  id: string;
+  name: string;
+  initial: string;
+  tagline: string;
+  bgColor: string;
+  textColor: string;
+}
+
+export const SPONSORS: Sponsor[] = [
+  { id: 'sp-1', name: 'Nike', initial: 'N', tagline: 'Presented by Nike', bgColor: '#1C2842', textColor: '#F5F7FA' },
+  { id: 'sp-2', name: 'Gatorade', initial: 'G', tagline: 'Fueled by Gatorade', bgColor: '#1A2A0E', textColor: '#34C759' },
+  { id: 'sp-3', name: 'State Farm', initial: 'SF', tagline: 'Like a Good Neighbor', bgColor: '#2A0E0E', textColor: '#FF6B35' },
+  { id: 'sp-4', name: 'Coca-Cola', initial: 'CC', tagline: 'Taste the Feeling', bgColor: '#2A0E0E', textColor: '#FF3B30' },
+  { id: 'sp-5', name: 'Chick-fil-A', initial: 'C', tagline: 'Eat More Chicken', bgColor: '#2A1A0E', textColor: '#FF6B35' },
+];
+
+// ---------------------------------------------------------------------------
+// FAQ
+// ---------------------------------------------------------------------------
+
+export interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+}
+
+export const FAQ_ITEMS: FAQItem[] = [
+  { id: 'faq-1', category: 'Points', question: 'How do I earn points?', answer: 'You earn points by checking in at games, completing activations like trivia and predictions, participating in noise meter challenges, and through special bonus events. Each activity awards different amounts of points.' },
+  { id: 'faq-2', category: 'Points', question: 'Do my points expire?', answer: 'Points do not expire as long as your account remains active. Your total earned points determine your tier, while your available balance can be spent on rewards.' },
+  { id: 'faq-3', category: 'Tiers', question: 'How do tiers work?', answer: 'There are 5 tiers: Rookie (0 pts), Starter (500 pts), All-Star (2,000 pts), MVP (5,000 pts), and Hall of Fame (15,000 pts). Your tier is based on total points earned, not your current balance.' },
+  { id: 'faq-4', category: 'Tiers', question: 'Can I lose my tier?', answer: 'No! Your tier is based on total points earned over your lifetime. Spending points on rewards does not affect your tier status.' },
+  { id: 'faq-5', category: 'Rewards', question: 'How do I redeem rewards?', answer: 'Go to the Rewards tab, browse available rewards, and tap on one to see details. If you have enough points, tap "Redeem" to claim it. You can view your redeemed rewards under My Rewards in your profile.' },
+  { id: 'faq-6', category: 'Rewards', question: 'How do I use a redeemed reward?', answer: 'After redeeming, go to My Rewards in your profile. Tap "Show QR" on the reward and present the QR code at the appropriate location (concession stand, merch tent, etc.).' },
+  { id: 'faq-7', category: 'Gameday', question: 'How does check-in work?', answer: 'When you arrive at the stadium on gameday, tap the "Check In" button on the Gameday tab. You will earn 100 points for each gameday check-in. You can only check in once per game.' },
+  { id: 'faq-8', category: 'Gameday', question: 'What are activations?', answer: 'Activations are interactive challenges available during games. These include trivia, halftime predictions, noise meter challenges, and photo challenges. Each awards different point amounts.' },
+  { id: 'faq-9', category: 'Account', question: 'How do I change my school?', answer: 'You can change your school by signing out from the Profile tab and signing back in. You will be prompted to select a new school during the onboarding process.' },
+  { id: 'faq-10', category: 'Account', question: 'How do I contact support?', answer: 'For help, email support@rallyfanapp.com or reach out on Twitter/X @RallyFanApp. Our support team typically responds within 24 hours.' },
+];

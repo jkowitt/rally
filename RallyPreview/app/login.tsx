@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,6 +58,14 @@ export default function LoginScreen() {
 
   const handleGuestContinue = () => {
     router.replace('/select-school');
+  };
+
+  const handleGoogleSignIn = () => {
+    Alert.alert(
+      'Coming Soon',
+      'Google Sign-In will be available in the next update.',
+      [{ text: 'OK' }],
+    );
   };
 
   return (
@@ -158,6 +167,14 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Forgot Password */}
+          <TouchableOpacity
+            style={styles.forgotPasswordRow}
+            onPress={() => router.push('/forgot-password')}
+          >
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
           {/* Sign In Button */}
           <TouchableOpacity
             style={[styles.signInButton, loading && styles.signInButtonDisabled]}
@@ -170,6 +187,23 @@ export default function LoginScreen() {
             ) : (
               <Text style={styles.signInButtonText}>Sign In</Text>
             )}
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Sign in with Google */}
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleSignIn}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="logo-google" size={20} color={Colors.offWhite} />
+            <Text style={styles.googleButtonText}>Sign in with Google</Text>
           </TouchableOpacity>
 
           {/* Sign Up Link */}
@@ -191,6 +225,12 @@ export default function LoginScreen() {
             <Text style={styles.guestText}>Continue as Guest</Text>
             <Ionicons name="arrow-forward" size={16} color={Colors.gray} />
           </TouchableOpacity>
+
+          {/* Security Note */}
+          <View style={styles.securityNote}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={Colors.gray} />
+            <Text style={styles.securityNoteText}>Protected by Rally Security</Text>
+          </View>
         </ScrollView>
 
         {/* Server Status */}
@@ -296,6 +336,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
 
+  // Forgot Password
+  forgotPasswordRow: {
+    alignSelf: 'flex-end',
+    marginBottom: 20,
+    marginTop: -4,
+  },
+  forgotPasswordText: {
+    fontSize: 13,
+    color: Colors.orange,
+    fontWeight: '600',
+  },
+
   // Sign In Button
   signInButton: {
     backgroundColor: Colors.orange,
@@ -303,7 +355,6 @@ const styles = StyleSheet.create({
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 6,
     marginBottom: 20,
   },
   signInButtonDisabled: {
@@ -313,6 +364,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+
+  // Divider
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.navyLight,
+  },
+  dividerText: {
+    fontSize: 13,
+    color: Colors.gray,
+    marginHorizontal: 16,
+  },
+
+  // Google Button
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.navyMid,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.navyLight,
+    height: 52,
+    marginBottom: 20,
+    gap: 10,
+  },
+  googleButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.offWhite,
   },
 
   // Links
@@ -339,6 +426,19 @@ const styles = StyleSheet.create({
   },
   guestText: {
     fontSize: 14,
+    color: Colors.gray,
+  },
+
+  // Security Note
+  securityNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    gap: 6,
+  },
+  securityNoteText: {
+    fontSize: 12,
     color: Colors.gray,
   },
 

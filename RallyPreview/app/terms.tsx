@@ -38,31 +38,43 @@ const TERMS_SECTIONS: TermsSection[] = [
     body: 'Your privacy is important to us. We collect and process personal information in accordance with our Privacy Policy, which is incorporated into these Terms by reference. By using the App, you consent to the collection of data including location information (for gameday check-ins and geofencing), device information, usage analytics, and interaction data. Location data is used solely for verifying event attendance and enabling location-based features. You may disable location services at any time through your device settings, though this may limit certain App features. We implement industry-standard security measures to protect your data and do not sell personal information to third parties.',
   },
   {
-    title: '6. Intellectual Property',
+    title: '6. Email Communications & Notifications',
+    body: 'By creating an account, you agree to receive periodic email communications from Rally, including but not limited to: gameday alerts and reminders, loyalty points and rewards updates, new feature announcements, promotional offers from Rally and its partners, and weekly engagement summaries. Emails will be sent to the address associated with your account. You may opt out of non-essential email communications at any time by navigating to Settings > Notifications within the App or by clicking the "Unsubscribe" link in any email. Please note that transactional emails (account verification, password resets, security alerts) cannot be disabled as they are required for account security and functionality.',
+  },
+  {
+    title: '7. Push Notifications',
+    body: 'The App may send push notifications to your device, including real-time gameday updates, check-in reminders, reward redemption confirmations, leaderboard changes, and promotional alerts. By enabling push notifications during registration or in your device settings, you consent to receiving these notifications. You may disable push notifications at any time through your device settings (Settings > Notifications > Rally) or within the App under Settings > Notifications. Disabling push notifications may affect your ability to receive time-sensitive gameday alerts and check-in reminders.',
+  },
+  {
+    title: '8. Account Security & Verification',
+    body: 'All accounts must be verified via email before gaining full access to App features. You are required to provide a valid email address during registration, and a verification code will be sent to confirm ownership. Rally employs industry-standard security measures including encrypted data transmission (TLS/SSL), hashed password storage (bcrypt), JWT-based session authentication, and rate limiting to prevent brute-force attacks. We support account recovery via email-based password reset. You are responsible for maintaining the security of your account credentials and should enable any additional security features offered by the App. Rally reserves the right to implement additional security measures, including multi-factor authentication and suspicious activity monitoring, to protect user accounts.',
+  },
+  {
+    title: '9. Intellectual Property',
     body: 'The App, including its design, logos, text, graphics, software, and all other content, is the property of Van Wagner Sports & Entertainment and is protected by copyright, trademark, and other intellectual property laws. The Rally name, logo, and all related marks are trademarks of Van Wagner Sports & Entertainment. Collegiate athletic team names, logos, and mascots used within the App are the property of their respective institutions and are used under license. You may not copy, reproduce, modify, distribute, or create derivative works from any content within the App without our prior written consent.',
   },
   {
-    title: '7. Prohibited Conduct',
+    title: '10. Prohibited Conduct',
     body: 'You agree not to: (a) use the App for any unlawful purpose; (b) attempt to gain unauthorized access to any part of the App or its systems; (c) use automated scripts, bots, or other means to artificially accumulate points or manipulate leaderboard standings; (d) impersonate another person or entity; (e) submit false or misleading information; (f) interfere with or disrupt the App or its servers; (g) harass, abuse, or harm other users; or (h) violate any applicable local, state, national, or international law or regulation.',
   },
   {
-    title: '8. Limitation of Liability',
+    title: '11. Limitation of Liability',
     body: 'TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, VAN WAGNER SPORTS & ENTERTAINMENT AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATED TO YOUR USE OF THE APP. OUR TOTAL LIABILITY SHALL NOT EXCEED THE AMOUNT YOU PAID TO US, IF ANY, IN THE TWELVE (12) MONTHS PRIOR TO THE CLAIM. THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED.',
   },
   {
-    title: '9. Indemnification',
+    title: '12. Indemnification',
     body: 'You agree to indemnify, defend, and hold harmless Van Wagner Sports & Entertainment and its affiliates, officers, directors, employees, and agents from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys\' fees) arising from or relating to your use of the App, your User Content, or your violation of these Terms.',
   },
   {
-    title: '10. Governing Law',
+    title: '13. Governing Law',
     body: 'These Terms shall be governed by and construed in accordance with the laws of the State of New York, without regard to its conflict of law provisions. Any disputes arising under or in connection with these Terms shall be subject to the exclusive jurisdiction of the state and federal courts located in New York County, New York. Any cause of action arising out of or related to the App must be commenced within one (1) year after the cause of action accrues.',
   },
   {
-    title: '11. Termination',
+    title: '14. Termination',
     body: 'We may terminate or suspend your account and access to the App at our sole discretion, without notice, for conduct that we believe violates these Terms or is harmful to other users, us, or third parties. Upon termination, your right to use the App will immediately cease, and any accumulated points or unredeemed rewards will be forfeited. Provisions of these Terms that by their nature should survive termination shall remain in effect.',
   },
   {
-    title: '12. Contact Information',
+    title: '15. Contact Information',
     body: 'If you have any questions about these Terms and Conditions, please contact us at:\n\nVan Wagner Sports & Entertainment\nRally Fan Engagement Platform\nEmail: support@rallyfanapp.com\nAddress: 5 Bryant Park, New York, NY 10018\n\nFor account-related inquiries, you may also reach us through the Help section within the App.',
   },
 ];

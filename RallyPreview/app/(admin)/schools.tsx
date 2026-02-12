@@ -6,6 +6,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,16 +44,68 @@ const CONTENT_COUNTS: Record<string, string> = {
 // Mock active status
 const INACTIVE_SCHOOLS = ['bluefield-state', 'shaw', 'livingstone', 'lincoln-pa'];
 
+interface AddSchoolForm {
+  name: string;
+  shortName: string;
+  mascot: string;
+  conference: string;
+  city: string;
+  state: string;
+  division: Division;
+  primaryColor: string;
+  contactEmail: string;
+}
+
+const EMPTY_SCHOOL_FORM: AddSchoolForm = {
+  name: '',
+  shortName: '',
+  mascot: '',
+  conference: '',
+  city: '',
+  state: '',
+  division: 'D1',
+  primaryColor: '#FF6B35',
+  contactEmail: '',
+};
+
 export default function SchoolManagement() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterTab>('All');
+  const [showAddSchool, setShowAddSchool] = useState(false);
+  const [schoolForm, setSchoolForm] = useState<AddSchoolForm>(EMPTY_SCHOOL_FORM);
+  const [addedSchools, setAddedSchools] = useState<typeof SCHOOLS>([]);
 
-  const d1Count = SCHOOLS.filter((s) => s.division === 'D1').length;
-  const d2Count = SCHOOLS.filter((s) => s.division === 'D2').length;
+  const allSchools = useMemo(() => [...SCHOOLS, ...addedSchools], [addedSchools]);
+
+  const d1Count = allSchools.filter((s) => s.division === 'D1').length;
+  const d2Count = allSchools.filter((s) => s.division === 'D2').length;
+
+  const handleAddSchool = () => {
+    if (!schoolForm.name.trim() || !schoolForm.shortName.trim()) {
+      Alert.alert('Missing Fields', 'Please enter at least a school name and short name.');
+      return;
+    }
+    const newSchool = {
+      id: schoolForm.shortName.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now(),
+      name: schoolForm.name.trim(),
+      shortName: schoolForm.shortName.trim(),
+      mascot: schoolForm.mascot.trim() || 'TBD',
+      conference: schoolForm.conference.trim() || 'Independent',
+      city: schoolForm.city.trim() || '',
+      state: schoolForm.state.trim() || '',
+      division: schoolForm.division,
+      primaryColor: schoolForm.primaryColor || '#FF6B35',
+      secondaryColor: '#FFFFFF',
+    };
+    setAddedSchools((prev) => [newSchool, ...prev]);
+    setShowAddSchool(false);
+    setSchoolForm(EMPTY_SCHOOL_FORM);
+    Alert.alert('School Added', `${newSchool.name} has been added to the platform.${schoolForm.contactEmail ? `\n\nInvitation sent to ${schoolForm.contactEmail}.` : ''}`);
+  };
 
   const filteredSchools = useMemo(() => {
-    let results = SCHOOLS;
+    let results = allSchools;
     if (filter !== 'All') {
       results = results.filter((s) => s.division === filter);
     }
@@ -74,20 +130,159 @@ export default function SchoolManagement() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Stats Bar */}
-        <View style={styles.statsBar}>
-          <Text style={styles.statsText}>
-            <Text style={styles.statsHighlight}>{SCHOOLS.length}</Text> Schools
-            {'  '}
-            <Text style={{ color: GRAY }}>{'\u00B7'}</Text>
-            {'  '}
-            <Text style={styles.statsHighlight}>{d1Count}</Text> D1
-            {'  '}
-            <Text style={{ color: GRAY }}>{'\u00B7'}</Text>
-            {'  '}
-            <Text style={styles.statsHighlight}>{d2Count}</Text> D2
-          </Text>
+        {/* Stats Bar + Add Button */}
+        <View style={styles.statsRow}>
+          <View style={[styles.statsBar, { flex: 1, marginBottom: 0 }]}>
+            <Text style={styles.statsText}>
+              <Text style={styles.statsHighlight}>{allSchools.length}</Text> Schools
+              {'  '}
+              <Text style={{ color: GRAY }}>{'\u00B7'}</Text>
+              {'  '}
+              <Text style={styles.statsHighlight}>{d1Count}</Text> D1
+              {'  '}
+              <Text style={{ color: GRAY }}>{'\u00B7'}</Text>
+              {'  '}
+              <Text style={styles.statsHighlight}>{d2Count}</Text> D2
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addSchoolBtn}
+            onPress={() => setShowAddSchool(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add-circle" size={16} color="#FFF" />
+            <Text style={styles.addSchoolBtnText}>Add</Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Add School Modal */}
+        <Modal visible={showAddSchool} transparent animationType="slide">
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalOverlay}
+          >
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.modalCard}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Add / Invite School</Text>
+                  <TouchableOpacity onPress={() => setShowAddSchool(false)}>
+                    <Ionicons name="close" size={22} color={GRAY} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.fieldLabel}>School Name *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="University of Example"
+                  placeholderTextColor={GRAY}
+                  value={schoolForm.name}
+                  onChangeText={(v) => setSchoolForm((p) => ({ ...p, name: v }))}
+                />
+
+                <Text style={styles.fieldLabel}>Short Name *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Example"
+                  placeholderTextColor={GRAY}
+                  value={schoolForm.shortName}
+                  onChangeText={(v) => setSchoolForm((p) => ({ ...p, shortName: v }))}
+                />
+
+                <View style={styles.twoCol}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>Mascot</Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="Eagles"
+                      placeholderTextColor={GRAY}
+                      value={schoolForm.mascot}
+                      onChangeText={(v) => setSchoolForm((p) => ({ ...p, mascot: v }))}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>Conference</Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="Big 12"
+                      placeholderTextColor={GRAY}
+                      value={schoolForm.conference}
+                      onChangeText={(v) => setSchoolForm((p) => ({ ...p, conference: v }))}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.twoCol}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>City</Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="City"
+                      placeholderTextColor={GRAY}
+                      value={schoolForm.city}
+                      onChangeText={(v) => setSchoolForm((p) => ({ ...p, city: v }))}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>State</Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="ST"
+                      placeholderTextColor={GRAY}
+                      value={schoolForm.state}
+                      onChangeText={(v) => setSchoolForm((p) => ({ ...p, state: v }))}
+                    />
+                  </View>
+                </View>
+
+                <Text style={styles.fieldLabel}>Division</Text>
+                <View style={styles.divisionRow}>
+                  {(['D1', 'D2'] as Division[]).map((d) => (
+                    <TouchableOpacity
+                      key={d}
+                      style={[
+                        styles.divisionChip,
+                        schoolForm.division === d && { backgroundColor: d === 'D1' ? BLUE : ORANGE },
+                      ]}
+                      onPress={() => setSchoolForm((p) => ({ ...p, division: d }))}
+                    >
+                      <Text
+                        style={[
+                          styles.divisionChipText,
+                          schoolForm.division === d && { color: '#FFF' },
+                        ]}
+                      >
+                        {d}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.fieldLabel}>Contact Email (sends invite)</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="athletics@example.edu"
+                  placeholderTextColor={GRAY}
+                  value={schoolForm.contactEmail}
+                  onChangeText={(v) => setSchoolForm((p) => ({ ...p, contactEmail: v }))}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+
+                <TouchableOpacity
+                  style={styles.submitBtn}
+                  onPress={handleAddSchool}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="school" size={16} color="#FFF" />
+                  <Text style={styles.submitBtnText}>Add School & Send Invite</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </Modal>
 
         {/* Search Bar */}
         <View style={styles.searchBar}>
@@ -330,6 +525,101 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: ORANGE,
+  },
+
+  /* Stats Row */
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  addSchoolBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ORANGE,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  addSchoolBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  /* Modal */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  modalCard: {
+    backgroundColor: NAVY_MID,
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: OFF_WHITE,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: GRAY,
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  modalInput: {
+    backgroundColor: NAVY_LIGHT,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: OFF_WHITE,
+  },
+  twoCol: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  divisionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  divisionChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: NAVY_LIGHT,
+  },
+  divisionChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: GRAY,
+  },
+  submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: ORANGE,
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginTop: 20,
+    gap: 8,
+  },
+  submitBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 
   /* School Meta */

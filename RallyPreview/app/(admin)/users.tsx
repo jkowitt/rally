@@ -7,6 +7,9 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -66,13 +69,42 @@ const FILTER_MAP: Record<FilterRole, Role | undefined> = {
 export default function UserManagement() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterRole>('All');
+  const [users, setUsers] = useState<UserItem[]>(MOCK_USERS);
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<Role>('user');
+  const [inviteSchool, setInviteSchool] = useState('');
 
-  const devCount = MOCK_USERS.filter((u) => u.role === 'developer').length;
-  const adminCount = MOCK_USERS.filter((u) => u.role === 'admin').length;
-  const userCount = MOCK_USERS.filter((u) => u.role === 'user').length;
+  const devCount = users.filter((u) => u.role === 'developer').length;
+  const adminCount = users.filter((u) => u.role === 'admin').length;
+  const userCount = users.filter((u) => u.role === 'user').length;
+
+  const handleSendInvite = () => {
+    if (!inviteName.trim() || !inviteEmail.trim()) {
+      Alert.alert('Missing Fields', 'Please enter a name and email address.');
+      return;
+    }
+    const newUser: UserItem = {
+      id: `inv-${Date.now()}`,
+      name: inviteName.trim(),
+      email: inviteEmail.trim().toLowerCase(),
+      handle: `@${inviteName.trim().toLowerCase().replace(/\s+/g, '')}`,
+      role: inviteRole,
+      school: inviteSchool.trim() || 'Unassigned',
+      lastActive: 'Invited',
+    };
+    setUsers((prev) => [newUser, ...prev]);
+    setShowInvite(false);
+    setInviteName('');
+    setInviteEmail('');
+    setInviteRole('user');
+    setInviteSchool('');
+    Alert.alert('Invite Sent', `Invitation sent to ${newUser.email} as ${newUser.role}.`);
+  };
 
   const filteredUsers = useMemo(() => {
-    let results = MOCK_USERS;
+    let results = users;
     const roleFilter = FILTER_MAP[filter];
     if (roleFilter) {
       results = results.filter((u) => u.role === roleFilter);
@@ -120,26 +152,111 @@ export default function UserManagement() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Stats Bar */}
-        <View style={styles.statsBar}>
-          <Text style={styles.statsText}>
-            <Text style={styles.statsHighlight}>{MOCK_USERS.length}</Text> total
-            {'  '}
-            <Text style={{ color: GRAY }}>{'\u00B7'}</Text>
-            {'  '}
-            <Text style={{ color: ORANGE, fontWeight: '700' }}>{devCount}</Text>{' '}
-            developers
-            {'  '}
-            <Text style={{ color: GRAY }}>{'\u00B7'}</Text>
-            {'  '}
-            <Text style={{ color: BLUE, fontWeight: '700' }}>{adminCount}</Text>{' '}
-            admins
-            {'  '}
-            <Text style={{ color: GRAY }}>{'\u00B7'}</Text>
-            {'  '}
-            <Text style={styles.statsHighlight}>{userCount}</Text> users
-          </Text>
+        {/* Stats Bar + Invite Button */}
+        <View style={styles.statsRow}>
+          <View style={[styles.statsBar, { flex: 1, marginBottom: 0 }]}>
+            <Text style={styles.statsText}>
+              <Text style={styles.statsHighlight}>{users.length}</Text> total
+              {'  '}
+              <Text style={{ color: GRAY }}>{'\u00B7'}</Text>
+              {'  '}
+              <Text style={{ color: ORANGE, fontWeight: '700' }}>{devCount}</Text>{' '}
+              dev
+              {'  '}
+              <Text style={{ color: GRAY }}>{'\u00B7'}</Text>
+              {'  '}
+              <Text style={{ color: BLUE, fontWeight: '700' }}>{adminCount}</Text>{' '}
+              admin
+              {'  '}
+              <Text style={{ color: GRAY }}>{'\u00B7'}</Text>
+              {'  '}
+              <Text style={styles.statsHighlight}>{userCount}</Text> user
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.inviteBtn}
+            onPress={() => setShowInvite(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="person-add" size={16} color="#FFF" />
+            <Text style={styles.inviteBtnText}>Invite</Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Invite Modal */}
+        <Modal visible={showInvite} transparent animationType="slide">
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalOverlay}
+          >
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Invite User</Text>
+                <TouchableOpacity onPress={() => setShowInvite(false)}>
+                  <Ionicons name="close" size={22} color={GRAY} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.fieldLabel}>Full Name</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Jane Smith"
+                placeholderTextColor={GRAY}
+                value={inviteName}
+                onChangeText={setInviteName}
+              />
+
+              <Text style={styles.fieldLabel}>Email Address</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="jane@example.com"
+                placeholderTextColor={GRAY}
+                value={inviteEmail}
+                onChangeText={setInviteEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <Text style={styles.fieldLabel}>School (optional)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Kent State"
+                placeholderTextColor={GRAY}
+                value={inviteSchool}
+                onChangeText={setInviteSchool}
+              />
+
+              <Text style={styles.fieldLabel}>Role</Text>
+              <View style={styles.roleRow}>
+                {(['user', 'admin', 'developer'] as Role[]).map((r) => (
+                  <TouchableOpacity
+                    key={r}
+                    style={[styles.roleChip, inviteRole === r && { backgroundColor: ROLE_COLORS[r] }]}
+                    onPress={() => setInviteRole(r)}
+                  >
+                    <Text
+                      style={[
+                        styles.roleChipText,
+                        inviteRole === r && { color: '#FFF' },
+                      ]}
+                    >
+                      {r.charAt(0).toUpperCase() + r.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={styles.sendInviteBtn}
+                onPress={handleSendInvite}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="send" size={16} color="#FFF" />
+                <Text style={styles.sendInviteBtnText}>Send Invitation</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
 
         {/* Search Bar */}
         <View style={styles.searchBar}>
@@ -428,6 +545,99 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: ERROR,
+  },
+
+  /* Stats Row */
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  inviteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ORANGE,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  inviteBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  /* Modal */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: NAVY_MID,
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: OFF_WHITE,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: GRAY,
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  modalInput: {
+    backgroundColor: NAVY_LIGHT,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: OFF_WHITE,
+  },
+  roleRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  roleChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: NAVY_LIGHT,
+  },
+  roleChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: GRAY,
+  },
+  sendInviteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: ORANGE,
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginTop: 20,
+    gap: 8,
+  },
+  sendInviteBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 
   /* Empty */

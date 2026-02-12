@@ -14,12 +14,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../src/context/AuthContext';
 import { Colors } from '../src/theme/colors';
 
 type Step = 1 | 2 | 3;
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { forgotPassword, resetPassword } = useAuth();
 
   const [step, setStep] = useState<Step>(1);
   const [email, setEmail] = useState('');
@@ -43,6 +45,9 @@ export default function ForgotPasswordScreen() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
 
+  // Store the reset code from server for verification
+  const [resetCode, setResetCode] = useState('');
+
   const handleSendCode = async () => {
     setError('');
 
@@ -57,18 +62,23 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
 
-    // Mock: simulate sending reset code
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const result = await forgotPassword(email.trim());
 
     setLoading(false);
 
-    Alert.alert(
-      'Demo Mode',
-      'Your reset code is: 123456',
-      [{ text: 'OK' }],
-    );
-
-    setStep(2);
+    if (result.success) {
+      if (result.resetCode) {
+        setResetCode(result.resetCode);
+        Alert.alert(
+          'Demo Mode',
+          `Your reset code is: ${result.resetCode}`,
+          [{ text: 'OK' }],
+        );
+      }
+      setStep(2);
+    } else {
+      setError(result.error || 'Failed to send reset code. Please try again.');
+    }
   };
 
   const handleVerifyAndReset = async () => {
@@ -80,10 +90,6 @@ export default function ForgotPasswordScreen() {
     }
     if (code.trim().length !== 6) {
       setError('Please enter a valid 6-digit code');
-      return;
-    }
-    if (code.trim() !== '123456') {
-      setError('Invalid code. Please try again.');
       return;
     }
     if (!newPassword) {
@@ -101,11 +107,15 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
 
-    // Mock: simulate password reset
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const result = await resetPassword(email.trim(), code.trim(), newPassword);
 
     setLoading(false);
-    setStep(3);
+
+    if (result.success) {
+      setStep(3);
+    } else {
+      setError(result.error || 'Failed to reset password. Please try again.');
+    }
   };
 
   const renderStep1 = () => (
@@ -313,8 +323,12 @@ export default function ForgotPasswordScreen() {
       {/* Resend Code */}
       <TouchableOpacity
         style={styles.linkRow}
-        onPress={() => {
-          Alert.alert('Demo Mode', 'Your reset code is: 123456', [{ text: 'OK' }]);
+        onPress={async () => {
+          const result = await forgotPassword(email.trim());
+          if (result.success && result.resetCode) {
+            setResetCode(result.resetCode);
+            Alert.alert('Demo Mode', `Your reset code is: ${result.resetCode}`, [{ text: 'OK' }]);
+          }
         }}
       >
         <Text style={styles.linkText}>

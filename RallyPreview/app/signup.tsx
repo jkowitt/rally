@@ -234,7 +234,17 @@ export default function SignupScreen() {
       // All good - register and navigate
       setLoading(true);
       const formattedHandle = handle.startsWith('@') ? handle : `@${handle}`;
-      const result = await register(email.trim(), password, name.trim(), formattedHandle);
+      const result = await register({
+        email: email.trim(),
+        password,
+        name: name.trim(),
+        handle: formattedHandle,
+        favoriteSchool: favoriteSchool?.id || null,
+        supportingSchools: supportingSchools.map((s) => s.id),
+        emailUpdates,
+        pushNotifications,
+        acceptedTerms: termsAccepted,
+      });
       setLoading(false);
 
       if (result.success) {

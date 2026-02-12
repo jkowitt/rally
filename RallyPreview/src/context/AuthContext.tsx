@@ -21,6 +21,11 @@ export interface AuthUser {
   handle: string;
   role: 'developer' | 'admin' | 'user';
   schoolId: string | null;
+  favoriteSchool: string | null;
+  supportingSchools: string[];
+  emailVerified: boolean;
+  emailUpdates: boolean;
+  pushNotifications: boolean;
   acceptedTerms: boolean;
 }
 
@@ -117,6 +122,11 @@ const DEMO_ACCOUNTS: { email: string; password: string; user: AuthUser }[] = [
       handle: '@jkowitt',
       role: 'developer',
       schoolId: null,
+      favoriteSchool: null,
+      supportingSchools: [],
+      emailVerified: true,
+      emailUpdates: true,
+      pushNotifications: true,
       acceptedTerms: true,
     },
   },
@@ -130,6 +140,11 @@ const DEMO_ACCOUNTS: { email: string; password: string; user: AuthUser }[] = [
       handle: '@alexr',
       role: 'admin',
       schoolId: null,
+      favoriteSchool: null,
+      supportingSchools: [],
+      emailVerified: true,
+      emailUpdates: true,
+      pushNotifications: true,
       acceptedTerms: true,
     },
   },
@@ -142,7 +157,12 @@ const DEMO_ACCOUNTS: { email: string; password: string; user: AuthUser }[] = [
       name: 'Jordan Mitchell',
       handle: '@jordanm',
       role: 'user',
-      schoolId: null,
+      schoolId: 'duke',
+      favoriteSchool: 'duke',
+      supportingSchools: ['unc', 'virginia'],
+      emailVerified: true,
+      emailUpdates: true,
+      pushNotifications: true,
       acceptedTerms: true,
     },
   },
@@ -156,19 +176,35 @@ const AUTH_TOKEN_KEY = '@rally_auth_token';
 const AUTH_USER_KEY = '@rally_auth_user';
 
 // ---------------------------------------------------------------------------
+// Register params
+// ---------------------------------------------------------------------------
+
+export interface RegisterParams {
+  email: string;
+  password: string;
+  name: string;
+  handle: string;
+  favoriteSchool?: string | null;
+  supportingSchools?: string[];
+  emailUpdates?: boolean;
+  pushNotifications?: boolean;
+  acceptedTerms?: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Context value interface
 // ---------------------------------------------------------------------------
 
 interface AuthContextValue {
   state: AuthState;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (
-    email: string,
-    password: string,
-    name: string,
-    handle: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+  register: (params: RegisterParams) => Promise<{ success: boolean; error?: string; verificationCode?: string }>;
   logout: () => Promise<void>;
+  verifyEmail: (code: string) => Promise<{ success: boolean; error?: string }>;
+  resendVerification: () => Promise<{ success: boolean; error?: string; verificationCode?: string }>;
+  forgotPassword: (email: string) => Promise<{ success: boolean; error?: string; resetCode?: string }>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (fields: Partial<AuthUser>) => Promise<{ success: boolean; error?: string }>;
   toggleEditMode: () => void;
   isAdmin: boolean;
   isDeveloper: boolean;
@@ -260,13 +296,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Register
   const register = useCallback(
-    async (
-      email: string,
-      password: string,
-      name: string,
-      handle: string,
-    ): Promise<{ success: boolean; error?: string }> => {
+    async (params: RegisterParams): Promise<{ success: boolean; error?: string; verificationCode?: string }> => {
       dispatch({ type: 'SET_LOADING', loading: true });
+
+      const {
+        email, password, name, handle,
+        favoriteSchool, supportingSchools,
+        emailUpdates, pushNotifications,
+        acceptedTerms,
+      } = params;
 
       // Try server registration first
       const serverResult = await apiClient.post('/auth/register', {
@@ -274,15 +312,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
         name,
         handle,
+        favoriteSchool: favoriteSchool || null,
+        supportingSchools: supportingSchools || [],
+        emailUpdates: emailUpdates !== undefined ? emailUpdates : true,
+        pushNotifications: pushNotifications !== undefined ? pushNotifications : true,
+        acceptedTerms: acceptedTerms !== undefined ? acceptedTerms : true,
       });
 
       if (serverResult.ok) {
-        const { token, user } = serverResult.data;
+        const { token, user, verificationCode } = serverResult.data;
         setApiToken(token);
         await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
         await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
         dispatch({ type: 'LOGIN', user, token });
-        return { success: true };
+        return { success: true, verificationCode };
       }
 
       // If server unavailable, create local user
@@ -293,7 +336,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name,
           handle: handle.startsWith('@') ? handle : `@${handle}`,
           role: 'user',
-          schoolId: null,
+          schoolId: favoriteSchool || null,
+          favoriteSchool: favoriteSchool || null,
+          supportingSchools: supportingSchools || [],
+          emailVerified: false,
+          emailUpdates: emailUpdates !== undefined ? emailUpdates : true,
+          pushNotifications: pushNotifications !== undefined ? pushNotifications : true,
           acceptedTerms: true,
         };
         const fakeToken = `local-token-${localUser.id}`;
@@ -308,6 +356,123 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: serverResult.error };
     },
     [],
+  );
+
+  // Verify email
+  const verifyEmail = useCallback(
+    async (code: string): Promise<{ success: boolean; error?: string }> => {
+      const serverResult = await apiClient.post('/auth/verify-email', { code });
+
+      if (serverResult.ok) {
+        const updatedUser = serverResult.data.user;
+        if (updatedUser) {
+          await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
+          dispatch({ type: 'SET_USER', user: updatedUser });
+        }
+        return { success: true };
+      }
+
+      if (serverResult.error === 'Server unavailable') {
+        // Offline: accept any 6-digit code
+        if (state.user) {
+          const updatedUser = { ...state.user, emailVerified: true };
+          await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
+          dispatch({ type: 'SET_USER', user: updatedUser });
+        }
+        return { success: true };
+      }
+
+      return { success: false, error: serverResult.error };
+    },
+    [state.user],
+  );
+
+  // Resend verification code
+  const resendVerification = useCallback(
+    async (): Promise<{ success: boolean; error?: string; verificationCode?: string }> => {
+      const serverResult = await apiClient.post('/auth/resend-verification');
+
+      if (serverResult.ok) {
+        return { success: true, verificationCode: serverResult.data.verificationCode };
+      }
+
+      if (serverResult.error === 'Server unavailable') {
+        // Offline: generate a fake code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        return { success: true, verificationCode: code };
+      }
+
+      return { success: false, error: serverResult.error };
+    },
+    [],
+  );
+
+  // Forgot password
+  const forgotPassword = useCallback(
+    async (email: string): Promise<{ success: boolean; error?: string; resetCode?: string }> => {
+      const serverResult = await apiClient.post('/auth/forgot-password', { email });
+
+      if (serverResult.ok) {
+        return { success: true, resetCode: serverResult.data.resetCode };
+      }
+
+      if (serverResult.error === 'Server unavailable') {
+        // Offline: return mock code
+        return { success: true, resetCode: '123456' };
+      }
+
+      return { success: false, error: serverResult.error };
+    },
+    [],
+  );
+
+  // Reset password
+  const resetPassword = useCallback(
+    async (email: string, code: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {
+      const serverResult = await apiClient.post('/auth/reset-password', { email, code, newPassword });
+
+      if (serverResult.ok) {
+        return { success: true };
+      }
+
+      if (serverResult.error === 'Server unavailable') {
+        // Offline: accept code 123456
+        if (code === '123456') {
+          return { success: true };
+        }
+        return { success: false, error: 'Invalid reset code' };
+      }
+
+      return { success: false, error: serverResult.error };
+    },
+    [],
+  );
+
+  // Update profile
+  const updateProfile = useCallback(
+    async (fields: Partial<AuthUser>): Promise<{ success: boolean; error?: string }> => {
+      const serverResult = await apiClient.put('/auth/me', fields);
+
+      if (serverResult.ok) {
+        const updatedUser = serverResult.data;
+        await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
+        dispatch({ type: 'SET_USER', user: updatedUser });
+        return { success: true };
+      }
+
+      if (serverResult.error === 'Server unavailable') {
+        // Offline: update locally
+        if (state.user) {
+          const updatedUser = { ...state.user, ...fields };
+          await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
+          dispatch({ type: 'SET_USER', user: updatedUser });
+        }
+        return { success: true };
+      }
+
+      return { success: false, error: serverResult.error };
+    },
+    [state.user],
   );
 
   // Logout
@@ -333,13 +498,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      verifyEmail,
+      resendVerification,
+      forgotPassword,
+      resetPassword,
+      updateProfile,
       toggleEditMode,
       isAdmin,
       isDeveloper,
       isAuthenticated,
       editMode,
     }),
-    [state, login, register, logout, toggleEditMode, isAdmin, isDeveloper, isAuthenticated, editMode],
+    [state, login, register, logout, verifyEmail, resendVerification, forgotPassword, resetPassword, updateProfile, toggleEditMode, isAdmin, isDeveloper, isAuthenticated, editMode],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

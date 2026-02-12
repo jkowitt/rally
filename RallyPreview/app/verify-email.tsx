@@ -21,7 +21,7 @@ const RESEND_COOLDOWN = 60;
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
-  const { state } = useAuth();
+  const { state, verifyEmail, resendVerification } = useAuth();
 
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [error, setError] = useState('');
@@ -132,34 +132,51 @@ export default function VerifyEmailScreen() {
 
     setLoading(true);
 
-    // Mock: accept any 6-digit code
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const result = await verifyEmail(codeString);
 
     setLoading(false);
 
-    // Navigate to tabs on success
-    router.replace('/(tabs)');
+    if (result.success) {
+      router.replace('/(tabs)');
+    } else {
+      setError(result.error || 'Invalid verification code. Please try again.');
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (!canResend) return;
 
-    Alert.alert(
-      'Demo Mode',
-      'Your verification code is: 123456',
-      [{ text: 'OK' }],
-    );
+    const result = await resendVerification();
+
+    if (result.success && result.verificationCode) {
+      Alert.alert(
+        'Demo Mode',
+        `Your verification code is: ${result.verificationCode}`,
+        [{ text: 'OK' }],
+      );
+    } else if (!result.success) {
+      setError(result.error || 'Failed to resend code');
+    }
 
     setCanResend(false);
     setResendTimer(RESEND_COOLDOWN);
   };
 
-  const handleShowCode = () => {
-    Alert.alert(
-      'Demo Mode',
-      'Your verification code is: 123456',
-      [{ text: 'OK' }],
-    );
+  const handleShowCode = async () => {
+    const result = await resendVerification();
+    if (result.success && result.verificationCode) {
+      Alert.alert(
+        'Demo Mode',
+        `Your verification code is: ${result.verificationCode}`,
+        [{ text: 'OK' }],
+      );
+    } else {
+      Alert.alert(
+        'Demo Mode',
+        'Your verification code is: 123456',
+        [{ text: 'OK' }],
+      );
+    }
   };
 
   const formatTimer = (seconds: number) => {

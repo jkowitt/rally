@@ -198,33 +198,33 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxxl,
   },
   header: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: Colors.offWhite,
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
   },
 
   // Points Balance Card
   balanceCard: {
     backgroundColor: Colors.navyMid,
-    borderRadius: Radius.lg,
-    padding: Spacing.xxl,
+    borderRadius: Radius.md,
+    padding: Spacing.lg,
     marginHorizontal: Spacing.xl,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.md,
     alignItems: 'center',
   },
   balanceLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.gray,
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
   },
   balanceValue: {
-    fontSize: 42,
+    fontSize: 36,
     fontWeight: '700',
     color: Colors.offWhite,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   tierBadge: {
     backgroundColor: Colors.orange,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   rewardEmojiArea: {
-    height: 100,
+    height: 80,
     alignItems: 'center',
     justifyContent: 'center',
   },

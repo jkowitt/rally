@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   FlatList,
   Image,
   Dimensions,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,9 +29,8 @@ const COLORS = {
 };
 
 const DIVISION_FILTERS: { id: Division | 'all'; label: string }[] = [
-  { id: 'all', label: 'All' },
+  { id: 'all', label: 'All Conferences' },
   { id: 'D1', label: 'Division I' },
-  { id: 'D2', label: 'Division II' },
 ];
 
 export default function SelectSchoolScreen() {
@@ -39,6 +39,7 @@ export default function SelectSchoolScreen() {
 
   const [query, setQuery] = useState('');
   const [selectedDivision, setSelectedDivision] = useState<Division | 'all'>('all');
+  const [disclaimerSchool, setDisclaimerSchool] = useState<School | null>(null);
 
   const filtered = useMemo(() => {
     const division = selectedDivision === 'all' ? undefined : selectedDivision;
@@ -59,10 +60,17 @@ export default function SelectSchoolScreen() {
       .map(([conference, schools]) => ({ conference, schools }));
   }, [filtered]);
 
-  const handleSelect = (school: School) => {
-    dispatch({ type: 'SELECT_SCHOOL', school });
-    router.replace('/(tabs)');
-  };
+  const handleSelect = useCallback((school: School) => {
+    setDisclaimerSchool(school);
+  }, []);
+
+  const handleConfirmSchool = useCallback(() => {
+    if (disclaimerSchool) {
+      dispatch({ type: 'SELECT_SCHOOL', school: disclaimerSchool });
+      setDisclaimerSchool(null);
+      router.replace('/(tabs)');
+    }
+  }, [disclaimerSchool, dispatch, router]);
 
   const renderSchool = (school: School) => (
     <TouchableOpacity
@@ -172,6 +180,43 @@ export default function SelectSchoolScreen() {
           </View>
         }
       />
+
+      {/* Partnership Disclaimer Modal */}
+      <Modal visible={disclaimerSchool !== null} transparent animationType="fade">
+        <View style={styles.disclaimerOverlay}>
+          <View style={styles.disclaimerCard}>
+            <View style={styles.disclaimerIconRow}>
+              <View style={[styles.disclaimerIconCircle, { backgroundColor: disclaimerSchool?.primaryColor || COLORS.orange }]}>
+                <Ionicons name="information-circle" size={28} color="#FFF" />
+              </View>
+            </View>
+            <Text style={styles.disclaimerTitle}>Early Access Mode</Text>
+            <Text style={styles.disclaimerSchoolName}>
+              {disclaimerSchool?.name}
+            </Text>
+            <Text style={styles.disclaimerText}>
+              This school is not yet an official partner of Rally. You are viewing the app in early preview mode as expansion to new schools and conferences occurs.
+            </Text>
+            <Text style={styles.disclaimerSubtext}>
+              Features, content, and rewards shown are for demonstration purposes. Full functionality will be available once a partnership is established.
+            </Text>
+            <TouchableOpacity
+              style={[styles.disclaimerBtn, { backgroundColor: disclaimerSchool?.primaryColor || COLORS.orange }]}
+              onPress={handleConfirmSchool}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.disclaimerBtnText}>Continue with {disclaimerSchool?.shortName}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.disclaimerCancelBtn}
+              onPress={() => setDisclaimerSchool(null)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.disclaimerCancelText}>Choose a Different School</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -320,6 +365,79 @@ const styles = StyleSheet.create({
   schoolLocation: {
     fontSize: 12,
     color: COLORS.gray,
+  },
+
+  // Disclaimer Modal
+  disclaimerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  disclaimerCard: {
+    backgroundColor: COLORS.navyMid,
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+  },
+  disclaimerIconRow: {
+    marginBottom: 16,
+  },
+  disclaimerIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disclaimerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.offWhite,
+    marginBottom: 4,
+  },
+  disclaimerSchoolName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.blue,
+    marginBottom: 16,
+  },
+  disclaimerText: {
+    fontSize: 14,
+    color: COLORS.offWhite,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  disclaimerSubtext: {
+    fontSize: 12,
+    color: COLORS.gray,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 20,
+  },
+  disclaimerBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  disclaimerBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  disclaimerCancelBtn: {
+    paddingVertical: 8,
+  },
+  disclaimerCancelText: {
+    fontSize: 13,
+    color: COLORS.gray,
+    fontWeight: '500',
   },
 
   // Empty

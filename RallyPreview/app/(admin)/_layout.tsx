@@ -1,15 +1,24 @@
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, TouchableOpacity, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const NAVY = '#131B2E';
 const NAVY_MID = '#1C2842';
 const ORANGE = '#FF6B35';
 const GRAY = '#8B95A5';
 const OFF_WHITE = '#F5F7FA';
 
+const ADMIN_TABS: { name: string; title: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { name: 'index', title: 'Dashboard', icon: 'grid' },
+  { name: 'schools', title: 'Schools', icon: 'school' },
+  { name: 'analytics', title: 'Analytics', icon: 'analytics' },
+  { name: 'users', title: 'Users', icon: 'people' },
+];
+
 export default function AdminLayout() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0);
 
   return (
     <Tabs
@@ -54,52 +63,38 @@ export default function AdminLayout() {
         tabBarStyle: {
           backgroundColor: NAVY_MID,
           borderTopColor: NAVY_MID,
-          height: Platform.OS === 'ios' ? 85 : 65,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-          paddingTop: 8,
+          borderTopWidth: 0,
+          elevation: 0,
+          height: 56 + bottomPad,
+          paddingBottom: bottomPad,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: '600',
+          marginTop: 2,
+        },
+        tabBarIconStyle: {
+          marginBottom: 0,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+          minHeight: 48,
         },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="schools"
-        options={{
-          title: 'Schools',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="school" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="analytics"
-        options={{
-          title: 'Analytics',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="analytics" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="users"
-        options={{
-          title: 'Users',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={color} />
-          ),
-        }}
-      />
+      {ADMIN_TABS.map((tab) => (
+        <Tabs.Screen
+          key={tab.name}
+          name={tab.name}
+          options={{
+            title: tab.title,
+            tabBarIcon: ({ color }) => (
+              <Ionicons name={tab.icon} size={22} color={color} />
+            ),
+          }}
+        />
+      ))}
     </Tabs>
   );
 }

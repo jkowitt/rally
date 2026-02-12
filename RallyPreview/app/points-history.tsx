@@ -92,9 +92,9 @@ export default function PointsHistoryScreen() {
           ]}
         >
           {isEarned ? (
-            <Ionicons name="arrow-up" size={18} color={COLORS.success} />
+            <Ionicons name="add-circle" size={18} color={COLORS.success} />
           ) : (
-            <Ionicons name="arrow-down" size={18} color={COLORS.error} />
+            <Ionicons name="remove-circle" size={18} color={COLORS.error} />
           )}
         </View>
 

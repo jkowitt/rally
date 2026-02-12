@@ -227,7 +227,7 @@ export default function HelpScreen() {
           </TouchableOpacity>
 
           <View style={styles.responseNote}>
-            <Ionicons name="time-outline" size={16} color={COLORS.gray} />
+            <Ionicons name="hourglass-outline" size={16} color={COLORS.gray} />
             <Text style={styles.responseText}>
               We typically respond within 24 hours
             </Text>

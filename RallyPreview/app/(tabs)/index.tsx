@@ -107,7 +107,7 @@ export default function HomeScreen() {
     switch (type) {
       case 'video': return 'play-circle';
       case 'poll': return 'bar-chart';
-      default: return 'document-text';
+      default: return 'newspaper';
     }
   };
 
@@ -199,7 +199,7 @@ export default function HomeScreen() {
           >
             <View style={[styles.tierBadge, { backgroundColor: schoolColor }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="star" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Ionicons name="shield" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
                 <Text style={styles.tierBadgeText}>{state.tier.name}</Text>
               </View>
             </View>

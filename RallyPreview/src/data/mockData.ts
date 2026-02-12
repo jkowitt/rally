@@ -260,7 +260,7 @@ export const INITIAL_POINTS_HISTORY: PointsEntry[] = [
 
 export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   { id: 'notif-1', title: 'Gameday Reminder', body: 'Gates open in 2 hours! Don\'t forget to check in when you arrive.', iconName: 'american-football', iconFamily: 'Ionicons', timestamp: new Date('2025-10-25T09:00:00'), read: false },
-  { id: 'notif-2', title: 'Tier Upgrade!', body: 'Congratulations! You\'ve reached Starter tier. Keep earning to unlock All-Star.', iconName: 'star', iconFamily: 'Ionicons', timestamp: new Date('2025-10-18T15:00:00'), read: false },
+  { id: 'notif-2', title: 'Tier Upgrade!', body: 'Congratulations! You\'ve reached Starter tier. Keep earning to unlock All-Star.', iconName: 'shield', iconFamily: 'Ionicons', timestamp: new Date('2025-10-18T15:00:00'), read: false },
   { id: 'notif-3', title: 'New Reward Available', body: 'The Rally T-Shirt is now available in the rewards store for 500 pts.', iconName: 'gift', iconFamily: 'Ionicons', timestamp: new Date('2025-10-15T12:00:00'), read: true },
   { id: 'notif-4', title: 'Trivia Challenge', body: 'A new trivia challenge is live! Answer correctly to earn bonus points.', iconName: 'bulb', iconFamily: 'Ionicons', timestamp: new Date('2025-10-12T11:30:00'), read: true },
   { id: 'notif-5', title: 'Points Earned', body: 'You earned 150 pts for a correct halftime prediction. Nice call!', iconName: 'wallet', iconFamily: 'Ionicons', timestamp: new Date('2025-10-04T16:35:00'), read: true },

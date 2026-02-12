@@ -176,12 +176,12 @@ export default function PhotoChallengeScreen() {
             <View style={styles.completedPhotoContainer}>
               <Image source={{ uri: existingPhoto }} style={styles.completedPhoto} />
               <View style={styles.completedOverlay}>
-                <Ionicons name="ribbon" size={32} color={COLORS.success} />
+                <Ionicons name="medal" size={32} color={COLORS.success} />
               </View>
             </View>
           ) : (
             <View style={styles.completedPlaceholder}>
-              <Ionicons name="image" size={48} color={COLORS.gray} />
+              <Ionicons name="camera-outline" size={48} color={COLORS.gray} />
               <Text style={styles.completedPlaceholderText}>Photo submitted</Text>
             </View>
           )}
@@ -259,7 +259,7 @@ export default function PhotoChallengeScreen() {
         <View style={styles.promptCard}>
           <View style={styles.promptIconRow}>
             <View style={styles.promptIconCircle}>
-              <Ionicons name="flash" size={28} color={COLORS.orange} />
+              <Ionicons name="sparkles" size={28} color={COLORS.orange} />
             </View>
           </View>
           <Text style={styles.promptTitle}>Show Your Game Day Spirit!</Text>

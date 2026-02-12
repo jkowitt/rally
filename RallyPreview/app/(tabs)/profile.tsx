@@ -25,7 +25,7 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: 'points', iconName: 'trending-up', label: 'Points History', bgColor: Colors.orangeAlpha(0.15), route: '/points-history' },
+  { id: 'points', iconName: 'wallet', label: 'Points History', bgColor: Colors.orangeAlpha(0.15), route: '/points-history' },
   { id: 'rewards', iconName: 'gift', label: 'My Rewards', bgColor: Colors.blueAlpha(0.15), route: '/my-rewards' },
   { id: 'notifications', iconName: 'notifications', label: 'Notifications', bgColor: Colors.successAlpha(0.15), route: '/notifications' },
   { id: 'leaderboard', iconName: 'podium', label: 'Leaderboard', bgColor: Colors.blueAlpha(0.15), route: '/leaderboard' },
@@ -83,7 +83,7 @@ export default function ProfileScreen() {
             {state.user.handle} · Member since {state.user.memberSince}
           </Text>
           <View style={styles.tierBadge}>
-            <Ionicons name="star" size={13} color="#FFFFFF" />
+            <Ionicons name="shield" size={13} color="#FFFFFF" />
             <Text style={styles.tierBadgeText}>{state.tier.name}</Text>
           </View>
         </View>

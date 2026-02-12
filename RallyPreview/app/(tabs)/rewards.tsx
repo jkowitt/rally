@@ -101,7 +101,7 @@ export default function RewardsScreen() {
           </Text>
           <View style={styles.tierBadge}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="star" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Ionicons name="shield" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
               <Text style={styles.tierBadgeText}>{state.tier.name}</Text>
             </View>
           </View>

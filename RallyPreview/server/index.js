@@ -562,19 +562,20 @@ app.get('/api/schools/:schoolId/bonus-offers', (req, res) => {
 });
 
 app.post('/api/schools/:schoolId/bonus-offers', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
-  const { title, description, bonusMultiplier, bonusPoints, activationType, expiresAt } = req.body;
-  if (!title) return res.status(400).json({ error: 'Title is required' });
+  const { name, description, bonusMultiplier, bonusPoints, activationType, expiresAt, startsAt } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
 
   const now = new Date().toISOString();
   const offer = {
     id: uuidv4(),
     schoolId: req.params.schoolId,
-    title,
+    name,
     description: description || '',
     bonusMultiplier: parseFloat(bonusMultiplier) || null, // e.g. 2.0 for double points
     bonusPoints: parseInt(bonusPoints, 10) || null, // e.g. 50 flat bonus
     activationType: activationType || 'all', // all, checkin, trivia, prediction, etc.
     active: true,
+    startsAt: startsAt || now,
     expiresAt: expiresAt || null,
     createdBy: req.user.id,
     createdAt: now,
@@ -585,7 +586,7 @@ app.post('/api/schools/:schoolId/bonus-offers', authenticateToken, requireRole([
   db.bonusOffers.push(offer);
   writeDb(db);
 
-  console.log(`[Bonus] "${offer.title}" created for ${req.params.schoolId}`);
+  console.log(`[Bonus] "${offer.name}" created for ${req.params.schoolId}`);
   res.status(201).json(offer);
 });
 
@@ -594,9 +595,10 @@ app.put('/api/schools/:schoolId/bonus-offers/:offerId', authenticateToken, requi
   const offer = (db.bonusOffers || []).find((o) => o.id === req.params.offerId && o.schoolId === req.params.schoolId);
   if (!offer) return res.status(404).json({ error: 'Bonus offer not found' });
 
-  const { title, description, bonusMultiplier, bonusPoints, activationType, active, expiresAt } = req.body;
-  if (title !== undefined) offer.title = title;
+  const { name, description, bonusMultiplier, bonusPoints, activationType, active, expiresAt, startsAt } = req.body;
+  if (name !== undefined) offer.name = name;
   if (description !== undefined) offer.description = description;
+  if (startsAt !== undefined) offer.startsAt = startsAt;
   if (bonusMultiplier !== undefined) offer.bonusMultiplier = parseFloat(bonusMultiplier) || null;
   if (bonusPoints !== undefined) offer.bonusPoints = parseInt(bonusPoints, 10) || null;
   if (activationType !== undefined) offer.activationType = activationType;

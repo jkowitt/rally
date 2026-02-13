@@ -200,7 +200,7 @@ export const rallyBonusOffers = {
 
 // Users (admin)
 export const rallyUsers = {
-  list: () => rallyFetch<RallyUser[] | { totalUsers: number; message: string }>('/users'),
+  list: () => rallyFetch<RallyUser[]>('/users'),
 
   getById: (id: string) => rallyFetch<RallyUser>(`/users/${id}`),
 

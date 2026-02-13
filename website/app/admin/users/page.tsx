@@ -20,8 +20,8 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     rallyUsers.list().then((res) => {
-      if (res.ok && res.data?.users) {
-        setUsers(res.data.users);
+      if (res.ok && Array.isArray(res.data)) {
+        setUsers(res.data);
       }
       setLoading(false);
     });

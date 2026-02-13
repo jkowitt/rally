@@ -102,10 +102,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!user) return false;
     // Developer sees everything
     if (user.role === 'developer') return true;
-    // Developer-only items
-    if ('developerOnly' in item && item.developerOnly) return user.role === 'developer';
-    // Admin-only items (admin + developer, not teammates)
-    if ('adminOnly' in item && item.adminOnly) return user.role === 'admin' || user.role === 'developer';
+    // Developer-only items (developers already returned above)
+    if ('developerOnly' in item && item.developerOnly) return false;
+    // Admin-only items (developers already returned above)
+    if ('adminOnly' in item && item.adminOnly) return user.role === 'admin';
     // Teammate permission check
     if (user.role === 'teammate' && 'permission' in item && item.permission) {
       const perms = (user as { teammatePermissions?: Record<string, boolean> }).teammatePermissions || {};

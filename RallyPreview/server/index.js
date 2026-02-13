@@ -655,24 +655,41 @@ app.get('/api/analytics', authenticateToken, requireRole(['admin', 'developer'])
   res.json(analytics);
 });
 
-app.post('/api/analytics/track', authenticateToken, (req, res) => {
-  const { event, schoolId, metadata } = req.body;
+app.post('/api/analytics/track', (req, res) => {
+  const { event, page, schoolId, metadata, timestamp } = req.body;
 
   if (!event) {
     return res.status(400).json({ error: 'Event name is required' });
   }
 
+  // Try to extract user from token (optional - allow unauthenticated tracking)
+  let userId = 'anonymous';
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+      userId = decoded.userId || decoded.id || 'anonymous';
+    } catch {
+      // Continue with anonymous
+    }
+  }
+
   const analyticsEntry = {
     id: uuidv4(),
     event,
-    userId: req.user.id,
-    schoolId: schoolId || req.user.schoolId || 'unknown',
+    page: page || '',
+    userId,
+    schoolId: schoolId || 'unknown',
     metadata: metadata || {},
-    timestamp: new Date().toISOString()
+    timestamp: timestamp || new Date().toISOString()
   };
 
   const db = getDb();
   db.analytics.push(analyticsEntry);
+  // Keep only last 1000 events to prevent unbounded growth
+  if (db.analytics.length > 1000) {
+    db.analytics = db.analytics.slice(-1000);
+  }
   writeDb(db);
 
   res.status(201).json(analyticsEntry);
@@ -739,17 +756,30 @@ app.get('/api/analytics/summary', authenticateToken, requireRole(['admin', 'deve
     dailyActiveUsers.push({ date: dateStr, count: uniqueUsers.size });
   }
 
+  // Recent events (last 50)
+  const recentEvents = db.analytics
+    .slice(-50)
+    .reverse()
+    .map((e) => ({
+      event: e.event,
+      page: e.page || '',
+      timestamp: e.timestamp,
+      userId: e.userId
+    }));
+
   res.json({
     totalUsers,
     verifiedUsers,
     activeToday,
+    eventsTracked: totalEvents,
     totalEvents,
     eventsByType,
     topSchools,
     usersBySchool,
     emailOptIn,
     pushOptIn,
-    dailyActiveUsers
+    dailyActiveUsers,
+    recentEvents
   });
 });
 

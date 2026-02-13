@@ -210,32 +210,263 @@ app.get('/api/schools/:schoolId', (_req, res) => {
 
 // ─── Events / Games ─────────────────────────────────────────────────────────
 
+// Migrate: on startup, load events.json into data.json if needed
 const EVENTS_FILE = path.join(__dirname, 'events.json');
 
-const getEvents = () => {
-  try {
-    const raw = fs.readFileSync(EVENTS_FILE, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return [];
+function ensureEventsInDb() {
+  const db = getDb();
+  if (!db.events) {
+    try {
+      const raw = fs.readFileSync(EVENTS_FILE, 'utf-8');
+      db.events = JSON.parse(raw);
+    } catch {
+      db.events = [];
+    }
+    writeDb(db);
   }
-};
+  if (!db.pointsLedger) {
+    db.pointsLedger = [];
+    writeDb(db);
+  }
+}
 
-app.get('/api/events', (_req, res) => {
-  const events = getEvents();
-  const { schoolId, status } = _req.query || {};
-  let results = events;
+app.get('/api/events', (req, res) => {
+  ensureEventsInDb();
+  const db = getDb();
+  const { schoolId, status } = req.query || {};
+  let results = db.events || [];
   if (schoolId) results = results.filter((e) => e.homeSchoolId === schoolId || e.awaySchoolId === schoolId);
   if (status) results = results.filter((e) => e.status === status);
   results.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
   res.json({ events: results, total: results.length });
 });
 
-app.get('/api/events/:eventId', (_req, res) => {
-  const events = getEvents();
-  const event = events.find((e) => e.id === _req.params.eventId);
+app.get('/api/events/:eventId', (req, res) => {
+  ensureEventsInDb();
+  const db = getDb();
+  const event = (db.events || []).find((e) => e.id === req.params.eventId);
   if (!event) return res.status(404).json({ error: 'Event not found' });
   res.json(event);
+});
+
+// Create event (admin/developer)
+app.post('/api/events', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureEventsInDb();
+  const { title, sport, homeSchoolId, homeTeam, awaySchoolId, awayTeam, venue, city, dateTime, status, activations } = req.body;
+
+  if (!title || !dateTime || !homeSchoolId) {
+    return res.status(400).json({ error: 'Title, dateTime, and homeSchoolId are required' });
+  }
+
+  const now = new Date().toISOString();
+  const event = {
+    id: uuidv4(),
+    title,
+    sport: sport || 'General',
+    homeSchoolId,
+    homeTeam: homeTeam || '',
+    awaySchoolId: awaySchoolId || null,
+    awayTeam: awayTeam || '',
+    venue: venue || '',
+    city: city || '',
+    dateTime,
+    status: status || 'upcoming',
+    activations: Array.isArray(activations) ? activations.map((a) => ({
+      id: uuidv4(),
+      type: a.type || 'custom',
+      name: a.name || 'Activity',
+      points: parseInt(a.points, 10) || 0,
+      description: a.description || '',
+    })) : [],
+    createdBy: req.user.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const db = getDb();
+  db.events.push(event);
+  writeDb(db);
+
+  console.log(`[Event] Created "${event.title}" by ${req.user.email}`);
+  res.status(201).json(event);
+});
+
+// Update event
+app.put('/api/events/:eventId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureEventsInDb();
+  const db = getDb();
+  const event = (db.events || []).find((e) => e.id === req.params.eventId);
+  if (!event) return res.status(404).json({ error: 'Event not found' });
+
+  const { title, sport, homeTeam, awaySchoolId, awayTeam, venue, city, dateTime, status, activations } = req.body;
+
+  if (title !== undefined) event.title = title;
+  if (sport !== undefined) event.sport = sport;
+  if (homeTeam !== undefined) event.homeTeam = homeTeam;
+  if (awaySchoolId !== undefined) event.awaySchoolId = awaySchoolId;
+  if (awayTeam !== undefined) event.awayTeam = awayTeam;
+  if (venue !== undefined) event.venue = venue;
+  if (city !== undefined) event.city = city;
+  if (dateTime !== undefined) event.dateTime = dateTime;
+  if (status !== undefined) event.status = status;
+  if (activations !== undefined) {
+    event.activations = Array.isArray(activations) ? activations.map((a) => ({
+      id: a.id || uuidv4(),
+      type: a.type || 'custom',
+      name: a.name || 'Activity',
+      points: parseInt(a.points, 10) || 0,
+      description: a.description || '',
+    })) : [];
+  }
+  event.updatedAt = new Date().toISOString();
+
+  writeDb(db);
+  res.json(event);
+});
+
+// Delete event
+app.delete('/api/events/:eventId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureEventsInDb();
+  const db = getDb();
+  const index = (db.events || []).findIndex((e) => e.id === req.params.eventId);
+  if (index === -1) return res.status(404).json({ error: 'Event not found' });
+
+  db.events.splice(index, 1);
+  writeDb(db);
+  res.json({ message: 'Event deleted' });
+});
+
+// ─── Points earning (complete an activation) ────────────────────────────────
+
+app.post('/api/events/:eventId/earn', authenticateToken, (req, res) => {
+  ensureEventsInDb();
+  const { activationId } = req.body;
+  if (!activationId) return res.status(400).json({ error: 'activationId is required' });
+
+  const db = getDb();
+  const event = (db.events || []).find((e) => e.id === req.params.eventId);
+  if (!event) return res.status(404).json({ error: 'Event not found' });
+
+  const activation = (event.activations || []).find((a) => a.id === activationId);
+  if (!activation) return res.status(404).json({ error: 'Activation not found' });
+
+  // Check if already earned
+  const already = (db.pointsLedger || []).find(
+    (p) => p.userId === req.user.id && p.eventId === event.id && p.activationId === activationId
+  );
+  if (already) return res.status(409).json({ error: 'Already earned points for this activation' });
+
+  const entry = {
+    id: uuidv4(),
+    userId: req.user.id,
+    eventId: event.id,
+    activationId,
+    activationName: activation.name,
+    points: activation.points,
+    schoolId: event.homeSchoolId,
+    timestamp: new Date().toISOString(),
+  };
+
+  if (!db.pointsLedger) db.pointsLedger = [];
+  db.pointsLedger.push(entry);
+  writeDb(db);
+
+  // Calculate total points for this user
+  const totalPoints = db.pointsLedger
+    .filter((p) => p.userId === req.user.id)
+    .reduce((sum, p) => sum + p.points, 0);
+
+  res.status(201).json({ earned: entry, totalPoints });
+});
+
+// Get user's points summary
+app.get('/api/points/me', authenticateToken, (req, res) => {
+  ensureEventsInDb();
+  const db = getDb();
+  const ledger = (db.pointsLedger || []).filter((p) => p.userId === req.user.id);
+  const totalPoints = ledger.reduce((sum, p) => sum + p.points, 0);
+
+  // Determine tier
+  let tier = 'Bronze';
+  if (totalPoints >= 5000) tier = 'Platinum';
+  else if (totalPoints >= 2500) tier = 'Gold';
+  else if (totalPoints >= 1000) tier = 'Silver';
+
+  res.json({
+    totalPoints,
+    tier,
+    history: ledger.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 50),
+  });
+});
+
+// ─── Rewards CRUD ────────────────────────────────────────────────────────────
+
+// Get rewards for a school
+app.get('/api/schools/:schoolId/rewards', (req, res) => {
+  const db = getDb();
+  const settings = db.schoolSettings[req.params.schoolId] || {};
+  res.json({ rewards: settings.customRewards || [] });
+});
+
+// Create reward
+app.post('/api/schools/:schoolId/rewards', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const { name, pointsCost, description } = req.body;
+  if (!name || pointsCost === undefined) {
+    return res.status(400).json({ error: 'Name and pointsCost are required' });
+  }
+
+  const db = getDb();
+  if (!db.schoolSettings[req.params.schoolId]) {
+    db.schoolSettings[req.params.schoolId] = { sponsorBannerEnabled: true, splashEnabled: true, customRewards: [] };
+  }
+  if (!db.schoolSettings[req.params.schoolId].customRewards) {
+    db.schoolSettings[req.params.schoolId].customRewards = [];
+  }
+
+  const reward = {
+    id: uuidv4(),
+    name,
+    pointsCost: parseInt(pointsCost, 10) || 0,
+    description: description || '',
+    createdAt: new Date().toISOString(),
+  };
+
+  db.schoolSettings[req.params.schoolId].customRewards.push(reward);
+  writeDb(db);
+
+  res.status(201).json(reward);
+});
+
+// Update reward
+app.put('/api/schools/:schoolId/rewards/:rewardId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const settings = db.schoolSettings[req.params.schoolId];
+  if (!settings || !settings.customRewards) return res.status(404).json({ error: 'School settings not found' });
+
+  const reward = settings.customRewards.find((r) => r.id === req.params.rewardId);
+  if (!reward) return res.status(404).json({ error: 'Reward not found' });
+
+  const { name, pointsCost, description } = req.body;
+  if (name !== undefined) reward.name = name;
+  if (pointsCost !== undefined) reward.pointsCost = parseInt(pointsCost, 10) || 0;
+  if (description !== undefined) reward.description = description;
+
+  writeDb(db);
+  res.json(reward);
+});
+
+// Delete reward
+app.delete('/api/schools/:schoolId/rewards/:rewardId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const settings = db.schoolSettings[req.params.schoolId];
+  if (!settings || !settings.customRewards) return res.status(404).json({ error: 'School settings not found' });
+
+  const index = settings.customRewards.findIndex((r) => r.id === req.params.rewardId);
+  if (index === -1) return res.status(404).json({ error: 'Reward not found' });
+
+  settings.customRewards.splice(index, 1);
+  writeDb(db);
+  res.json({ message: 'Reward deleted' });
 });
 
 // ─── Auth routes ─────────────────────────────────────────────────────────────

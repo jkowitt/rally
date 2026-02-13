@@ -283,8 +283,8 @@ app.post('/api/auth/register', async (req, res) => {
       name: name.trim(),
       handle: handle.startsWith('@') ? handle : `@${handle}`,
       role: role || 'user',
-      schoolId: schoolId || favoriteSchool || null,
-      favoriteSchool: favoriteSchool || null,
+      schoolId: schoolId || favoriteSchool || 'rally-university',
+      favoriteSchool: favoriteSchool || 'rally-university',
       supportingSchools: Array.isArray(supportingSchools) ? supportingSchools.slice(0, 2) : [],
       emailVerified: false,
       emailUpdates: emailUpdates !== undefined ? emailUpdates : true,
@@ -928,7 +928,7 @@ async function seedDemoAccounts() {
       name: 'Jason Kowitt',
       handle: '@jkowitt',
       role: 'developer',
-      favoriteSchool: null,
+      favoriteSchool: 'rally-university',
       supportingSchools: [],
     },
     {
@@ -937,7 +937,7 @@ async function seedDemoAccounts() {
       name: 'Alex Rivera',
       handle: '@alexr',
       role: 'admin',
-      favoriteSchool: null,
+      favoriteSchool: 'rally-university',
       supportingSchools: [],
     },
     {
@@ -946,8 +946,8 @@ async function seedDemoAccounts() {
       name: 'Jordan Mitchell',
       handle: '@jordanm',
       role: 'user',
-      favoriteSchool: 'duke',
-      supportingSchools: ['unc', 'virginia'],
+      favoriteSchool: 'rally-university',
+      supportingSchools: [],
     },
   ];
 

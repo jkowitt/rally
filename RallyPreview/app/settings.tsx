@@ -216,17 +216,27 @@ export default function SettingsScreen() {
               <Text style={styles.aboutValue}>1.0.0</Text>
             </View>
             <View style={styles.rowDivider} />
-            <View style={styles.aboutRow}>
+            <TouchableOpacity
+              style={styles.aboutRow}
+              onPress={() => router.push('/select-school' as any)}
+              activeOpacity={0.7}
+            >
               <View style={styles.settingRowLeft}>
                 <View style={styles.settingIcon}>
                   <Ionicons name="school-outline" size={18} color={COLORS.offWhite} />
                 </View>
                 <Text style={styles.settingLabel}>School</Text>
               </View>
-              <Text style={styles.aboutValue}>
-                {state.school?.name || 'Not Selected'}
-              </Text>
-            </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {state.school && (
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: state.school.primaryColor }} />
+                )}
+                <Text style={styles.aboutValue}>
+                  {state.school?.name || 'Not Selected'}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.gray} />
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 

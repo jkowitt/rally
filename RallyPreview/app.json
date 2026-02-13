@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.loudlegacy.rally",
-      "versionCode": 1,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/rally-appicon-orange.png",
         "backgroundColor": "#131B2E"

@@ -55,6 +55,22 @@ function generate6DigitCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+// Haversine distance between two lat/lng pairs (returns miles)
+function haversineDistance(lat1, lng1, lat2, lng2) {
+  const R = 3958.8; // Earth radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Default check-in radius in miles
+const DEFAULT_CHECKIN_RADIUS = 0.25;
+
 // Strip sensitive fields from user object for API responses
 function sanitizeUser(user) {
   return {
@@ -256,7 +272,12 @@ app.get('/api/events/:eventId', (req, res) => {
 // Create event (admin/developer)
 app.post('/api/events', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
   ensureEventsInDb();
-  const { title, sport, homeSchoolId, homeTeam, awaySchoolId, awayTeam, venue, city, dateTime, status, activations } = req.body;
+  const {
+    title, sport, homeSchoolId, homeTeam, awaySchoolId, awayTeam,
+    venue, city, dateTime, status, activations,
+    venueAddress, venueLatitude, venueLongitude, checkinRadius,
+    broadcastEnabled,
+  } = req.body;
 
   if (!title || !dateTime || !homeSchoolId) {
     return res.status(400).json({ error: 'Title, dateTime, and homeSchoolId are required' });
@@ -275,6 +296,13 @@ app.post('/api/events', authenticateToken, requireRole(['admin', 'developer']), 
     city: city || '',
     dateTime,
     status: status || 'upcoming',
+    // Geo check-in fields
+    venueAddress: venueAddress || '',
+    venueLatitude: venueLatitude ? parseFloat(venueLatitude) : null,
+    venueLongitude: venueLongitude ? parseFloat(venueLongitude) : null,
+    checkinRadius: checkinRadius ? parseFloat(checkinRadius) : DEFAULT_CHECKIN_RADIUS,
+    // Broadcast: allows remote fans to participate
+    broadcastEnabled: broadcastEnabled !== undefined ? broadcastEnabled : true,
     activations: Array.isArray(activations) ? activations.map((a) => ({
       id: uuidv4(),
       type: a.type || 'custom',
@@ -302,7 +330,10 @@ app.put('/api/events/:eventId', authenticateToken, requireRole(['admin', 'develo
   const event = (db.events || []).find((e) => e.id === req.params.eventId);
   if (!event) return res.status(404).json({ error: 'Event not found' });
 
-  const { title, sport, homeTeam, awaySchoolId, awayTeam, venue, city, dateTime, status, activations } = req.body;
+  const {
+    title, sport, homeTeam, awaySchoolId, awayTeam, venue, city, dateTime, status, activations,
+    venueAddress, venueLatitude, venueLongitude, checkinRadius, broadcastEnabled,
+  } = req.body;
 
   if (title !== undefined) event.title = title;
   if (sport !== undefined) event.sport = sport;
@@ -313,6 +344,11 @@ app.put('/api/events/:eventId', authenticateToken, requireRole(['admin', 'develo
   if (city !== undefined) event.city = city;
   if (dateTime !== undefined) event.dateTime = dateTime;
   if (status !== undefined) event.status = status;
+  if (venueAddress !== undefined) event.venueAddress = venueAddress;
+  if (venueLatitude !== undefined) event.venueLatitude = parseFloat(venueLatitude);
+  if (venueLongitude !== undefined) event.venueLongitude = parseFloat(venueLongitude);
+  if (checkinRadius !== undefined) event.checkinRadius = parseFloat(checkinRadius);
+  if (broadcastEnabled !== undefined) event.broadcastEnabled = broadcastEnabled;
   if (activations !== undefined) {
     event.activations = Array.isArray(activations) ? activations.map((a) => ({
       id: a.id || uuidv4(),
@@ -338,6 +374,634 @@ app.delete('/api/events/:eventId', authenticateToken, requireRole(['admin', 'dev
   db.events.splice(index, 1);
   writeDb(db);
   res.json({ message: 'Event deleted' });
+});
+
+// ─── Geo Check-In System ────────────────────────────────────────────────────
+//
+// Flow:
+// 1. User taps "Pre Check-In" for an upcoming event → status: pre_checkin
+//    - They get queued; the app monitors their location in the background
+// 2. When the user enters the venue geofence (0.25mi default) → status: checked_in
+//    - Points are awarded, in-game features unlock
+// 3. Users can also do a direct check-in if already at the venue
+// 4. Remote fans (watching on TV) can "tune in" → status: remote
+//    - They don't get venue check-in points but CAN interact with live engagements
+//
+
+// Pre check-in (user signals intent to attend)
+app.post('/api/events/:eventId/pre-checkin', authenticateToken, (req, res) => {
+  ensureEventsInDb();
+  const db = getDb();
+  const event = (db.events || []).find((e) => e.id === req.params.eventId);
+  if (!event) return res.status(404).json({ error: 'Event not found' });
+
+  if (!db.checkins) db.checkins = [];
+
+  // Check if already checked in
+  const existing = db.checkins.find(
+    (c) => c.userId === req.user.id && c.eventId === event.id
+  );
+  if (existing) {
+    return res.status(409).json({
+      error: `Already ${existing.status === 'checked_in' ? 'checked in' : 'pre-checked in'}`,
+      checkin: existing,
+    });
+  }
+
+  const checkin = {
+    id: uuidv4(),
+    userId: req.user.id,
+    eventId: event.id,
+    schoolId: event.homeSchoolId,
+    status: 'pre_checkin',   // pre_checkin → checked_in (when in range)
+    preCheckinAt: new Date().toISOString(),
+    checkedInAt: null,
+    latitude: null,
+    longitude: null,
+    distanceMiles: null,
+    pointsAwarded: false,
+    method: 'pre_checkin',   // pre_checkin, direct, remote
+  };
+
+  db.checkins.push(checkin);
+  writeDb(db);
+
+  console.log(`[CheckIn] Pre check-in for "${event.title}" by ${req.user.email}`);
+  res.status(201).json(checkin);
+});
+
+// Location update / direct check-in (user sends their lat/lng)
+// If they have a pre-checkin and are now in range → auto-promotes to checked_in
+// If no pre-checkin → does a direct check-in (must be in range)
+app.post('/api/events/:eventId/checkin', authenticateToken, (req, res) => {
+  ensureEventsInDb();
+  const { latitude, longitude } = req.body;
+
+  if (latitude === undefined || longitude === undefined) {
+    return res.status(400).json({ error: 'latitude and longitude are required' });
+  }
+
+  const db = getDb();
+  const event = (db.events || []).find((e) => e.id === req.params.eventId);
+  if (!event) return res.status(404).json({ error: 'Event not found' });
+
+  // Venue must have coordinates set by admin
+  if (!event.venueLatitude || !event.venueLongitude) {
+    return res.status(400).json({ error: 'This event does not have venue coordinates configured yet' });
+  }
+
+  const userLat = parseFloat(latitude);
+  const userLng = parseFloat(longitude);
+  const distance = haversineDistance(userLat, userLng, event.venueLatitude, event.venueLongitude);
+  const radius = event.checkinRadius || DEFAULT_CHECKIN_RADIUS;
+  const inRange = distance <= radius;
+
+  if (!db.checkins) db.checkins = [];
+
+  // Find existing checkin for this user+event
+  const existing = db.checkins.find(
+    (c) => c.userId === req.user.id && c.eventId === event.id
+  );
+
+  if (existing && existing.status === 'checked_in') {
+    return res.status(409).json({
+      error: 'Already checked in',
+      checkin: existing,
+      distance: Math.round(distance * 1000) / 1000,
+    });
+  }
+
+  if (!inRange) {
+    return res.status(403).json({
+      error: `You are ${distance.toFixed(2)} miles from the venue. Must be within ${radius} miles to check in.`,
+      distance: Math.round(distance * 1000) / 1000,
+      radius,
+      inRange: false,
+    });
+  }
+
+  // In range — either promote pre_checkin or create direct checkin
+  const now = new Date().toISOString();
+
+  if (existing) {
+    // Promote pre_checkin to checked_in
+    existing.status = 'checked_in';
+    existing.checkedInAt = now;
+    existing.latitude = userLat;
+    existing.longitude = userLng;
+    existing.distanceMiles = Math.round(distance * 1000) / 1000;
+    existing.method = 'auto_from_pre_checkin';
+
+    // Award check-in points if not already awarded
+    if (!existing.pointsAwarded) {
+      const checkinPoints = 100; // base check-in points
+      if (!db.pointsLedger) db.pointsLedger = [];
+      db.pointsLedger.push({
+        id: uuidv4(),
+        userId: req.user.id,
+        eventId: event.id,
+        activationId: 'geo-checkin',
+        activationName: 'Venue Check-In',
+        points: checkinPoints,
+        schoolId: event.homeSchoolId,
+        timestamp: now,
+      });
+      existing.pointsAwarded = true;
+    }
+
+    writeDb(db);
+    console.log(`[CheckIn] Auto check-in for "${event.title}" by ${req.user.email} (${distance.toFixed(3)} mi)`);
+
+    return res.json({
+      checkin: existing,
+      distance: Math.round(distance * 1000) / 1000,
+      inRange: true,
+      message: 'Checked in! You were pre-checked in and are now at the venue.',
+    });
+  }
+
+  // Direct check-in (no pre-checkin)
+  const checkin = {
+    id: uuidv4(),
+    userId: req.user.id,
+    eventId: event.id,
+    schoolId: event.homeSchoolId,
+    status: 'checked_in',
+    preCheckinAt: null,
+    checkedInAt: now,
+    latitude: userLat,
+    longitude: userLng,
+    distanceMiles: Math.round(distance * 1000) / 1000,
+    pointsAwarded: true,
+    method: 'direct',
+  };
+
+  db.checkins.push(checkin);
+
+  // Award check-in points
+  const checkinPoints = 100;
+  if (!db.pointsLedger) db.pointsLedger = [];
+  db.pointsLedger.push({
+    id: uuidv4(),
+    userId: req.user.id,
+    eventId: event.id,
+    activationId: 'geo-checkin',
+    activationName: 'Venue Check-In',
+    points: checkinPoints,
+    schoolId: event.homeSchoolId,
+    timestamp: now,
+  });
+
+  writeDb(db);
+  console.log(`[CheckIn] Direct check-in for "${event.title}" by ${req.user.email} (${distance.toFixed(3)} mi)`);
+
+  res.status(201).json({
+    checkin,
+    distance: Math.round(distance * 1000) / 1000,
+    inRange: true,
+    message: 'Checked in at the venue!',
+  });
+});
+
+// Remote tune-in (for TV/away fans — no geo required)
+app.post('/api/events/:eventId/tune-in', authenticateToken, (req, res) => {
+  ensureEventsInDb();
+  const db = getDb();
+  const event = (db.events || []).find((e) => e.id === req.params.eventId);
+  if (!event) return res.status(404).json({ error: 'Event not found' });
+
+  if (!event.broadcastEnabled) {
+    return res.status(403).json({ error: 'Remote viewing is not enabled for this event' });
+  }
+
+  if (!db.checkins) db.checkins = [];
+
+  const existing = db.checkins.find(
+    (c) => c.userId === req.user.id && c.eventId === event.id
+  );
+  if (existing) {
+    // If already at venue, keep that status (it's higher priority)
+    if (existing.status === 'checked_in') {
+      return res.json({ checkin: existing, message: 'You are checked in at the venue' });
+    }
+    // Upgrade pre_checkin to remote if they're tuning in from home
+    if (existing.status === 'pre_checkin') {
+      existing.status = 'remote';
+      existing.method = 'remote';
+      writeDb(db);
+      return res.json({ checkin: existing, message: 'Tuned in remotely' });
+    }
+    return res.status(409).json({ error: 'Already tuned in', checkin: existing });
+  }
+
+  const now = new Date().toISOString();
+  const checkin = {
+    id: uuidv4(),
+    userId: req.user.id,
+    eventId: event.id,
+    schoolId: event.homeSchoolId,
+    status: 'remote',
+    preCheckinAt: null,
+    checkedInAt: now,
+    latitude: null,
+    longitude: null,
+    distanceMiles: null,
+    pointsAwarded: true,
+    method: 'remote',
+  };
+
+  db.checkins.push(checkin);
+
+  // Remote tune-in gets fewer points than venue check-in
+  const remotePoints = 25;
+  if (!db.pointsLedger) db.pointsLedger = [];
+  db.pointsLedger.push({
+    id: uuidv4(),
+    userId: req.user.id,
+    eventId: event.id,
+    activationId: 'remote-tunein',
+    activationName: 'Remote Tune-In',
+    points: remotePoints,
+    schoolId: event.homeSchoolId,
+    timestamp: now,
+  });
+
+  writeDb(db);
+  console.log(`[CheckIn] Remote tune-in for "${event.title}" by ${req.user.email}`);
+  res.status(201).json({ checkin, message: 'Tuned in remotely! You can now interact with live engagements.' });
+});
+
+// Get my check-in status for an event
+app.get('/api/events/:eventId/my-checkin', authenticateToken, (req, res) => {
+  const db = getDb();
+  if (!db.checkins) return res.json({ checkin: null });
+
+  const checkin = db.checkins.find(
+    (c) => c.userId === req.user.id && c.eventId === req.params.eventId
+  );
+  res.json({ checkin: checkin || null });
+});
+
+// Get all check-ins for an event (admin view)
+app.get('/api/events/:eventId/checkins', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const checkins = (db.checkins || []).filter((c) => c.eventId === req.params.eventId);
+
+  const atVenue = checkins.filter((c) => c.status === 'checked_in').length;
+  const preChecked = checkins.filter((c) => c.status === 'pre_checkin').length;
+  const remote = checkins.filter((c) => c.status === 'remote').length;
+
+  res.json({
+    checkins,
+    summary: { total: checkins.length, atVenue, preChecked, remote },
+  });
+});
+
+// ─── Live Engagements (admin pushes content during games) ───────────────────
+//
+// Admins can push interactive content to fans during live events:
+// - Ads / Sponsor activations (served to both venue + remote fans = touchpoints)
+// - Polls ("Who will score next?")
+// - Trivia questions (earn points for correct answers)
+// - Predictions ("Will they convert this 3rd down?")
+// - Challenges ("Make some noise!" / noise meter)
+// - Announcements (halftime, score updates, promo codes)
+//
+// Audience targeting:
+// - at_venue: only fans physically checked in at the venue
+// - remote: only fans watching from home/TV
+// - all: both venue and remote fans (maximum touchpoints)
+//
+// Each engagement has a time window (startsAt → expiresAt) and can award points
+// for interaction. Sponsors get impression tracking.
+//
+
+// Create a live engagement for an event
+app.post('/api/events/:eventId/engagements', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureEventsInDb();
+  const db = getDb();
+  const event = (db.events || []).find((e) => e.id === req.params.eventId);
+  if (!event) return res.status(404).json({ error: 'Event not found' });
+
+  const {
+    type, title, body, imageUrl,
+    audience, points, duration,
+    sponsorName, sponsorLogo, sponsorUrl,
+    options,     // for polls/trivia/predictions: [{ label, isCorrect? }]
+    correctAnswer, // for trivia: index of correct option
+    metadata,
+  } = req.body;
+
+  if (!type || !title) {
+    return res.status(400).json({ error: 'type and title are required' });
+  }
+
+  const validTypes = ['ad', 'sponsor', 'poll', 'trivia', 'prediction', 'challenge', 'announcement', 'promo'];
+  if (!validTypes.includes(type)) {
+    return res.status(400).json({ error: `type must be one of: ${validTypes.join(', ')}` });
+  }
+
+  const validAudiences = ['at_venue', 'remote', 'all'];
+  const targetAudience = audience || 'all';
+  if (!validAudiences.includes(targetAudience)) {
+    return res.status(400).json({ error: `audience must be one of: ${validAudiences.join(', ')}` });
+  }
+
+  const now = new Date().toISOString();
+  const durationMs = (duration || 300) * 1000; // default 5 min
+  const expiresAt = new Date(Date.now() + durationMs).toISOString();
+
+  const engagement = {
+    id: uuidv4(),
+    eventId: event.id,
+    schoolId: event.homeSchoolId,
+    type,
+    title,
+    body: body || '',
+    imageUrl: imageUrl || null,
+    audience: targetAudience,
+    points: parseInt(points, 10) || 0,
+    // Timing
+    startsAt: now,
+    expiresAt,
+    durationSeconds: duration || 300,
+    active: true,
+    // Sponsor info (for ad/sponsor types)
+    sponsorName: sponsorName || null,
+    sponsorLogo: sponsorLogo || null,
+    sponsorUrl: sponsorUrl || null,
+    // Interactive options (polls, trivia, predictions)
+    options: Array.isArray(options) ? options.map((o, i) => ({
+      id: `opt-${i}`,
+      label: o.label || o,
+      isCorrect: o.isCorrect || false,
+      votes: 0,
+    })) : [],
+    correctAnswer: correctAnswer !== undefined ? parseInt(correctAnswer, 10) : null,
+    // Tracking
+    impressions: 0,
+    interactions: 0,
+    metadata: metadata || {},
+    createdBy: req.user.id,
+    createdAt: now,
+  };
+
+  if (!db.engagements) db.engagements = [];
+  db.engagements.push(engagement);
+  writeDb(db);
+
+  console.log(`[Engagement] "${engagement.type}: ${engagement.title}" pushed to ${targetAudience} for "${event.title}" by ${req.user.email}`);
+  res.status(201).json(engagement);
+});
+
+// Get all engagements for an event (admin view — includes expired)
+app.get('/api/events/:eventId/engagements', authenticateToken, (req, res) => {
+  const db = getDb();
+  let engagements = (db.engagements || []).filter((e) => e.eventId === req.params.eventId);
+  engagements.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json({ engagements, total: engagements.length });
+});
+
+// Get active engagements for a user (what should show on their screen right now)
+app.get('/api/events/:eventId/engagements/live', authenticateToken, (req, res) => {
+  const db = getDb();
+  const now = new Date();
+
+  // Determine user's check-in status for audience filtering
+  const checkin = (db.checkins || []).find(
+    (c) => c.userId === req.user.id && c.eventId === req.params.eventId
+  );
+
+  if (!checkin) {
+    return res.status(403).json({ error: 'You must be checked in or tuned in to view live engagements' });
+  }
+
+  const userLocation = checkin.status === 'checked_in' ? 'at_venue' : 'remote';
+
+  let engagements = (db.engagements || []).filter((e) => {
+    if (e.eventId !== req.params.eventId) return false;
+    if (!e.active) return false;
+    if (new Date(e.expiresAt) < now) return false;
+    // Audience filter
+    if (e.audience === 'all') return true;
+    if (e.audience === userLocation) return true;
+    return false;
+  });
+
+  // Sort by most recent first
+  engagements.sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt));
+
+  // Track impressions
+  for (const eng of engagements) {
+    eng.impressions = (eng.impressions || 0) + 1;
+  }
+  writeDb(db);
+
+  // Log impression for sponsors
+  if (!db.impressionLog) db.impressionLog = [];
+  for (const eng of engagements) {
+    if (eng.sponsorName) {
+      db.impressionLog.push({
+        id: uuidv4(),
+        engagementId: eng.id,
+        eventId: eng.eventId,
+        userId: req.user.id,
+        sponsorName: eng.sponsorName,
+        userLocation,
+        timestamp: now.toISOString(),
+      });
+    }
+  }
+  writeDb(db);
+
+  res.json({
+    engagements,
+    userStatus: checkin.status,
+    userLocation,
+    total: engagements.length,
+  });
+});
+
+// Interact with an engagement (vote on poll, answer trivia, tap ad, etc.)
+app.post('/api/engagements/:engagementId/interact', authenticateToken, (req, res) => {
+  const db = getDb();
+  const engagement = (db.engagements || []).find((e) => e.id === req.params.engagementId);
+  if (!engagement) return res.status(404).json({ error: 'Engagement not found' });
+
+  const now = new Date();
+  if (new Date(engagement.expiresAt) < now) {
+    return res.status(410).json({ error: 'This engagement has expired' });
+  }
+
+  const { optionId, response } = req.body;
+
+  // Check for duplicate interaction
+  if (!db.engagementInteractions) db.engagementInteractions = [];
+  const alreadyInteracted = db.engagementInteractions.find(
+    (i) => i.userId === req.user.id && i.engagementId === engagement.id
+  );
+  if (alreadyInteracted) {
+    return res.status(409).json({ error: 'Already interacted with this engagement', interaction: alreadyInteracted });
+  }
+
+  // Process the interaction based on type
+  let correct = null;
+  let pointsEarned = 0;
+
+  if (['poll', 'trivia', 'prediction'].includes(engagement.type) && optionId) {
+    // Record vote
+    const option = engagement.options.find((o) => o.id === optionId);
+    if (option) {
+      option.votes = (option.votes || 0) + 1;
+    }
+
+    // For trivia, check correctness
+    if (engagement.type === 'trivia' && engagement.correctAnswer !== null) {
+      correct = option && option.isCorrect;
+      pointsEarned = correct ? (engagement.points || 10) : Math.floor((engagement.points || 10) / 4);
+    } else {
+      // Polls/predictions: flat participation points
+      pointsEarned = engagement.points || 5;
+    }
+  } else if (['ad', 'sponsor'].includes(engagement.type)) {
+    // Tapping/viewing an ad = interaction point + impression tracked
+    pointsEarned = engagement.points || 2;
+  } else if (engagement.type === 'challenge') {
+    // Challenge completion
+    pointsEarned = engagement.points || 25;
+  } else {
+    // Generic interaction (announcement tap, promo claim)
+    pointsEarned = engagement.points || 1;
+  }
+
+  engagement.interactions = (engagement.interactions || 0) + 1;
+
+  const interaction = {
+    id: uuidv4(),
+    userId: req.user.id,
+    engagementId: engagement.id,
+    eventId: engagement.eventId,
+    type: engagement.type,
+    optionId: optionId || null,
+    response: response || null,
+    correct,
+    pointsEarned,
+    timestamp: now.toISOString(),
+  };
+
+  db.engagementInteractions.push(interaction);
+
+  // Award points
+  if (pointsEarned > 0) {
+    if (!db.pointsLedger) db.pointsLedger = [];
+    db.pointsLedger.push({
+      id: uuidv4(),
+      userId: req.user.id,
+      eventId: engagement.eventId,
+      activationId: `engagement-${engagement.id}`,
+      activationName: `${engagement.type}: ${engagement.title}`,
+      points: pointsEarned,
+      schoolId: engagement.schoolId,
+      timestamp: now.toISOString(),
+    });
+  }
+
+  writeDb(db);
+
+  console.log(`[Engagement] Interaction on "${engagement.title}" by user ${req.user.id} (+${pointsEarned} pts)`);
+
+  res.json({
+    interaction,
+    pointsEarned,
+    correct,
+    message: correct === true ? 'Correct!' : correct === false ? 'Not quite!' : 'Interaction recorded!',
+  });
+});
+
+// Update an engagement (extend time, deactivate, etc.)
+app.put('/api/engagements/:engagementId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const engagement = (db.engagements || []).find((e) => e.id === req.params.engagementId);
+  if (!engagement) return res.status(404).json({ error: 'Engagement not found' });
+
+  const { title, body, imageUrl, active, audience, points, expiresAt, durationSeconds, sponsorName, sponsorLogo, sponsorUrl, options } = req.body;
+
+  if (title !== undefined) engagement.title = title;
+  if (body !== undefined) engagement.body = body;
+  if (imageUrl !== undefined) engagement.imageUrl = imageUrl;
+  if (active !== undefined) engagement.active = active;
+  if (audience !== undefined) engagement.audience = audience;
+  if (points !== undefined) engagement.points = parseInt(points, 10) || 0;
+  if (expiresAt !== undefined) engagement.expiresAt = expiresAt;
+  if (durationSeconds !== undefined) engagement.durationSeconds = durationSeconds;
+  if (sponsorName !== undefined) engagement.sponsorName = sponsorName;
+  if (sponsorLogo !== undefined) engagement.sponsorLogo = sponsorLogo;
+  if (sponsorUrl !== undefined) engagement.sponsorUrl = sponsorUrl;
+  if (options !== undefined) engagement.options = options;
+
+  writeDb(db);
+  res.json(engagement);
+});
+
+// Delete an engagement
+app.delete('/api/engagements/:engagementId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const index = (db.engagements || []).findIndex((e) => e.id === req.params.engagementId);
+  if (index === -1) return res.status(404).json({ error: 'Engagement not found' });
+
+  db.engagements.splice(index, 1);
+  writeDb(db);
+  res.json({ message: 'Engagement deleted' });
+});
+
+// Get engagement stats (admin — impressions, interactions, sponsor ROI)
+app.get('/api/events/:eventId/engagement-stats', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const engagements = (db.engagements || []).filter((e) => e.eventId === req.params.eventId);
+  const interactions = (db.engagementInteractions || []).filter((i) => i.eventId === req.params.eventId);
+  const impressions = (db.impressionLog || []).filter((i) => i.eventId === req.params.eventId);
+  const checkins = (db.checkins || []).filter((c) => c.eventId === req.params.eventId);
+
+  // Sponsor summary
+  const sponsorStats = {};
+  for (const eng of engagements) {
+    if (eng.sponsorName) {
+      if (!sponsorStats[eng.sponsorName]) {
+        sponsorStats[eng.sponsorName] = { impressions: 0, interactions: 0, engagements: 0 };
+      }
+      sponsorStats[eng.sponsorName].impressions += eng.impressions || 0;
+      sponsorStats[eng.sponsorName].interactions += eng.interactions || 0;
+      sponsorStats[eng.sponsorName].engagements += 1;
+    }
+  }
+
+  res.json({
+    totalEngagements: engagements.length,
+    totalInteractions: interactions.length,
+    totalImpressions: impressions.length,
+    audienceBreakdown: {
+      atVenue: checkins.filter((c) => c.status === 'checked_in').length,
+      remote: checkins.filter((c) => c.status === 'remote').length,
+      preChecked: checkins.filter((c) => c.status === 'pre_checkin').length,
+    },
+    byType: engagements.reduce((acc, e) => {
+      acc[e.type] = (acc[e.type] || 0) + 1;
+      return acc;
+    }, {}),
+    sponsorStats,
+    engagements: engagements.map((e) => ({
+      id: e.id,
+      type: e.type,
+      title: e.title,
+      audience: e.audience,
+      impressions: e.impressions,
+      interactions: e.interactions,
+      sponsorName: e.sponsorName,
+      active: e.active,
+      startsAt: e.startsAt,
+      expiresAt: e.expiresAt,
+    })),
+  });
 });
 
 // ─── Points earning (complete an activation) ────────────────────────────────

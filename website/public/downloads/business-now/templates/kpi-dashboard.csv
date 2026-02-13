@@ -1,0 +1,116 @@
+KPI DASHBOARD TEMPLATE - Business Now by Loud Legacy
+"Instructions: Track up to 10 KPIs weekly or monthly. Focus on metrics that drive decisions."
+
+=== YOUR KEY METRICS ===
+"Choose 3-5 KPIs that matter most to your business. Quality over quantity."
+
+KPI #,Metric Name,Category,Frequency,Target,Current,Unit,Owner,Notes
+1,Example: Monthly Recurring Revenue,Revenue,Monthly,10000,8500,$,CEO,Primary growth metric
+2,Example: Customer Churn Rate,Retention,Monthly,5,3.2,%,CS Lead,Below target is good
+3,Example: Lead Conversion Rate,Sales,Weekly,25,18,%,Sales,Need to improve
+4,Example: Average Project Value,Revenue,Monthly,5000,4200,$,Sales,
+5,Example: Net Promoter Score,Customer,Quarterly,50,42,Score,CS Lead,Survey 100 customers
+6,,,,,,,,
+7,,,,,,,,
+8,,,,,,,,
+9,,,,,,,,
+10,,,,,,,,
+
+=== WEEKLY TRACKING ===
+Week Ending,KPI 1,KPI 2,KPI 3,KPI 4,KPI 5,Notes
+2024-01-07,8500,3.2,18,4200,42,
+2024-01-14,,,,,
+2024-01-21,,,,,
+2024-01-28,,,,,
+2024-02-04,,,,,
+2024-02-11,,,,,
+2024-02-18,,,,,
+2024-02-25,,,,,
+2024-03-03,,,,,
+2024-03-10,,,,,
+2024-03-17,,,,,
+2024-03-24,,,,,
+2024-03-31,,,,,
+
+=== MONTHLY TRACKING ===
+Month,KPI 1,KPI 1 Target,KPI 2,KPI 2 Target,KPI 3,KPI 3 Target,KPI 4,KPI 4 Target,KPI 5,KPI 5 Target
+January,,,,,,,,,
+February,,,,,,,,,
+March,,,,,,,,,
+April,,,,,,,,,
+May,,,,,,,,,
+June,,,,,,,,,
+July,,,,,,,,,
+August,,,,,,,,,
+September,,,,,,,,,
+October,,,,,,,,,
+November,,,,,,,,,
+December,,,,,,,,,
+
+=== TREND ANALYSIS ===
+KPI,3-Month Trend,Direction,Action Needed
+KPI 1,,Up/Down/Flat,
+KPI 2,,Up/Down/Flat,
+KPI 3,,Up/Down/Flat,
+KPI 4,,Up/Down/Flat,
+KPI 5,,Up/Down/Flat,
+
+=== COMMON KPIs BY BUSINESS TYPE ===
+"Reference list - choose what matters to YOUR business"
+
+SERVICE BUSINESSES:
+- Monthly Recurring Revenue (MRR)
+- Client Retention Rate
+- Average Revenue Per Client
+- Utilization Rate
+- Project Profitability
+- Client Satisfaction Score
+- Referral Rate
+- Sales Cycle Length
+
+PRODUCT BUSINESSES:
+- Monthly Revenue
+- Units Sold
+- Average Order Value
+- Customer Acquisition Cost
+- Lifetime Customer Value
+- Return Rate
+- Inventory Turnover
+- Gross Margin
+
+CONTENT/MEDIA BUSINESSES:
+- Monthly Active Users
+- Email List Size
+- Open Rate / Click Rate
+- Conversion Rate
+- Revenue Per Subscriber
+- Content Output
+- Engagement Rate
+- Traffic Sources %
+
+=== KPI SELECTION CRITERIA ===
+"Good KPIs have these characteristics:"
+"1. Actionable - You can influence the number"
+"2. Timely - You can measure it frequently enough to act"
+"3. Relevant - It connects to business outcomes"
+"4. Simple - Anyone can understand what it means"
+"5. Owned - Someone is responsible for moving it"
+
+=== RED/YELLOW/GREEN THRESHOLDS ===
+KPI,Green (On Track),Yellow (Watch),Red (Action Needed)
+Example: MRR,> $10K,$8K - $10K,< $8K
+Example: Churn,< 3%,3% - 5%,> 5%
+KPI 1,,,
+KPI 2,,,
+KPI 3,,,
+KPI 4,,,
+KPI 5,,,
+
+=== WEEKLY REVIEW QUESTIONS ===
+"Ask these questions when reviewing your KPIs:"
+"1. What moved significantly this week? Why?"
+"2. What's trending in the wrong direction?"
+"3. What action will we take based on these numbers?"
+"4. Are we measuring the right things?"
+
+"Questions? support@loud-legacy.com"

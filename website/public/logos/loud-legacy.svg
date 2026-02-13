@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" fill="none">
+  <!-- Shield with torch icon -->
+  <g transform="translate(8, 5)">
+    <!-- Shield shape -->
+    <path d="M0 5 C0 2 2 0 5 0 L45 0 C48 0 50 2 50 5 L50 45 C50 52 45 58 40 63 L25 75 L10 63 C5 58 0 52 0 45 Z" fill="white"/>
+    <!-- Torch inside shield -->
+    <g transform="translate(14, 12)">
+      <!-- Torch handle -->
+      <path d="M8 30 L14 30 L14 45 L8 45 Z" fill="#1a1a1a"/>
+      <path d="M6 44 L16 44 L16 48 L6 48 Z" fill="#1a1a1a"/>
+      <!-- Torch bowl -->
+      <path d="M4 28 L18 28 L16 32 L6 32 Z" fill="#1a1a1a"/>
+      <!-- Flame -->
+      <path d="M11 0 C6 8 4 14 6 20 C7 24 9 27 11 28 C13 27 15 24 16 20 C18 14 16 8 11 0" fill="#1a1a1a"/>
+    </g>
+  </g>
+  <!-- LOUD text -->
+  <text x="70" y="38" font-family="Arial Black, sans-serif" font-size="32" font-weight="900" fill="white" letter-spacing="1">LOUD</text>
+  <!-- LEGACY text -->
+  <text x="70" y="68" font-family="Arial Black, sans-serif" font-size="32" font-weight="900" fill="white" letter-spacing="1">LEGACY</text>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 60" fill="none">
+  <!-- Golden torch icon -->
+  <g transform="translate(8, 5)">
+    <!-- Flame with flowing curves -->
+    <path d="M18 0 C12 10 8 18 10 26 C11 30 14 34 18 36 C22 34 25 30 26 26 C28 18 24 10 18 0" fill="#C9A227"/>
+    <path d="M18 6 C14 12 12 18 13 23 C14 26 16 28 18 29 C20 28 22 26 23 23 C24 18 22 12 18 6" fill="#D4B43A"/>
+    <path d="M18 12 C16 16 15 19 16 22 C16 23 17 24 18 24 C19 24 20 23 20 22 C21 19 20 16 18 12" fill="#E8D080"/>
+    <!-- Torch handle -->
+    <rect x="14" y="36" width="8" height="18" fill="#C9A227"/>
+    <!-- Handle base -->
+    <path d="M10 54 L26 54 L24 50 L12 50 Z" fill="#C9A227"/>
+  </g>
+  <!-- LEGACY text - serif style -->
+  <text x="48" y="32" font-family="Georgia, 'Times New Roman', serif" font-size="26" font-weight="400" fill="#C9A227" letter-spacing="2">LEGACY</text>
+  <!-- CRM text - spaced out -->
+  <text x="48" y="50" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-weight="400" fill="#C9A227" letter-spacing="6">C R M</text>
+</svg>

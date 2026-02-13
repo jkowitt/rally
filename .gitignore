@@ -63,3 +63,9 @@ playground.xcworkspace
 
 # Crashlytics
 crashlytics-build.properties
+
+# Node / Next.js (website)
+node_modules/
+.next/
+.netlify/
+website/cache/

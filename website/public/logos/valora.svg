@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" fill="none">
+  <defs>
+    <linearGradient id="valoraText" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#d4dfe8"/>
+      <stop offset="50%" style="stop-color:#9fb3c4"/>
+      <stop offset="100%" style="stop-color:#7a95aa"/>
+    </linearGradient>
+    <linearGradient id="valoraDot" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c5d4e0"/>
+      <stop offset="100%" style="stop-color:#8aa4b8"/>
+    </linearGradient>
+  </defs>
+  <!-- VALORA text -->
+  <text x="15" y="45" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="500" fill="url(#valoraText)" letter-spacing="5">VALORA</text>
+  <!-- Molecular dots above the final A -->
+  <g transform="translate(178, 3)">
+    <circle cx="8" cy="12" r="5" fill="url(#valoraDot)"/>
+    <circle cx="26" cy="5" r="4" fill="url(#valoraDot)"/>
+    <circle cx="35" cy="16" r="3" fill="url(#valoraDot)"/>
+    <line x1="12" y1="10" x2="23" y2="6" stroke="url(#valoraDot)" stroke-width="2"/>
+    <line x1="29" y1="7" x2="33" y2="14" stroke="url(#valoraDot)" stroke-width="1.5"/>
+  </g>
+</svg>

@@ -1,0 +1,1323 @@
+// Prisma Schema for VALORA
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// USER MANAGEMENT & AUTHENTICATION
+// ==========================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?   // Hashed password
+  emailVerified DateTime?
+  image         String?
+  role          UserRole  @default(USER)
+
+  // Platform Access (shared across all LOUD platforms)
+  platformAccess PlatformAccess[]
+
+  // Relations
+  accounts         Account[]
+  sessions         Session[]
+  organizations    OrganizationMember[]
+  valuations       Valuation[]
+  activities       ActivityLog[]
+  subscriptions    Subscription[]
+  businessProjects BusinessProject[]
+  crmLeads         CRMLead[]
+  crmDeals         CRMDeal[]
+
+  // Loud Works relations
+  talentProfile     TalentProfile?
+  worksOrgMemberships WorksOrgMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  ANALYST
+  VIEWER
+  SUPER_ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==========================================
+// ORGANIZATION & TEAM MANAGEMENT
+// ==========================================
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logo        String?
+
+  // Subscription
+  planType    PlanType @default(FREE)
+  planExpiry  DateTime?
+
+  // Relations
+  members     OrganizationMember[]
+  valuations  Valuation[]
+  portfolios  Portfolio[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+enum PlanType {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrgRole  @default(MEMBER)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt DateTime @default(now())
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// ==========================================
+// PROPERTY & VALUATION
+// ==========================================
+
+model Property {
+  id          String       @id @default(cuid())
+  address     String
+  city        String?
+  state       String?
+  zip         String?
+  country     String?     @default("USA")
+
+  // Property Details
+  propertyType PropertyType
+  subType      String?     // Office, Retail, Apartment, etc.
+  squareFeet   Float?
+  units        Int?        // For multifamily
+  yearBuilt    Int?
+  lotSize      Float?
+
+  // Coordinates
+  latitude     Float?
+  longitude    Float?
+
+  // AI Analysis
+  aiConditionScore Float?   // 0-100
+  aiWearTearNotes  String?  @db.Text
+  aiRecommendations String? @db.Text
+
+  // Images
+  images       PropertyImage[]
+
+  // Relations
+  valuations   Valuation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([address])
+  @@index([propertyType])
+  @@index([city, state])
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  MULTIFAMILY
+  INDUSTRIAL
+  MIXED_USE
+  LAND
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  propertyId String
+  url        String
+  caption    String?
+  type       ImageType @default(EXTERIOR)
+
+  // AI Analysis
+  aiAnalysis String?  @db.Text
+  aiTags     String[] // Detected features
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  uploadedAt DateTime @default(now())
+
+  @@index([propertyId])
+}
+
+enum ImageType {
+  EXTERIOR
+  INTERIOR
+  AERIAL
+  FLOORPLAN
+  OTHER
+}
+
+model Valuation {
+  id             String          @id @default(cuid())
+  propertyId     String
+  userId         String
+  organizationId String?
+
+  // Valuation Basics
+  name           String
+  status         ValuationStatus @default(DRAFT)
+  visibility     Visibility      @default(PRIVATE)
+
+  // Financial Data (stored as JSON for flexibility)
+  purchasePrice     Float?
+  currentValue      Float?
+  estimatedValue    Float?
+
+  // P&L Data
+  incomeData        Json?  // { rent: 100000, otherIncome: 5000, ... }
+  expenseData       Json?  // { taxes: 10000, insurance: 5000, ... }
+  financingData     Json?  // { loanAmount: 500000, interestRate: 4.5, ... }
+
+  // Analysis Results
+  noi               Float?  // Net Operating Income
+  capRate           Float?
+  irr               Float?  // Internal Rate of Return
+  cashOnCash        Float?
+  dscr              Float?  // Debt Service Coverage Ratio
+
+  // Scenarios
+  scenarios         ValuationScenario[]
+
+  // Comparables
+  comparables       Comparable[]
+
+  // Relations
+  property      Property      @relation(fields: [propertyId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+  organization  Organization? @relation(fields: [organizationId], references: [id])
+  portfolio     Portfolio?    @relation(fields: [portfolioId], references: [id])
+  portfolioId   String?
+
+  // Approval Workflow
+  approvalStatus ApprovalStatus @default(NOT_SUBMITTED)
+  approvedBy     String?
+  approvedAt     DateTime?
+
+  // Metadata
+  notes         String?       @db.Text
+  tags          String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([propertyId])
+  @@index([status])
+}
+
+enum ValuationStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum Visibility {
+  PRIVATE
+  ORGANIZATION
+  PUBLIC
+}
+
+enum ApprovalStatus {
+  NOT_SUBMITTED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model ValuationScenario {
+  id           String @id @default(cuid())
+  valuationId  String
+  name         String  // "Base Case", "Best Case", "Worst Case"
+
+  // Scenario-specific assumptions
+  assumptions  Json    // All variable assumptions
+  results      Json    // Calculated results
+
+  valuation    Valuation @relation(fields: [valuationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([valuationId])
+}
+
+model Comparable {
+  id           String @id @default(cuid())
+  valuationId  String
+
+  // Comp Property Details
+  address      String
+  propertyType PropertyType
+  squareFeet   Float?
+  salePrice    Float
+  saleDate     DateTime
+  capRate      Float?
+  pricePerSF   Float?
+
+  // Source
+  source       String?  // MLS, Public Records, etc.
+  sourceUrl    String?
+
+  valuation    Valuation @relation(fields: [valuationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([valuationId])
+}
+
+// ==========================================
+// PORTFOLIO MANAGEMENT
+// ==========================================
+
+model Portfolio {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+
+  // Relations
+  valuations     Valuation[]
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+// ==========================================
+// MARKET DATA
+// ==========================================
+
+model MarketData {
+  id           String       @id @default(cuid())
+
+  // Location
+  city         String
+  state        String
+  zip          String?
+  market       String?      // "Downtown", "Suburbs", etc.
+
+  // Property Type
+  propertyType PropertyType
+
+  // Market Metrics
+  avgCapRate   Float?
+  avgRentPSF   Float?
+  vacancyRate  Float?
+  absorption   Float?       // SF absorbed in period
+  inventory    Float?       // Available SF
+
+  // Date
+  period       DateTime     // Month/Quarter this data represents
+
+  // Source
+  source       String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([city, state, propertyType, period])
+  @@index([city, state])
+  @@index([propertyType])
+}
+
+// ==========================================
+// CMS & CONTENT MANAGEMENT
+// ==========================================
+
+model CMSContent {
+  id        String      @id @default(cuid())
+  key       String      @unique  // "homepage_hero_title", "valora_cta_text"
+  value     String      @db.Text
+  type      ContentType @default(TEXT)
+  section   String?     // "homepage", "valora", "footer"
+
+  updatedBy String?
+  updatedAt DateTime    @updatedAt
+  createdAt DateTime    @default(now())
+
+  @@index([section])
+}
+
+enum ContentType {
+  TEXT
+  HTML
+  MARKDOWN
+  JSON
+}
+
+model MediaAsset {
+  id          String    @id @default(cuid())
+  fileName    String
+  originalName String
+  mimeType    String
+  size        Int       // bytes
+  url         String
+
+  // Organization
+  folder      String?   // "logos", "property-images", etc.
+  tags        String[]
+
+  // Metadata
+  alt         String?
+  caption     String?
+
+  uploadedBy  String?
+  uploadedAt  DateTime  @default(now())
+
+  @@index([folder])
+}
+
+// ==========================================
+// ACTIVITY LOGS & AUDIT TRAIL
+// ==========================================
+
+model ActivityLog {
+  id             String       @id @default(cuid())
+  userId         String?
+  organizationId String?
+
+  action         String       // "created_valuation", "updated_property"
+  entityType     String       // "valuation", "property", "user"
+  entityId       String?
+
+  details        Json?        // Additional context
+  ipAddress      String?
+  userAgent      String?
+
+  user           User?        @relation(fields: [userId], references: [id])
+
+  createdAt      DateTime     @default(now())
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ==========================================
+// PROPERTY DATA CACHE (RentCast + Evaluation Comps)
+// ==========================================
+// Persisted cache of RentCast data and evaluated properties.
+// Reduces duplicate RentCast API calls across users and builds
+// an internal comp database that grows stronger over time.
+
+model PropertyCache {
+  id            String   @id @default(cuid())
+
+  // Normalized address fields for lookup
+  addressHash   String   @unique   // SHA-256 of normalized address
+  address       String
+  city          String
+  state         String
+  zipCode       String?
+
+  // Property attributes (from RentCast or evaluation)
+  propertyType  String?
+  bedrooms      Int?
+  bathrooms     Float?
+  squareFeet    Int?
+  yearBuilt     Int?
+  lotSizeSqft   Float?
+  latitude      Float?
+  longitude     Float?
+
+  // Sale data
+  lastSaleDate  String?
+  lastSalePrice Float?
+  saleHistory   Json?             // Array of { date, price, buyer, seller, type }
+
+  // Source tracking
+  source        String            // "rentcast", "rentcast-comps", "evaluation"
+  rawData       Json?             // Full original API response for reference
+
+  // Comp metadata (for area-based searches)
+  isComp        Boolean  @default(false)
+
+  // Cache lifecycle
+  fetchedAt     DateTime @default(now())
+  expiresAt     DateTime            // After this date, re-fetch from RentCast
+  hitCount      Int      @default(0) // Track reuse across users
+
+  @@index([city, state])
+  @@index([zipCode])
+  @@index([source])
+  @@index([expiresAt])
+  @@index([isComp, city, state])
+}
+
+// ==========================================
+// SYSTEM CONFIGURATION
+// ==========================================
+
+model SystemConfig {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String @db.Text
+
+  updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// MULTI-PLATFORM SUPPORT
+// ==========================================
+
+// Platform Access Control - which platforms a user can access
+model PlatformAccess {
+  id         String   @id @default(cuid())
+  userId     String
+  platform   Platform
+  enabled    Boolean  @default(true)
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, platform])
+  @@index([userId])
+  @@index([platform])
+}
+
+enum Platform {
+  VALORA        // Real estate valuation (loud-legacy-web)
+  BUSINESS_NOW  // Business management
+  LEGACY_CRM    // Customer relationship management
+  HUB           // Central dashboard/hub
+  VENUEVR       // VR venue tours
+  LOUD_WORKS    // Workforce & applied learning platform
+}
+
+// ==========================================
+// SUBSCRIPTION & PAYMENTS (Shared across platforms)
+// ==========================================
+
+model Subscription {
+  id             String             @id @default(cuid())
+  userId         String
+  platform       Platform           // Which platform this subscription is for
+
+  // Subscription Details
+  status         SubscriptionStatus @default(ACTIVE)
+  planType       SubscriptionPlan
+  billingCycle   BillingCycle       @default(MONTHLY)
+
+  // Pricing
+  amount         Float              // Amount in cents
+  currency       String             @default("USD")
+
+  // Payment Provider (Stripe)
+  stripeCustomerId       String?
+  stripeSubscriptionId   String?
+  stripePaymentMethodId  String?
+  stripePriceId          String?
+
+  // Subscription Period
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean  @default(false)
+  canceledAt         DateTime?
+
+  // Trial
+  trialStart    DateTime?
+  trialEnd      DateTime?
+
+  // Relations
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, platform])
+  @@index([userId])
+  @@index([platform])
+  @@index([status])
+  @@index([stripeSubscriptionId])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+  UNPAID
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  subscriptionId   String
+
+  // Payment Details
+  amount           Float         // Amount in cents
+  currency         String        @default("USD")
+  status           PaymentStatus
+
+  // Stripe
+  stripePaymentIntentId String?  @unique
+  stripeChargeId        String?  @unique
+
+  // Payment Method
+  paymentMethod    String?       // card, bank_transfer, etc.
+  last4            String?       // Last 4 digits of card
+  brand            String?       // visa, mastercard, etc.
+
+  // Invoice
+  invoiceUrl       String?
+  receiptUrl       String?
+
+  // Error handling
+  failureCode      String?
+  failureMessage   String?
+
+  subscription     Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  paidAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([stripePaymentIntentId])
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  CANCELED
+}
+
+// ==========================================
+// BUSINESS NOW PLATFORM
+// ==========================================
+
+model BusinessProject {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  status      ProjectStatus @default(PLANNING)
+
+  // Business Plan
+  executiveSummary String? @db.Text
+  marketAnalysis   String? @db.Text
+  financialPlan    Json?   // Revenue projections, expenses, etc.
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks       BusinessTask[]
+  milestones  BusinessMilestone[]
+
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+model BusinessTask {
+  id          String   @id @default(cuid())
+  projectId   String
+  title       String
+  description String?  @db.Text
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  project     BusinessProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  COMPLETED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model BusinessMilestone {
+  id          String   @id @default(cuid())
+  projectId   String
+  title       String
+  description String?  @db.Text
+  targetDate  DateTime
+  achieved    Boolean  @default(false)
+  achievedAt  DateTime?
+
+  project     BusinessProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ==========================================
+// LEGACY CRM PLATFORM
+// ==========================================
+
+model CRMLead {
+  id          String   @id @default(cuid())
+  userId      String
+
+  // Contact Info
+  firstName   String
+  lastName    String
+  email       String
+  phone       String?
+  company     String?
+  title       String?
+
+  // Lead Details
+  status      LeadStatus @default(NEW)
+  source      LeadSource @default(OTHER)
+  score       Int?       // Lead score 0-100
+
+  // Address
+  address     String?
+  city        String?
+  state       String?
+  zip         String?
+  country     String?    @default("USA")
+
+  // Relations
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deals       CRMDeal[]
+  activities  CRMActivity[]
+  notes       CRMNote[]
+
+  convertedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([email])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNQUALIFIED
+  CONVERTED
+  LOST
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  EMAIL_CAMPAIGN
+  SOCIAL_MEDIA
+  COLD_CALL
+  EVENT
+  OTHER
+}
+
+model CRMDeal {
+  id          String   @id @default(cuid())
+  userId      String
+  leadId      String?
+
+  // Deal Info
+  title       String
+  description String?  @db.Text
+  value       Float    // Deal value
+  currency    String   @default("USD")
+
+  stage       DealStage @default(PROSPECTING)
+  probability Int?      // Win probability 0-100
+
+  // Dates
+  expectedCloseDate DateTime?
+  actualCloseDate   DateTime?
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead        CRMLead?    @relation(fields: [leadId], references: [id])
+  activities  CRMActivity[]
+  notes       CRMNote[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([leadId])
+  @@index([stage])
+}
+
+enum DealStage {
+  PROSPECTING
+  QUALIFICATION
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+model CRMActivity {
+  id          String   @id @default(cuid())
+  leadId      String?
+  dealId      String?
+
+  type        ActivityType
+  subject     String
+  description String?  @db.Text
+
+  scheduledAt DateTime?
+  completedAt DateTime?
+
+  lead        CRMLead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal        CRMDeal? @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([leadId])
+  @@index([dealId])
+  @@index([type])
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  TASK
+  NOTE
+}
+
+model CRMNote {
+  id        String   @id @default(cuid())
+  leadId    String?
+  dealId    String?
+
+  content   String   @db.Text
+  isPinned  Boolean  @default(false)
+
+  lead      CRMLead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal      CRMDeal? @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([dealId])
+}
+
+// ==========================================
+// LOUD WORKS PLATFORM
+// ==========================================
+
+// Organization types for Loud Works
+model WorksOrganization {
+  id            String               @id @default(cuid())
+  type          WorksOrgType
+  name          String
+  description   String?              @db.Text
+  industry      String?
+  location      String?
+  website       String?
+  logo          String?
+  billingStatus WorksBillingStatus   @default(PENDING)
+
+  // Relations
+  members       WorksOrgMember[]
+  projects      WorksProject[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([billingStatus])
+}
+
+enum WorksOrgType {
+  EMPLOYER
+  SPONSOR
+  UNIVERSITY
+  NONPROFIT
+}
+
+enum WorksBillingStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+model WorksOrgMember {
+  id             String             @id @default(cuid())
+  userId         String
+  organizationId String
+  roleInOrg      WorksOrgRole       @default(MEMBER)
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization WorksOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+enum WorksOrgRole {
+  OWNER
+  MANAGER
+  VIEWER
+  MEMBER
+}
+
+// Talent Profile for Loud Works
+model TalentProfile {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  headline              String?
+  bio                   String?  @db.Text
+  location              String?
+  availabilityHoursWeek Int?
+  preferredCategories   String[] // Array of category names
+  links                 Json?    // Array of {title, url}
+  verificationStatus    TalentVerificationStatus @default(PENDING)
+
+  // Relations
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills       TalentSkill[]
+  proofItems   ProofItem[]
+  applications WorksApplication[]
+  engagements  WorksEngagement[]  @relation("TalentEngagements")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([verificationStatus])
+}
+
+enum TalentVerificationStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+}
+
+model WorksSkill {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  category    String
+  description String?
+
+  // Relations
+  talentSkills TalentSkill[]
+
+  createdAt DateTime @default(now())
+}
+
+model TalentSkill {
+  id              String @id @default(cuid())
+  talentProfileId String
+  skillId         String
+  proficiency     SkillProficiency @default(INTERMEDIATE)
+
+  talentProfile TalentProfile @relation(fields: [talentProfileId], references: [id], onDelete: Cascade)
+  skill         WorksSkill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([talentProfileId, skillId])
+  @@index([talentProfileId])
+  @@index([skillId])
+}
+
+enum SkillProficiency {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+model ProofItem {
+  id              String    @id @default(cuid())
+  talentProfileId String
+  type            ProofType
+  title           String
+  description     String?   @db.Text
+  url             String?
+  fileKey         String?
+  tags            String[]
+
+  talentProfile TalentProfile @relation(fields: [talentProfileId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([talentProfileId])
+}
+
+enum ProofType {
+  LINK
+  FILE
+  TEXT
+  PROJECT
+  CERTIFICATE
+}
+
+// Projects for Loud Works
+model WorksProject {
+  id              String               @id @default(cuid())
+  organizationId  String
+  title           String
+  description     String               @db.Text
+  category        String
+  locationType    WorksLocationType
+  locationDetails String?
+  timeframeStart  DateTime?
+  timeframeEnd    DateTime?
+  estimatedHours  Int?
+  payType         WorksPayType
+  payAmount       Float
+  requirements    Json?                // Array of required skill IDs
+  status          WorksProjectStatus   @default(DRAFT)
+  visibilityRules Json?                // Rules for who can see the project
+  createdByUserId String
+  approvedByUserId String?
+  approvedAt      DateTime?
+
+  // Relations
+  organization WorksOrganization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  applications WorksApplication[]
+  engagements  WorksEngagement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([category])
+}
+
+enum WorksLocationType {
+  REMOTE
+  ONSITE
+  HYBRID
+}
+
+enum WorksPayType {
+  FIXED
+  HOURLY
+}
+
+enum WorksProjectStatus {
+  DRAFT
+  PENDING_APPROVAL
+  LIVE
+  PAUSED
+  FILLED
+  CLOSED
+  REJECTED
+}
+
+// Applications for projects
+model WorksApplication {
+  id             String                   @id @default(cuid())
+  projectId      String
+  talentUserId   String
+  note           String?                  @db.Text
+  aiMatchScore   Float?
+  aiMatchReasons Json?                    // Array of reasons
+  status         WorksApplicationStatus   @default(SUBMITTED)
+
+  // Relations
+  project       WorksProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  talentProfile TalentProfile @relation(fields: [talentUserId], references: [userId], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, talentUserId])
+  @@index([projectId])
+  @@index([talentUserId])
+  @@index([status])
+}
+
+enum WorksApplicationStatus {
+  SUBMITTED
+  SHORTLISTED
+  OFFERED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+// Engagement (active project assignment)
+model WorksEngagement {
+  id             String                 @id @default(cuid())
+  projectId      String
+  talentUserId   String
+  partnerUserId  String
+  status         WorksEngagementStatus  @default(ACTIVE)
+  agreedPayType  WorksPayType
+  agreedPayAmount Float
+  startAt        DateTime               @default(now())
+  endAt          DateTime?
+
+  // Relations
+  project       WorksProject       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  talentProfile TalentProfile      @relation("TalentEngagements", fields: [talentUserId], references: [userId], onDelete: Cascade)
+  milestones    WorksMilestone[]
+  outcomeLogs   WorksOutcomeLog[]
+  feedback      WorksFeedback[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([talentUserId])
+  @@index([status])
+}
+
+enum WorksEngagementStatus {
+  ACTIVE
+  COMPLETED
+  CANCELED
+  DISPUTED
+}
+
+model WorksMilestone {
+  id           String                @id @default(cuid())
+  engagementId String
+  title        String
+  description  String?               @db.Text
+  dueAt        DateTime?
+  status       WorksMilestoneStatus  @default(NOT_STARTED)
+
+  // Relations
+  engagement  WorksEngagement    @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  submissions WorksSubmission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([engagementId])
+  @@index([status])
+}
+
+enum WorksMilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  NEEDS_REVISION
+  APPROVED
+}
+
+model WorksSubmission {
+  id              String                   @id @default(cuid())
+  milestoneId     String
+  submittedByUserId String
+  type            WorksSubmissionType
+  contentRef      String                   @db.Text // URL, file key, or text content
+  reviewStatus    WorksReviewStatus        @default(PENDING)
+  reviewNotes     String?                  @db.Text
+  reviewedByUserId String?
+  reviewedAt      DateTime?
+
+  // Relations
+  milestone WorksMilestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  submittedAt DateTime @default(now())
+
+  @@index([milestoneId])
+  @@index([reviewStatus])
+}
+
+enum WorksSubmissionType {
+  FILE
+  LINK
+  TEXT
+}
+
+enum WorksReviewStatus {
+  PENDING
+  NEEDS_REVISION
+  APPROVED
+  REJECTED
+}
+
+model WorksOutcomeLog {
+  id            String @id @default(cuid())
+  engagementId  String
+  hoursLogged   Float?
+  skillsUsed    String[]
+  skillsGained  String[]
+  outcomeMetrics Json?
+
+  // Relations
+  engagement WorksEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([engagementId])
+}
+
+model WorksFeedback {
+  id           String @id @default(cuid())
+  engagementId String
+  fromUserId   String
+  toUserId     String
+  rating       Int    // 1-5
+  notes        String? @db.Text
+  isPublic     Boolean @default(true)
+
+  // Relations
+  engagement WorksEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([engagementId])
+  @@index([fromUserId])
+  @@index([toUserId])
+}
+
+model WorksReport {
+  id           String           @id @default(cuid())
+  scope        WorksReportScope
+  scopeId      String           // ID of engagement, organization, etc.
+  templateId   String?
+  title        String
+  contentMarkdown String         @db.Text
+  exportStatus WorksExportStatus @default(DRAFT)
+  exportedAt   DateTime?
+  exportUrl    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scope, scopeId])
+}
+
+enum WorksReportScope {
+  ENGAGEMENT
+  ORGANIZATION
+  UNIVERSITY
+  SPONSOR
+}
+
+enum WorksExportStatus {
+  DRAFT
+  EXPORTED
+  ARCHIVED
+}

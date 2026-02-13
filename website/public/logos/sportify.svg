@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100" fill="none">
+  <defs>
+    <linearGradient id="swirl1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00c8ff"/>
+      <stop offset="25%" style="stop-color:#00e87a"/>
+      <stop offset="50%" style="stop-color:#f0e020"/>
+      <stop offset="75%" style="stop-color:#ff8833"/>
+      <stop offset="100%" style="stop-color:#ff5533"/>
+    </linearGradient>
+    <linearGradient id="swirl2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#00b4e6"/>
+      <stop offset="50%" style="stop-color:#0066cc"/>
+      <stop offset="100%" style="stop-color:#003399"/>
+    </linearGradient>
+  </defs>
+  <!-- Dynamic S swirl -->
+  <g transform="translate(50, 5)">
+    <!-- Upper swirl arc -->
+    <path d="M50 8 C80 8 95 22 90 42 C85 58 60 62 40 55"
+          stroke="url(#swirl1)" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <!-- Lower swirl arc -->
+    <path d="M60 18 C75 20 82 32 78 45 C74 58 55 65 38 60 C20 55 12 40 18 25 C22 15 35 10 50 12"
+          stroke="url(#swirl2)" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <!-- Play button -->
+    <path d="M42 28 L58 38 L42 48 Z" fill="#1a2f4a"/>
+    <!-- Sparkle -->
+    <path d="M85 5 L87 11 L93 13 L87 15 L85 21 L83 15 L77 13 L83 11 Z" fill="#00d4ff"/>
+    <!-- Accent dots -->
+    <circle cx="15" cy="50" r="4" fill="#00e87a"/>
+    <circle cx="90" cy="58" r="3" fill="#ff7744"/>
+    <circle cx="25" cy="12" r="2.5" fill="#00c8ff"/>
+    <circle cx="8" cy="35" r="2" fill="#00b4e6"/>
+  </g>
+  <!-- SPORTIFY text -->
+  <text x="100" y="90" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#1a2f4a" text-anchor="middle" letter-spacing="2">SPORTIFY</text>
+</svg>

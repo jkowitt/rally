@@ -1,0 +1,70 @@
+GOAL & PRIORITY TRACKER - Business Now by Loud Legacy
+"Instructions: Set quarterly goals, break them into monthly milestones, and track weekly priorities."
+
+=== QUARTERLY GOALS ===
+Quarter,Goal #,Goal Description,Success Metric,Target,Current,Status,Due Date
+Q1 2024,1,Example: Launch new service offering,Revenue from new service,$10000,0,Not Started,2024-03-31
+Q1 2024,2,Example: Build email list to 1000,Email subscribers,1000,250,In Progress,2024-03-31
+Q1 2024,3,Example: Systemize client onboarding,Onboarding time (hours),2,8,In Progress,2024-03-31
+Q2 2024,1,,,,,,
+Q2 2024,2,,,,,,
+Q2 2024,3,,,,,,
+Q3 2024,1,,,,,,
+Q3 2024,2,,,,,,
+Q3 2024,3,,,,,,
+Q4 2024,1,,,,,,
+Q4 2024,2,,,,,,
+Q4 2024,3,,,,,,
+
+STATUS OPTIONS: Not Started | In Progress | On Hold | Completed | Cancelled
+
+=== MONTHLY MILESTONES ===
+Month,Related Goal,Milestone Description,Key Actions,Status,Completion Date
+January,Goal 1,Example: Research competitors,List 10 competitors - analyze pricing,Completed,2024-01-15
+January,Goal 2,Example: Set up email system,Choose platform - create signup form,Completed,2024-01-20
+February,Goal 1,,,,,
+February,Goal 2,,,,,
+March,Goal 1,,,,,
+March,Goal 2,,,,,
+
+=== WEEKLY PRIORITIES ===
+Week Starting,Priority 1,P1 Status,Priority 2,P2 Status,Priority 3,P3 Status,Notes
+2024-01-01,Example: Finish competitor research,Done,Example: Draft service description,Done,Example: Set up landing page,In Progress,Good week
+2024-01-08,,,,,,,
+2024-01-15,,,,,,,
+2024-01-22,,,,,,,
+2024-01-29,,,,,,,
+2024-02-05,,,,,,,
+2024-02-12,,,,,,,
+2024-02-19,,,,,,,
+2024-02-26,,,,,,,
+
+=== PRIORITY SCORING MATRIX ===
+"Use this to decide what to work on when everything feels important"
+
+Task/Project,Impact (1-10),Urgency (1-10),Effort (1-10),Dependencies,Priority Score,Decision
+Example: Website redesign,8,3,9,Need copy first,24,Defer to Q2
+Example: Fix checkout bug,9,10,2,None,190,Do immediately
+Example: New blog series,5,2,6,Need topics,10,Low priority
+,,,,,
+,,,,,
+,,,,,
+
+"Priority Score Formula: (Impact x Urgency) / Effort"
+"Higher score = Higher priority"
+
+=== GOAL REFLECTION ===
+Quarter,Goals Completed,Goals Missed,What Worked,What Didn't,Adjustments for Next Quarter
+Q1 2024,,,,,
+Q2 2024,,,,,
+Q3 2024,,,,,
+Q4 2024,,,,,
+
+=== TIPS FOR EFFECTIVE GOAL SETTING ===
+"1. Limit to 3 major goals per quarter - focus beats breadth"
+"2. Make goals specific and measurable - 'grow revenue' vs 'add $5K MRR'"
+"3. Break goals into monthly milestones - big goals need small steps"
+"4. Review weekly - adjust tactics not goals"
+"5. Celebrate completions - acknowledge progress"
+
+"Questions? support@loud-legacy.com"

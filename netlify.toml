@@ -1,0 +1,27 @@
+[build]
+base = "website"
+command = "npm install && npm run build"
+publish = ".next"
+
+[build.environment]
+NODE_VERSION = "20"
+NEXT_TELEMETRY_DISABLED = "1"
+NEXT_DISABLE_SWC_WASM = "1"
+PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING = "1"
+SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+
+# Production branch deployment
+[context.production]
+command = "npm install && npm run build"
+
+# Branch deploys
+[context.branch-deploy]
+command = "npm install && npm run build"
+
+# Deploy previews for pull requests
+[context.deploy-preview]
+command = "npm install && npm run build"
+
+# Netlify plugin for Next.js
+[[plugins]]
+package = "@netlify/plugin-nextjs"

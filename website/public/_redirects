@@ -1,0 +1,10 @@
+# First, let the /valora static files generated into public/ be served directly
+# Make /valora and any deep link under it load the SPA index
+/valora /valora/index.html 200
+/valora/* /valora/index.html 200
+# Serve static Next exports for other sub-apps, also staged under public/
+/venuevr/* /venuevr/:splat 200
+/business-now/* /business-now/:splat 200
+/crm/* /crm/:splat 200
+/sportify/* /sportify/:splat 200
+/* /index.html 200

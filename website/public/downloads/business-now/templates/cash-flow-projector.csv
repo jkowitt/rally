@@ -1,0 +1,83 @@
+12-MONTH CASH FLOW PROJECTOR - Business Now by Loud Legacy
+"Instructions: Project your cash flow for the next 12 months. Update monthly with actual figures."
+
+=== CASH FLOW SUMMARY ===
+,Month 1,Month 2,Month 3,Month 4,Month 5,Month 6,Month 7,Month 8,Month 9,Month 10,Month 11,Month 12,TOTAL
+Starting Cash,10000,,,,,,,,,,,
++ Total Cash In,0,0,0,0,0,0,0,0,0,0,0,0,0
+- Total Cash Out,0,0,0,0,0,0,0,0,0,0,0,0,0
+= Net Cash Flow,0,0,0,0,0,0,0,0,0,0,0,0,0
+Ending Cash,10000,0,0,0,0,0,0,0,0,0,0,0,
+
+=== CASH IN (Revenue & Income) ===
+Category,Month 1,Month 2,Month 3,Month 4,Month 5,Month 6,Month 7,Month 8,Month 9,Month 10,Month 11,Month 12,TOTAL
+Service Revenue,0,0,0,0,0,0,0,0,0,0,0,0,0
+Product Sales,0,0,0,0,0,0,0,0,0,0,0,0,0
+Recurring/Subscription,0,0,0,0,0,0,0,0,0,0,0,0,0
+Other Income,0,0,0,0,0,0,0,0,0,0,0,0,0
+TOTAL CASH IN,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+=== CASH OUT (Expenses) ===
+Category,Month 1,Month 2,Month 3,Month 4,Month 5,Month 6,Month 7,Month 8,Month 9,Month 10,Month 11,Month 12,TOTAL
+Owner Pay/Draw,0,0,0,0,0,0,0,0,0,0,0,0,0
+Contractor/Employee Pay,0,0,0,0,0,0,0,0,0,0,0,0,0
+Rent/Lease,0,0,0,0,0,0,0,0,0,0,0,0,0
+Software & Subscriptions,0,0,0,0,0,0,0,0,0,0,0,0,0
+Marketing & Advertising,0,0,0,0,0,0,0,0,0,0,0,0,0
+Professional Services,0,0,0,0,0,0,0,0,0,0,0,0,0
+Insurance,0,0,0,0,0,0,0,0,0,0,0,0,0
+Taxes (Estimated),0,0,0,0,0,0,0,0,0,0,0,0,0
+Supplies & Materials,0,0,0,0,0,0,0,0,0,0,0,0,0
+Travel & Entertainment,0,0,0,0,0,0,0,0,0,0,0,0,0
+Debt Payments,0,0,0,0,0,0,0,0,0,0,0,0,0
+Other Expenses,0,0,0,0,0,0,0,0,0,0,0,0,0
+TOTAL CASH OUT,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+=== SCENARIO PLANNING ===
+"Model three scenarios to prepare for uncertainty"
+
+BEST CASE SCENARIO
+Description: Revenue 20% above projection
+,Month 1,Month 2,Month 3,Month 4,Month 5,Month 6,Month 7,Month 8,Month 9,Month 10,Month 11,Month 12
+Revenue,0,0,0,0,0,0,0,0,0,0,0,0
+Ending Cash,0,0,0,0,0,0,0,0,0,0,0,0
+
+EXPECTED SCENARIO
+Description: Revenue meets projection
+,Month 1,Month 2,Month 3,Month 4,Month 5,Month 6,Month 7,Month 8,Month 9,Month 10,Month 11,Month 12
+Revenue,0,0,0,0,0,0,0,0,0,0,0,0
+Ending Cash,0,0,0,0,0,0,0,0,0,0,0,0
+
+WORST CASE SCENARIO
+Description: Revenue 30% below projection
+,Month 1,Month 2,Month 3,Month 4,Month 5,Month 6,Month 7,Month 8,Month 9,Month 10,Month 11,Month 12
+Revenue,0,0,0,0,0,0,0,0,0,0,0,0
+Ending Cash,0,0,0,0,0,0,0,0,0,0,0,0
+
+=== KEY METRICS ===
+Metric,Value,Target,Status
+Cash Runway (months),0,6,
+Monthly Burn Rate,0,,
+Break-even Point,0,,
+Average Monthly Revenue,0,,
+Revenue Growth Rate,0%,10%,
+
+=== ASSUMPTIONS & NOTES ===
+"Document your assumptions here so you can revisit them"
+Assumption,Value,Source/Reasoning
+Revenue growth rate,0%,
+Expense growth rate,0%,
+Seasonal adjustments,,
+Major planned expenses,,
+Expected client additions,,
+
+=== CASH FLOW RULES ===
+"1. Always maintain 3-6 months of expenses in cash reserve"
+"2. Update projections monthly with actual figures"
+"3. Investigate any variance greater than 10%"
+"4. Review scenarios quarterly and adjust assumptions"
+"5. Never let projected cash go below your minimum threshold"
+
+"Minimum Cash Threshold: $_______ (recommended: 3 months expenses)"
+
+"Questions? support@loud-legacy.com"

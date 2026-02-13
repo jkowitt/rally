@@ -1,0 +1,81 @@
+INCOME & EXPENSE TRACKER - Business Now by Loud Legacy
+"Instructions: Enter your income and expenses below. Categories are suggestions - modify to fit your business."
+"Download the Excel version for automatic calculations and charts."
+
+=== MONTHLY SUMMARY ===
+Month,Total Income,Total Expenses,Net Profit,Profit Margin %
+January,0,0,0,0%
+February,0,0,0,0%
+March,0,0,0,0%
+April,0,0,0,0%
+May,0,0,0,0%
+June,0,0,0,0%
+July,0,0,0,0%
+August,0,0,0,0%
+September,0,0,0,0%
+October,0,0,0,0%
+November,0,0,0,0%
+December,0,0,0,0%
+YEAR TOTAL,0,0,0,0%
+
+=== INCOME TRACKING ===
+Date,Description,Category,Amount,Client/Source,Payment Method,Notes
+2024-01-01,Example: Consulting Project,Service Revenue,5000,ABC Corp,Bank Transfer,Q1 project
+2024-01-15,Example: Product Sale,Product Revenue,500,Online Store,Stripe,Widget sales
+,,,,,
+,,,,,
+,,,,,
+
+INCOME CATEGORIES:
+- Service Revenue
+- Product Revenue
+- Recurring Revenue
+- Consulting
+- Commissions
+- Affiliate Income
+- Other Income
+
+=== EXPENSE TRACKING ===
+Date,Description,Category,Amount,Vendor,Payment Method,Tax Deductible,Notes
+2024-01-01,Example: Software Subscription,Software & Tools,99,Adobe,Credit Card,Yes,Creative Cloud
+2024-01-05,Example: Office Supplies,Office Expenses,45,Amazon,Credit Card,Yes,Printer paper
+,,,,,,,
+,,,,,,,
+,,,,,,,
+
+EXPENSE CATEGORIES:
+- Software & Tools
+- Marketing & Advertising
+- Professional Services
+- Office Expenses
+- Travel & Meals
+- Insurance
+- Taxes & Licenses
+- Contractor Payments
+- Equipment
+- Education & Training
+- Bank & Payment Fees
+- Utilities
+- Rent
+- Other Expenses
+
+=== CATEGORY SUMMARY ===
+Category,Budget,Actual,Variance,% of Total
+Software & Tools,0,0,0,0%
+Marketing & Advertising,0,0,0,0%
+Professional Services,0,0,0,0%
+Office Expenses,0,0,0,0%
+Travel & Meals,0,0,0,0%
+Contractor Payments,0,0,0,0%
+Other,0,0,0,0%
+TOTAL,0,0,0,100%
+
+=== NOTES ===
+"Use this tracker to:"
+"1. Record all income as it comes in"
+"2. Record all expenses as they occur"
+"3. Review monthly to understand cash flow"
+"4. Identify expense categories to optimize"
+"5. Prepare for tax time with organized records"
+
+"For questions: support@loud-legacy.com"

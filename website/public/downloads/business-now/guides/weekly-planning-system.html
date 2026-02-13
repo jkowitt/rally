@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Planning System - Business Now</title>
+  <style>
+    @page { size: letter; margin: 1in; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      line-height: 1.6;
+      color: #1B365D;
+      max-width: 8.5in;
+      margin: 0 auto;
+      padding: 40px;
+      background: #fff;
+    }
+    .header {
+      border-bottom: 3px solid #2D9CDB;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    .logo {
+      font-size: 14px;
+      font-weight: bold;
+      color: #2D9CDB;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+    }
+    h1 { font-size: 32px; color: #1B365D; margin-bottom: 10px; }
+    .subtitle { font-size: 18px; color: #4A5568; font-style: italic; }
+    h2 {
+      font-size: 22px;
+      color: #1B365D;
+      margin-top: 35px;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #E8F4FC;
+    }
+    h3 { font-size: 18px; color: #2D9CDB; margin-top: 25px; margin-bottom: 10px; }
+    p { margin-bottom: 15px; font-size: 14px; color: #4A5568; }
+    .intro {
+      background: #E8F4FC;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    .intro p { margin-bottom: 0; font-size: 16px; color: #1B365D; }
+    ul, ol { margin-left: 25px; margin-bottom: 20px; }
+    li { margin-bottom: 8px; font-size: 14px; color: #4A5568; }
+    .step-box {
+      border: 2px solid #2D9CDB;
+      border-radius: 8px;
+      padding: 25px;
+      margin: 25px 0;
+      background: #FAFBFC;
+    }
+    .step-box h4 { font-size: 16px; color: #1B365D; margin-bottom: 10px; }
+    .step-number {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      background: #2D9CDB;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 30px;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .time-block {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #fff;
+      border-left: 4px solid #2D9CDB;
+    }
+    .time { font-weight: bold; min-width: 120px; color: #1B365D; }
+    .activity { flex: 1; color: #4A5568; }
+    .callout {
+      background: #FEF3C7;
+      border-left: 4px solid #C9A227;
+      padding: 15px 20px;
+      margin: 20px 0;
+    }
+    .callout p { margin-bottom: 0; color: #92400E; }
+    .template {
+      border: 1px solid #E2E8F0;
+      padding: 20px;
+      margin: 20px 0;
+      background: #fff;
+    }
+    .template-section { margin-bottom: 25px; }
+    .template-section h5 {
+      font-size: 14px;
+      color: #1B365D;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .line {
+      border-bottom: 1px solid #CBD5E0;
+      height: 28px;
+      margin-bottom: 5px;
+    }
+    .checkbox-line {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .checkbox {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #CBD5E0;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    .page-break { page-break-before: always; }
+    .footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid #E2E8F0;
+      font-size: 12px;
+      color: #718096;
+      text-align: center;
+    }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">Business Now by Loud Legacy</div>
+    <h1>Weekly Planning System</h1>
+    <p class="subtitle">The rhythm that builds momentum and consistency</p>
+  </div>
+
+  <div class="intro">
+    <p>Consistency beats intensity. This system creates a weekly rhythm that turns good intentions into completed work. Do it the same way, every week, and watch execution become automatic.</p>
+  </div>
+
+  <h2>The Problem with Most Planning</h2>
+  <p>Most people plan when they feel motivated. They create elaborate systems when energy is high, then abandon them when life gets busy. The result: inconsistent execution and guilt.</p>
+  <p>The solution isn't more willpower. It's a simple system you can follow even on your worst days.</p>
+
+  <h2>The Weekly Planning System</h2>
+  <p>This system has three parts:</p>
+  <ol>
+    <li><strong>Weekly Review</strong> (30 min) - Close out the previous week</li>
+    <li><strong>Weekly Planning</strong> (30 min) - Set up the coming week</li>
+    <li><strong>Daily Check-in</strong> (5 min) - Stay on track each day</li>
+  </ol>
+
+  <h3>When to Do It</h3>
+  <p>Schedule your Weekly Review and Planning for the same time every week. Most people prefer:</p>
+  <ul>
+    <li><strong>Friday afternoon</strong> - End the work week with closure</li>
+    <li><strong>Sunday evening</strong> - Start Monday with clarity</li>
+  </ul>
+  <p>Pick one and protect it like a client meeting.</p>
+
+  <h2>Part 1: Weekly Review (30 minutes)</h2>
+
+  <div class="step-box">
+    <h4><span class="step-number">1</span> Review Completed Work (10 min)</h4>
+    <p>Look at your calendar and task list from the past week. Ask:</p>
+    <ul>
+      <li>What did I complete?</li>
+      <li>What moved forward even if not finished?</li>
+      <li>What wins should I acknowledge?</li>
+    </ul>
+  </div>
+
+  <div class="step-box">
+    <h4><span class="step-number">2</span> Review Incomplete Work (10 min)</h4>
+    <p>Look at what didn't get done. Ask:</p>
+    <ul>
+      <li>Why didn't this happen?</li>
+      <li>Does it still need to happen?</li>
+      <li>What would make it easier next time?</li>
+    </ul>
+  </div>
+
+  <div class="step-box">
+    <h4><span class="step-number">3</span> Capture Loose Ends (10 min)</h4>
+    <p>Clear your head by writing down anything still floating around:</p>
+    <ul>
+      <li>Promises you made</li>
+      <li>Ideas you had</li>
+      <li>Things you need to follow up on</li>
+    </ul>
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2>Part 2: Weekly Planning (30 minutes)</h2>
+
+  <div class="step-box">
+    <h4><span class="step-number">1</span> Identify Your Top 3 Priorities (10 min)</h4>
+    <p>What are the three most important outcomes for this week? Not tasks—outcomes. What needs to be true by Friday?</p>
+    <p><em>Rule: If you can't name your top 3, you don't have priorities.</em></p>
+  </div>
+
+  <div class="step-box">
+    <h4><span class="step-number">2</span> Block Time for Priorities (10 min)</h4>
+    <p>Look at your calendar and block specific time for each priority. If it's not scheduled, it won't happen.</p>
+    <ul>
+      <li>Block 2-4 hour chunks for deep work</li>
+      <li>Protect mornings for important work</li>
+      <li>Leave buffer for the unexpected</li>
+    </ul>
+  </div>
+
+  <div class="step-box">
+    <h4><span class="step-number">3</span> List Supporting Tasks (10 min)</h4>
+    <p>What smaller tasks support your priorities? What admin needs to happen? Keep this list short—10 items max.</p>
+  </div>
+
+  <div class="callout">
+    <p><strong>The 3-3-3 Rule:</strong> Each week, aim for 3 priorities, 3 hours of deep work per priority, and 3 pages of notes or output. Simple metrics you can actually hit.</p>
+  </div>
+
+  <h2>Part 3: Daily Check-in (5 minutes)</h2>
+
+  <p>Each morning, take 5 minutes to answer:</p>
+  <ol>
+    <li>What is my ONE most important task today?</li>
+    <li>What time will I work on it?</li>
+    <li>What might get in the way?</li>
+  </ol>
+
+  <p>Each evening, take 2 minutes to note:</p>
+  <ol>
+    <li>Did I complete my most important task?</li>
+    <li>What did I learn today?</li>
+    <li>What should tomorrow's most important task be?</li>
+  </ol>
+
+  <h2>Sample Weekly Schedule</h2>
+
+  <div class="time-block">
+    <span class="time">Sunday 7:00 PM</span>
+    <span class="activity">Weekly Review + Planning (60 min)</span>
+  </div>
+  <div class="time-block">
+    <span class="time">Monday-Friday AM</span>
+    <span class="activity">Daily Check-in (5 min before starting work)</span>
+  </div>
+  <div class="time-block">
+    <span class="time">Monday-Friday PM</span>
+    <span class="activity">Evening reflection (2 min before ending)</span>
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2>Weekly Planning Template</h2>
+
+  <div class="template">
+    <p><strong>Week of:</strong> _______________________</p>
+
+    <div class="template-section">
+      <h5>Top 3 Priorities This Week</h5>
+      <div class="checkbox-line"><span class="checkbox"></span><div class="line" style="flex:1"></div></div>
+      <div class="checkbox-line"><span class="checkbox"></span><div class="line" style="flex:1"></div></div>
+      <div class="checkbox-line"><span class="checkbox"></span><div class="line" style="flex:1"></div></div>
+    </div>
+
+    <div class="template-section">
+      <h5>Supporting Tasks</h5>
+      <div class="checkbox-line"><span class="checkbox"></span><div class="line" style="flex:1"></div></div>
+      <div class="checkbox-line"><span class="checkbox"></span><div class="line" style="flex:1"></div></div>
+      <div class="checkbox-line"><span class="checkbox"></span><div class="line" style="flex:1"></div></div>
+      <div class="checkbox-line"><span class="checkbox"></span><div class="line" style="flex:1"></div></div>
+      <div class="checkbox-line"><span class="checkbox"></span><div class="line" style="flex:1"></div></div>
+    </div>
+
+    <div class="template-section">
+      <h5>Time Blocks for Deep Work</h5>
+      <p style="font-size:12px; color:#718096;">When will you work on your priorities?</p>
+      <div class="line"></div>
+      <div class="line"></div>
+      <div class="line"></div>
+    </div>
+
+    <div class="template-section">
+      <h5>End of Week Review</h5>
+      <p style="font-size:12px; color:#718096;">What worked? What didn't? What will you do differently?</p>
+      <div class="line"></div>
+      <div class="line"></div>
+      <div class="line"></div>
+    </div>
+  </div>
+
+  <h2>Making It Stick</h2>
+  <ol>
+    <li><strong>Start small</strong> - Even 15 minutes of planning beats none</li>
+    <li><strong>Same time, same place</strong> - Make it a ritual, not a decision</li>
+    <li><strong>Imperfect action</strong> - A messy plan executed beats a perfect plan ignored</li>
+    <li><strong>Review the system</strong> - After 4 weeks, adjust what isn't working</li>
+  </ol>
+
+  <div class="footer">
+    <p>Weekly Planning System | Business Now by Loud Legacy Ventures</p>
+    <p>loud-legacy.com/business-now</p>
+  </div>
+</body>
+</html>

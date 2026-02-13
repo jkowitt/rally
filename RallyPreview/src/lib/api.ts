@@ -2,7 +2,7 @@
 // Rally API Client
 // ---------------------------------------------------------------------------
 
-export const API_BASE = 'http://localhost:3001/api';
+export const API_BASE = process.env.EXPO_PUBLIC_RALLY_API_URL || 'http://localhost:3001/api';
 
 // Module-level auth token
 let _token: string | null = null;

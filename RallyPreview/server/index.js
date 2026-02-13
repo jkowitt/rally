@@ -9,8 +9,8 @@ const path = require('path');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const PORT = 3001;
-const JWT_SECRET = 'rally-secret-key-2026';
+const PORT = process.env.PORT || 3001;
+const JWT_SECRET = process.env.JWT_SECRET || 'rally-secret-key-2026';
 const JWT_EXPIRES_IN = '7d';
 const DATA_FILE = path.join(__dirname, 'data.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
@@ -87,8 +87,12 @@ const upload = multer({ storage });
 
 const app = express();
 
+const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',')
+  : ['*'];
+
 app.use(cors({
-  origin: '*',
+  origin: ALLOWED_ORIGINS.includes('*') ? '*' : ALLOWED_ORIGINS,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));

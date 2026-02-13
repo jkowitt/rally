@@ -1,0 +1,39 @@
+name: Auto-merge to main
+
+on:
+  push:
+    branches:
+      - 'claude/**'
+
+jobs:
+  merge-to-main:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge to main
+        run: |
+          # Get the branch that triggered this workflow
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Merging $BRANCH into main..."
+
+          # Checkout main (create if it doesn't exist)
+          git checkout main 2>/dev/null || git checkout -b main
+
+          # Fast-forward merge the feature branch
+          git merge --ff-only "$BRANCH" || git merge --no-edit "$BRANCH"
+
+          # Push main
+          git push origin main

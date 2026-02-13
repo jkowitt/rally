@@ -16,6 +16,10 @@ export default function SignUpPage() {
     handle: "",
     password: "",
     confirmPassword: "",
+    userType: "",
+    birthYear: "",
+    residingCity: "",
+    residingState: "",
   });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -42,12 +46,17 @@ export default function SignUpPage() {
 
     try {
       const handle = formData.handle.startsWith("@") ? formData.handle : `@${formData.handle}`;
+      const birthYearNum = formData.birthYear ? parseInt(formData.birthYear, 10) : undefined;
       const result = await signUp({
         email: formData.email.trim(),
         password: formData.password,
         name: formData.name.trim(),
         handle,
         acceptedTerms: agreedToTerms,
+        userType: formData.userType || undefined,
+        birthYear: birthYearNum && !isNaN(birthYearNum) ? birthYearNum : undefined,
+        residingCity: formData.residingCity.trim() || undefined,
+        residingState: formData.residingState.trim() || undefined,
       });
 
       if (result.success) {
@@ -206,10 +215,9 @@ export default function SignUpPage() {
 
           {step === 2 && (
             <>
-              <h1 className="rally-auth-heading">Almost There!</h1>
+              <h1 className="rally-auth-heading">Tell Us About You</h1>
               <p className="rally-auth-subheading">
-                You can select your favorite school later from your profile.
-                Ready to create your account?
+                Help us personalize your experience. All fields are optional.
               </p>
 
               {error && (
@@ -223,22 +231,83 @@ export default function SignUpPage() {
                 </div>
               )}
 
-              <div className="rally-auth-summary">
-                <div className="rally-auth-summary-row">
-                  <span>Name</span>
-                  <span>{formData.name}</span>
+              <div className="rally-auth-form">
+                <div className="rally-auth-field">
+                  <label htmlFor="userType">I am a...</label>
+                  <div className="rally-auth-input-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
+                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <select
+                      id="userType"
+                      value={formData.userType}
+                      onChange={(e) => setFormData({ ...formData, userType: e.target.value })}
+                      className="rally-auth-select"
+                    >
+                      <option value="">Select one (optional)</option>
+                      <option value="student">Current Student</option>
+                      <option value="alumni">Alumni</option>
+                      <option value="general_fan">General Fan</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="rally-auth-summary-row">
-                  <span>Email</span>
-                  <span>{formData.email}</span>
+
+                <div className="rally-auth-field">
+                  <label htmlFor="birthYear">Birth Year</label>
+                  <div className="rally-auth-input-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
+                      <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                    <input
+                      id="birthYear"
+                      type="number"
+                      value={formData.birthYear}
+                      onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+                      placeholder="e.g. 2002"
+                      min="1900"
+                      max={new Date().getFullYear()}
+                    />
+                  </div>
                 </div>
-                <div className="rally-auth-summary-row">
-                  <span>Handle</span>
-                  <span>@{formData.handle.replace(/^@/, '')}</span>
+
+                <div className="rally-auth-field">
+                  <label htmlFor="residingCity">City</label>
+                  <div className="rally-auth-input-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <input
+                      id="residingCity"
+                      type="text"
+                      value={formData.residingCity}
+                      onChange={(e) => setFormData({ ...formData, residingCity: e.target.value })}
+                      placeholder="Your city (optional)"
+                    />
+                  </div>
+                </div>
+
+                <div className="rally-auth-field">
+                  <label htmlFor="residingState">State</label>
+                  <div className="rally-auth-input-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <input
+                      id="residingState"
+                      type="text"
+                      value={formData.residingState}
+                      onChange={(e) => setFormData({ ...formData, residingState: e.target.value })}
+                      placeholder="Your state (optional)"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="rally-auth-form" style={{ gap: "12px" }}>
+              <div className="rally-auth-form" style={{ gap: "12px", marginTop: "8px" }}>
                 <button
                   className="rally-btn rally-btn--primary rally-btn--full"
                   onClick={handleSubmit}

@@ -2045,7 +2045,14 @@ app.post('/api/auth/register', async (req, res) => {
     // Validate demographics
     const validUserTypes = ['student', 'alumni', 'general_fan'];
     const cleanUserType = (userType && validUserTypes.includes(userType)) ? userType : null;
-    const cleanBirthYear = birthYear ? parseInt(birthYear, 10) : null;
+    let cleanBirthYear = null;
+    if (birthYear) {
+      const parsed = parseInt(birthYear, 10);
+      const currentYear = new Date().getFullYear();
+      if (!isNaN(parsed) && parsed >= 1900 && parsed <= currentYear) {
+        cleanBirthYear = parsed;
+      }
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const verificationCode = generate6DigitCode();
@@ -2198,7 +2205,15 @@ app.put('/api/auth/me', authenticateToken, async (req, res) => {
       const validUserTypes = ['student', 'alumni', 'general_fan'];
       user.userType = validUserTypes.includes(userType) ? userType : null;
     }
-    if (birthYear !== undefined) user.birthYear = birthYear ? parseInt(birthYear, 10) : null;
+    if (birthYear !== undefined) {
+      if (birthYear) {
+        const parsed = parseInt(birthYear, 10);
+        const currentYear = new Date().getFullYear();
+        user.birthYear = (!isNaN(parsed) && parsed >= 1900 && parsed <= currentYear) ? parsed : null;
+      } else {
+        user.birthYear = null;
+      }
+    }
     if (residingCity !== undefined) user.residingCity = residingCity ? residingCity.trim() : null;
     if (residingState !== undefined) user.residingState = residingState ? residingState.trim() : null;
     if (password) {
@@ -2738,6 +2753,14 @@ app.post('/api/teammates/invite', authenticateToken, requireRole(['admin', 'deve
     if (existingUser.role === 'teammate' && (existingUser.propertyId || existingUser.schoolId) === propertyId) {
       return res.status(409).json({ error: 'This user is already a teammate on your property' });
     }
+    // If already a teammate on a different property, reject
+    if (existingUser.role === 'teammate') {
+      return res.status(400).json({ error: 'This user is already a teammate on another property. They must be removed from that team first.' });
+    }
+    // If admin or developer, can't convert
+    if (existingUser.role === 'admin' || existingUser.role === 'developer') {
+      return res.status(400).json({ error: `This user is a ${existingUser.role} and cannot be converted to a teammate` });
+    }
     // If an existing user, convert them to teammate
     if (existingUser.role === 'user') {
       existingUser.role = 'teammate';
@@ -2870,10 +2893,12 @@ app.delete('/api/teammates/:teammateId', authenticateToken, requireRole(['admin'
     return res.status(403).json({ error: 'You can only manage teammates on your own property' });
   }
 
-  // Revert to regular user
+  // Revert to regular user — clear all teammate-specific fields
   teammate.role = 'user';
-  teammate.teammatePermissions = undefined;
-  teammate.invitedBy = undefined;
+  teammate.teammatePermissions = null;
+  teammate.invitedBy = null;
+  teammate.propertyId = null;
+  teammate.propertyLeague = null;
   writeDb(db);
 
   console.log(`[Teammate] ${teammate.email} removed from property ${teammatePropertyId} by ${req.user.email}`);
@@ -3408,6 +3433,10 @@ async function seedDemoAccounts() {
       role: 'developer',
       favoriteSchool: 'rally-university',
       supportingSchools: [],
+      userType: null,
+      birthYear: null,
+      residingCity: null,
+      residingState: null,
     },
     {
       email: 'admin@rally.com',
@@ -3417,6 +3446,10 @@ async function seedDemoAccounts() {
       role: 'admin',
       favoriteSchool: 'rally-university',
       supportingSchools: [],
+      userType: null,
+      birthYear: null,
+      residingCity: null,
+      residingState: null,
     },
     {
       email: 'user@rally.com',
@@ -3426,6 +3459,11 @@ async function seedDemoAccounts() {
       role: 'user',
       favoriteSchool: 'rally-university',
       supportingSchools: [],
+      userType: 'student',
+      birthYear: 2003,
+      residingCity: 'Los Angeles',
+      residingState: 'CA',
+      favoriteSports: ['football', 'basketball'],
     },
   ];
 
@@ -3443,8 +3481,16 @@ async function seedDemoAccounts() {
         handle: account.handle,
         role: account.role,
         schoolId: account.favoriteSchool,
+        propertyId: account.favoriteSchool,
+        propertyLeague: 'college',
         favoriteSchool: account.favoriteSchool,
         supportingSchools: account.supportingSchools,
+        favoriteTeams: [],
+        favoriteSports: account.favoriteSports || [],
+        userType: account.userType || null,
+        birthYear: account.birthYear || null,
+        residingCity: account.residingCity || null,
+        residingState: account.residingState || null,
         emailVerified: true,
         emailUpdates: true,
         pushNotifications: true,

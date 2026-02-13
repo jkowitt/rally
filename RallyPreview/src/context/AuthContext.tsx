@@ -14,19 +14,44 @@ import { apiClient, setToken as setApiToken, isServerAvailable } from '../lib/ap
 // Types
 // ---------------------------------------------------------------------------
 
+export interface TeammatePermissions {
+  events: boolean;
+  engagements: boolean;
+  rewards: boolean;
+  redemptions: boolean;
+  notifications: boolean;
+  bonusOffers: boolean;
+  content: boolean;
+  analytics: boolean;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
   handle: string;
-  role: 'developer' | 'admin' | 'user';
+  role: 'developer' | 'admin' | 'teammate' | 'user';
   schoolId: string | null;
+  propertyId?: string | null;
+  propertyLeague?: string;
   favoriteSchool: string | null;
+  favoriteTeams?: Array<{ propertyId: string; league: string }>;
+  favoriteSports?: string[];
   supportingSchools: string[];
   emailVerified: boolean;
   emailUpdates: boolean;
   pushNotifications: boolean;
   acceptedTerms: boolean;
+  // Demographics
+  userType?: 'student' | 'alumni' | 'general_fan' | null;
+  birthYear?: number | null;
+  residingCity?: string | null;
+  residingState?: string | null;
+  // Teammate-specific
+  teammatePermissions?: TeammatePermissions;
+  invitedBy?: string | null;
+  points?: number;
+  tier?: string;
 }
 
 export interface AuthState {
@@ -128,6 +153,10 @@ const DEMO_ACCOUNTS: { email: string; password: string; user: AuthUser }[] = [
       emailUpdates: true,
       pushNotifications: true,
       acceptedTerms: true,
+      userType: null,
+      birthYear: null,
+      residingCity: null,
+      residingState: null,
     },
   },
   {
@@ -146,6 +175,10 @@ const DEMO_ACCOUNTS: { email: string; password: string; user: AuthUser }[] = [
       emailUpdates: true,
       pushNotifications: true,
       acceptedTerms: true,
+      userType: 'alumni',
+      birthYear: 1995,
+      residingCity: 'New York',
+      residingState: 'NY',
     },
   },
   {
@@ -164,6 +197,10 @@ const DEMO_ACCOUNTS: { email: string; password: string; user: AuthUser }[] = [
       emailUpdates: true,
       pushNotifications: true,
       acceptedTerms: true,
+      userType: 'student',
+      birthYear: 2003,
+      residingCity: 'Durham',
+      residingState: 'NC',
     },
   },
 ];
@@ -189,6 +226,10 @@ export interface RegisterParams {
   emailUpdates?: boolean;
   pushNotifications?: boolean;
   acceptedTerms?: boolean;
+  userType?: string;
+  birthYear?: number;
+  residingCity?: string;
+  residingState?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -304,6 +345,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         favoriteSchool, supportingSchools,
         emailUpdates, pushNotifications,
         acceptedTerms,
+        userType, birthYear, residingCity, residingState,
       } = params;
 
       // Try server registration first
@@ -317,6 +359,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailUpdates: emailUpdates !== undefined ? emailUpdates : true,
         pushNotifications: pushNotifications !== undefined ? pushNotifications : true,
         acceptedTerms: acceptedTerms !== undefined ? acceptedTerms : true,
+        ...(userType ? { userType } : {}),
+        ...(birthYear ? { birthYear } : {}),
+        ...(residingCity ? { residingCity } : {}),
+        ...(residingState ? { residingState } : {}),
       });
 
       if (serverResult.ok) {
@@ -343,6 +389,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           emailUpdates: emailUpdates !== undefined ? emailUpdates : true,
           pushNotifications: pushNotifications !== undefined ? pushNotifications : true,
           acceptedTerms: true,
+          userType: (userType as AuthUser['userType']) || null,
+          birthYear: birthYear || null,
+          residingCity: residingCity || null,
+          residingState: residingState || null,
         };
         const fakeToken = `local-token-${localUser.id}`;
         setApiToken(fakeToken);
@@ -483,7 +533,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Computed properties
-  const isAdmin = state.user?.role === 'admin' || state.user?.role === 'developer';
+  const isAdmin = state.user?.role === 'admin' || state.user?.role === 'developer' || state.user?.role === 'teammate';
   const isDeveloper = state.user?.role === 'developer';
   const isAuthenticated = state.isAuthenticated;
   const editMode = state.editMode;

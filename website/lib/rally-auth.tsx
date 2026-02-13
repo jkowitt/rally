@@ -17,8 +17,12 @@ interface RallyAuthContextType {
     favoriteSchool?: string | null;
     supportingSchools?: string[];
     acceptedTerms?: boolean;
+    userType?: string;
+    birthYear?: number;
+    residingCity?: string;
+    residingState?: string;
   }) => Promise<{ success: boolean; error?: string }>;
-  updateProfile: (fields: Partial<Pick<RallyUser, 'name' | 'handle' | 'favoriteSchool' | 'supportingSchools' | 'emailUpdates' | 'pushNotifications'>>) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (fields: Partial<Pick<RallyUser, 'name' | 'handle' | 'favoriteSchool' | 'supportingSchools' | 'emailUpdates' | 'pushNotifications' | 'userType' | 'birthYear' | 'residingCity' | 'residingState'>>) => Promise<{ success: boolean; error?: string }>;
   signOut: () => void;
   trackPage: (page: string) => void;
   trackEvent: (event: string, metadata?: Record<string, string>) => void;
@@ -82,6 +86,10 @@ export function RallyAuthProvider({ children }: { children: ReactNode }) {
     favoriteSchool?: string | null;
     supportingSchools?: string[];
     acceptedTerms?: boolean;
+    userType?: string;
+    birthYear?: number;
+    residingCity?: string;
+    residingState?: string;
   }) => {
     const res = await rallyAuth.register(params);
     if (res.ok && res.data) {
@@ -92,7 +100,7 @@ export function RallyAuthProvider({ children }: { children: ReactNode }) {
     return { success: false, error: res.error || "Failed to create account" };
   }, []);
 
-  const updateProfile = useCallback(async (fields: Partial<Pick<RallyUser, 'name' | 'handle' | 'favoriteSchool' | 'supportingSchools' | 'emailUpdates' | 'pushNotifications'>>) => {
+  const updateProfile = useCallback(async (fields: Partial<Pick<RallyUser, 'name' | 'handle' | 'favoriteSchool' | 'supportingSchools' | 'emailUpdates' | 'pushNotifications' | 'userType' | 'birthYear' | 'residingCity' | 'residingState'>>) => {
     const res = await rallyAuth.updateProfile(fields);
     if (res.ok && res.data) {
       setUser(res.data as RallyUser);

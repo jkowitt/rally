@@ -78,7 +78,7 @@ export const rallyAuth = {
       body: JSON.stringify({ email, code, newPassword }),
     }),
 
-  updateProfile: (fields: Partial<Pick<RallyUser, 'name' | 'handle' | 'favoriteSchool' | 'supportingSchools' | 'emailUpdates' | 'pushNotifications'>>) =>
+  updateProfile: (fields: Partial<Pick<RallyUser, 'name' | 'handle' | 'favoriteSchool' | 'supportingSchools' | 'emailUpdates' | 'pushNotifications' | 'userType' | 'birthYear' | 'residingCity' | 'residingState'>>) =>
     rallyFetch<RallyUser>('/auth/me', {
       method: 'PUT',
       body: JSON.stringify(fields),

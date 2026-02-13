@@ -5,11 +5,24 @@ import { useRallyAuth } from "@/lib/rally-auth";
 
 const AVAILABLE_SCHOOL = { id: "rally-university", name: "Rally University", mascot: "Ralliers", primaryColor: "#FF6B35" };
 
+const USER_TYPE_LABELS: Record<string, string> = {
+  student: "Current Student",
+  alumni: "Alumni",
+  general_fan: "General Fan",
+};
+
 export default function ProfilePage() {
   const { user, updateProfile } = useRallyAuth();
   const [isChangingSchool, setIsChangingSchool] = useState(false);
+  const [isEditingDemographics, setIsEditingDemographics] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [demoForm, setDemoForm] = useState({
+    userType: user?.userType || "",
+    birthYear: user?.birthYear?.toString() || "",
+    residingCity: user?.residingCity || "",
+    residingState: user?.residingState || "",
+  });
 
   const handleChangeSchool = async () => {
     setSaving(true);
@@ -102,6 +115,131 @@ export default function ProfilePage() {
             >
               Cancel
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Demographics */}
+      <div className="rally-dash-section">
+        <h3>About You</h3>
+        {!isEditingDemographics ? (
+          <>
+            <div className="rally-dash-detail-grid">
+              <div className="rally-dash-detail-row">
+                <span className="rally-dash-detail-label">Type</span>
+                <span className="rally-dash-detail-value">{user?.userType ? USER_TYPE_LABELS[user.userType] || user.userType : "Not set"}</span>
+              </div>
+              <div className="rally-dash-detail-row">
+                <span className="rally-dash-detail-label">Birth Year</span>
+                <span className="rally-dash-detail-value">{user?.birthYear || "Not set"}</span>
+              </div>
+              <div className="rally-dash-detail-row">
+                <span className="rally-dash-detail-label">City</span>
+                <span className="rally-dash-detail-value">{user?.residingCity || "Not set"}</span>
+              </div>
+              <div className="rally-dash-detail-row">
+                <span className="rally-dash-detail-label">State</span>
+                <span className="rally-dash-detail-value">{user?.residingState || "Not set"}</span>
+              </div>
+            </div>
+            <button
+              className="rally-btn rally-btn--primary"
+              style={{ marginTop: '12px', width: '100%' }}
+              onClick={() => {
+                setDemoForm({
+                  userType: user?.userType || "",
+                  birthYear: user?.birthYear?.toString() || "",
+                  residingCity: user?.residingCity || "",
+                  residingState: user?.residingState || "",
+                });
+                setIsEditingDemographics(true);
+              }}
+            >
+              Edit Demographics
+            </button>
+          </>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>I am a...</label>
+              <select
+                value={demoForm.userType}
+                onChange={(e) => setDemoForm({ ...demoForm, userType: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '14px' }}
+              >
+                <option value="">Not specified</option>
+                <option value="student">Current Student</option>
+                <option value="alumni">Alumni</option>
+                <option value="general_fan">General Fan</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Birth Year</label>
+              <input
+                type="number"
+                value={demoForm.birthYear}
+                onChange={(e) => setDemoForm({ ...demoForm, birthYear: e.target.value })}
+                placeholder="e.g. 2002"
+                min="1900"
+                max={new Date().getFullYear()}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '14px' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>City</label>
+              <input
+                type="text"
+                value={demoForm.residingCity}
+                onChange={(e) => setDemoForm({ ...demoForm, residingCity: e.target.value })}
+                placeholder="Your city"
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '14px' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>State</label>
+              <input
+                type="text"
+                value={demoForm.residingState}
+                onChange={(e) => setDemoForm({ ...demoForm, residingState: e.target.value })}
+                placeholder="Your state"
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '14px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <button
+                className="rally-btn rally-btn--secondary"
+                style={{ flex: 1 }}
+                onClick={() => { setIsEditingDemographics(false); setMessage(null); }}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                className="rally-btn rally-btn--primary"
+                style={{ flex: 1 }}
+                disabled={saving}
+                onClick={async () => {
+                  setSaving(true);
+                  setMessage(null);
+                  const birthYearNum = demoForm.birthYear ? parseInt(demoForm.birthYear, 10) : undefined;
+                  const result = await updateProfile({
+                    userType: (demoForm.userType as 'student' | 'alumni' | 'general_fan') || null,
+                    birthYear: birthYearNum && !isNaN(birthYearNum) ? birthYearNum : null,
+                    residingCity: demoForm.residingCity.trim() || null,
+                    residingState: demoForm.residingState.trim() || null,
+                  });
+                  if (result.success) {
+                    setMessage("Demographics updated!");
+                    setIsEditingDemographics(false);
+                  } else {
+                    setMessage(result.error || "Failed to update demographics");
+                  }
+                  setSaving(false);
+                }}
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
           </div>
         )}
       </div>

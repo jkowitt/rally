@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useApp, type Settings } from '../src/context/AppContext';
+import { useAuth } from '../src/context/AuthContext';
 
 const COLORS = {
   orange: '#FF6B35',
@@ -26,13 +27,27 @@ const COLORS = {
   error: '#FF3B30',
 };
 
+const USER_TYPE_OPTIONS = [
+  { value: '', label: 'Not specified' },
+  { value: 'student', label: 'Current Student' },
+  { value: 'alumni', label: 'Alumni' },
+  { value: 'general_fan', label: 'General Fan' },
+];
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { state, dispatch } = useApp();
+  const { state: authState, updateProfile } = useAuth();
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isEditingDemographics, setIsEditingDemographics] = useState(false);
+  const [savingDemographics, setSavingDemographics] = useState(false);
   const [editName, setEditName] = useState(state.user.name);
   const [editHandle, setEditHandle] = useState(state.user.handle);
+  const [editUserType, setEditUserType] = useState(authState.user?.userType || '');
+  const [editBirthYear, setEditBirthYear] = useState(authState.user?.birthYear?.toString() || '');
+  const [editCity, setEditCity] = useState(authState.user?.residingCity || '');
+  const [editState, setEditState] = useState(authState.user?.residingState || '');
 
   const handleToggle = (key: keyof Settings, value: boolean) => {
     dispatch({ type: 'UPDATE_SETTINGS', key, value });
@@ -179,6 +194,153 @@ export default function SettingsScreen() {
             )}
           </View>
         </View>
+
+        {/* Demographics Section */}
+        {authState.isAuthenticated && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About You</Text>
+            <View style={styles.card}>
+              {isEditingDemographics ? (
+                <View style={styles.editProfileForm}>
+                  <Text style={styles.editLabel}>I am a...</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                    {USER_TYPE_OPTIONS.map((opt) => (
+                      <TouchableOpacity
+                        key={opt.value}
+                        style={{
+                          paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+                          backgroundColor: editUserType === opt.value ? COLORS.orange : COLORS.navyLight,
+                          borderWidth: 1, borderColor: editUserType === opt.value ? COLORS.orange : COLORS.navy,
+                        }}
+                        onPress={() => setEditUserType(opt.value)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 13, fontWeight: editUserType === opt.value ? '700' : '500' }}>
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text style={styles.editLabel}>Birth Year</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editBirthYear}
+                    onChangeText={setEditBirthYear}
+                    placeholder="e.g. 2002"
+                    placeholderTextColor={COLORS.gray}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                  />
+                  <Text style={styles.editLabel}>City</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editCity}
+                    onChangeText={setEditCity}
+                    placeholder="Your city"
+                    placeholderTextColor={COLORS.gray}
+                    autoCapitalize="words"
+                  />
+                  <Text style={styles.editLabel}>State</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editState}
+                    onChangeText={setEditState}
+                    placeholder="Your state"
+                    placeholderTextColor={COLORS.gray}
+                    autoCapitalize="characters"
+                    maxLength={2}
+                  />
+                  <View style={styles.editActions}>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={() => setIsEditingDemographics(false)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.saveButton}
+                      onPress={async () => {
+                        setSavingDemographics(true);
+                        const birthYearNum = editBirthYear ? parseInt(editBirthYear, 10) : null;
+                        await updateProfile({
+                          userType: (editUserType as any) || null,
+                          birthYear: birthYearNum && !isNaN(birthYearNum) ? birthYearNum : null,
+                          residingCity: editCity.trim() || null,
+                          residingState: editState.trim() || null,
+                        });
+                        setSavingDemographics(false);
+                        setIsEditingDemographics(false);
+                      }}
+                      activeOpacity={0.7}
+                      disabled={savingDemographics}
+                    >
+                      <Text style={styles.saveButtonText}>{savingDemographics ? 'Saving...' : 'Save'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.aboutRow}>
+                    <View style={styles.settingRowLeft}>
+                      <View style={styles.settingIcon}>
+                        <Ionicons name="person-outline" size={18} color={COLORS.offWhite} />
+                      </View>
+                      <Text style={styles.settingLabel}>Type</Text>
+                    </View>
+                    <Text style={styles.aboutValue}>
+                      {USER_TYPE_OPTIONS.find((o) => o.value === (authState.user?.userType || ''))?.label || 'Not set'}
+                    </Text>
+                  </View>
+                  <View style={styles.rowDivider} />
+                  <View style={styles.aboutRow}>
+                    <View style={styles.settingRowLeft}>
+                      <View style={styles.settingIcon}>
+                        <Ionicons name="calendar-outline" size={18} color={COLORS.offWhite} />
+                      </View>
+                      <Text style={styles.settingLabel}>Birth Year</Text>
+                    </View>
+                    <Text style={styles.aboutValue}>{authState.user?.birthYear || 'Not set'}</Text>
+                  </View>
+                  <View style={styles.rowDivider} />
+                  <View style={styles.aboutRow}>
+                    <View style={styles.settingRowLeft}>
+                      <View style={styles.settingIcon}>
+                        <Ionicons name="location-outline" size={18} color={COLORS.offWhite} />
+                      </View>
+                      <Text style={styles.settingLabel}>Location</Text>
+                    </View>
+                    <Text style={styles.aboutValue}>
+                      {authState.user?.residingCity && authState.user?.residingState
+                        ? `${authState.user.residingCity}, ${authState.user.residingState}`
+                        : authState.user?.residingCity || authState.user?.residingState || 'Not set'}
+                    </Text>
+                  </View>
+                  <View style={styles.rowDivider} />
+                  <TouchableOpacity
+                    style={styles.aboutRow}
+                    onPress={() => {
+                      setEditUserType(authState.user?.userType || '');
+                      setEditBirthYear(authState.user?.birthYear?.toString() || '');
+                      setEditCity(authState.user?.residingCity || '');
+                      setEditState(authState.user?.residingState || '');
+                      setIsEditingDemographics(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.settingRowLeft}>
+                      <View style={styles.settingIcon}>
+                        <Ionicons name="pencil" size={18} color={COLORS.orange} />
+                      </View>
+                      <Text style={[styles.settingLabel, { color: COLORS.orange }]}>Edit Demographics</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.gray} />
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Notification Settings */}
         <View style={styles.section}>

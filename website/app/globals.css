@@ -23519,6 +23519,24 @@ body {
   color: rgba(139,149,165,0.5);
 }
 
+.rally-auth-input-wrap select,
+.rally-auth-select {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--rally-off-white);
+  padding: 0.75rem 0.5rem;
+  font-size: 0.9375rem;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.rally-auth-input-wrap select option {
+  background: #1C2842;
+  color: var(--rally-off-white);
+}
+
 .rally-auth-at {
   color: var(--rally-gray);
   font-size: 0.9375rem;

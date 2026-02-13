@@ -52,8 +52,9 @@ export function Header() {
           {!isDashboard && (
             <>
               <Link href="/#features" className="nav-link">Features</Link>
-              <Link href="/#schools" className="nav-link">Schools</Link>
+              <Link href="/#leagues" className="nav-link">Leagues</Link>
               <Link href="/#how-it-works" className="nav-link">How It Works</Link>
+              <Link href="/why-loud-legacy" className="nav-link">Why Loud Legacy</Link>
             </>
           )}
           {isDashboard && (

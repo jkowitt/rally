@@ -80,7 +80,11 @@ function sanitizeUser(user) {
     handle: user.handle,
     role: user.role,
     schoolId: user.schoolId || null,
+    propertyId: user.propertyId || user.schoolId || null,
+    propertyLeague: user.propertyLeague || 'college',
     favoriteSchool: user.favoriteSchool || null,
+    favoriteTeams: user.favoriteTeams || [],
+    favoriteSports: user.favoriteSports || [],
     supportingSchools: user.supportingSchools || [],
     emailVerified: user.emailVerified || false,
     emailUpdates: user.emailUpdates !== undefined ? user.emailUpdates : true,
@@ -193,6 +197,7 @@ app.get('/api/health', (_req, res) => {
 // ─── Schools data ───────────────────────────────────────────────────────────
 
 const SCHOOLS_FILE = path.join(__dirname, 'schools.json');
+const TEAMS_FILE = path.join(__dirname, 'teams.json');
 
 const getSchools = () => {
   try {
@@ -203,6 +208,105 @@ const getSchools = () => {
   }
 };
 
+const getTeams = () => {
+  try {
+    const raw = fs.readFileSync(TEAMS_FILE, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+};
+
+// ─── Leagues ────────────────────────────────────────────────────────────────
+
+const LEAGUES = [
+  { id: 'college', name: 'College', sport: 'multi', level: 'college', description: 'NCAA Division I collegiate athletics' },
+  { id: 'nba', name: 'NBA', sport: 'basketball', level: 'major', description: 'National Basketball Association' },
+  { id: 'nfl', name: 'NFL', sport: 'football', level: 'major', description: 'National Football League' },
+  { id: 'mlb', name: 'MLB', sport: 'baseball', level: 'major', description: 'Major League Baseball' },
+  { id: 'nhl', name: 'NHL', sport: 'hockey', level: 'major', description: 'National Hockey League' },
+  { id: 'mls', name: 'MLS', sport: 'soccer', level: 'major', description: 'Major League Soccer' },
+  { id: 'uwsl', name: 'UWSL', sport: 'soccer', level: 'major', description: "United Women's Soccer League" },
+];
+
+app.get('/api/leagues', (_req, res) => {
+  // Count properties per league
+  const schools = getSchools();
+  const teams = getTeams();
+
+  const leaguesWithCounts = LEAGUES.map((league) => {
+    const count = league.id === 'college'
+      ? schools.length
+      : teams.filter((t) => t.league === league.id).length;
+    return { ...league, propertyCount: count };
+  });
+
+  res.json({ leagues: leaguesWithCounts });
+});
+
+// ─── Unified Properties (colleges + pro teams) ─────────────────────────────
+// A "property" is any team/school an admin can manage and fans can follow.
+
+// Get all properties (unified: schools tagged as college + pro teams)
+app.get('/api/properties', (req, res) => {
+  const schools = getSchools();
+  const teams = getTeams();
+  const { q, league, sport, conference, division, level } = req.query || {};
+
+  // Tag schools as college league properties
+  let collegeProperties = schools.map((s) => ({
+    ...s,
+    league: 'college',
+    level: 'college',
+    sport: 'multi', // colleges have multiple sports
+    logo: s.logo || null,
+  }));
+
+  // Combine
+  let allProperties = [...collegeProperties, ...teams];
+
+  // Filters
+  if (league) allProperties = allProperties.filter((p) => p.league === league);
+  if (sport) allProperties = allProperties.filter((p) => p.sport === sport || p.sport === 'multi');
+  if (conference) allProperties = allProperties.filter((p) => p.conference === conference);
+  if (division) allProperties = allProperties.filter((p) => p.division === division);
+  if (level) allProperties = allProperties.filter((p) => p.level === level);
+  if (q) {
+    const query = q.toLowerCase();
+    allProperties = allProperties.filter((p) =>
+      p.name.toLowerCase().includes(query) ||
+      p.shortName.toLowerCase().includes(query) ||
+      p.mascot.toLowerCase().includes(query) ||
+      (p.city && p.city.toLowerCase().includes(query)) ||
+      (p.conference && p.conference.toLowerCase().includes(query))
+    );
+  }
+
+  res.json({ properties: allProperties, total: allProperties.length });
+});
+
+// Get a single property by ID (searches both schools and teams)
+app.get('/api/properties/:propertyId', (req, res) => {
+  const { propertyId } = req.params;
+
+  // Check schools first
+  const schools = getSchools();
+  const school = schools.find((s) => s.id === propertyId);
+  if (school) {
+    return res.json({ ...school, league: 'college', level: 'college', sport: 'multi' });
+  }
+
+  // Check teams
+  const teams = getTeams();
+  const team = teams.find((t) => t.id === propertyId);
+  if (team) {
+    return res.json(team);
+  }
+
+  return res.status(404).json({ error: 'Property not found' });
+});
+
+// Keep legacy schools endpoints working
 app.get('/api/schools', (req, res) => {
   const schools = getSchools();
   const { q, conference, division } = req.query || {};
@@ -226,6 +330,72 @@ app.get('/api/schools/:schoolId', (_req, res) => {
   const school = schools.find((s) => s.id === _req.params.schoolId);
   if (!school) return res.status(404).json({ error: 'School not found' });
   res.json(school);
+});
+
+// ─── User Interests (teams + sports across leagues) ─────────────────────────
+// Users can follow teams from any league and select sports they care about.
+
+app.get('/api/auth/me/interests', authenticateToken, (req, res) => {
+  const db = getDb();
+  const user = db.users.find((u) => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  res.json({
+    favoriteTeams: user.favoriteTeams || [],
+    favoriteSports: user.favoriteSports || [],
+    // Legacy fields still available
+    favoriteSchool: user.favoriteSchool || null,
+    supportingSchools: user.supportingSchools || [],
+  });
+});
+
+app.put('/api/auth/me/interests', authenticateToken, (req, res) => {
+  const { favoriteTeams, favoriteSports, favoriteSchool, supportingSchools } = req.body;
+
+  const db = getDb();
+  const user = db.users.find((u) => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  // favoriteTeams: array of { propertyId, league } — max 20
+  if (favoriteTeams !== undefined) {
+    if (!Array.isArray(favoriteTeams)) {
+      return res.status(400).json({ error: 'favoriteTeams must be an array' });
+    }
+    if (favoriteTeams.length > 20) {
+      return res.status(400).json({ error: 'Maximum 20 favorite teams allowed' });
+    }
+    user.favoriteTeams = favoriteTeams.map((t) => ({
+      propertyId: t.propertyId,
+      league: t.league || 'college',
+    }));
+  }
+
+  // favoriteSports: array of sport strings — e.g. ["football", "basketball", "baseball"]
+  if (favoriteSports !== undefined) {
+    if (!Array.isArray(favoriteSports)) {
+      return res.status(400).json({ error: 'favoriteSports must be an array' });
+    }
+    const validSports = ['football', 'basketball', 'baseball', 'hockey', 'soccer', 'softball', 'volleyball', 'track', 'swimming', 'tennis', 'golf', 'lacrosse', 'wrestling', 'gymnastics'];
+    user.favoriteSports = favoriteSports.filter((s) => validSports.includes(s));
+  }
+
+  // Legacy — keep backward compat
+  if (favoriteSchool !== undefined) {
+    user.favoriteSchool = favoriteSchool;
+    user.schoolId = favoriteSchool;
+  }
+  if (supportingSchools !== undefined) {
+    user.supportingSchools = Array.isArray(supportingSchools) ? supportingSchools.slice(0, 2) : [];
+  }
+
+  writeDb(db);
+
+  res.json({
+    favoriteTeams: user.favoriteTeams || [],
+    favoriteSports: user.favoriteSports || [],
+    favoriteSchool: user.favoriteSchool || null,
+    supportingSchools: user.supportingSchools || [],
+  });
 });
 
 // ─── Events / Games ─────────────────────────────────────────────────────────
@@ -1686,15 +1856,23 @@ app.get('/api/capacity', authenticateToken, requireRole(['admin', 'developer']),
   const users = db.users.filter((u) => u.role === 'user');
   const developers = db.users.filter((u) => u.role === 'developer');
 
-  // Schools with active admins
-  const schoolsWithAdmins = [...new Set(admins.map((a) => a.schoolId).filter(Boolean))];
+  // Properties with active admins
+  const propertiesWithAdmins = [...new Set(admins.map((a) => a.propertyId || a.schoolId).filter(Boolean))];
+
+  // Admin breakdown by league
+  const adminsByLeague = {};
+  for (const admin of admins) {
+    const league = admin.propertyLeague || 'college';
+    adminsByLeague[league] = (adminsByLeague[league] || 0) + 1;
+  }
 
   res.json({
     admins: {
       current: admins.length,
       max: MAX_SCHOOL_ADMINS,
       available: Math.max(0, MAX_SCHOOL_ADMINS - admins.length),
-      schools: schoolsWithAdmins,
+      properties: propertiesWithAdmins,
+      byLeague: adminsByLeague,
     },
     users: {
       current: users.length,
@@ -1708,24 +1886,29 @@ app.get('/api/capacity', authenticateToken, requireRole(['admin', 'developer']),
   });
 });
 
-// Provision a school admin (developer-only)
+// Provision a property admin (developer-only — only you can assign admins)
+// Works for any property: college, NBA, NFL, MLB, NHL, MLS, UWSL
 app.post('/api/admin/provision', authenticateToken, requireRole(['developer']), async (req, res) => {
-  const { email, password, name, handle, schoolId } = req.body;
+  const { email, password, name, handle, propertyId, schoolId } = req.body;
+  const targetId = propertyId || schoolId; // support both new and legacy field name
 
-  if (!email || !password || !name || !handle || !schoolId) {
-    return res.status(400).json({ error: 'email, password, name, handle, and schoolId are all required' });
+  if (!email || !password || !name || !handle || !targetId) {
+    return res.status(400).json({ error: 'email, password, name, handle, and propertyId are all required' });
   }
 
   if (password.length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
-  // Verify school exists
+  // Verify property exists (check schools + teams)
   const schools = getSchools();
-  const school = schools.find((s) => s.id === schoolId);
-  if (!school) {
-    return res.status(404).json({ error: `School "${schoolId}" not found in schools list` });
+  const teams = getTeams();
+  const property = schools.find((s) => s.id === targetId) || teams.find((t) => t.id === targetId);
+  if (!property) {
+    return res.status(404).json({ error: `Property "${targetId}" not found. Check /api/properties for valid IDs.` });
   }
+
+  const propertyLeague = property.league || 'college';
 
   const db = getDb();
 
@@ -1758,8 +1941,11 @@ app.post('/api/admin/provision', authenticateToken, requireRole(['developer']), 
     name: name.trim(),
     handle: normalizedHandle,
     role: 'admin',
-    schoolId,
-    favoriteSchool: schoolId,
+    schoolId: targetId, // legacy compat
+    propertyId: targetId,
+    propertyLeague: propertyLeague,
+    favoriteSchool: targetId,
+    favoriteTeams: [{ propertyId: targetId, league: propertyLeague }],
     supportingSchools: [],
     emailVerified: true, // Pre-verified since provisioned by developer
     emailUpdates: true,
@@ -1775,9 +1961,9 @@ app.post('/api/admin/provision', authenticateToken, requireRole(['developer']), 
 
   db.users.push(admin);
 
-  // Initialize school settings if not present
-  if (!db.schoolSettings[schoolId]) {
-    db.schoolSettings[schoolId] = {
+  // Initialize property settings if not present
+  if (!db.schoolSettings[targetId]) {
+    db.schoolSettings[targetId] = {
       sponsorBannerEnabled: true,
       splashEnabled: true,
       customRewards: [],
@@ -1786,11 +1972,11 @@ app.post('/api/admin/provision', authenticateToken, requireRole(['developer']), 
 
   writeDb(db);
 
-  console.log(`[Provision] Admin "${admin.email}" provisioned for school "${school.name}" by ${req.user.email}`);
+  console.log(`[Provision] Admin "${admin.email}" provisioned for ${propertyLeague.toUpperCase()} property "${property.name}" by ${req.user.email}`);
 
   res.status(201).json({
     admin: sanitizeUser(admin),
-    school: { id: school.id, name: school.name, shortName: school.shortName },
+    property: { id: property.id, name: property.name, shortName: property.shortName, league: propertyLeague },
     capacity: {
       adminsUsed: adminCount + 1,
       adminsMax: MAX_SCHOOL_ADMINS,
@@ -1799,7 +1985,7 @@ app.post('/api/admin/provision', authenticateToken, requireRole(['developer']), 
   });
 });
 
-// Bulk provision multiple school admins (developer-only)
+// Bulk provision multiple property admins (developer-only)
 app.post('/api/admin/provision/bulk', authenticateToken, requireRole(['developer']), async (req, res) => {
   const { admins: adminList } = req.body;
 
@@ -1809,6 +1995,7 @@ app.post('/api/admin/provision/bulk', authenticateToken, requireRole(['developer
 
   const db = getDb();
   const schools = getSchools();
+  const teams = getTeams();
   const currentAdminCount = db.users.filter((u) => u.role === 'admin').length;
 
   if (currentAdminCount + adminList.length > MAX_SCHOOL_ADMINS) {
@@ -1821,18 +2008,21 @@ app.post('/api/admin/provision/bulk', authenticateToken, requireRole(['developer
   const errors = [];
 
   for (const entry of adminList) {
-    const { email, password, name, handle, schoolId } = entry;
+    const { email, password, name, handle, propertyId, schoolId } = entry;
+    const targetId = propertyId || schoolId;
 
-    if (!email || !password || !name || !handle || !schoolId) {
+    if (!email || !password || !name || !handle || !targetId) {
       errors.push({ email: email || 'unknown', error: 'Missing required fields' });
       continue;
     }
 
-    const school = schools.find((s) => s.id === schoolId);
-    if (!school) {
-      errors.push({ email, error: `School "${schoolId}" not found` });
+    const property = schools.find((s) => s.id === targetId) || teams.find((t) => t.id === targetId);
+    if (!property) {
+      errors.push({ email, error: `Property "${targetId}" not found` });
       continue;
     }
+
+    const propertyLeague = property.league || 'college';
 
     if (db.users.find((u) => u.email.toLowerCase() === email.toLowerCase())) {
       errors.push({ email, error: 'Email already registered' });
@@ -1855,8 +2045,11 @@ app.post('/api/admin/provision/bulk', authenticateToken, requireRole(['developer
       name: name.trim(),
       handle: normalizedHandle,
       role: 'admin',
-      schoolId,
-      favoriteSchool: schoolId,
+      schoolId: targetId,
+      propertyId: targetId,
+      propertyLeague,
+      favoriteSchool: targetId,
+      favoriteTeams: [{ propertyId: targetId, league: propertyLeague }],
       supportingSchools: [],
       emailVerified: true,
       emailUpdates: true,
@@ -1872,15 +2065,15 @@ app.post('/api/admin/provision/bulk', authenticateToken, requireRole(['developer
 
     db.users.push(admin);
 
-    if (!db.schoolSettings[schoolId]) {
-      db.schoolSettings[schoolId] = {
+    if (!db.schoolSettings[targetId]) {
+      db.schoolSettings[targetId] = {
         sponsorBannerEnabled: true,
         splashEnabled: true,
         customRewards: [],
       };
     }
 
-    results.push({ email: admin.email, schoolId, schoolName: school.name });
+    results.push({ email: admin.email, propertyId: targetId, propertyName: property.name, league: propertyLeague });
   }
 
   writeDb(db);

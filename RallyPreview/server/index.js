@@ -1239,16 +1239,26 @@ app.get('/api/points/me', authenticateToken, (req, res) => {
 
 // ─── Rewards CRUD ────────────────────────────────────────────────────────────
 
-// Get rewards for a school
+// Get rewards for a property
 app.get('/api/schools/:schoolId/rewards', (req, res) => {
   const db = getDb();
   const settings = db.schoolSettings[req.params.schoolId] || {};
   res.json({ rewards: settings.customRewards || [] });
 });
 
-// Create reward
+// Create reward (admin sets up what fans can redeem)
 app.post('/api/schools/:schoolId/rewards', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
-  const { name, pointsCost, description } = req.body;
+  const {
+    name, pointsCost, description,
+    category,         // merchandise, food_drink, experience, digital, discount, access
+    fulfillmentType,  // in_person, digital_code, shipping, self_serve
+    quantity,          // null = unlimited, number = limited supply
+    imageUrl,
+    instructions,     // instructions shown to user after redemption
+    digitalPayload,   // for digital: promo code, download link, etc.
+    expiresAt,        // optional expiry for the reward availability
+  } = req.body;
+
   if (!name || pointsCost === undefined) {
     return res.status(400).json({ error: 'Name and pointsCost are required' });
   }
@@ -1266,6 +1276,15 @@ app.post('/api/schools/:schoolId/rewards', authenticateToken, requireRole(['admi
     name,
     pointsCost: parseInt(pointsCost, 10) || 0,
     description: description || '',
+    category: category || 'general',
+    fulfillmentType: fulfillmentType || 'in_person',
+    quantity: quantity !== undefined && quantity !== null ? parseInt(quantity, 10) : null,
+    quantityRedeemed: 0,
+    imageUrl: imageUrl || null,
+    instructions: instructions || '',
+    digitalPayload: digitalPayload || null,
+    expiresAt: expiresAt || null,
+    active: true,
     createdAt: new Date().toISOString(),
   };
 
@@ -1284,10 +1303,18 @@ app.put('/api/schools/:schoolId/rewards/:rewardId', authenticateToken, requireRo
   const reward = settings.customRewards.find((r) => r.id === req.params.rewardId);
   if (!reward) return res.status(404).json({ error: 'Reward not found' });
 
-  const { name, pointsCost, description } = req.body;
+  const { name, pointsCost, description, category, fulfillmentType, quantity, imageUrl, instructions, digitalPayload, expiresAt, active } = req.body;
   if (name !== undefined) reward.name = name;
   if (pointsCost !== undefined) reward.pointsCost = parseInt(pointsCost, 10) || 0;
   if (description !== undefined) reward.description = description;
+  if (category !== undefined) reward.category = category;
+  if (fulfillmentType !== undefined) reward.fulfillmentType = fulfillmentType;
+  if (quantity !== undefined) reward.quantity = quantity !== null ? parseInt(quantity, 10) : null;
+  if (imageUrl !== undefined) reward.imageUrl = imageUrl;
+  if (instructions !== undefined) reward.instructions = instructions;
+  if (digitalPayload !== undefined) reward.digitalPayload = digitalPayload;
+  if (expiresAt !== undefined) reward.expiresAt = expiresAt;
+  if (active !== undefined) reward.active = active;
 
   writeDb(db);
   res.json(reward);
@@ -1305,6 +1332,458 @@ app.delete('/api/schools/:schoolId/rewards/:rewardId', authenticateToken, requir
   settings.customRewards.splice(index, 1);
   writeDb(db);
   res.json({ message: 'Reward deleted' });
+});
+
+// ─── Reward Redemption System ───────────────────────────────────────────────
+//
+// Lifecycle:
+//   1. User browses rewards → picks one → POST /redeem (points deducted, code generated)
+//   2. Redemption status: pending → verified → fulfilled (or rejected/expired)
+//
+// Verification methods:
+//   - REDEMPTION CODE: 8-char alphanumeric code user shows to staff
+//   - QR CODE: same code encoded as a URL staff can scan
+//   - DIGITAL AUTO-FULFILL: digital rewards (promo codes, links) deliver instantly
+//   - IN-APP VERIFY: admin taps "verify" then "fulfill" in admin panel
+//
+// Fulfillment types:
+//   - in_person: user shows code at venue counter/booth, staff verifies + fulfills
+//   - digital_code: auto-fulfilled immediately, user gets promo code/link
+//   - shipping: user provides address, admin ships and marks fulfilled
+//   - self_serve: user shows code at kiosk/vending, self-validates
+//
+
+// Generate a short alphanumeric redemption code
+function generateRedemptionCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// User redeems a reward (cash in points)
+app.post('/api/schools/:schoolId/rewards/:rewardId/redeem', authenticateToken, (req, res) => {
+  const db = getDb();
+  const settings = db.schoolSettings[req.params.schoolId];
+  if (!settings || !settings.customRewards) {
+    return res.status(404).json({ error: 'Property not found' });
+  }
+
+  const reward = settings.customRewards.find((r) => r.id === req.params.rewardId);
+  if (!reward) return res.status(404).json({ error: 'Reward not found' });
+
+  if (reward.active === false) {
+    return res.status(400).json({ error: 'This reward is no longer available' });
+  }
+
+  if (reward.expiresAt && new Date(reward.expiresAt) < new Date()) {
+    return res.status(400).json({ error: 'This reward has expired' });
+  }
+
+  // Check quantity limit
+  if (reward.quantity !== null && reward.quantity !== undefined) {
+    if ((reward.quantityRedeemed || 0) >= reward.quantity) {
+      return res.status(400).json({ error: 'This reward is sold out' });
+    }
+  }
+
+  // Calculate user's available points
+  const ledger = (db.pointsLedger || []).filter((p) => p.userId === req.user.id);
+  const totalEarned = ledger.reduce((sum, p) => sum + p.points, 0);
+  const totalSpent = (db.redemptions || [])
+    .filter((r) => r.userId === req.user.id && r.status !== 'rejected' && r.status !== 'expired')
+    .reduce((sum, r) => sum + r.pointsCost, 0);
+  const availablePoints = totalEarned - totalSpent;
+
+  if (availablePoints < reward.pointsCost) {
+    return res.status(400).json({
+      error: `Not enough points. You have ${availablePoints} but this reward costs ${reward.pointsCost}.`,
+      availablePoints,
+      pointsCost: reward.pointsCost,
+    });
+  }
+
+  // Check for duplicate pending redemption of same reward
+  if (!db.redemptions) db.redemptions = [];
+  const pendingDupe = db.redemptions.find(
+    (r) => r.userId === req.user.id && r.rewardId === reward.id &&
+    ['pending', 'verified'].includes(r.status)
+  );
+  if (pendingDupe) {
+    return res.status(409).json({
+      error: 'You already have a pending redemption for this reward',
+      redemption: pendingDupe,
+    });
+  }
+
+  const now = new Date().toISOString();
+  const code = generateRedemptionCode();
+  const isDigital = reward.fulfillmentType === 'digital_code';
+
+  const redemption = {
+    id: uuidv4(),
+    userId: req.user.id,
+    userName: req.user.name,
+    userEmail: req.user.email,
+    schoolId: req.params.schoolId,
+    rewardId: reward.id,
+    rewardName: reward.name,
+    pointsCost: reward.pointsCost,
+    category: reward.category || 'general',
+    fulfillmentType: reward.fulfillmentType || 'in_person',
+    // Verification
+    redemptionCode: code,
+    qrUrl: `/api/redemptions/${code}/verify`, // staff scans this URL
+    // Status
+    status: isDigital ? 'fulfilled' : 'pending',
+    // Digital payload (only for auto-fulfilled digital rewards)
+    digitalPayload: isDigital ? reward.digitalPayload : null,
+    instructions: reward.instructions || '',
+    // Shipping info (user fills in later if shipping type)
+    shippingAddress: null,
+    // Timestamps
+    requestedAt: now,
+    verifiedAt: isDigital ? now : null,
+    verifiedBy: isDigital ? 'auto' : null,
+    fulfilledAt: isDigital ? now : null,
+    fulfilledBy: isDigital ? 'auto' : null,
+    rejectedAt: null,
+    rejectedBy: null,
+    rejectionReason: null,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 day expiry
+    notes: '',
+  };
+
+  db.redemptions.push(redemption);
+
+  // Increment quantity redeemed
+  reward.quantityRedeemed = (reward.quantityRedeemed || 0) + 1;
+
+  writeDb(db);
+
+  console.log(`[Redeem] ${req.user.email} redeemed "${reward.name}" for ${reward.pointsCost} pts (code: ${code})`);
+
+  res.status(201).json({
+    redemption,
+    availablePoints: availablePoints - reward.pointsCost,
+    message: isDigital
+      ? 'Reward redeemed! Check your digital payload below.'
+      : `Reward requested! Show code ${code} to staff to claim.`,
+  });
+});
+
+// User: add shipping address to a shipping-type redemption
+app.put('/api/redemptions/:redemptionId/shipping', authenticateToken, (req, res) => {
+  const db = getDb();
+  if (!db.redemptions) return res.status(404).json({ error: 'Redemption not found' });
+
+  const redemption = db.redemptions.find(
+    (r) => r.id === req.params.redemptionId && r.userId === req.user.id
+  );
+  if (!redemption) return res.status(404).json({ error: 'Redemption not found' });
+
+  if (redemption.fulfillmentType !== 'shipping') {
+    return res.status(400).json({ error: 'This redemption does not require shipping' });
+  }
+
+  const { street, city, state, zip, phone } = req.body;
+  if (!street || !city || !state || !zip) {
+    return res.status(400).json({ error: 'street, city, state, and zip are required' });
+  }
+
+  redemption.shippingAddress = { street, city, state, zip, phone: phone || '' };
+  writeDb(db);
+
+  res.json({ redemption, message: 'Shipping address saved' });
+});
+
+// User: get my redemptions
+app.get('/api/redemptions/me', authenticateToken, (req, res) => {
+  const db = getDb();
+  const redemptions = (db.redemptions || [])
+    .filter((r) => r.userId === req.user.id)
+    .sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
+
+  // Calculate points balance
+  const ledger = (db.pointsLedger || []).filter((p) => p.userId === req.user.id);
+  const totalEarned = ledger.reduce((sum, p) => sum + p.points, 0);
+  const totalSpent = redemptions
+    .filter((r) => r.status !== 'rejected' && r.status !== 'expired')
+    .reduce((sum, r) => sum + r.pointsCost, 0);
+
+  res.json({
+    redemptions,
+    pointsBalance: {
+      earned: totalEarned,
+      spent: totalSpent,
+      available: totalEarned - totalSpent,
+    },
+  });
+});
+
+// ─── Staff / Admin Verification & Fulfillment ──────────────────────────────
+
+// Verify a redemption by code (staff scans QR or enters code)
+// This is a public-ish endpoint — staff at the venue uses it
+app.get('/api/redemptions/:code/verify', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const redemption = (db.redemptions || []).find((r) => r.redemptionCode === req.params.code);
+
+  if (!redemption) {
+    return res.status(404).json({ valid: false, error: 'Redemption code not found' });
+  }
+
+  // Check if expired
+  if (redemption.expiresAt && new Date(redemption.expiresAt) < new Date()) {
+    if (redemption.status === 'pending') {
+      redemption.status = 'expired';
+      writeDb(db);
+    }
+    return res.status(410).json({ valid: false, error: 'This redemption has expired', redemption });
+  }
+
+  if (redemption.status === 'fulfilled') {
+    return res.json({ valid: false, error: 'Already fulfilled', redemption });
+  }
+
+  if (redemption.status === 'rejected') {
+    return res.json({ valid: false, error: 'This redemption was rejected', redemption });
+  }
+
+  // Valid — show staff the details so they can confirm
+  res.json({
+    valid: true,
+    redemption,
+    message: `Valid! ${redemption.userName} is redeeming "${redemption.rewardName}" (${redemption.pointsCost} pts)`,
+  });
+});
+
+// Admin: get all redemptions for their property (filterable)
+app.get('/api/schools/:schoolId/redemptions', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const { status } = req.query || {};
+  let redemptions = (db.redemptions || []).filter((r) => r.schoolId === req.params.schoolId);
+
+  if (status) {
+    redemptions = redemptions.filter((r) => r.status === status);
+  }
+
+  redemptions.sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
+
+  // Summary counts
+  const summary = {
+    total: redemptions.length,
+    pending: redemptions.filter((r) => r.status === 'pending').length,
+    verified: redemptions.filter((r) => r.status === 'verified').length,
+    fulfilled: redemptions.filter((r) => r.status === 'fulfilled').length,
+    rejected: redemptions.filter((r) => r.status === 'rejected').length,
+    expired: redemptions.filter((r) => r.status === 'expired').length,
+    totalPointsRedeemed: redemptions
+      .filter((r) => r.status !== 'rejected' && r.status !== 'expired')
+      .reduce((sum, r) => sum + r.pointsCost, 0),
+  };
+
+  res.json({ redemptions, summary });
+});
+
+// Admin: mark a redemption as verified (staff confirmed user identity)
+app.post('/api/redemptions/:redemptionId/mark-verified', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const redemption = (db.redemptions || []).find((r) => r.id === req.params.redemptionId);
+  if (!redemption) return res.status(404).json({ error: 'Redemption not found' });
+
+  if (redemption.status !== 'pending') {
+    return res.status(400).json({ error: `Cannot verify a redemption with status "${redemption.status}"` });
+  }
+
+  redemption.status = 'verified';
+  redemption.verifiedAt = new Date().toISOString();
+  redemption.verifiedBy = req.user.id;
+
+  writeDb(db);
+  console.log(`[Redeem] Verified "${redemption.rewardName}" for ${redemption.userName} by ${req.user.email}`);
+  res.json({ redemption, message: 'Redemption verified. Ready to fulfill.' });
+});
+
+// Admin: mark a redemption as fulfilled (reward handed to user)
+app.post('/api/redemptions/:redemptionId/fulfill', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const redemption = (db.redemptions || []).find((r) => r.id === req.params.redemptionId);
+  if (!redemption) return res.status(404).json({ error: 'Redemption not found' });
+
+  if (!['pending', 'verified'].includes(redemption.status)) {
+    return res.status(400).json({ error: `Cannot fulfill a redemption with status "${redemption.status}"` });
+  }
+
+  const { notes } = req.body || {};
+
+  const now = new Date().toISOString();
+  redemption.status = 'fulfilled';
+  if (!redemption.verifiedAt) {
+    redemption.verifiedAt = now;
+    redemption.verifiedBy = req.user.id;
+  }
+  redemption.fulfilledAt = now;
+  redemption.fulfilledBy = req.user.id;
+  if (notes) redemption.notes = notes;
+
+  writeDb(db);
+  console.log(`[Redeem] Fulfilled "${redemption.rewardName}" for ${redemption.userName} by ${req.user.email}`);
+  res.json({ redemption, message: 'Reward fulfilled!' });
+});
+
+// Admin: reject a redemption (points refunded to user)
+app.post('/api/redemptions/:redemptionId/reject', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const redemption = (db.redemptions || []).find((r) => r.id === req.params.redemptionId);
+  if (!redemption) return res.status(404).json({ error: 'Redemption not found' });
+
+  if (['fulfilled', 'rejected'].includes(redemption.status)) {
+    return res.status(400).json({ error: `Cannot reject a redemption with status "${redemption.status}"` });
+  }
+
+  const { reason } = req.body || {};
+
+  redemption.status = 'rejected';
+  redemption.rejectedAt = new Date().toISOString();
+  redemption.rejectedBy = req.user.id;
+  redemption.rejectionReason = reason || 'Rejected by admin';
+
+  // Restore quantity on the reward
+  const settings = db.schoolSettings[redemption.schoolId];
+  if (settings && settings.customRewards) {
+    const reward = settings.customRewards.find((r) => r.id === redemption.rewardId);
+    if (reward && reward.quantityRedeemed > 0) {
+      reward.quantityRedeemed -= 1;
+    }
+  }
+
+  writeDb(db);
+  console.log(`[Redeem] Rejected "${redemption.rewardName}" for ${redemption.userName}: ${redemption.rejectionReason}`);
+  res.json({
+    redemption,
+    message: `Redemption rejected. ${redemption.pointsCost} points refunded to user.`,
+  });
+});
+
+// Admin: quick-fulfill by scanning a redemption code (single step: verify + fulfill)
+app.post('/api/redemptions/scan', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Redemption code is required' });
+
+  const db = getDb();
+  const redemption = (db.redemptions || []).find((r) => r.redemptionCode === code.toUpperCase().trim());
+
+  if (!redemption) {
+    return res.status(404).json({ valid: false, error: 'Code not found. Check the code and try again.' });
+  }
+
+  if (redemption.status === 'fulfilled') {
+    return res.status(400).json({ valid: false, error: 'Already fulfilled', redemption });
+  }
+
+  if (redemption.status === 'rejected') {
+    return res.status(400).json({ valid: false, error: 'This redemption was rejected', redemption });
+  }
+
+  if (redemption.expiresAt && new Date(redemption.expiresAt) < new Date()) {
+    redemption.status = 'expired';
+    writeDb(db);
+    return res.status(410).json({ valid: false, error: 'This redemption has expired', redemption });
+  }
+
+  // One-step verify + fulfill
+  const now = new Date().toISOString();
+  redemption.status = 'fulfilled';
+  redemption.verifiedAt = redemption.verifiedAt || now;
+  redemption.verifiedBy = redemption.verifiedBy || req.user.id;
+  redemption.fulfilledAt = now;
+  redemption.fulfilledBy = req.user.id;
+
+  writeDb(db);
+  console.log(`[Redeem] Scan-fulfilled "${redemption.rewardName}" for ${redemption.userName} (code: ${code}) by ${req.user.email}`);
+
+  res.json({
+    valid: true,
+    redemption,
+    message: `Fulfilled! ${redemption.userName} redeemed "${redemption.rewardName}" (${redemption.pointsCost} pts)`,
+  });
+});
+
+// Admin: redemption analytics for a property
+app.get('/api/schools/:schoolId/redemption-stats', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const redemptions = (db.redemptions || []).filter((r) => r.schoolId === req.params.schoolId);
+
+  // By reward
+  const byReward = {};
+  for (const r of redemptions) {
+    if (!byReward[r.rewardName]) {
+      byReward[r.rewardName] = { rewardId: r.rewardId, name: r.rewardName, total: 0, fulfilled: 0, pending: 0, rejected: 0, totalPoints: 0 };
+    }
+    byReward[r.rewardName].total += 1;
+    if (r.status === 'fulfilled') byReward[r.rewardName].fulfilled += 1;
+    if (r.status === 'pending' || r.status === 'verified') byReward[r.rewardName].pending += 1;
+    if (r.status === 'rejected') byReward[r.rewardName].rejected += 1;
+    if (r.status !== 'rejected' && r.status !== 'expired') {
+      byReward[r.rewardName].totalPoints += r.pointsCost;
+    }
+  }
+
+  // By category
+  const byCategory = {};
+  for (const r of redemptions) {
+    const cat = r.category || 'general';
+    byCategory[cat] = (byCategory[cat] || 0) + 1;
+  }
+
+  // By fulfillment type
+  const byFulfillmentType = {};
+  for (const r of redemptions) {
+    const ft = r.fulfillmentType || 'in_person';
+    byFulfillmentType[ft] = (byFulfillmentType[ft] || 0) + 1;
+  }
+
+  // Top redeemers
+  const userCounts = {};
+  for (const r of redemptions) {
+    if (r.status !== 'rejected' && r.status !== 'expired') {
+      if (!userCounts[r.userId]) {
+        userCounts[r.userId] = { userId: r.userId, userName: r.userName, count: 0, totalPoints: 0 };
+      }
+      userCounts[r.userId].count += 1;
+      userCounts[r.userId].totalPoints += r.pointsCost;
+    }
+  }
+  const topRedeemers = Object.values(userCounts).sort((a, b) => b.totalPoints - a.totalPoints).slice(0, 10);
+
+  // Avg fulfillment time (for fulfilled redemptions)
+  const fulfilledRedemptions = redemptions.filter((r) => r.status === 'fulfilled' && r.fulfilledAt && r.requestedAt);
+  let avgFulfillmentMinutes = null;
+  if (fulfilledRedemptions.length > 0) {
+    const totalMs = fulfilledRedemptions.reduce((sum, r) => {
+      return sum + (new Date(r.fulfilledAt) - new Date(r.requestedAt));
+    }, 0);
+    avgFulfillmentMinutes = Math.round(totalMs / fulfilledRedemptions.length / 60000);
+  }
+
+  res.json({
+    total: redemptions.length,
+    fulfilled: redemptions.filter((r) => r.status === 'fulfilled').length,
+    pending: redemptions.filter((r) => r.status === 'pending' || r.status === 'verified').length,
+    rejected: redemptions.filter((r) => r.status === 'rejected').length,
+    expired: redemptions.filter((r) => r.status === 'expired').length,
+    totalPointsRedeemed: redemptions
+      .filter((r) => r.status !== 'rejected' && r.status !== 'expired')
+      .reduce((sum, r) => sum + r.pointsCost, 0),
+    avgFulfillmentMinutes,
+    byReward: Object.values(byReward),
+    byCategory,
+    byFulfillmentType,
+    topRedeemers,
+  });
 });
 
 // ─── Push Notifications CRUD ─────────────────────────────────────────────────

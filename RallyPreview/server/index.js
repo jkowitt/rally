@@ -469,6 +469,154 @@ app.delete('/api/schools/:schoolId/rewards/:rewardId', authenticateToken, requir
   res.json({ message: 'Reward deleted' });
 });
 
+// ─── Push Notifications CRUD ─────────────────────────────────────────────────
+
+app.get('/api/notifications', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const { schoolId } = req.query || {};
+  let notifs = db.notifications || [];
+  if (schoolId) notifs = notifs.filter((n) => n.schoolId === schoolId);
+  notifs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json({ notifications: notifs, total: notifs.length });
+});
+
+app.post('/api/notifications', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const { title, body, schoolId, targetAudience, scheduledFor } = req.body;
+  if (!title || !body) return res.status(400).json({ error: 'Title and body are required' });
+
+  const now = new Date().toISOString();
+  const notif = {
+    id: uuidv4(),
+    title,
+    body,
+    schoolId: schoolId || req.user.schoolId || 'rally-university',
+    targetAudience: targetAudience || 'all', // all, tier:gold, tier:silver, etc.
+    status: scheduledFor ? 'scheduled' : 'sent',
+    scheduledFor: scheduledFor || null,
+    sentAt: scheduledFor ? null : now,
+    createdBy: req.user.id,
+    createdAt: now,
+  };
+
+  const db = getDb();
+  if (!db.notifications) db.notifications = [];
+  db.notifications.push(notif);
+  writeDb(db);
+
+  console.log(`[Notification] "${notif.title}" created by ${req.user.email}`);
+  res.status(201).json(notif);
+});
+
+app.put('/api/notifications/:notifId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const notif = (db.notifications || []).find((n) => n.id === req.params.notifId);
+  if (!notif) return res.status(404).json({ error: 'Notification not found' });
+
+  const { title, body, targetAudience, scheduledFor, status } = req.body;
+  if (title !== undefined) notif.title = title;
+  if (body !== undefined) notif.body = body;
+  if (targetAudience !== undefined) notif.targetAudience = targetAudience;
+  if (scheduledFor !== undefined) notif.scheduledFor = scheduledFor;
+  if (status !== undefined) notif.status = status;
+
+  writeDb(db);
+  res.json(notif);
+});
+
+app.delete('/api/notifications/:notifId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const index = (db.notifications || []).findIndex((n) => n.id === req.params.notifId);
+  if (index === -1) return res.status(404).json({ error: 'Notification not found' });
+
+  db.notifications.splice(index, 1);
+  writeDb(db);
+  res.json({ message: 'Notification deleted' });
+});
+
+// Send a notification now (marks as sent)
+app.post('/api/notifications/:notifId/send', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const notif = (db.notifications || []).find((n) => n.id === req.params.notifId);
+  if (!notif) return res.status(404).json({ error: 'Notification not found' });
+
+  notif.status = 'sent';
+  notif.sentAt = new Date().toISOString();
+  writeDb(db);
+
+  console.log(`[Notification] "${notif.title}" sent to ${notif.targetAudience}`);
+  res.json(notif);
+});
+
+// ─── Bonus Offers CRUD ──────────────────────────────────────────────────────
+
+app.get('/api/schools/:schoolId/bonus-offers', (req, res) => {
+  const db = getDb();
+  let offers = (db.bonusOffers || []).filter((o) => o.schoolId === req.params.schoolId);
+  const now = new Date();
+  offers = offers.map((o) => ({
+    ...o,
+    isActive: o.active && (!o.expiresAt || new Date(o.expiresAt) > now),
+  }));
+  offers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json({ bonusOffers: offers, total: offers.length });
+});
+
+app.post('/api/schools/:schoolId/bonus-offers', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const { title, description, bonusMultiplier, bonusPoints, activationType, expiresAt } = req.body;
+  if (!title) return res.status(400).json({ error: 'Title is required' });
+
+  const now = new Date().toISOString();
+  const offer = {
+    id: uuidv4(),
+    schoolId: req.params.schoolId,
+    title,
+    description: description || '',
+    bonusMultiplier: parseFloat(bonusMultiplier) || null, // e.g. 2.0 for double points
+    bonusPoints: parseInt(bonusPoints, 10) || null, // e.g. 50 flat bonus
+    activationType: activationType || 'all', // all, checkin, trivia, prediction, etc.
+    active: true,
+    expiresAt: expiresAt || null,
+    createdBy: req.user.id,
+    createdAt: now,
+  };
+
+  const db = getDb();
+  if (!db.bonusOffers) db.bonusOffers = [];
+  db.bonusOffers.push(offer);
+  writeDb(db);
+
+  console.log(`[Bonus] "${offer.title}" created for ${req.params.schoolId}`);
+  res.status(201).json(offer);
+});
+
+app.put('/api/schools/:schoolId/bonus-offers/:offerId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const offer = (db.bonusOffers || []).find((o) => o.id === req.params.offerId && o.schoolId === req.params.schoolId);
+  if (!offer) return res.status(404).json({ error: 'Bonus offer not found' });
+
+  const { title, description, bonusMultiplier, bonusPoints, activationType, active, expiresAt } = req.body;
+  if (title !== undefined) offer.title = title;
+  if (description !== undefined) offer.description = description;
+  if (bonusMultiplier !== undefined) offer.bonusMultiplier = parseFloat(bonusMultiplier) || null;
+  if (bonusPoints !== undefined) offer.bonusPoints = parseInt(bonusPoints, 10) || null;
+  if (activationType !== undefined) offer.activationType = activationType;
+  if (active !== undefined) offer.active = active;
+  if (expiresAt !== undefined) offer.expiresAt = expiresAt;
+
+  writeDb(db);
+  res.json(offer);
+});
+
+app.delete('/api/schools/:schoolId/bonus-offers/:offerId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const index = (db.bonusOffers || []).findIndex((o) => o.id === req.params.offerId && o.schoolId === req.params.schoolId);
+  if (index === -1) return res.status(404).json({ error: 'Bonus offer not found' });
+
+  db.bonusOffers.splice(index, 1);
+  writeDb(db);
+  res.json({ message: 'Bonus offer deleted' });
+});
+
 // ─── Auth routes ─────────────────────────────────────────────────────────────
 
 // Register

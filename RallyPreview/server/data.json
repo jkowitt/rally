@@ -13,6 +13,18 @@
       "lastLogin": "2026-02-12T05:18:38.561Z"
     },
     {
+      "id": "b48b1d5a-bd59-4a18-a2b5-9a02ca11106d",
+      "email": "jlkowitt25@gmail.com",
+      "passwordHash": "$2a$10$jPnnx33f703UKw8AHIQOV.pFtQ4.a8RES.MMosm6ZY90A.cWqZSVy",
+      "name": "Jason Kowitt",
+      "handle": "@jasonk",
+      "role": "developer",
+      "schoolId": "kent-state",
+      "createdAt": "2026-02-13T00:00:00.000Z",
+      "acceptedTerms": true,
+      "lastLogin": "2026-02-13T00:00:00.000Z"
+    },
+    {
       "id": "79946438-c0dc-4f7b-bbb3-574d09b06acf",
       "email": "admin@rally.com",
       "passwordHash": "$2a$10$1dewLKaY7Zev0uTxNmXnquRk7mo8YhhMfUpE7VH4qXW1.Pn.xyUri",

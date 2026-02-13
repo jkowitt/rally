@@ -15,6 +15,10 @@ const JWT_EXPIRES_IN = '7d';
 const DATA_FILE = path.join(__dirname, 'data.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
+// ─── Capacity limits ────────────────────────────────────────────────────────
+const MAX_SCHOOL_ADMINS = parseInt(process.env.MAX_SCHOOL_ADMINS, 10) || 15;
+const MAX_USERS = parseInt(process.env.MAX_USERS, 10) || 10000;
+
 // Ensure uploads directory exists
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -645,6 +649,18 @@ app.post('/api/auth/register', async (req, res) => {
 
     const db = getDb();
 
+    // Enforce user capacity
+    const userCount = db.users.filter((u) => u.role === 'user').length;
+    if ((role || 'user') === 'user' && userCount >= MAX_USERS) {
+      return res.status(403).json({ error: 'User registration is currently full. Please try again later.' });
+    }
+
+    // Enforce admin capacity
+    const adminCount = db.users.filter((u) => u.role === 'admin').length;
+    if (role === 'admin' && adminCount >= MAX_SCHOOL_ADMINS) {
+      return res.status(403).json({ error: 'Admin capacity reached. Contact support for more slots.' });
+    }
+
     if (db.users.find((u) => u.email.toLowerCase() === email.toLowerCase())) {
       return res.status(409).json({ error: 'Email already registered' });
     }
@@ -995,6 +1011,228 @@ app.delete('/api/users/:id', authenticateToken, requireRole(['developer']), (req
   writeDb(db);
 
   res.json({ message: 'User deleted' });
+});
+
+// ─── Capacity & Admin Provisioning ──────────────────────────────────────────
+
+// Get server capacity status
+app.get('/api/capacity', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const admins = db.users.filter((u) => u.role === 'admin');
+  const users = db.users.filter((u) => u.role === 'user');
+  const developers = db.users.filter((u) => u.role === 'developer');
+
+  // Schools with active admins
+  const schoolsWithAdmins = [...new Set(admins.map((a) => a.schoolId).filter(Boolean))];
+
+  res.json({
+    admins: {
+      current: admins.length,
+      max: MAX_SCHOOL_ADMINS,
+      available: Math.max(0, MAX_SCHOOL_ADMINS - admins.length),
+      schools: schoolsWithAdmins,
+    },
+    users: {
+      current: users.length,
+      max: MAX_USERS,
+      available: Math.max(0, MAX_USERS - users.length),
+    },
+    developers: {
+      current: developers.length,
+    },
+    totalAccounts: db.users.length,
+  });
+});
+
+// Provision a school admin (developer-only)
+app.post('/api/admin/provision', authenticateToken, requireRole(['developer']), async (req, res) => {
+  const { email, password, name, handle, schoolId } = req.body;
+
+  if (!email || !password || !name || !handle || !schoolId) {
+    return res.status(400).json({ error: 'email, password, name, handle, and schoolId are all required' });
+  }
+
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  }
+
+  // Verify school exists
+  const schools = getSchools();
+  const school = schools.find((s) => s.id === schoolId);
+  if (!school) {
+    return res.status(404).json({ error: `School "${schoolId}" not found in schools list` });
+  }
+
+  const db = getDb();
+
+  // Check admin capacity
+  const adminCount = db.users.filter((u) => u.role === 'admin').length;
+  if (adminCount >= MAX_SCHOOL_ADMINS) {
+    return res.status(403).json({
+      error: `Admin capacity reached (${adminCount}/${MAX_SCHOOL_ADMINS}). Upgrade your plan to add more admins.`,
+    });
+  }
+
+  // Check email uniqueness
+  if (db.users.find((u) => u.email.toLowerCase() === email.toLowerCase())) {
+    return res.status(409).json({ error: 'Email already registered' });
+  }
+
+  // Check handle uniqueness
+  const normalizedHandle = handle.startsWith('@') ? handle : `@${handle}`;
+  if (db.users.find((u) => u.handle.toLowerCase() === normalizedHandle.toLowerCase())) {
+    return res.status(409).json({ error: 'Handle already taken' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const now = new Date().toISOString();
+
+  const admin = {
+    id: uuidv4(),
+    email: email.toLowerCase().trim(),
+    passwordHash,
+    name: name.trim(),
+    handle: normalizedHandle,
+    role: 'admin',
+    schoolId,
+    favoriteSchool: schoolId,
+    supportingSchools: [],
+    emailVerified: true, // Pre-verified since provisioned by developer
+    emailUpdates: true,
+    pushNotifications: true,
+    acceptedTerms: true,
+    verificationCode: null,
+    verificationCodeExpiry: null,
+    resetToken: null,
+    resetTokenExpiry: null,
+    createdAt: now,
+    lastLogin: now,
+  };
+
+  db.users.push(admin);
+
+  // Initialize school settings if not present
+  if (!db.schoolSettings[schoolId]) {
+    db.schoolSettings[schoolId] = {
+      sponsorBannerEnabled: true,
+      splashEnabled: true,
+      customRewards: [],
+    };
+  }
+
+  writeDb(db);
+
+  console.log(`[Provision] Admin "${admin.email}" provisioned for school "${school.name}" by ${req.user.email}`);
+
+  res.status(201).json({
+    admin: sanitizeUser(admin),
+    school: { id: school.id, name: school.name, shortName: school.shortName },
+    capacity: {
+      adminsUsed: adminCount + 1,
+      adminsMax: MAX_SCHOOL_ADMINS,
+      adminsAvailable: MAX_SCHOOL_ADMINS - adminCount - 1,
+    },
+  });
+});
+
+// Bulk provision multiple school admins (developer-only)
+app.post('/api/admin/provision/bulk', authenticateToken, requireRole(['developer']), async (req, res) => {
+  const { admins: adminList } = req.body;
+
+  if (!Array.isArray(adminList) || adminList.length === 0) {
+    return res.status(400).json({ error: 'admins array is required with at least one entry' });
+  }
+
+  const db = getDb();
+  const schools = getSchools();
+  const currentAdminCount = db.users.filter((u) => u.role === 'admin').length;
+
+  if (currentAdminCount + adminList.length > MAX_SCHOOL_ADMINS) {
+    return res.status(403).json({
+      error: `Would exceed admin capacity. Current: ${currentAdminCount}, Requested: ${adminList.length}, Max: ${MAX_SCHOOL_ADMINS}`,
+    });
+  }
+
+  const results = [];
+  const errors = [];
+
+  for (const entry of adminList) {
+    const { email, password, name, handle, schoolId } = entry;
+
+    if (!email || !password || !name || !handle || !schoolId) {
+      errors.push({ email: email || 'unknown', error: 'Missing required fields' });
+      continue;
+    }
+
+    const school = schools.find((s) => s.id === schoolId);
+    if (!school) {
+      errors.push({ email, error: `School "${schoolId}" not found` });
+      continue;
+    }
+
+    if (db.users.find((u) => u.email.toLowerCase() === email.toLowerCase())) {
+      errors.push({ email, error: 'Email already registered' });
+      continue;
+    }
+
+    const normalizedHandle = handle.startsWith('@') ? handle : `@${handle}`;
+    if (db.users.find((u) => u.handle.toLowerCase() === normalizedHandle.toLowerCase())) {
+      errors.push({ email, error: 'Handle already taken' });
+      continue;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const now = new Date().toISOString();
+
+    const admin = {
+      id: uuidv4(),
+      email: email.toLowerCase().trim(),
+      passwordHash,
+      name: name.trim(),
+      handle: normalizedHandle,
+      role: 'admin',
+      schoolId,
+      favoriteSchool: schoolId,
+      supportingSchools: [],
+      emailVerified: true,
+      emailUpdates: true,
+      pushNotifications: true,
+      acceptedTerms: true,
+      verificationCode: null,
+      verificationCodeExpiry: null,
+      resetToken: null,
+      resetTokenExpiry: null,
+      createdAt: now,
+      lastLogin: now,
+    };
+
+    db.users.push(admin);
+
+    if (!db.schoolSettings[schoolId]) {
+      db.schoolSettings[schoolId] = {
+        sponsorBannerEnabled: true,
+        splashEnabled: true,
+        customRewards: [],
+      };
+    }
+
+    results.push({ email: admin.email, schoolId, schoolName: school.name });
+  }
+
+  writeDb(db);
+
+  const finalAdminCount = db.users.filter((u) => u.role === 'admin').length;
+  console.log(`[Bulk Provision] ${results.length} admins provisioned by ${req.user.email}`);
+
+  res.status(201).json({
+    provisioned: results,
+    errors,
+    capacity: {
+      adminsUsed: finalAdminCount,
+      adminsMax: MAX_SCHOOL_ADMINS,
+      adminsAvailable: MAX_SCHOOL_ADMINS - finalAdminCount,
+    },
+  });
 });
 
 // ─── Content routes ─────────────────────────────────────────────────────────

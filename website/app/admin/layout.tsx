@@ -7,15 +7,17 @@ import { useEffect } from "react";
 import { useRallyAuth } from "@/lib/rally-auth";
 import "./admin.css";
 
-const navItems = [
-  { href: "/admin", label: "Analytics", icon: "dashboard" },
-  { href: "/admin/events", label: "Events", icon: "events" },
-  { href: "/admin/rewards", label: "Rewards", icon: "rewards" },
-  { href: "/admin/bonus-offers", label: "Bonus Offers", icon: "bonus" },
-  { href: "/admin/notifications", label: "Notifications", icon: "notifications" },
-  { href: "/admin/users", label: "Users", icon: "users" },
-  { href: "/admin/schools", label: "Schools", icon: "schools" },
-  { href: "/admin/settings", label: "Settings", icon: "settings" },
+const allNavItems = [
+  { href: "/admin", label: "Analytics", icon: "dashboard", permission: "analytics" },
+  { href: "/admin/events", label: "Events", icon: "events", permission: "events" },
+  { href: "/admin/rewards", label: "Rewards", icon: "rewards", permission: "rewards" },
+  { href: "/admin/bonus-offers", label: "Bonus Offers", icon: "bonus", permission: "bonusOffers" },
+  { href: "/admin/notifications", label: "Notifications", icon: "notifications", permission: "notifications" },
+  { href: "/admin/demographics", label: "Demographics", icon: "demographics", permission: "analytics" },
+  { href: "/admin/teammates", label: "Teammates", icon: "teammates", adminOnly: true },
+  { href: "/admin/users", label: "Users", icon: "users", developerOnly: true },
+  { href: "/admin/schools", label: "Schools", icon: "schools", adminOnly: true },
+  { href: "/admin/settings", label: "Settings", icon: "settings", adminOnly: true },
 ];
 
 const icons: Record<string, JSX.Element> = {
@@ -66,6 +68,18 @@ const icons: Record<string, JSX.Element> = {
       <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
     </svg>
   ),
+  demographics: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M18 20V10M12 20V4M6 20v-6" strokeLinecap="round" />
+    </svg>
+  ),
+  teammates: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+    </svg>
+  ),
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -82,6 +96,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.push("/auth/signin");
     }
   }, [isLoading, isAuthenticated, isAdmin, router]);
+
+  // Filter nav items based on role and permissions
+  const navItems = allNavItems.filter((item) => {
+    if (!user) return false;
+    // Developer sees everything
+    if (user.role === 'developer') return true;
+    // Developer-only items
+    if ('developerOnly' in item && item.developerOnly) return user.role === 'developer';
+    // Admin-only items (admin + developer, not teammates)
+    if ('adminOnly' in item && item.adminOnly) return user.role === 'admin' || user.role === 'developer';
+    // Teammate permission check
+    if (user.role === 'teammate' && 'permission' in item && item.permission) {
+      const perms = (user as { teammatePermissions?: Record<string, boolean> }).teammatePermissions || {};
+      return !!perms[item.permission];
+    }
+    // Admins see everything not developer-only
+    return true;
+  });
 
   if (isLoading) {
     return (

@@ -73,7 +73,7 @@ const DEFAULT_CHECKIN_RADIUS = 0.25;
 
 // Strip sensitive fields from user object for API responses
 function sanitizeUser(user) {
-  return {
+  const base = {
     id: user.id,
     email: user.email,
     name: user.name,
@@ -90,10 +90,35 @@ function sanitizeUser(user) {
     emailUpdates: user.emailUpdates !== undefined ? user.emailUpdates : true,
     pushNotifications: user.pushNotifications !== undefined ? user.pushNotifications : true,
     acceptedTerms: user.acceptedTerms || false,
+    // Demographics
+    userType: user.userType || null,         // student, alumni, general_fan
+    birthYear: user.birthYear || null,
+    residingCity: user.residingCity || null,
+    residingState: user.residingState || null,
     createdAt: user.createdAt,
     lastLogin: user.lastLogin,
   };
+
+  // Teammate-specific fields
+  if (user.role === 'teammate') {
+    base.teammatePermissions = user.teammatePermissions || {};
+    base.invitedBy = user.invitedBy || null;
+  }
+
+  return base;
 }
+
+// Default teammate permissions (all off — admin toggles on)
+const DEFAULT_TEAMMATE_PERMISSIONS = {
+  events: false,
+  engagements: false,
+  rewards: false,
+  redemptions: false,
+  notifications: false,
+  bonusOffers: false,
+  content: false,
+  analytics: false,
+};
 
 // ─── Multer setup ────────────────────────────────────────────────────────────
 
@@ -175,10 +200,34 @@ const requireRole = (roles) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+    // Direct role match
+    if (roles.includes(req.user.role)) {
+      return next();
     }
-    next();
+    // Teammates can access admin-level endpoints if they have the right permission
+    if (req.user.role === 'teammate' && roles.includes('admin')) {
+      const perms = req.user.teammatePermissions || {};
+      const url = req.originalUrl;
+
+      let feature = null;
+      if (url.includes('/events') || url.includes('/checkin')) feature = 'events';
+      else if (url.includes('/engagement')) feature = 'engagements';
+      else if (url.includes('/reward') && !url.includes('/redemption')) feature = 'rewards';
+      else if (url.includes('/redemption') || url.includes('/scan')) feature = 'redemptions';
+      else if (url.includes('/notification')) feature = 'notifications';
+      else if (url.includes('/bonus-offer')) feature = 'bonusOffers';
+      else if (url.includes('/content')) feature = 'content';
+      else if (url.includes('/analytics')) feature = 'analytics';
+
+      if (feature && perms[feature]) return next();
+
+      return res.status(403).json({
+        error: feature
+          ? `You do not have permission to access ${feature}`
+          : 'Insufficient permissions',
+      });
+    }
+    return res.status(403).json({ error: 'Insufficient permissions' });
   };
 };
 
@@ -1946,6 +1995,8 @@ app.post('/api/auth/register', async (req, res) => {
       role, schoolId, acceptedTerms,
       favoriteSchool, supportingSchools,
       emailUpdates, pushNotifications,
+      // Demographics (optional)
+      userType, birthYear, residingCity, residingState,
     } = req.body;
 
     if (!email || !password || !name || !handle) {
@@ -1962,15 +2013,24 @@ app.post('/api/auth/register', async (req, res) => {
 
     const db = getDb();
 
+    // Check if this email has a pending teammate invitation
+    if (!db.teammateInvitations) db.teammateInvitations = [];
+    const invitation = db.teammateInvitations.find(
+      (inv) => inv.email.toLowerCase() === email.toLowerCase() && inv.status === 'pending'
+    );
+
+    // Determine effective role
+    const effectiveRole = invitation ? 'teammate' : (role || 'user');
+
     // Enforce user capacity
     const userCount = db.users.filter((u) => u.role === 'user').length;
-    if ((role || 'user') === 'user' && userCount >= MAX_USERS) {
+    if (effectiveRole === 'user' && userCount >= MAX_USERS) {
       return res.status(403).json({ error: 'User registration is currently full. Please try again later.' });
     }
 
     // Enforce admin capacity
     const adminCount = db.users.filter((u) => u.role === 'admin').length;
-    if (role === 'admin' && adminCount >= MAX_SCHOOL_ADMINS) {
+    if (effectiveRole === 'admin' && adminCount >= MAX_SCHOOL_ADMINS) {
       return res.status(403).json({ error: 'Admin capacity reached. Contact support for more slots.' });
     }
 
@@ -1982,6 +2042,11 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(409).json({ error: 'Handle already taken' });
     }
 
+    // Validate demographics
+    const validUserTypes = ['student', 'alumni', 'general_fan'];
+    const cleanUserType = (userType && validUserTypes.includes(userType)) ? userType : null;
+    const cleanBirthYear = birthYear ? parseInt(birthYear, 10) : null;
+
     const passwordHash = await bcrypt.hash(password, 10);
     const verificationCode = generate6DigitCode();
     const now = new Date().toISOString();
@@ -1992,14 +2057,24 @@ app.post('/api/auth/register', async (req, res) => {
       passwordHash,
       name: name.trim(),
       handle: handle.startsWith('@') ? handle : `@${handle}`,
-      role: role || 'user',
-      schoolId: schoolId || favoriteSchool || 'rally-university',
+      role: effectiveRole,
+      schoolId: invitation ? invitation.propertyId : (schoolId || favoriteSchool || 'rally-university'),
+      propertyId: invitation ? invitation.propertyId : (schoolId || favoriteSchool || 'rally-university'),
+      propertyLeague: invitation ? invitation.propertyLeague : 'college',
       favoriteSchool: favoriteSchool || 'rally-university',
       supportingSchools: Array.isArray(supportingSchools) ? supportingSchools.slice(0, 2) : [],
       emailVerified: false,
       emailUpdates: emailUpdates !== undefined ? emailUpdates : true,
       pushNotifications: pushNotifications !== undefined ? pushNotifications : true,
       acceptedTerms: true,
+      // Demographics
+      userType: cleanUserType,
+      birthYear: cleanBirthYear,
+      residingCity: residingCity ? residingCity.trim() : null,
+      residingState: residingState ? residingState.trim() : null,
+      // Teammate fields (if applicable)
+      teammatePermissions: invitation ? invitation.permissions : undefined,
+      invitedBy: invitation ? invitation.invitedBy : undefined,
       verificationCode,
       verificationCodeExpiry: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 min
       resetToken: null,
@@ -2009,6 +2084,14 @@ app.post('/api/auth/register', async (req, res) => {
     };
 
     db.users.push(user);
+
+    // Mark invitation as accepted if applicable
+    if (invitation) {
+      invitation.status = 'accepted';
+      invitation.acceptedAt = now;
+      invitation.userId = user.id;
+    }
+
     writeDb(db);
 
     const token = generateToken(user.id);
@@ -2080,6 +2163,8 @@ app.put('/api/auth/me', authenticateToken, async (req, res) => {
       name, handle, schoolId, password,
       favoriteSchool, supportingSchools,
       emailUpdates, pushNotifications,
+      // Demographics
+      userType, birthYear, residingCity, residingState,
     } = req.body;
 
     const db = getDb();
@@ -2108,6 +2193,14 @@ app.put('/api/auth/me', authenticateToken, async (req, res) => {
     }
     if (emailUpdates !== undefined) user.emailUpdates = emailUpdates;
     if (pushNotifications !== undefined) user.pushNotifications = pushNotifications;
+    // Demographics
+    if (userType !== undefined) {
+      const validUserTypes = ['student', 'alumni', 'general_fan'];
+      user.userType = validUserTypes.includes(userType) ? userType : null;
+    }
+    if (birthYear !== undefined) user.birthYear = birthYear ? parseInt(birthYear, 10) : null;
+    if (residingCity !== undefined) user.residingCity = residingCity ? residingCity.trim() : null;
+    if (residingState !== undefined) user.residingState = residingState ? residingState.trim() : null;
     if (password) {
       if (password.length < 8) {
         return res.status(400).json({ error: 'Password must be at least 8 characters' });
@@ -2270,13 +2363,30 @@ app.post('/api/auth/reset-password', async (req, res) => {
 
 // ─── User management routes ─────────────────────────────────────────────────
 
+// User list — developer sees all data, admins/teammates see only aggregate counts (no granular user data)
 app.get('/api/users', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
   const db = getDb();
-  const users = db.users.map((u) => sanitizeUser(u));
-  res.json(users);
+
+  if (req.user.role === 'developer') {
+    // Developer sees full sanitized user list
+    const users = db.users.map((u) => sanitizeUser(u));
+    return res.json(users);
+  }
+
+  // Admins and teammates only see users for their property, limited info
+  const propertyId = req.user.propertyId || req.user.schoolId;
+  const propertyUsers = db.users.filter(
+    (u) => (u.propertyId || u.schoolId || u.favoriteSchool) === propertyId && u.role === 'user'
+  );
+
+  // Return only non-identifiable summary (no emails, no individual names)
+  res.json({
+    totalUsers: propertyUsers.length,
+    message: 'Granular user data is restricted. Use /api/demographics for aggregate insights.',
+  });
 });
 
-app.get('/api/users/:id', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+app.get('/api/users/:id', authenticateToken, requireRole(['developer']), (req, res) => {
   const db = getDb();
   const user = db.users.find((u) => u.id === req.params.id);
 
@@ -2289,7 +2399,7 @@ app.get('/api/users/:id', authenticateToken, requireRole(['admin', 'developer'])
 
 app.put('/api/users/:id/role', authenticateToken, requireRole(['developer']), (req, res) => {
   const { role } = req.body;
-  const validRoles = ['developer', 'admin', 'user'];
+  const validRoles = ['developer', 'admin', 'teammate', 'user'];
 
   if (!role || !validRoles.includes(role)) {
     return res.status(400).json({ error: `Role must be one of: ${validRoles.join(', ')}` });
@@ -2303,6 +2413,10 @@ app.put('/api/users/:id/role', authenticateToken, requireRole(['developer']), (r
   }
 
   user.role = role;
+  // If converting to teammate, ensure permissions exist
+  if (role === 'teammate' && !user.teammatePermissions) {
+    user.teammatePermissions = { ...DEFAULT_TEAMMATE_PERMISSIONS };
+  }
   writeDb(db);
 
   res.json(sanitizeUser(user));
@@ -2332,6 +2446,7 @@ app.delete('/api/users/:id', authenticateToken, requireRole(['developer']), (req
 app.get('/api/capacity', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
   const db = getDb();
   const admins = db.users.filter((u) => u.role === 'admin');
+  const teammates = db.users.filter((u) => u.role === 'teammate');
   const users = db.users.filter((u) => u.role === 'user');
   const developers = db.users.filter((u) => u.role === 'developer');
 
@@ -2345,6 +2460,13 @@ app.get('/api/capacity', authenticateToken, requireRole(['admin', 'developer']),
     adminsByLeague[league] = (adminsByLeague[league] || 0) + 1;
   }
 
+  // Teammates breakdown by property
+  const teammatesByProperty = {};
+  for (const tm of teammates) {
+    const prop = tm.propertyId || tm.schoolId || 'unassigned';
+    teammatesByProperty[prop] = (teammatesByProperty[prop] || 0) + 1;
+  }
+
   res.json({
     admins: {
       current: admins.length,
@@ -2352,6 +2474,11 @@ app.get('/api/capacity', authenticateToken, requireRole(['admin', 'developer']),
       available: Math.max(0, MAX_SCHOOL_ADMINS - admins.length),
       properties: propertiesWithAdmins,
       byLeague: adminsByLeague,
+    },
+    teammates: {
+      current: teammates.length,
+      byProperty: teammatesByProperty,
+      pendingInvitations: (db.teammateInvitations || []).filter((i) => i.status === 'pending').length,
     },
     users: {
       current: users.length,
@@ -2569,6 +2696,402 @@ app.post('/api/admin/provision/bulk', authenticateToken, requireRole(['developer
       adminsAvailable: MAX_SCHOOL_ADMINS - finalAdminCount,
     },
   });
+});
+
+// ─── Teammate Management ─────────────────────────────────────────────────────
+//
+// Admins invite teammates to help manage their property. Teammates can only
+// access features the admin has toggled on. Only the developer can see
+// granular user data — everyone else gets aggregate demographics only.
+//
+
+// Admin: invite a teammate via email
+app.post('/api/teammates/invite', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const { email, name, permissions } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const db = getDb();
+  if (!db.teammateInvitations) db.teammateInvitations = [];
+
+  const propertyId = req.user.propertyId || req.user.schoolId;
+  if (!propertyId) {
+    return res.status(400).json({ error: 'You must be assigned to a property to invite teammates' });
+  }
+
+  // Check if already invited
+  const existingInvite = db.teammateInvitations.find(
+    (inv) => inv.email.toLowerCase() === email.toLowerCase() &&
+    inv.propertyId === propertyId &&
+    inv.status === 'pending'
+  );
+  if (existingInvite) {
+    return res.status(409).json({ error: 'This email already has a pending invitation', invitation: existingInvite });
+  }
+
+  // Check if user already exists with this email
+  const existingUser = db.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  if (existingUser) {
+    // If already a teammate on this property, reject
+    if (existingUser.role === 'teammate' && (existingUser.propertyId || existingUser.schoolId) === propertyId) {
+      return res.status(409).json({ error: 'This user is already a teammate on your property' });
+    }
+    // If an existing user, convert them to teammate
+    if (existingUser.role === 'user') {
+      existingUser.role = 'teammate';
+      existingUser.propertyId = propertyId;
+      existingUser.propertyLeague = req.user.propertyLeague || 'college';
+      existingUser.invitedBy = req.user.id;
+      existingUser.teammatePermissions = permissions || { ...DEFAULT_TEAMMATE_PERMISSIONS };
+      writeDb(db);
+
+      console.log(`[Teammate] Existing user ${existingUser.email} converted to teammate for ${propertyId} by ${req.user.email}`);
+      return res.status(201).json({
+        message: 'Existing user converted to teammate',
+        teammate: sanitizeUser(existingUser),
+        converted: true,
+      });
+    }
+  }
+
+  // Create invitation
+  const now = new Date().toISOString();
+  const invitation = {
+    id: uuidv4(),
+    email: email.toLowerCase().trim(),
+    name: name || '',
+    propertyId,
+    propertyLeague: req.user.propertyLeague || 'college',
+    permissions: permissions || { ...DEFAULT_TEAMMATE_PERMISSIONS },
+    invitedBy: req.user.id,
+    invitedByName: req.user.name,
+    status: 'pending', // pending → accepted
+    createdAt: now,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+    acceptedAt: null,
+    userId: null,
+  };
+
+  db.teammateInvitations.push(invitation);
+  writeDb(db);
+
+  console.log(`[Teammate] Invitation sent to ${email} for ${propertyId} by ${req.user.email}`);
+
+  res.status(201).json({
+    invitation,
+    message: `Invitation sent to ${email}. They will become a teammate when they register.`,
+  });
+});
+
+// Admin: get teammates for their property
+app.get('/api/teammates', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const propertyId = req.query.propertyId || req.user.propertyId || req.user.schoolId;
+
+  // Get active teammates
+  const teammates = db.users
+    .filter((u) => u.role === 'teammate' && (u.propertyId || u.schoolId) === propertyId)
+    .map((u) => sanitizeUser(u));
+
+  // Get pending invitations
+  if (!db.teammateInvitations) db.teammateInvitations = [];
+  const pendingInvitations = db.teammateInvitations.filter(
+    (inv) => inv.propertyId === propertyId && inv.status === 'pending'
+  );
+
+  res.json({
+    teammates,
+    pendingInvitations,
+    total: teammates.length,
+    pending: pendingInvitations.length,
+  });
+});
+
+// Admin: update a teammate's permissions
+app.put('/api/teammates/:teammateId/permissions', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const { permissions } = req.body;
+
+  if (!permissions || typeof permissions !== 'object') {
+    return res.status(400).json({ error: 'permissions object is required' });
+  }
+
+  const db = getDb();
+  const teammate = db.users.find(
+    (u) => u.id === req.params.teammateId && u.role === 'teammate'
+  );
+
+  if (!teammate) {
+    return res.status(404).json({ error: 'Teammate not found' });
+  }
+
+  // Only the admin of the same property (or developer) can update permissions
+  const adminPropertyId = req.user.propertyId || req.user.schoolId;
+  const teammatePropertyId = teammate.propertyId || teammate.schoolId;
+  if (req.user.role !== 'developer' && adminPropertyId !== teammatePropertyId) {
+    return res.status(403).json({ error: 'You can only manage teammates on your own property' });
+  }
+
+  // Merge permissions — only update specified fields
+  const validPermissions = ['events', 'engagements', 'rewards', 'redemptions', 'notifications', 'bonusOffers', 'content', 'analytics'];
+  const currentPerms = teammate.teammatePermissions || { ...DEFAULT_TEAMMATE_PERMISSIONS };
+  for (const key of validPermissions) {
+    if (permissions[key] !== undefined) {
+      currentPerms[key] = !!permissions[key];
+    }
+  }
+
+  teammate.teammatePermissions = currentPerms;
+  writeDb(db);
+
+  console.log(`[Teammate] Permissions updated for ${teammate.email} by ${req.user.email}`);
+
+  res.json({
+    teammate: sanitizeUser(teammate),
+    message: 'Permissions updated',
+  });
+});
+
+// Admin: remove a teammate (reverts to regular user)
+app.delete('/api/teammates/:teammateId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const teammate = db.users.find(
+    (u) => u.id === req.params.teammateId && u.role === 'teammate'
+  );
+
+  if (!teammate) {
+    return res.status(404).json({ error: 'Teammate not found' });
+  }
+
+  const adminPropertyId = req.user.propertyId || req.user.schoolId;
+  const teammatePropertyId = teammate.propertyId || teammate.schoolId;
+  if (req.user.role !== 'developer' && adminPropertyId !== teammatePropertyId) {
+    return res.status(403).json({ error: 'You can only manage teammates on your own property' });
+  }
+
+  // Revert to regular user
+  teammate.role = 'user';
+  teammate.teammatePermissions = undefined;
+  teammate.invitedBy = undefined;
+  writeDb(db);
+
+  console.log(`[Teammate] ${teammate.email} removed from property ${teammatePropertyId} by ${req.user.email}`);
+
+  res.json({
+    message: `${teammate.name} has been removed from the team and reverted to a regular user.`,
+    user: sanitizeUser(teammate),
+  });
+});
+
+// Admin: cancel a pending invitation
+app.delete('/api/teammates/invitations/:invitationId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  if (!db.teammateInvitations) return res.status(404).json({ error: 'Invitation not found' });
+
+  const index = db.teammateInvitations.findIndex((inv) => inv.id === req.params.invitationId);
+  if (index === -1) return res.status(404).json({ error: 'Invitation not found' });
+
+  const invitation = db.teammateInvitations[index];
+  if (invitation.status !== 'pending') {
+    return res.status(400).json({ error: 'Can only cancel pending invitations' });
+  }
+
+  db.teammateInvitations.splice(index, 1);
+  writeDb(db);
+
+  res.json({ message: 'Invitation cancelled' });
+});
+
+// ─── Demographics Analytics (Aggregate Only) ────────────────────────────────
+//
+// Returns aggregate demographic data for a property's fan base.
+// NO individual user data is exposed. Only the developer can see
+// granular user data via /api/users endpoints.
+//
+
+app.get('/api/demographics/:propertyId', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  const db = getDb();
+  const { propertyId } = req.params;
+
+  // Determine which users belong to this property
+  // Users who have this as their favoriteSchool/propertyId or have it in their favoriteTeams
+  const propertyUsers = db.users.filter((u) => {
+    if (u.role === 'admin' || u.role === 'developer' || u.role === 'teammate') return false;
+    if (u.favoriteSchool === propertyId || u.schoolId === propertyId || u.propertyId === propertyId) return true;
+    if (u.favoriteTeams && u.favoriteTeams.some((t) => t.propertyId === propertyId)) return true;
+    return false;
+  });
+
+  if (propertyUsers.length === 0) {
+    return res.json({
+      propertyId,
+      totalFans: 0,
+      message: 'No fan data available yet for this property.',
+      age: { average: null, min: null, max: null, distribution: {} },
+      userType: {},
+      cities: [],
+      states: [],
+      interests: {},
+    });
+  }
+
+  // ─── Age Analysis ────────────────────────────────────────────────
+  const currentYear = new Date().getFullYear();
+  const usersWithAge = propertyUsers.filter((u) => u.birthYear && u.birthYear > 1900 && u.birthYear < currentYear);
+  const ages = usersWithAge.map((u) => currentYear - u.birthYear);
+
+  let ageStats = { average: null, min: null, max: null, distribution: {} };
+  if (ages.length > 0) {
+    const avgAge = Math.round(ages.reduce((sum, a) => sum + a, 0) / ages.length);
+    const minAge = Math.min(...ages);
+    const maxAge = Math.max(...ages);
+
+    // Age distribution buckets
+    const ageBuckets = { '13-17': 0, '18-24': 0, '25-34': 0, '35-44': 0, '45-54': 0, '55+': 0 };
+    for (const age of ages) {
+      if (age <= 17) ageBuckets['13-17']++;
+      else if (age <= 24) ageBuckets['18-24']++;
+      else if (age <= 34) ageBuckets['25-34']++;
+      else if (age <= 44) ageBuckets['35-44']++;
+      else if (age <= 54) ageBuckets['45-54']++;
+      else ageBuckets['55+']++;
+    }
+
+    ageStats = { average: avgAge, min: minAge, max: maxAge, distribution: ageBuckets };
+  }
+
+  // ─── User Type Breakdown ─────────────────────────────────────────
+  const userTypeBreakdown = { student: 0, alumni: 0, general_fan: 0, unspecified: 0 };
+  for (const u of propertyUsers) {
+    const ut = u.userType || 'unspecified';
+    userTypeBreakdown[ut] = (userTypeBreakdown[ut] || 0) + 1;
+  }
+
+  // ─── City Distribution (top 20) ──────────────────────────────────
+  const cityCounts = {};
+  for (const u of propertyUsers) {
+    if (u.residingCity) {
+      const cityKey = `${u.residingCity}${u.residingState ? ', ' + u.residingState : ''}`;
+      cityCounts[cityKey] = (cityCounts[cityKey] || 0) + 1;
+    }
+  }
+  const topCities = Object.entries(cityCounts)
+    .map(([city, count]) => ({ city, count, percentage: Math.round((count / propertyUsers.length) * 100) }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20);
+
+  // ─── State Distribution ──────────────────────────────────────────
+  const stateCounts = {};
+  for (const u of propertyUsers) {
+    if (u.residingState) {
+      stateCounts[u.residingState] = (stateCounts[u.residingState] || 0) + 1;
+    }
+  }
+  const topStates = Object.entries(stateCounts)
+    .map(([state, count]) => ({ state, count, percentage: Math.round((count / propertyUsers.length) * 100) }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20);
+
+  // ─── Interests (Sports) ──────────────────────────────────────────
+  const interestCounts = {};
+  for (const u of propertyUsers) {
+    if (u.favoriteSports && Array.isArray(u.favoriteSports)) {
+      for (const sport of u.favoriteSports) {
+        interestCounts[sport] = (interestCounts[sport] || 0) + 1;
+      }
+    }
+  }
+
+  // ─── Engagement Level ────────────────────────────────────────────
+  const userIds = new Set(propertyUsers.map((u) => u.id));
+  const propertyCheckins = (db.checkins || []).filter((c) => userIds.has(c.userId) && c.schoolId === propertyId);
+  const propertyPointsEntries = (db.pointsLedger || []).filter((p) => userIds.has(p.userId) && p.schoolId === propertyId);
+  const totalPointsEarned = propertyPointsEntries.reduce((sum, p) => sum + p.points, 0);
+
+  // Tier distribution
+  const tierCounts = { Bronze: 0, Silver: 0, Gold: 0, Platinum: 0 };
+  for (const u of propertyUsers) {
+    const userPoints = (db.pointsLedger || [])
+      .filter((p) => p.userId === u.id)
+      .reduce((sum, p) => sum + p.points, 0);
+    if (userPoints >= 5000) tierCounts.Platinum++;
+    else if (userPoints >= 2500) tierCounts.Gold++;
+    else if (userPoints >= 1000) tierCounts.Silver++;
+    else tierCounts.Bronze++;
+  }
+
+  res.json({
+    propertyId,
+    totalFans: propertyUsers.length,
+    age: ageStats,
+    userType: userTypeBreakdown,
+    cities: topCities,
+    states: topStates,
+    interests: interestCounts,
+    engagement: {
+      totalCheckins: propertyCheckins.length,
+      atVenue: propertyCheckins.filter((c) => c.status === 'checked_in').length,
+      remote: propertyCheckins.filter((c) => c.status === 'remote').length,
+      totalPointsEarned,
+      avgPointsPerFan: propertyUsers.length > 0 ? Math.round(totalPointsEarned / propertyUsers.length) : 0,
+    },
+    tiers: tierCounts,
+    // Notification preferences (aggregate)
+    preferences: {
+      emailOptIn: propertyUsers.filter((u) => u.emailUpdates !== false).length,
+      pushOptIn: propertyUsers.filter((u) => u.pushNotifications !== false).length,
+    },
+  });
+});
+
+// ─── Data Export (Developer Only) ────────────────────────────────────────────
+//
+// Only the developer can export raw user data. No admin or teammate can
+// export any data at a granular level.
+//
+
+app.get('/api/export/users', authenticateToken, requireRole(['developer']), (req, res) => {
+  const db = getDb();
+  const { propertyId, format } = req.query;
+
+  let users = db.users.filter((u) => u.role === 'user');
+  if (propertyId) {
+    users = users.filter(
+      (u) => u.favoriteSchool === propertyId || u.schoolId === propertyId || u.propertyId === propertyId
+    );
+  }
+
+  const exportData = users.map((u) => ({
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    handle: u.handle,
+    userType: u.userType || null,
+    birthYear: u.birthYear || null,
+    residingCity: u.residingCity || null,
+    residingState: u.residingState || null,
+    favoriteSchool: u.favoriteSchool,
+    favoriteTeams: u.favoriteTeams || [],
+    favoriteSports: u.favoriteSports || [],
+    emailVerified: u.emailVerified,
+    createdAt: u.createdAt,
+    lastLogin: u.lastLogin,
+  }));
+
+  if (format === 'csv') {
+    const headers = Object.keys(exportData[0] || {}).join(',');
+    const rows = exportData.map((row) =>
+      Object.values(row).map((v) =>
+        typeof v === 'object' ? JSON.stringify(v) : `"${v}"`
+      ).join(',')
+    );
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="rally-users-${Date.now()}.csv"`);
+    return res.send([headers, ...rows].join('\n'));
+  }
+
+  res.json({ users: exportData, total: exportData.length });
 });
 
 // ─── Content routes ─────────────────────────────────────────────────────────

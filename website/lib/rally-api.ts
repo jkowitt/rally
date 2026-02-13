@@ -200,15 +200,47 @@ export const rallyBonusOffers = {
 
 // Users (admin)
 export const rallyUsers = {
-  list: () => rallyFetch<{ users: RallyUser[] }>('/users'),
+  list: () => rallyFetch<RallyUser[] | { totalUsers: number; message: string }>('/users'),
 
-  getById: (id: string) => rallyFetch<{ user: RallyUser }>(`/users/${id}`),
+  getById: (id: string) => rallyFetch<RallyUser>(`/users/${id}`),
 
   update: (id: string, fields: Partial<RallyUser>) =>
-    rallyFetch<{ user: RallyUser }>(`/users/${id}`, {
+    rallyFetch<RallyUser>(`/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(fields),
     }),
+};
+
+// Teammates (admin)
+export const rallyTeammates = {
+  list: (propertyId?: string) => {
+    const qs = propertyId ? `?propertyId=${propertyId}` : '';
+    return rallyFetch<TeammateListResponse>(`/teammates${qs}`);
+  },
+
+  invite: (email: string, name?: string, permissions?: TeammatePermissions) =>
+    rallyFetch<{ invitation: TeammateInvitation; message: string; teammate?: RallyUser; converted?: boolean }>('/teammates/invite', {
+      method: 'POST',
+      body: JSON.stringify({ email, name, permissions }),
+    }),
+
+  updatePermissions: (teammateId: string, permissions: Partial<TeammatePermissions>) =>
+    rallyFetch<{ teammate: RallyUser; message: string }>(`/teammates/${teammateId}/permissions`, {
+      method: 'PUT',
+      body: JSON.stringify({ permissions }),
+    }),
+
+  remove: (teammateId: string) =>
+    rallyFetch<{ message: string }>(`/teammates/${teammateId}`, { method: 'DELETE' }),
+
+  cancelInvitation: (invitationId: string) =>
+    rallyFetch<{ message: string }>(`/teammates/invitations/${invitationId}`, { method: 'DELETE' }),
+};
+
+// Demographics (admin — aggregate only)
+export const rallyDemographics = {
+  get: (propertyId: string) =>
+    rallyFetch<DemographicsData>(`/demographics/${propertyId}`),
 };
 
 // Analytics
@@ -234,17 +266,91 @@ export interface RallyUser {
   email: string;
   name: string;
   handle: string;
-  role: 'developer' | 'admin' | 'user';
+  role: 'developer' | 'admin' | 'teammate' | 'user';
   schoolId: string | null;
+  propertyId?: string | null;
+  propertyLeague?: string;
   favoriteSchool: string | null;
+  favoriteTeams?: Array<{ propertyId: string; league: string }>;
+  favoriteSports?: string[];
   supportingSchools: string[];
   emailVerified: boolean;
   emailUpdates: boolean;
   pushNotifications: boolean;
   acceptedTerms: boolean;
+  // Demographics
+  userType?: 'student' | 'alumni' | 'general_fan' | null;
+  birthYear?: number | null;
+  residingCity?: string | null;
+  residingState?: string | null;
+  // Teammate-specific
+  teammatePermissions?: TeammatePermissions;
+  invitedBy?: string | null;
   points?: number;
   tier?: string;
   createdAt?: string;
+  lastLogin?: string;
+}
+
+export interface TeammatePermissions {
+  events: boolean;
+  engagements: boolean;
+  rewards: boolean;
+  redemptions: boolean;
+  notifications: boolean;
+  bonusOffers: boolean;
+  content: boolean;
+  analytics: boolean;
+}
+
+export interface TeammateInvitation {
+  id: string;
+  email: string;
+  name: string;
+  propertyId: string;
+  propertyLeague: string;
+  permissions: TeammatePermissions;
+  invitedBy: string;
+  invitedByName: string;
+  status: 'pending' | 'accepted';
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  userId: string | null;
+}
+
+export interface TeammateListResponse {
+  teammates: RallyUser[];
+  pendingInvitations: TeammateInvitation[];
+  total: number;
+  pending: number;
+}
+
+export interface DemographicsData {
+  propertyId: string;
+  totalFans: number;
+  age: {
+    average: number | null;
+    min: number | null;
+    max: number | null;
+    distribution: Record<string, number>;
+  };
+  userType: Record<string, number>;
+  cities: Array<{ city: string; count: number; percentage: number }>;
+  states: Array<{ state: string; count: number; percentage: number }>;
+  interests: Record<string, number>;
+  engagement?: {
+    totalCheckins: number;
+    atVenue: number;
+    remote: number;
+    totalPointsEarned: number;
+    avgPointsPerFan: number;
+  };
+  tiers?: Record<string, number>;
+  preferences?: {
+    emailOptIn: number;
+    pushOptIn: number;
+  };
 }
 
 export interface RegisterParams {
@@ -257,6 +363,11 @@ export interface RegisterParams {
   emailUpdates?: boolean;
   pushNotifications?: boolean;
   acceptedTerms?: boolean;
+  // Demographics (optional)
+  userType?: string;
+  birthYear?: number;
+  residingCity?: string;
+  residingState?: string;
 }
 
 export interface ContentItem {

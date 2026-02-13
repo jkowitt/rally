@@ -115,7 +115,7 @@ export function RallyAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const isAuthenticated = !!user;
-  const isAdmin = user?.role === 'admin' || user?.role === 'developer';
+  const isAdmin = user?.role === 'admin' || user?.role === 'developer' || user?.role === 'teammate';
 
   return (
     <RallyAuthContext.Provider

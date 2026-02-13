@@ -4,29 +4,52 @@
     "slug": "RallyPreview",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/rally-appicon-orange.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": false,
     "scheme": "rally",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/rally-logo-on-dark.png",
       "resizeMode": "contain",
       "backgroundColor": "#131B2E"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.loudlegacy.rally"
     },
     "android": {
+      "package": "com.loudlegacy.rally",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/rally-appicon-orange.png",
         "backgroundColor": "#131B2E"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "RECEIVE_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/rally-icon-white.png",
+          "color": "#FF6B35"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
   }
 }

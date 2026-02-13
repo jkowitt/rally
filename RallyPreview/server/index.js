@@ -170,6 +170,74 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.1.0' });
 });
 
+// ─── Schools data ───────────────────────────────────────────────────────────
+
+const SCHOOLS_FILE = path.join(__dirname, 'schools.json');
+
+const getSchools = () => {
+  try {
+    const raw = fs.readFileSync(SCHOOLS_FILE, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+};
+
+app.get('/api/schools', (req, res) => {
+  const schools = getSchools();
+  const { q, conference, division } = req.query || {};
+  let results = schools;
+  if (division) results = results.filter((s) => s.division === division);
+  if (conference) results = results.filter((s) => s.conference === conference);
+  if (q) {
+    const query = q.toLowerCase();
+    results = results.filter((s) =>
+      s.name.toLowerCase().includes(query) ||
+      s.shortName.toLowerCase().includes(query) ||
+      s.mascot.toLowerCase().includes(query) ||
+      s.conference.toLowerCase().includes(query)
+    );
+  }
+  res.json({ schools: results, total: results.length });
+});
+
+app.get('/api/schools/:schoolId', (_req, res) => {
+  const schools = getSchools();
+  const school = schools.find((s) => s.id === _req.params.schoolId);
+  if (!school) return res.status(404).json({ error: 'School not found' });
+  res.json(school);
+});
+
+// ─── Events / Games ─────────────────────────────────────────────────────────
+
+const EVENTS_FILE = path.join(__dirname, 'events.json');
+
+const getEvents = () => {
+  try {
+    const raw = fs.readFileSync(EVENTS_FILE, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+};
+
+app.get('/api/events', (_req, res) => {
+  const events = getEvents();
+  const { schoolId, status } = _req.query || {};
+  let results = events;
+  if (schoolId) results = results.filter((e) => e.homeSchoolId === schoolId || e.awaySchoolId === schoolId);
+  if (status) results = results.filter((e) => e.status === status);
+  results.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+  res.json({ events: results, total: results.length });
+});
+
+app.get('/api/events/:eventId', (_req, res) => {
+  const events = getEvents();
+  const event = events.find((e) => e.id === _req.params.eventId);
+  if (!event) return res.status(404).json({ error: 'Event not found' });
+  res.json(event);
+});
+
 // ─── Auth routes ─────────────────────────────────────────────────────────────
 
 // Register

@@ -1,0 +1,114 @@
+[
+  {
+    "id": "evt-rally-001",
+    "title": "Rally University vs Kent State",
+    "sport": "Football",
+    "homeSchoolId": "rally-university",
+    "homeTeam": "Rally University Ralliers",
+    "awaySchoolId": "kent-state",
+    "awayTeam": "Kent State Golden Flashes",
+    "venue": "Rally Stadium",
+    "city": "Rally City",
+    "dateTime": "2026-02-15T19:00:00.000Z",
+    "status": "upcoming",
+    "season": "2026",
+    "week": 1,
+    "activations": [
+      { "id": "act-001", "type": "trivia", "name": "Trivia Challenge", "points": 50, "description": "Answer 5 questions about Rally University history" },
+      { "id": "act-002", "type": "prediction", "name": "Score Prediction", "points": 75, "description": "Predict the final score" },
+      { "id": "act-003", "type": "noise_meter", "name": "Noise Meter", "points": 25, "description": "Get the crowd roaring!" },
+      { "id": "act-004", "type": "photo", "name": "Photo Challenge", "points": 30, "description": "Share your best gameday photo" },
+      { "id": "act-005", "type": "poll", "name": "Fan Poll", "points": 10, "description": "Vote: Who will score first?" },
+      { "id": "act-006", "type": "checkin", "name": "Stadium Check-In", "points": 100, "description": "Check in at Rally Stadium to earn points" }
+    ],
+    "trivia": [
+      { "id": "triv-001", "question": "What year was Rally University founded?", "options": ["2024", "2025", "2026", "2023"], "correctIndex": 2 },
+      { "id": "triv-002", "question": "What is Rally University's mascot?", "options": ["Eagles", "Ralliers", "Chargers", "Pioneers"], "correctIndex": 1 },
+      { "id": "triv-003", "question": "What are Rally U's school colors?", "options": ["Blue & White", "Orange & Navy", "Red & Gold", "Green & Black"], "correctIndex": 1 },
+      { "id": "triv-004", "question": "Where is Rally Stadium located?", "options": ["New York", "Rally City", "Los Angeles", "Chicago"], "correctIndex": 1 },
+      { "id": "triv-005", "question": "What conference does Rally U compete in?", "options": ["Big Ten", "ACC", "SEC", "Independent"], "correctIndex": 3 }
+    ]
+  },
+  {
+    "id": "evt-rally-002",
+    "title": "Rally University vs Duke",
+    "sport": "Basketball",
+    "homeSchoolId": "rally-university",
+    "homeTeam": "Rally University Ralliers",
+    "awaySchoolId": "duke",
+    "awayTeam": "Duke Blue Devils",
+    "venue": "Rally Arena",
+    "city": "Rally City",
+    "dateTime": "2026-02-17T20:30:00.000Z",
+    "status": "upcoming",
+    "season": "2026",
+    "week": 1,
+    "activations": [
+      { "id": "act-011", "type": "trivia", "name": "Trivia Challenge", "points": 50, "description": "Test your basketball knowledge" },
+      { "id": "act-012", "type": "prediction", "name": "Score Prediction", "points": 75, "description": "Predict the final score" },
+      { "id": "act-013", "type": "noise_meter", "name": "Noise Meter", "points": 25, "description": "Be the loudest fan!" },
+      { "id": "act-014", "type": "checkin", "name": "Arena Check-In", "points": 100, "description": "Check in at Rally Arena" }
+    ],
+    "trivia": [
+      { "id": "triv-011", "question": "How many NCAA championships has Duke won?", "options": ["3", "5", "6", "7"], "correctIndex": 2 },
+      { "id": "triv-012", "question": "Who is Duke's all-time leading scorer?", "options": ["J.J. Redick", "Christian Laettner", "Shane Battier", "Grant Hill"], "correctIndex": 0 },
+      { "id": "triv-013", "question": "What is Duke's home arena called?", "options": ["Dean Dome", "Cameron Indoor Stadium", "Rupp Arena", "Allen Fieldhouse"], "correctIndex": 1 }
+    ]
+  },
+  {
+    "id": "evt-rally-003",
+    "title": "Rally University vs Ohio State",
+    "sport": "Football",
+    "homeSchoolId": "ohio-state",
+    "homeTeam": "Ohio State Buckeyes",
+    "awaySchoolId": "rally-university",
+    "awayTeam": "Rally University Ralliers",
+    "venue": "Ohio Stadium",
+    "city": "Columbus",
+    "dateTime": "2026-02-22T15:30:00.000Z",
+    "status": "upcoming",
+    "season": "2026",
+    "week": 2,
+    "activations": [
+      { "id": "act-021", "type": "trivia", "name": "Trivia Challenge", "points": 50, "description": "How well do you know the Buckeyes?" },
+      { "id": "act-022", "type": "prediction", "name": "Score Prediction", "points": 75, "description": "Predict the final score" },
+      { "id": "act-023", "type": "checkin", "name": "Stadium Check-In", "points": 100, "description": "Check in at Ohio Stadium" }
+    ],
+    "trivia": [
+      { "id": "triv-021", "question": "What is Ohio State's stadium capacity?", "options": ["90,000", "102,780", "85,000", "110,000"], "correctIndex": 1 },
+      { "id": "triv-022", "question": "What rivalry game is 'The Game'?", "options": ["Ohio State vs Penn State", "Ohio State vs Michigan", "Ohio State vs Wisconsin", "Ohio State vs Michigan State"], "correctIndex": 1 }
+    ]
+  },
+  {
+    "id": "evt-rally-live",
+    "title": "Rally University vs Gonzaga",
+    "sport": "Basketball",
+    "homeSchoolId": "rally-university",
+    "homeTeam": "Rally University Ralliers",
+    "awaySchoolId": "gonzaga",
+    "awayTeam": "Gonzaga Bulldogs",
+    "venue": "Rally Arena",
+    "city": "Rally City",
+    "dateTime": "2026-02-13T19:00:00.000Z",
+    "status": "live",
+    "season": "2026",
+    "week": 1,
+    "score": {
+      "home": 45,
+      "away": 42,
+      "period": "2nd Half",
+      "clock": "12:34"
+    },
+    "activations": [
+      { "id": "act-031", "type": "trivia", "name": "Live Trivia", "points": 50, "description": "Answer questions during the game!" },
+      { "id": "act-032", "type": "prediction", "name": "Halftime Prediction", "points": 75, "description": "Predict the final score at halftime" },
+      { "id": "act-033", "type": "noise_meter", "name": "Noise Meter", "points": 25, "description": "Make some noise!" },
+      { "id": "act-034", "type": "photo", "name": "Gameday Photo", "points": 30, "description": "Share your gameday experience" },
+      { "id": "act-035", "type": "checkin", "name": "Arena Check-In", "points": 100, "description": "You're at Rally Arena!" }
+    ],
+    "trivia": [
+      { "id": "triv-031", "question": "Where is Gonzaga located?", "options": ["Seattle", "Spokane", "Portland", "Boise"], "correctIndex": 1 },
+      { "id": "triv-032", "question": "What is Gonzaga's mascot?", "options": ["Zags", "Bulldogs", "Huskies", "Bears"], "correctIndex": 1 }
+    ]
+  }
+]

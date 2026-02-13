@@ -14,6 +14,9 @@ export interface School {
 }
 
 export const SCHOOLS: School[] = [
+  // ── Rally Demo ────────────────────────────────────────────────────────────
+  { id: 'rally-university', name: 'Rally University', shortName: 'Rally U', mascot: 'Ralliers', division: 'D1', conference: 'Independent', primaryColor: '#FF6B35', secondaryColor: '#1A1A2E', city: 'Rally City', state: 'US' },
+
   // ── A-10 (15) ──────────────────────────────────────────────────────────────
   { id: 'davidson', name: 'Davidson', shortName: 'Davidson', mascot: 'Wildcats', division: 'D1', conference: 'A-10', primaryColor: '#CC0000', secondaryColor: '#000000', city: 'Davidson', state: 'NC' },
   { id: 'dayton', name: 'Dayton', shortName: 'Dayton', mascot: 'Flyers', division: 'D1', conference: 'A-10', primaryColor: '#CE1141', secondaryColor: '#004B8D', city: 'Dayton', state: 'OH' },

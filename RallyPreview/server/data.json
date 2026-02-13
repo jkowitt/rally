@@ -121,6 +121,42 @@
       "order": 1,
       "createdAt": "2026-02-12T05:17:57.235Z",
       "updatedAt": "2026-02-12T05:17:57.235Z"
+    },
+    {
+      "id": "rally-u-banner-001",
+      "schoolId": "rally-university",
+      "type": "banner",
+      "title": "Welcome to Rally University",
+      "description": "The official home of the Ralliers! Experience the future of fan engagement.",
+      "url": "/logos/rally-logo-transparent-white.png",
+      "active": true,
+      "order": 0,
+      "createdAt": "2026-02-13T00:00:00.000Z",
+      "updatedAt": "2026-02-13T00:00:00.000Z"
+    },
+    {
+      "id": "rally-u-banner-002",
+      "schoolId": "rally-university",
+      "type": "banner",
+      "title": "Rally U Season Opener",
+      "description": "Don't miss the Ralliers take on Gonzaga LIVE tonight at Rally Arena!",
+      "url": "/logos/rally-logo-on-orange.png",
+      "active": true,
+      "order": 1,
+      "createdAt": "2026-02-13T00:00:00.000Z",
+      "updatedAt": "2026-02-13T00:00:00.000Z"
+    },
+    {
+      "id": "rally-u-banner-003",
+      "schoolId": "rally-university",
+      "type": "banner",
+      "title": "Earn Rewards with Rally",
+      "description": "Check-in, answer trivia, and predict scores to earn points and unlock exclusive rewards.",
+      "url": "/logos/rally-logo-on-dark.png",
+      "active": true,
+      "order": 2,
+      "createdAt": "2026-02-13T00:00:00.000Z",
+      "updatedAt": "2026-02-13T00:00:00.000Z"
     }
   ],
   "analytics": [
@@ -663,6 +699,36 @@
           "name": "VIP Parking",
           "pointsCost": 1000,
           "description": "Premium parking pass for next home game."
+        }
+      ]
+    },
+    "rally-university": {
+      "sponsorBannerEnabled": true,
+      "splashEnabled": true,
+      "customRewards": [
+        {
+          "id": "rally-reward-001",
+          "name": "Rally T-Shirt",
+          "pointsCost": 300,
+          "description": "Exclusive Rally University t-shirt with the Ralliers logo."
+        },
+        {
+          "id": "rally-reward-002",
+          "name": "Free Rally Merch Pack",
+          "pointsCost": 750,
+          "description": "Rally stickers, lanyard, and koozie bundle."
+        },
+        {
+          "id": "rally-reward-003",
+          "name": "Courtside Seats",
+          "pointsCost": 2000,
+          "description": "Courtside seats at the next Rally U home basketball game."
+        },
+        {
+          "id": "rally-reward-004",
+          "name": "Meet the Team",
+          "pointsCost": 5000,
+          "description": "VIP meet-and-greet with Rally University athletes."
         }
       ]
     }

@@ -22835,6 +22835,559 @@ textarea:focus-visible {
 }
 
 /* ===========================
+   RALLY HERO HEADLINE
+   =========================== */
+.rally-hero-headline {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--rally-off-white);
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .rally-hero-headline {
+    font-size: 2rem;
+  }
+}
+
+/* ===========================
+   RALLY VALUE PROPS
+   =========================== */
+.rally-value-props {
+  padding: 6rem 0;
+}
+
+.rally-value-props h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.rally-value-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+.rally-value-card {
+  background: var(--rally-navy-mid);
+  border-radius: 16px;
+  padding: 2rem;
+  border: 1px solid var(--rally-navy-light);
+  transition: all 0.2s ease;
+}
+
+.rally-value-card:hover {
+  border-color: var(--rally-orange);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.rally-value-metric {
+  display: inline-block;
+  background: rgba(255,107,53,0.15);
+  color: var(--rally-orange);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  margin-bottom: 1rem;
+}
+
+.rally-value-card h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--rally-off-white);
+  margin-bottom: 0.5rem;
+}
+
+.rally-value-card p {
+  font-size: 0.9375rem;
+  color: var(--rally-gray);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .rally-value-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===========================
+   RALLY AUDIENCE LINKS
+   =========================== */
+.rally-audience-card--linked {
+  display: flex;
+  flex-direction: column;
+}
+
+.rally-audience-link {
+  display: inline-block;
+  margin-top: auto;
+  padding-top: 1rem;
+  color: var(--rally-orange);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.rally-audience-link:hover {
+  color: var(--rally-orange-light);
+}
+
+/* ===========================
+   RALLY FEATURES CTA
+   =========================== */
+.rally-features-cta {
+  text-align: center;
+  margin-top: 2.5rem;
+}
+
+/* ===========================
+   NAV DROPDOWN
+   =========================== */
+.nav-dropdown {
+  position: relative;
+}
+
+.nav-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.nav-chevron {
+  transition: transform 0.2s ease;
+}
+
+.nav-chevron.open {
+  transform: rotate(180deg);
+}
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--rally-navy-mid);
+  border: 1px solid var(--rally-navy-light);
+  border-radius: 12px;
+  min-width: 280px;
+  padding: 0.5rem;
+  z-index: 1001;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+}
+
+.nav-dropdown-item {
+  display: block;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.nav-dropdown-item:hover {
+  background: var(--rally-navy-light);
+}
+
+.nav-dropdown-label {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--rally-off-white);
+}
+
+.nav-dropdown-desc {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--rally-gray);
+  margin-top: 0.125rem;
+}
+
+@media (max-width: 768px) {
+  .nav-dropdown-menu {
+    position: static;
+    transform: none;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0 0 0 1rem;
+    min-width: unset;
+  }
+}
+
+/* ===========================
+   PLATFORM PAGE
+   =========================== */
+.platform-nav-bar {
+  background: var(--rally-navy-mid);
+  border-top: 1px solid var(--rally-navy-light);
+  border-bottom: 1px solid var(--rally-navy-light);
+  padding: 1rem 0;
+  position: sticky;
+  top: 72px;
+  z-index: 100;
+}
+
+.platform-nav-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.platform-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.platform-nav-link {
+  white-space: nowrap;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--rally-gray);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.platform-nav-link:hover {
+  color: var(--rally-off-white);
+  background: var(--rally-navy-light);
+}
+
+.platform-section {
+  padding: 5rem 0;
+}
+
+.platform-section--alt {
+  background: var(--rally-navy-mid);
+}
+
+.platform-section-header {
+  max-width: 720px;
+  margin-bottom: 2.5rem;
+}
+
+.platform-section-header h2 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--rally-off-white);
+  margin-bottom: 0.5rem;
+}
+
+.platform-section-subtitle {
+  font-size: 1.125rem;
+  color: var(--rally-orange);
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.platform-section-desc {
+  font-size: 1rem;
+  color: var(--rally-gray);
+  line-height: 1.7;
+}
+
+.platform-capabilities {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.platform-capability {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(255,107,53,0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255,107,53,0.08);
+}
+
+.platform-capability-check {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255,107,53,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--rally-orange);
+  margin-top: 1px;
+}
+
+.platform-capability span {
+  font-size: 0.9375rem;
+  color: var(--rally-off-white);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .platform-capabilities {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===========================
+   SOLUTIONS PAGES
+   =========================== */
+.solutions-hero {
+  padding-bottom: 5rem;
+}
+
+/* Solutions Challenges */
+.solutions-challenges {
+  padding: 5rem 0;
+}
+
+.solutions-challenges h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.solutions-challenges-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.solutions-challenge-card {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1.5rem;
+  align-items: center;
+  background: var(--rally-navy-mid);
+  border-radius: 14px;
+  padding: 1.5rem 2rem;
+  border: 1px solid var(--rally-navy-light);
+}
+
+.solutions-challenge-label {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rally-gray);
+  margin-bottom: 0.5rem;
+}
+
+.solutions-challenge-label--solution {
+  color: var(--rally-orange);
+}
+
+.solutions-challenge-problem p,
+.solutions-challenge-solution p {
+  font-size: 0.9375rem;
+  color: var(--rally-off-white);
+  line-height: 1.5;
+}
+
+.solutions-challenge-arrow {
+  color: var(--rally-orange);
+  opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+  .solutions-challenge-card {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 1.25rem;
+  }
+
+  .solutions-challenge-arrow {
+    transform: rotate(90deg);
+    justify-self: center;
+  }
+}
+
+/* Solutions Leagues */
+.solutions-leagues {
+  padding: 5rem 0;
+  background: var(--rally-navy-mid);
+}
+
+.solutions-leagues h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.solutions-leagues-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+}
+
+.solutions-league-card {
+  background: var(--rally-navy);
+  border-radius: 14px;
+  padding: 1.75rem;
+  border: 1px solid var(--rally-navy-light);
+  transition: all 0.2s ease;
+}
+
+.solutions-league-card:hover {
+  border-color: var(--rally-orange);
+  transform: translateY(-2px);
+}
+
+.solutions-league-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.solutions-league-card h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--rally-off-white);
+}
+
+.solutions-league-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--rally-orange);
+  background: rgba(255,107,53,0.12);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+}
+
+.solutions-league-card p {
+  font-size: 0.9375rem;
+  color: var(--rally-gray);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .solutions-leagues-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===========================
+   USE CASES PAGE
+   =========================== */
+.use-cases-section {
+  padding: 4rem 0;
+  border-bottom: 1px solid var(--rally-navy-light);
+}
+
+.use-cases-section:nth-child(even) {
+  background: var(--rally-navy-mid);
+}
+
+.use-cases-section h2 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--rally-orange);
+  margin-bottom: 2rem;
+}
+
+.use-cases-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.use-case-card {
+  background: var(--rally-navy);
+  border-radius: 16px;
+  padding: 2rem;
+  border: 1px solid var(--rally-navy-light);
+  display: flex;
+  flex-direction: column;
+}
+
+.use-case-who {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rally-gray);
+  margin-bottom: 0.75rem;
+}
+
+.use-case-card h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--rally-off-white);
+  margin-bottom: 0.75rem;
+}
+
+.use-case-description {
+  font-size: 0.9375rem;
+  color: var(--rally-gray);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.use-case-outcome {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rally-navy-light);
+}
+
+.use-case-outcome-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rally-orange);
+  margin-bottom: 0.375rem;
+}
+
+.use-case-outcome p {
+  font-size: 0.875rem;
+  color: var(--rally-off-white);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .use-cases-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===========================
+   RALLY BUTTON SMALL
+   =========================== */
+.rally-btn--small {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  border-radius: 10px;
+}
+
+/* ===========================
    RALLY DASHBOARD STYLES
    =========================== */
 

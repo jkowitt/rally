@@ -10,9 +10,11 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [solutionsOpen, setSolutionsOpen] = useState(false);
   const { user, isAuthenticated, isAdmin, signOut } = useRallyAuth();
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
+  const solutionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,6 +28,9 @@ export function Header() {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
+      }
+      if (solutionsRef.current && !solutionsRef.current.contains(e.target as Node)) {
+        setSolutionsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -51,10 +56,36 @@ export function Header() {
         <nav className={`nav ${isOpen ? 'open' : ''}`}>
           {!isDashboard && (
             <>
-              <Link href="/#features" className="nav-link">Features</Link>
-              <Link href="/#leagues" className="nav-link">Leagues</Link>
-              <Link href="/#how-it-works" className="nav-link">How It Works</Link>
-              <Link href="/why-loud-legacy" className="nav-link">Why Loud Legacy</Link>
+              <Link href="/platform" className={`nav-link ${pathname === '/platform' ? 'active' : ''}`}>Platform</Link>
+              <div className="nav-dropdown" ref={solutionsRef}>
+                <button
+                  className={`nav-link nav-dropdown-trigger ${pathname.startsWith('/solutions') ? 'active' : ''}`}
+                  onClick={() => setSolutionsOpen(!solutionsOpen)}
+                >
+                  Solutions
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12" className={`nav-chevron ${solutionsOpen ? 'open' : ''}`}>
+                    <polyline points="6,9 12,15 18,9" />
+                  </svg>
+                </button>
+                {solutionsOpen && (
+                  <div className="nav-dropdown-menu">
+                    <Link href="/solutions/college" className="nav-dropdown-item" onClick={() => setSolutionsOpen(false)}>
+                      <span className="nav-dropdown-label">College Athletics</span>
+                      <span className="nav-dropdown-desc">NCAA D1 schools & conferences</span>
+                    </Link>
+                    <Link href="/solutions/professional" className="nav-dropdown-item" onClick={() => setSolutionsOpen(false)}>
+                      <span className="nav-dropdown-label">Professional Sports</span>
+                      <span className="nav-dropdown-desc">NBA, NFL, MLB, NHL, MLS, UWSL</span>
+                    </Link>
+                    <Link href="/solutions/entertainment" className="nav-dropdown-item" onClick={() => setSolutionsOpen(false)}>
+                      <span className="nav-dropdown-label">Entertainment & Events</span>
+                      <span className="nav-dropdown-desc">Concerts, festivals & live events</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+              <Link href="/use-cases" className={`nav-link ${pathname === '/use-cases' ? 'active' : ''}`}>Use Cases</Link>
+              <Link href="/why-loud-legacy" className={`nav-link ${pathname === '/why-loud-legacy' ? 'active' : ''}`}>About</Link>
             </>
           )}
           {isDashboard && (
@@ -129,8 +160,8 @@ export function Header() {
           ) : (
             <>
               <Link href="/auth/signin" className="nav-link">Sign In</Link>
-              <Link href="/auth/signup" className="rally-btn rally-btn--primary rally-btn--small">
-                Get Started
+              <Link href="/contact" className="rally-btn rally-btn--primary rally-btn--small">
+                Request Demo
               </Link>
             </>
           )}

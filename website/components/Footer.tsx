@@ -15,7 +15,7 @@ const Footer = () => {
               className="footer-rally-logo"
             />
             <p className="footer-tagline">
-              The gameday experience platform built for collegiate athletics.
+              The fan engagement and loyalty platform built for sports properties across every league.
             </p>
             <p className="footer-vw">
               Built by Loud Legacy
@@ -25,23 +25,27 @@ const Footer = () => {
           <div className="footer-section">
             <h4 className="footer-title">Platform</h4>
             <ul className="footer-links">
-              <li><Link href="/#features">Features</Link></li>
-              <li><Link href="/#schools">Schools</Link></li>
+              <li><Link href="/platform">Platform Overview</Link></li>
+              <li><Link href="/#platform">Capabilities</Link></li>
               <li><Link href="/#how-it-works">How It Works</Link></li>
-              <li><Link href="/dashboard">Dashboard</Link></li>
+              <li><Link href="/use-cases">Use Cases</Link></li>
+            </ul>
+          </div>
+
+          <div className="footer-section">
+            <h4 className="footer-title">Solutions</h4>
+            <ul className="footer-links">
+              <li><Link href="/solutions/college">College Athletics</Link></li>
+              <li><Link href="/solutions/professional">Professional Sports</Link></li>
+              <li><Link href="/solutions/entertainment">Entertainment & Events</Link></li>
             </ul>
           </div>
 
           <div className="footer-section">
             <h4 className="footer-title">Company</h4>
             <ul className="footer-links">
-              <li><Link href="/contact">Contact</Link></li>
-            </ul>
-          </div>
-
-          <div className="footer-section">
-            <h4 className="footer-title">Legal</h4>
-            <ul className="footer-links">
+              <li><Link href="/why-loud-legacy">About</Link></li>
+              <li><Link href="/contact">Contact & Demo</Link></li>
               <li><Link href="/privacy">Privacy Policy</Link></li>
               <li><Link href="/terms">Terms of Service</Link></li>
             </ul>

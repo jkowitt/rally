@@ -15,7 +15,7 @@ const Footer = () => {
               className="footer-rally-logo"
             />
             <p className="footer-tagline">
-              The fan engagement and loyalty platform built for sports properties across every league.
+              The sports community app where fans earn rewards for showing up, engaging, and being loyal.
             </p>
             <p className="footer-vw">
               Built by Loud Legacy
@@ -23,21 +23,22 @@ const Footer = () => {
           </div>
 
           <div className="footer-section">
-            <h4 className="footer-title">Platform</h4>
+            <h4 className="footer-title">Rally</h4>
             <ul className="footer-links">
-              <li><Link href="/platform">Platform Overview</Link></li>
-              <li><Link href="/#platform">Capabilities</Link></li>
-              <li><Link href="/#how-it-works">How It Works</Link></li>
-              <li><Link href="/use-cases">Use Cases</Link></li>
+              <li><Link href="/how-it-works">How It Works</Link></li>
+              <li><Link href="/rewards">Rewards & Tiers</Link></li>
+              <li><Link href="/leagues">Browse Leagues</Link></li>
+              <li><Link href="/auth/signup">Join Free</Link></li>
             </ul>
           </div>
 
           <div className="footer-section">
-            <h4 className="footer-title">Solutions</h4>
+            <h4 className="footer-title">Community</h4>
             <ul className="footer-links">
-              <li><Link href="/solutions/college">College Athletics</Link></li>
-              <li><Link href="/solutions/professional">Professional Sports</Link></li>
-              <li><Link href="/solutions/entertainment">Entertainment & Events</Link></li>
+              <li><Link href="/leagues">College</Link></li>
+              <li><Link href="/leagues">NBA &middot; NFL &middot; MLB</Link></li>
+              <li><Link href="/leagues">NHL &middot; MLS &middot; UWSL</Link></li>
+              <li><Link href="/for-properties">For Teams & Properties</Link></li>
             </ul>
           </div>
 
@@ -45,7 +46,7 @@ const Footer = () => {
             <h4 className="footer-title">Company</h4>
             <ul className="footer-links">
               <li><Link href="/why-loud-legacy">About</Link></li>
-              <li><Link href="/contact">Contact & Demo</Link></li>
+              <li><Link href="/contact">Contact</Link></li>
               <li><Link href="/privacy">Privacy Policy</Link></li>
               <li><Link href="/terms">Terms of Service</Link></li>
             </ul>

@@ -7,45 +7,20 @@ import Footer from "@/components/Footer";
 
 const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
-const inquiryTypes = [
-  { value: "demo", label: "Schedule a demo" },
-  { value: "sales", label: "Sales inquiry" },
-  { value: "partnership", label: "Sponsorship or partnership" },
-  { value: "support", label: "Support question" },
+const reasonOptions = [
+  { value: "general", label: "General question" },
+  { value: "support", label: "Help with my account" },
+  { value: "feedback", label: "Feedback or suggestion" },
+  { value: "property", label: "I represent a team or property" },
+  { value: "partnership", label: "Partnership or sponsorship" },
   { value: "other", label: "Other" },
-];
-
-const propertyTypes = [
-  { value: "college", label: "College Athletic Department" },
-  { value: "pro-team", label: "Professional Sports Team" },
-  { value: "league", label: "League or Conference" },
-  { value: "entertainment", label: "Entertainment / Live Events" },
-  { value: "venue", label: "Venue Operator" },
-  { value: "sponsor", label: "Brand / Sponsor" },
-  { value: "other", label: "Other" },
-];
-
-const leagueOptions = [
-  { value: "college", label: "College / NCAA" },
-  { value: "nba", label: "NBA" },
-  { value: "nfl", label: "NFL" },
-  { value: "mlb", label: "MLB" },
-  { value: "nhl", label: "NHL" },
-  { value: "mls", label: "MLS" },
-  { value: "uwsl", label: "UWSL" },
-  { value: "entertainment", label: "Entertainment / Non-Sports" },
-  { value: "multiple", label: "Multiple Leagues" },
 ];
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    company: "",
-    jobTitle: "",
-    inquiryType: "demo",
-    propertyType: "college",
-    league: "college",
+    reason: "general",
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
@@ -119,16 +94,16 @@ export default function ContactPage() {
           <div className="contact-grid">
             {/* Form */}
             <div className="contact-form-wrapper">
-              <h1>Schedule a Demo</h1>
+              <h1>Get in Touch</h1>
               <p className="contact-intro">
-                See how Rally drives attendance, engagement, and sponsor ROI for your property. Fill out the form and our team will be in touch.
+                Have a question, feedback, or just want to say what&apos;s up? We&apos;d love to hear from you.
               </p>
 
               {submitted ? (
                 <div className="contact-success">
                   <div className="success-icon">&#10003;</div>
-                  <h2>Thanks for reaching out!</h2>
-                  <p>We&apos;ll get back to you within one business day to schedule your demo.</p>
+                  <h2>Message sent!</h2>
+                  <p>We&apos;ll get back to you within one business day.</p>
                   <Link href="/" className="rally-btn rally-btn--secondary">
                     Back to Home
                   </Link>
@@ -149,7 +124,7 @@ export default function ContactPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="email">Work Email *</label>
+                      <label htmlFor="email">Email *</label>
                       <input
                         type="email"
                         id="email"
@@ -157,95 +132,37 @@ export default function ContactPage() {
                         value={formData.email}
                         onChange={handleChange}
                         required
-                        placeholder="you@organization.com"
+                        placeholder="you@email.com"
                       />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="company">Organization *</label>
-                      <input
-                        type="text"
-                        id="company"
-                        name="company"
-                        value={formData.company}
-                        onChange={handleChange}
-                        required
-                        placeholder="Team, school, or company name"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="jobTitle">Job Title</label>
-                      <input
-                        type="text"
-                        id="jobTitle"
-                        name="jobTitle"
-                        value={formData.jobTitle}
-                        onChange={handleChange}
-                        placeholder="Your role"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="propertyType">Property Type</label>
-                      <select
-                        id="propertyType"
-                        name="propertyType"
-                        value={formData.propertyType}
-                        onChange={handleChange}
-                      >
-                        {propertyTypes.map((pt) => (
-                          <option key={pt.value} value={pt.value}>
-                            {pt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="league">League / Segment</label>
-                      <select
-                        id="league"
-                        name="league"
-                        value={formData.league}
-                        onChange={handleChange}
-                      >
-                        {leagueOptions.map((l) => (
-                          <option key={l.value} value={l.value}>
-                            {l.label}
-                          </option>
-                        ))}
-                      </select>
                     </div>
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="inquiryType">How can we help?</label>
+                    <label htmlFor="reason">What&apos;s this about?</label>
                     <select
-                      id="inquiryType"
-                      name="inquiryType"
-                      value={formData.inquiryType}
+                      id="reason"
+                      name="reason"
+                      value={formData.reason}
                       onChange={handleChange}
                     >
-                      {inquiryTypes.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
+                      {reasonOptions.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
                         </option>
                       ))}
                     </select>
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="message">Tell us about your property</label>
+                    <label htmlFor="message">Message *</label>
                     <textarea
                       id="message"
                       name="message"
                       value={formData.message}
                       onChange={handleChange}
-                      rows={4}
-                      placeholder="What are you looking to achieve with fan engagement? Any specific challenges or goals?"
+                      required
+                      rows={5}
+                      placeholder="Tell us what's on your mind..."
                     />
                   </div>
 
@@ -262,7 +179,7 @@ export default function ContactPage() {
                     aria-busy={isLoading}
                     style={{ width: '100%' }}
                   >
-                    {isLoading ? "Sending..." : "Request a Demo"}
+                    {isLoading ? "Sending..." : "Send Message"}
                   </button>
                 </form>
               )}
@@ -271,42 +188,26 @@ export default function ContactPage() {
             {/* Sidebar */}
             <div className="contact-sidebar">
               <div className="sidebar-card">
-                <h3>What to expect</h3>
+                <h3>Quick links</h3>
                 <ul className="quick-links">
-                  <li>A personalized walkthrough of Rally tailored to your property type and league</li>
-                  <li>Live demo of the admin dashboard, fan experience, and analytics</li>
-                  <li>Discussion of your specific goals, challenges, and use cases</li>
+                  <li><Link href="/how-it-works">How Rally works</Link></li>
+                  <li><Link href="/rewards">Rewards & tiers</Link></li>
+                  <li><Link href="/leagues">Browse leagues</Link></li>
                 </ul>
               </div>
 
               <div className="sidebar-card">
                 <h3>Response time</h3>
                 <p>We typically respond within <strong>one business day</strong>.</p>
-                <p>For urgent inquiries, email <a href="mailto:sales@loud-legacy.com">sales@loud-legacy.com</a></p>
+                <p>For urgent help, email <a href="mailto:support@loud-legacy.com">support@loud-legacy.com</a></p>
               </div>
 
               <div className="sidebar-card">
-                <h3>Book directly</h3>
-                <p>Skip the form and schedule time with our team.</p>
-                <a
-                  href="https://calendly.com/loud-legacy/demo"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rally-btn rally-btn--secondary"
-                  style={{ width: '100%', textAlign: 'center' }}
-                >
-                  Book a Demo Call
-                </a>
-              </div>
-
-              <div className="sidebar-card">
-                <h3>Explore first</h3>
-                <ul className="quick-links">
-                  <li><Link href="/platform">Platform overview</Link></li>
-                  <li><Link href="/use-cases">Use cases</Link></li>
-                  <li><Link href="/solutions/college">College solutions</Link></li>
-                  <li><Link href="/solutions/professional">Pro sports solutions</Link></li>
-                </ul>
+                <h3>For teams & properties</h3>
+                <p>If you represent a team, league, or venue — check out our property page or schedule a demo.</p>
+                <Link href="/for-properties" className="rally-btn rally-btn--secondary" style={{ width: '100%', textAlign: 'center' }}>
+                  For Teams & Properties
+                </Link>
               </div>
             </div>
           </div>

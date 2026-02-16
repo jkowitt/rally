@@ -3,10 +3,10 @@ import Image from "next/image";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
 
-const platformCapabilities = [
+const features = [
   {
-    title: "Gameday Check-In",
-    description: "Geolocation-verified attendance tracking gives you real data on who shows up, how often, and when — across every event, every sport, every season.",
+    title: "Check In on Gameday",
+    description: "Show up, check in, earn points. Rally uses your location to verify you're at the game — then rewards you for being there.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
@@ -15,19 +15,19 @@ const platformCapabilities = [
     ),
   },
   {
-    title: "Live Fan Engagement",
-    description: "Push trivia, predictions, polls, and sponsor activations to fans in real time — at the venue or watching from home. Every interaction is a data point.",
+    title: "Trivia & Predictions",
+    description: "Test your knowledge with live trivia, predict game outcomes, and vote in real-time polls. Every answer earns you points.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 01-3.46 0" />
-        <path d="M12 2v1" strokeLinecap="round" />
+        <circle cx="12" cy="12" r="10" />
+        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" strokeLinecap="round" />
+        <circle cx="12" cy="17" r="0.5" fill="currentColor" />
       </svg>
     ),
   },
   {
-    title: "Loyalty & Rewards Engine",
-    description: "A fully configurable points and tier system. You define the rewards, set redemption rules, and control the fan journey from Bronze to Platinum.",
+    title: "Earn Points & Level Up",
+    description: "Every check-in, every trivia answer, every prediction earns points. Climb from Bronze to Silver to Gold to Platinum across all your teams.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -35,8 +35,8 @@ const platformCapabilities = [
     ),
   },
   {
-    title: "Sponsorship Activation",
-    description: "Give sponsors measurable impressions, targeted fan touchpoints, and real ROI data. Activate brand partners at the venue and on second screens.",
+    title: "Redeem Real Rewards",
+    description: "Cash in your points for merch, concessions, VIP experiences, meet-and-greets, and exclusive perks from your favorite teams.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <rect x="2" y="7" width="20" height="14" rx="2" />
@@ -45,17 +45,18 @@ const platformCapabilities = [
     ),
   },
   {
-    title: "Fan Analytics & Insights",
-    description: "Demographics, behavior, engagement trends, and attendance patterns — all in one dashboard. Know your fanbase better than ever before.",
+    title: "Watch from Anywhere",
+    description: "Can't make the game? Tune in remotely and still earn points, play trivia, make predictions, and compete on leaderboards from the couch.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M18 20V10M12 20V4M6 20v-6" strokeLinecap="round" />
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <path d="M8 21h8M12 17v4" strokeLinecap="round" />
       </svg>
     ),
   },
   {
-    title: "White-Label Branding",
-    description: "Every property gets its own branded experience — your colors, your logo, your content. Fans see your brand, not ours.",
+    title: "Your Team, Your Colors",
+    description: "Rally transforms to match your team's brand — colors, logo, and content. Follow up to 20 teams across any league.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -66,10 +67,10 @@ const platformCapabilities = [
 ];
 
 const stats = [
-  { value: "520+", label: "Properties Supported" },
-  { value: "7", label: "Major Leagues" },
-  { value: "15+", label: "Engagement Tools" },
-  { value: "100%", label: "White-Label" },
+  { value: "520+", label: "Teams & Schools" },
+  { value: "7", label: "Leagues" },
+  { value: "4", label: "Loyalty Tiers" },
+  { value: "15+", label: "Ways to Earn" },
 ];
 
 const leagues = [
@@ -82,53 +83,26 @@ const leagues = [
   { name: "UWSL", count: "14 Teams", color: "#B31942" },
 ];
 
-const propertyTypes = [
+const communityTypes = [
   {
-    title: "Professional Sports Teams",
-    description: "NBA, NFL, MLB, NHL, MLS, and UWSL teams use Rally to deepen fan loyalty, drive in-app engagement, and deliver measurable sponsor activations across every home game and road broadcast.",
-    link: "/solutions/professional",
-    linkText: "Pro Sports Solutions",
+    title: "Students & Student Sections",
+    description: "Compete with your section, rep your dorm or org on leaderboards, and earn exclusive rewards just for showing up and being loud.",
   },
   {
-    title: "College Athletic Departments",
-    description: "Drive student section attendance, grow multi-sport engagement, generate actionable fan data, and give sponsors measurable gameday impressions across every sport on campus.",
-    link: "/solutions/college",
-    linkText: "College Solutions",
+    title: "Season Ticket Holders",
+    description: "Get more from every game. Check-in streaks, tier progression, and VIP rewards that recognize your loyalty all season long.",
   },
   {
-    title: "Leagues & Conferences",
-    description: "Unified analytics across member teams with cross-property engagement tracking, league-wide reward programs, and centralized sponsor activation reporting.",
-    link: "/contact",
-    linkText: "Talk to Sales",
+    title: "Die-Hard Fans",
+    description: "Follow multiple teams across any league. Earn points everywhere, track your stats, and prove you're the biggest fan in your crew.",
   },
   {
-    title: "Entertainment & Live Events",
-    description: "Concerts, festivals, and live entertainment properties leverage Rally for check-ins, audience engagement, sponsor activations, and loyalty programs that bring fans back.",
-    link: "/solutions/entertainment",
-    linkText: "Entertainment Solutions",
-  },
-];
-
-const valueProps = [
-  {
-    metric: "Attendance",
-    headline: "Drive Attendance & Retention",
-    description: "Reward fans for showing up. Check-in incentives, loyalty tiers, and exclusive gameday rewards give fans a reason to come back — and come early.",
+    title: "Casual & Remote Fans",
+    description: "Watching from the couch counts. Tune in, play trivia, make predictions, and earn rewards even when you can't be at the venue.",
   },
   {
-    metric: "Engagement",
-    headline: "Engage Fans Beyond the Scoreboard",
-    description: "Trivia, predictions, polls, and live content keep fans engaged before, during, and after the game — whether they're in the arena or watching from the couch.",
-  },
-  {
-    metric: "Revenue",
-    headline: "Unlock New Revenue Streams",
-    description: "Sponsor activations with real impression data. Targeted fan offers. Reward redemptions that drive concession and merch sales. Rally turns engagement into revenue.",
-  },
-  {
-    metric: "Data",
-    headline: "Know Your Fanbase",
-    description: "Demographic insights, behavioral analytics, attendance patterns, and engagement trends — all in one place. Make decisions backed by real fan data, not guesswork.",
+    title: "Alumni & Boosters",
+    description: "Stay connected to your school's athletics long after graduation. Check in at away games, compete with fellow alumni, and support your program.",
   },
 ];
 
@@ -148,21 +122,21 @@ export default function HomePage() {
             className="rally-hero-logo"
             priority
           />
-          <div className="rally-badge">Fan Engagement & Loyalty Platform for Sports Properties</div>
+          <div className="rally-badge">The Sports Community App</div>
           <h1 className="rally-hero-headline">
-            Turn Every Gameday Into a<br />Revenue-Driving Experience
+            Your Teams. Your Rewards.<br />Your Community.
           </h1>
           <p className="rally-tagline">
-            Rally gives sports properties the tools to engage fans, activate sponsors,
-            and capture real data — across College, NBA, NFL, MLB, NHL, MLS, UWSL,
-            and live entertainment.
+            Rally is the gameday experience app for sports fans. Check in at games,
+            compete in trivia, earn points, climb loyalty tiers, and redeem real
+            rewards — across College, NBA, NFL, MLB, NHL, MLS, UWSL, and live events.
           </p>
           <div className="hero-actions">
-            <Link href="/contact" className="rally-btn rally-btn--primary rally-btn--large">
-              Schedule a Demo
+            <Link href="/auth/signup" className="rally-btn rally-btn--primary rally-btn--large">
+              Join Rally Free
             </Link>
-            <Link href="/platform" className="rally-btn rally-btn--secondary rally-btn--large">
-              Explore the Platform
+            <Link href="/how-it-works" className="rally-btn rally-btn--secondary rally-btn--large">
+              See How It Works
             </Link>
           </div>
         </div>
@@ -182,131 +156,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Value Propositions */}
-      <section className="rally-value-props">
-        <div className="container">
-          <h2>What Rally Does for Your Property</h2>
-          <p className="rally-section-subtitle">
-            Rally isn&apos;t just a fan app — it&apos;s a platform that drives measurable outcomes for sports properties and entertainment brands.
-          </p>
-          <div className="rally-value-grid">
-            {valueProps.map((vp) => (
-              <div key={vp.metric} className="rally-value-card">
-                <div className="rally-value-metric">{vp.metric}</div>
-                <h3>{vp.headline}</h3>
-                <p>{vp.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Leagues */}
-      <section id="leagues" className="rally-conferences">
-        <div className="container">
-          <h2>Built for Every League</h2>
-          <p className="rally-section-subtitle">
-            From NCAA Division I athletics to every major professional league and women&apos;s soccer —
-            Rally supports 520+ properties across 7 leagues.
-          </p>
-          <div className="rally-conference-tags">
-            {leagues.map((league) => (
-              <span
-                key={league.name}
-                className="rally-conf-tag"
-                style={{ borderColor: league.color, color: league.color }}
-              >
-                {league.name} &middot; {league.count}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Platform Capabilities */}
-      <section id="platform" className="rally-features">
-        <div className="container">
-          <h2>Platform Capabilities</h2>
-          <p className="rally-section-subtitle">
-            Everything your property needs to engage fans, activate sponsors,
-            and generate actionable data — before, during, and after gameday.
-          </p>
-          <div className="rally-feature-grid">
-            {platformCapabilities.map((feature) => (
-              <div key={feature.title} className="rally-feature-card">
-                <div className="rally-feature-icon">{feature.icon}</div>
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
-              </div>
-            ))}
-          </div>
-          <div className="rally-features-cta">
-            <Link href="/platform" className="rally-btn rally-btn--secondary">
-              See Full Platform Details
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Who We Serve */}
-      <section id="solutions" className="rally-audience">
-        <div className="container">
-          <h2>Built for Sports Properties of Every Size</h2>
-          <p className="rally-section-subtitle">
-            Whether you&apos;re a Power 5 program, a mid-market pro team, or a live entertainment brand —
-            Rally scales to your audience.
-          </p>
-          <div className="rally-audience-grid">
-            {propertyTypes.map((pt) => (
-              <div key={pt.title} className="rally-audience-card rally-audience-card--linked">
-                <h4>{pt.title}</h4>
-                <p>{pt.description}</p>
-                <Link href={pt.link} className="rally-audience-link">
-                  {pt.linkText} &rarr;
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How Properties Use Rally */}
-      <section id="how-it-works" className="rally-how">
-        <div className="container">
-          <h2>How Properties Use Rally</h2>
-          <div className="rally-steps">
-            <div className="rally-step">
-              <div className="rally-step-num">1</div>
-              <h3>Set Up Your Property</h3>
-              <p>We configure Rally with your branding, sports, events calendar, and reward catalog. Your property is live in days, not months.</p>
-            </div>
-            <div className="rally-step">
-              <div className="rally-step-num">2</div>
-              <h3>Engage Fans on Gameday</h3>
-              <p>Push check-ins, trivia, predictions, polls, and sponsor activations to fans at the venue and watching at home — all from your admin dashboard.</p>
-            </div>
-            <div className="rally-step">
-              <div className="rally-step-num">3</div>
-              <h3>Capture Data & Insights</h3>
-              <p>Track attendance, engagement, demographics, and behavior patterns in real time. See exactly how fans interact with your property.</p>
-            </div>
-            <div className="rally-step">
-              <div className="rally-step-num">4</div>
-              <h3>Prove ROI to Sponsors</h3>
-              <p>Deliver impression reports, interaction metrics, and audience demographics to sponsors and brand partners with real, verifiable data.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* App Preview */}
       <section className="rally-preview">
         <div className="container">
-          <h2>One Platform. Your Brand. Every Gameday.</h2>
+          <h2>One App. Every Team. Every Gameday.</h2>
           <p className="rally-section-subtitle">
-            Rally adapts to every property&apos;s brand — your colors, your logo, your content —
-            creating a unique branded experience for your fanbase.
+            Rally adapts to every team&apos;s brand — colors, logo, and content —
+            creating a unique experience for every fanbase, from college to the pros.
           </p>
+
           <div className="rally-phone-mockup">
             <div className="rally-phone">
               <div className="rally-screen">
@@ -315,14 +173,14 @@ export default function HomePage() {
                   <div className="rally-screen-avatar" />
                 </div>
                 <div className="rally-screen-card">
-                  <div className="rally-screen-label">YOUR BRAND</div>
-                  <div className="rally-screen-title">Your Gameday Experience</div>
+                  <div className="rally-screen-label">YOUR TEAM</div>
+                  <div className="rally-screen-title">Gameday Experience</div>
                   <div className="rally-screen-date">Events &middot; Points &middot; Rewards</div>
                 </div>
                 <div className="rally-screen-stats-row">
-                  <div className="rally-screen-stat"><span className="rally-accent">---</span><small>Points</small></div>
-                  <div className="rally-screen-stat"><span className="rally-tier-pill">Tier</span><small>Level</small></div>
-                  <div className="rally-screen-stat"><span className="rally-accent">---</span><small>Rank</small></div>
+                  <div className="rally-screen-stat"><span className="rally-accent">2,450</span><small>Points</small></div>
+                  <div className="rally-screen-stat"><span className="rally-tier-pill">Gold</span><small>Tier</small></div>
+                  <div className="rally-screen-stat"><span className="rally-accent">#12</span><small>Rank</small></div>
                 </div>
                 <div className="rally-screen-actions">
                   <div className="rally-screen-action"><div className="rally-sa-icon rally-sa-icon--orange" /><small>Check In</small></div>
@@ -336,17 +194,109 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Leagues */}
+      <section id="leagues" className="rally-conferences">
+        <div className="container">
+          <h2>Follow Your Favorite Teams</h2>
+          <p className="rally-section-subtitle">
+            520+ teams and schools across 7 leagues. Find your team, follow them in Rally,
+            and start earning.
+          </p>
+          <div className="rally-conference-tags">
+            {leagues.map((league) => (
+              <Link
+                key={league.name}
+                href="/leagues"
+                className="rally-conf-tag"
+                style={{ borderColor: league.color, color: league.color }}
+              >
+                {league.name} &middot; {league.count}
+              </Link>
+            ))}
+          </div>
+          <div className="rally-features-cta" style={{ marginTop: '2rem' }}>
+            <Link href="/leagues" className="rally-btn rally-btn--secondary">
+              Browse All Leagues &rarr;
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="rally-features">
+        <div className="container">
+          <h2>Everything You Need on Gameday</h2>
+          <p className="rally-section-subtitle">
+            Rally gives you more reasons to show up, more ways to engage,
+            and real rewards for being a fan.
+          </p>
+          <div className="rally-feature-grid">
+            {features.map((feature) => (
+              <div key={feature.title} className="rally-feature-card">
+                <div className="rally-feature-icon">{feature.icon}</div>
+                <h3>{feature.title}</h3>
+                <p>{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Who Rally Is For */}
+      <section className="rally-audience">
+        <div className="container">
+          <h2>Rally Is for Every Kind of Fan</h2>
+          <div className="rally-audience-grid">
+            {communityTypes.map((ct) => (
+              <div key={ct.title} className="rally-audience-card">
+                <h4>{ct.title}</h4>
+                <p>{ct.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section id="how-it-works" className="rally-how">
+        <div className="container">
+          <h2>How It Works</h2>
+          <div className="rally-steps">
+            <div className="rally-step">
+              <div className="rally-step-num">1</div>
+              <h3>Follow Your Teams</h3>
+              <p>Pick your favorites across College, NBA, NFL, MLB, NHL, MLS, and UWSL — follow up to 20 teams from any league.</p>
+            </div>
+            <div className="rally-step">
+              <div className="rally-step-num">2</div>
+              <h3>Show Up & Engage</h3>
+              <p>Check in at the venue or tune in from home. Play trivia, make predictions, vote in polls, and interact with live content.</p>
+            </div>
+            <div className="rally-step">
+              <div className="rally-step-num">3</div>
+              <h3>Earn Points & Climb</h3>
+              <p>Every action earns points. Level up through Bronze, Silver, Gold, and Platinum tiers across all your teams.</p>
+            </div>
+            <div className="rally-step">
+              <div className="rally-step-num">4</div>
+              <h3>Redeem Rewards</h3>
+              <p>Cash in points for merch, VIP access, concessions, meet-and-greets, and exclusive experiences from your teams.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="rally-cta">
         <div className="container">
-          <h2>Ready to Rally Your Fanbase?</h2>
-          <p>See how Rally drives attendance, engagement, and sponsor ROI for sports properties across every league. Built by Loud Legacy.</p>
+          <h2>Ready to Rally?</h2>
+          <p>Join the community of fans earning rewards across every league. Free to join, free to play.</p>
           <div className="rally-cta-actions">
-            <Link href="/contact" className="rally-btn rally-btn--primary rally-btn--large">
-              Schedule a Demo
+            <Link href="/auth/signup" className="rally-btn rally-btn--primary rally-btn--large">
+              Get Started Free
             </Link>
-            <Link href="/use-cases" className="rally-btn rally-btn--secondary rally-btn--large">
-              See Use Cases
+            <Link href="/rewards" className="rally-btn rally-btn--secondary rally-btn--large">
+              See Rewards
             </Link>
           </div>
         </div>

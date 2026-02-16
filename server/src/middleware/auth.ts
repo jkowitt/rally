@@ -34,6 +34,20 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
   }
 }
 
+export async function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.userRole || !['admin', 'developer'].includes(req.userRole)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+}
+
+export async function requireDeveloper(req: AuthRequest, res: Response, next: NextFunction) {
+  if (req.userRole !== 'developer') {
+    return res.status(403).json({ error: 'Developer access required' });
+  }
+  next();
+}
+
 export async function optionalAuth(req: AuthRequest, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {

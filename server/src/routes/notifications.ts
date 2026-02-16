@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
-import { AuthRequest, requireAuth } from '../middleware/auth';
+import { AuthRequest, requireAuth, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
@@ -21,7 +21,7 @@ function formatNotification(n: any) {
 }
 
 // GET /notifications
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { schoolId } = req.query;
     const where: any = {};
@@ -39,7 +39,7 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 // POST /notifications
-router.post('/', requireAuth, async (req: AuthRequest, res) => {
+router.post('/', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { title, body, schoolId, targetAudience, scheduledFor } = req.body;
     if (!title || !body || !schoolId) {
@@ -65,7 +65,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // PUT /notifications/:notifId
-router.put('/:notifId', requireAuth, async (req, res) => {
+router.put('/:notifId', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { title, body, schoolId, targetAudience, scheduledFor } = req.body;
     const data: any = {};
@@ -87,7 +87,7 @@ router.put('/:notifId', requireAuth, async (req, res) => {
 });
 
 // DELETE /notifications/:notifId
-router.delete('/:notifId', requireAuth, async (req, res) => {
+router.delete('/:notifId', requireAuth, requireAdmin, async (req, res) => {
   try {
     await prisma.notification.delete({ where: { id: String(req.params.notifId) } });
     return res.json({ message: 'Notification deleted' });
@@ -97,7 +97,7 @@ router.delete('/:notifId', requireAuth, async (req, res) => {
 });
 
 // POST /notifications/:notifId/send
-router.post('/:notifId/send', requireAuth, async (req, res) => {
+router.post('/:notifId/send', requireAuth, requireAdmin, async (req, res) => {
   try {
     const notification = await prisma.notification.update({
       where: { id: String(req.params.notifId) },

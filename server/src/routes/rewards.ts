@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
-import { AuthRequest, requireAuth } from '../middleware/auth';
+import { AuthRequest, requireAuth, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
@@ -28,7 +28,7 @@ router.get('/schools/:schoolId/rewards', requireAuth, async (req, res) => {
 });
 
 // POST /schools/:schoolId/rewards
-router.post('/schools/:schoolId/rewards', requireAuth, async (req: AuthRequest, res) => {
+router.post('/schools/:schoolId/rewards', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { name, pointsCost, description } = req.body;
     if (!name || pointsCost === undefined) {
@@ -51,7 +51,7 @@ router.post('/schools/:schoolId/rewards', requireAuth, async (req: AuthRequest, 
 });
 
 // PUT /schools/:schoolId/rewards/:rewardId
-router.put('/schools/:schoolId/rewards/:rewardId', requireAuth, async (req, res) => {
+router.put('/schools/:schoolId/rewards/:rewardId', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { name, pointsCost, description } = req.body;
     const data: any = {};
@@ -71,7 +71,7 @@ router.put('/schools/:schoolId/rewards/:rewardId', requireAuth, async (req, res)
 });
 
 // DELETE /schools/:schoolId/rewards/:rewardId
-router.delete('/schools/:schoolId/rewards/:rewardId', requireAuth, async (req, res) => {
+router.delete('/schools/:schoolId/rewards/:rewardId', requireAuth, requireAdmin, async (req, res) => {
   try {
     await prisma.reward.delete({ where: { id: String(req.params.rewardId) } });
     return res.json({ message: 'Reward deleted' });

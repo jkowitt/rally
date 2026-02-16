@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
-import { AuthRequest, requireAuth, optionalAuth } from '../middleware/auth';
+import { AuthRequest, requireAuth, requireAdmin, optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
-// GET /analytics
-router.get('/', requireAuth, async (_req, res) => {
+// GET /analytics (admin+ only)
+router.get('/', requireAuth, requireAdmin, async (_req, res) => {
   try {
     const totalUsers = await prisma.rallyUser.count();
 

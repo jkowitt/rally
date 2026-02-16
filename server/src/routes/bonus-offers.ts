@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
-import { AuthRequest, requireAuth } from '../middleware/auth';
+import { AuthRequest, requireAuth, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
@@ -21,7 +21,7 @@ function formatOffer(o: any) {
 }
 
 // GET /schools/:schoolId/bonus-offers
-router.get('/schools/:schoolId/bonus-offers', requireAuth, async (req, res) => {
+router.get('/schools/:schoolId/bonus-offers', requireAuth, requireAdmin, async (req, res) => {
   try {
     const offers = await prisma.bonusOffer.findMany({
       where: { schoolId: String(req.params.schoolId) },
@@ -34,7 +34,7 @@ router.get('/schools/:schoolId/bonus-offers', requireAuth, async (req, res) => {
 });
 
 // POST /schools/:schoolId/bonus-offers
-router.post('/schools/:schoolId/bonus-offers', requireAuth, async (req: AuthRequest, res) => {
+router.post('/schools/:schoolId/bonus-offers', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { name, description, bonusMultiplier, bonusPoints, activationType, startsAt, expiresAt } = req.body;
     if (!name || !expiresAt) {
@@ -62,7 +62,7 @@ router.post('/schools/:schoolId/bonus-offers', requireAuth, async (req: AuthRequ
 });
 
 // PUT /schools/:schoolId/bonus-offers/:offerId
-router.put('/schools/:schoolId/bonus-offers/:offerId', requireAuth, async (req, res) => {
+router.put('/schools/:schoolId/bonus-offers/:offerId', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { name, description, bonusMultiplier, bonusPoints, activationType, startsAt, expiresAt, isActive } = req.body;
     const data: any = {};
@@ -87,7 +87,7 @@ router.put('/schools/:schoolId/bonus-offers/:offerId', requireAuth, async (req, 
 });
 
 // DELETE /schools/:schoolId/bonus-offers/:offerId
-router.delete('/schools/:schoolId/bonus-offers/:offerId', requireAuth, async (req, res) => {
+router.delete('/schools/:schoolId/bonus-offers/:offerId', requireAuth, requireAdmin, async (req, res) => {
   try {
     await prisma.bonusOffer.delete({ where: { id: String(req.params.offerId) } });
     return res.json({ message: 'Bonus offer deleted' });

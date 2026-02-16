@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
-// GET /demographics/:propertyId
-router.get('/:propertyId', requireAuth, async (req, res) => {
+// GET /demographics/:propertyId (admin+ only)
+router.get('/:propertyId', requireAuth, requireAdmin, async (req, res) => {
   try {
     const propertyId = String(req.params.propertyId);
 

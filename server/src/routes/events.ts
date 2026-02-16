@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { getTier } from '../lib/tiers';
-import { AuthRequest, requireAuth, optionalAuth } from '../middleware/auth';
+import { AuthRequest, requireAuth, requireAdmin, optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -69,8 +69,8 @@ router.get('/:eventId', optionalAuth, async (req, res) => {
   }
 });
 
-// POST /events
-router.post('/', requireAuth, async (req: AuthRequest, res) => {
+// POST /events (admin+ only)
+router.post('/', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { title, sport, homeSchoolId, homeTeam, awaySchoolId, awayTeam, venue, city, dateTime, status, activations } = req.body;
 
@@ -110,8 +110,8 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// PUT /events/:eventId
-router.put('/:eventId', requireAuth, async (req: AuthRequest, res) => {
+// PUT /events/:eventId (admin+ only)
+router.put('/:eventId', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { title, sport, homeSchoolId, homeTeam, awaySchoolId, awayTeam, venue, city, dateTime, status, activations } = req.body;
 
@@ -154,8 +154,8 @@ router.put('/:eventId', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// DELETE /events/:eventId
-router.delete('/:eventId', requireAuth, async (req, res) => {
+// DELETE /events/:eventId (admin+ only)
+router.delete('/:eventId', requireAuth, requireAdmin, async (req, res) => {
   try {
     await prisma.event.delete({ where: { id: String(req.params.eventId) } });
     return res.json({ message: 'Event deleted' });

@@ -71,9 +71,9 @@ async function main() {
     create: {
       email: 'admin@rally.fan',
       password: adminPassword,
-      name: 'Rally Admin',
-      handle: 'rally-admin',
-      role: 'ADMIN',
+      name: 'Rally Developer',
+      handle: 'rally-dev',
+      role: 'DEVELOPER',
       schoolId: 'sch-georgia',
       favoriteSchool: 'sch-georgia',
       supportingSchools: ['sch-georgia', 'sch-tennessee'],
@@ -110,7 +110,9 @@ async function main() {
       tier: 'Bronze',
     },
   });
-  console.log('Seeded demo users (admin@rally.fan / fan@rally.fan, password: rally2024)');
+  console.log('Seeded demo users:');
+  console.log('  Developer: admin@rally.fan / rally2024 (full control)');
+  console.log('  Fan:       fan@rally.fan / rally2024');
 
   // =====================
   // SAMPLE EVENTS
@@ -305,8 +307,8 @@ async function main() {
 
   console.log('\nSeed complete!');
   console.log('---');
-  console.log('Admin login: admin@rally.fan / rally2024');
-  console.log('Fan login:   fan@rally.fan / rally2024');
+  console.log('Developer login: admin@rally.fan / rally2024 (full control, only role that can grant admin)');
+  console.log('Fan login:       fan@rally.fan / rally2024');
 }
 
 main()

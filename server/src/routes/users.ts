@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
-import { AuthRequest, requireAuth } from '../middleware/auth';
+import { AuthRequest, requireAuth, requireAdmin, requireDeveloper } from '../middleware/auth';
 
 const router = Router();
 
@@ -35,8 +35,8 @@ function formatUser(u: any) {
   };
 }
 
-// GET /users
-router.get('/', requireAuth, async (_req, res) => {
+// GET /users (admin+ only)
+router.get('/', requireAuth, requireAdmin, async (_req, res) => {
   try {
     const users = await prisma.rallyUser.findMany({
       orderBy: { createdAt: 'desc' },
@@ -47,8 +47,8 @@ router.get('/', requireAuth, async (_req, res) => {
   }
 });
 
-// GET /users/:id
-router.get('/:id', requireAuth, async (req, res) => {
+// GET /users/:id (admin+ only)
+router.get('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const user = await prisma.rallyUser.findUnique({ where: { id: String(req.params.id) } });
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -58,10 +58,22 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// PUT /users/:id
-router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
+// PUT /users/:id (admin+ can edit, but ONLY developer can change roles)
+router.put('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { name, handle, role, schoolId, propertyId, propertyLeague, favoriteSchool, supportingSchools, emailUpdates, pushNotifications, userType, birthYear, residingCity, residingState, teammatePermissions } = req.body;
+
+    // Role changes require DEVELOPER permission
+    if (role !== undefined) {
+      if (req.userRole !== 'developer') {
+        return res.status(403).json({ error: 'Only the developer can change user roles' });
+      }
+      // Cannot create another developer
+      const targetRole = role.toUpperCase();
+      if (targetRole === 'DEVELOPER') {
+        return res.status(403).json({ error: 'Cannot assign developer role' });
+      }
+    }
 
     const data: any = {};
     if (name !== undefined) data.name = name;

@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
-import { AuthRequest, requireAuth } from '../middleware/auth';
+import { AuthRequest, requireAuth, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
 // GET /teammates
-router.get('/', requireAuth, async (req: AuthRequest, res) => {
+router.get('/', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { propertyId } = req.query;
 
@@ -60,7 +60,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // POST /teammates/invite
-router.post('/invite', requireAuth, async (req: AuthRequest, res) => {
+router.post('/invite', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { email, name, permissions } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -155,7 +155,7 @@ router.post('/invite', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // PUT /teammates/:teammateId/permissions
-router.put('/:teammateId/permissions', requireAuth, async (req, res) => {
+router.put('/:teammateId/permissions', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { permissions } = req.body;
     if (!permissions) return res.status(400).json({ error: 'Permissions are required' });
@@ -187,7 +187,7 @@ router.put('/:teammateId/permissions', requireAuth, async (req, res) => {
 });
 
 // DELETE /teammates/:teammateId
-router.delete('/:teammateId', requireAuth, async (req, res) => {
+router.delete('/:teammateId', requireAuth, requireAdmin, async (req, res) => {
   try {
     await prisma.rallyUser.update({
       where: { id: String(req.params.teammateId) },
@@ -206,7 +206,7 @@ router.delete('/:teammateId', requireAuth, async (req, res) => {
 });
 
 // DELETE /teammates/invitations/:invitationId
-router.delete('/invitations/:invitationId', requireAuth, async (req, res) => {
+router.delete('/invitations/:invitationId', requireAuth, requireAdmin, async (req, res) => {
   try {
     await prisma.teammateInvitation.delete({ where: { id: String(req.params.invitationId) } });
     return res.json({ message: 'Invitation cancelled' });

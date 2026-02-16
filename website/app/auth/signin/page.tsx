@@ -23,7 +23,8 @@ export default function SignInPage() {
     try {
       const result = await signIn(email, password);
       if (result.success) {
-        router.push("/dashboard");
+        const role = result.user?.role;
+        router.push(role === 'developer' || role === 'admin' ? '/admin' : '/dashboard');
       } else {
         setError(result.error || "Invalid email or password");
       }

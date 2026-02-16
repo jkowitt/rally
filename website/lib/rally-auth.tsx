@@ -14,7 +14,7 @@ interface RallyAuthContextType {
   viewAs: ViewAsRole;
   setViewAs: (role: ViewAsRole) => void;
   effectiveRole: string;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: RallyUser }>;
   signUp: (params: {
     email: string;
     password: string;
@@ -84,7 +84,7 @@ export function RallyAuthProvider({ children }: { children: ReactNode }) {
     if (res.ok && res.data) {
       localStorage.setItem(TOKEN_KEY, res.data.token);
       setUser(res.data.user);
-      return { success: true };
+      return { success: true, user: res.data.user };
     }
     return { success: false, error: res.error || "Invalid email or password" };
   }, []);

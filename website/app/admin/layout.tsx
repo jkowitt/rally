@@ -7,17 +7,60 @@ import { useEffect } from "react";
 import { useRallyAuth } from "@/lib/rally-auth";
 import "./admin.css";
 
-const allNavItems = [
-  { href: "/admin", label: "Analytics", icon: "dashboard", permission: "analytics" },
-  { href: "/admin/events", label: "Events", icon: "events", permission: "events" },
-  { href: "/admin/rewards", label: "Rewards", icon: "rewards", permission: "rewards" },
-  { href: "/admin/bonus-offers", label: "Bonus Offers", icon: "bonus", permission: "bonusOffers" },
-  { href: "/admin/notifications", label: "Notifications", icon: "notifications", permission: "notifications" },
-  { href: "/admin/demographics", label: "Demographics", icon: "demographics", permission: "analytics" },
-  { href: "/admin/teammates", label: "Teammates", icon: "teammates", adminOnly: true },
-  { href: "/admin/users", label: "Users", icon: "users", developerOnly: true },
-  { href: "/admin/schools", label: "Schools", icon: "schools", adminOnly: true },
-  { href: "/admin/settings", label: "Settings", icon: "settings", adminOnly: true },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  permission?: string;
+  adminOnly?: boolean;
+  developerOnly?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: "",
+    items: [
+      { href: "/admin", label: "Analytics", icon: "dashboard", permission: "analytics" },
+    ],
+  },
+  {
+    label: "Fan Engagement",
+    items: [
+      { href: "/admin/events", label: "Events", icon: "events", permission: "events" },
+      { href: "/admin/rewards", label: "Rewards", icon: "rewards", permission: "rewards" },
+      { href: "/admin/bonus-offers", label: "Bonus Offers", icon: "bonus", permission: "bonusOffers" },
+      { href: "/admin/notifications", label: "Notifications", icon: "notifications", permission: "notifications" },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
+      { href: "/admin/pages", label: "Pages", icon: "pages", permission: "content" },
+      { href: "/admin/media", label: "Media", icon: "media", permission: "content" },
+      { href: "/admin/banners", label: "Banners", icon: "banners", permission: "content" },
+    ],
+  },
+  {
+    label: "People",
+    items: [
+      { href: "/admin/demographics", label: "Demographics", icon: "demographics", permission: "analytics" },
+      { href: "/admin/users", label: "Users", icon: "users", developerOnly: true },
+      { href: "/admin/teammates", label: "Teammates", icon: "teammates", adminOnly: true },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/admin/schools", label: "Schools", icon: "schools", adminOnly: true },
+      { href: "/admin/settings", label: "Settings", icon: "settings", adminOnly: true },
+      { href: "/admin/developer", label: "Developer", icon: "developer", developerOnly: true },
+    ],
+  },
 ];
 
 const icons: Record<string, JSX.Element> = {
@@ -80,6 +123,35 @@ const icons: Record<string, JSX.Element> = {
       <line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
     </svg>
   ),
+  pages: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <polyline points="14,2 14,8 20,8" />
+      <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10,9 9,9 8,9" />
+    </svg>
+  ),
+  media: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21,15 16,10 5,21" />
+    </svg>
+  ),
+  banners: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  ),
+  developer: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="16,18 22,12 16,6" />
+      <polyline points="8,6 2,12 8,18" />
+      <line x1="14" y1="4" x2="10" y2="20" />
+    </svg>
+  ),
 };
 
 const viewAsOptions = [
@@ -103,24 +175,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [isLoading, isAuthenticated, isAdmin, isDeveloper, router]);
 
-  // Filter nav items based on effective role (respects view switching)
-  const navItems = allNavItems.filter((item) => {
+  // Filter a single nav item based on effective role
+  const isItemVisible = (item: NavItem) => {
     if (!user) return false;
-    // Developer view sees everything
     if (effectiveRole === 'developer') return true;
-    // Developer-only items
-    if ('developerOnly' in item && item.developerOnly) return false;
-    // Admin-only items
-    if ('adminOnly' in item && item.adminOnly) return effectiveRole === 'admin';
-    // User view — only items with permissions (simulating fan access to admin)
+    if (item.developerOnly) return false;
+    if (item.adminOnly) return effectiveRole === 'admin';
     if (effectiveRole === 'user') return false;
-    // Teammate permission check
-    if (effectiveRole === 'teammate' && 'permission' in item && item.permission) {
+    if (effectiveRole === 'teammate' && item.permission) {
       const perms = (user as { teammatePermissions?: Record<string, boolean> }).teammatePermissions || {};
       return !!perms[item.permission];
     }
     return true;
-  });
+  };
+
+  // Filter groups — only show groups that have visible items
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(isItemVisible),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  // Flat list for header title lookup
+  const allItems = navGroups.flatMap((g) => g.items);
 
   if (isLoading) {
     return (
@@ -143,6 +221,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </div>
 
+        {/* View Switcher — prominent at top, developer only */}
+        {isDeveloper && (
+          <div className="rally-view-switcher rally-view-switcher--top">
+            <span className="rally-view-switcher-label">View as</span>
+            <div className="rally-view-switcher-buttons">
+              {viewAsOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  className={`rally-view-btn ${viewAs === opt.value ? 'active' : ''}`}
+                  style={{ '--view-color': opt.color } as React.CSSProperties}
+                  onClick={() => setViewAs(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <nav className="rally-admin-nav">
           <Link href="/dashboard" className="rally-admin-nav-item rally-admin-nav-back">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
@@ -150,16 +247,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </svg>
             <span>Back to Dashboard</span>
           </Link>
-          <div className="rally-admin-nav-divider" />
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`rally-admin-nav-item ${pathname === item.href ? "active" : ""}`}
-            >
-              <span className="rally-admin-nav-icon">{icons[item.icon]}</span>
-              <span>{item.label}</span>
-            </Link>
+
+          {visibleGroups.map((group, gi) => (
+            <div key={gi}>
+              {group.label ? (
+                <div className="rally-admin-nav-group-label">{group.label}</div>
+              ) : (
+                <div className="rally-admin-nav-divider" />
+              )}
+              {group.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`rally-admin-nav-item ${pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href)) ? "active" : ""}`}
+                >
+                  <span className="rally-admin-nav-icon">{icons[item.icon]}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </div>
           ))}
 
           {/* User view message */}
@@ -174,25 +280,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         <div className="rally-admin-sidebar-footer">
-          {/* View Switcher — only for developer */}
-          {isDeveloper && (
-            <div className="rally-view-switcher">
-              <span className="rally-view-switcher-label">View as</span>
-              <div className="rally-view-switcher-buttons">
-                {viewAsOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    className={`rally-view-btn ${viewAs === opt.value ? 'active' : ''}`}
-                    style={{ '--view-color': opt.color } as React.CSSProperties}
-                    onClick={() => setViewAs(opt.value)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div className="rally-admin-user">
             <span className="rally-admin-avatar">{user?.name?.substring(0, 2).toUpperCase()}</span>
             <div>
@@ -211,7 +298,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <main className="rally-admin-main">
         <header className="rally-admin-header">
-          <h1>{navItems.find((n) => n.href === pathname)?.label || "Admin"}</h1>
+          <h1>{allItems.find((n) => n.href === pathname)?.label || "Admin"}</h1>
           {isDeveloper && viewAs !== 'developer' && (
             <span className="rally-view-banner">
               Previewing as {viewAs}

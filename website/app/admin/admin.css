@@ -103,6 +103,16 @@
   margin: 0.5rem 0;
 }
 
+.rally-admin-nav-group-label {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: var(--rally-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 0.75rem 0.75rem 0.25rem;
+  margin-top: 0.25rem;
+}
+
 .rally-admin-sidebar-footer {
   padding: 1rem;
   border-top: 1px solid var(--rally-navy-light);
@@ -940,6 +950,12 @@
 .rally-view-switcher {
   margin-bottom: 0.75rem;
   padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--rally-navy-light);
+}
+
+.rally-view-switcher--top {
+  padding: 0.75rem 1rem;
+  margin-bottom: 0;
   border-bottom: 1px solid var(--rally-navy-light);
 }
 

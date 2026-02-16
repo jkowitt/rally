@@ -98,10 +98,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [pathname, isAuthenticated, trackPage]);
 
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || !isAdmin)) {
+    if (!isLoading && (!isAuthenticated || (!isAdmin && !isDeveloper))) {
       router.push("/auth/signin");
     }
-  }, [isLoading, isAuthenticated, isAdmin, router]);
+  }, [isLoading, isAuthenticated, isAdmin, isDeveloper, router]);
 
   // Filter nav items based on effective role (respects view switching)
   const navItems = allNavItems.filter((item) => {
@@ -131,7 +131,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (!isAuthenticated || !isAdmin) return null;
+  if (!isAuthenticated || (!isAdmin && !isDeveloper)) return null;
 
   return (
     <div className="rally-admin-layout">

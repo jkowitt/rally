@@ -11,7 +11,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAuthenticated, isLoading, isAdmin, signOut, trackPage } = useRallyAuth();
+  const { user, isAuthenticated, isLoading, isAdmin, isDeveloper, signOut, trackPage } = useRallyAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -87,7 +87,7 @@ export default function DashboardLayout({
             </Link>
           ))}
 
-          {isAdmin && (
+          {(isAdmin || isDeveloper) && (
             <>
               <div className="rally-sidebar-divider" />
               <Link

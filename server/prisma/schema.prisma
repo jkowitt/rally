@@ -1,0 +1,300 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// USERS & AUTH
+// ==========================================
+
+model RallyUser {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  password           String
+  name               String
+  handle             String   @unique
+  role               RallyRole @default(USER)
+
+  // School / Property association
+  schoolId           String?
+  propertyId         String?
+  propertyLeague     String?
+
+  // Fan preferences
+  favoriteSchool     String?
+  favoriteTeams      Json?     // Array of { propertyId, league }
+  favoriteSports     String[]
+  supportingSchools  String[]
+
+  // Verification & preferences
+  emailVerified      Boolean  @default(false)
+  emailUpdates       Boolean  @default(true)
+  pushNotifications  Boolean  @default(true)
+  acceptedTerms      Boolean  @default(false)
+
+  // Demographics
+  userType           String?   // 'student', 'alumni', 'general_fan'
+  birthYear          Int?
+  residingCity       String?
+  residingState      String?
+
+  // Teammate
+  teammatePermissions Json?
+  invitedBy          String?
+
+  // Engagement
+  points             Int      @default(0)
+  tier               String   @default("Bronze")
+
+  // Relations
+  pointsHistory      PointsEntry[]
+  notifications      Notification[] @relation("CreatedNotifications")
+  bonusOffers        BonusOffer[]   @relation("CreatedBonusOffers")
+  analyticsEvents    AnalyticsEvent[]
+
+  lastLogin          DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([email])
+  @@index([schoolId])
+  @@index([role])
+}
+
+enum RallyRole {
+  USER
+  TEAMMATE
+  ADMIN
+  DEVELOPER
+}
+
+// ==========================================
+// SCHOOLS & PROPERTIES
+// ==========================================
+
+model School {
+  id             String   @id @default(cuid())
+  name           String
+  mascot         String
+  conference     String
+  primaryColor   String
+  secondaryColor String
+
+  // Relations
+  events         Event[]
+  rewards        Reward[]
+  bonusOffers    BonusOffer[]
+
+  createdAt      DateTime @default(now())
+
+  @@index([conference])
+}
+
+// ==========================================
+// EVENTS
+// ==========================================
+
+model Event {
+  id             String      @id @default(cuid())
+  title          String
+  sport          String?
+  homeSchoolId   String
+  homeTeam       String?
+  awaySchoolId   String?
+  awayTeam       String?
+  venue          String?
+  city           String?
+  dateTime       DateTime
+  status         EventStatus @default(UPCOMING)
+
+  // Relations
+  homeSchool     School      @relation(fields: [homeSchoolId], references: [id])
+  activations    EventActivation[]
+  pointsEntries  PointsEntry[]
+
+  createdBy      String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([homeSchoolId])
+  @@index([status])
+  @@index([dateTime])
+}
+
+enum EventStatus {
+  UPCOMING
+  LIVE
+  COMPLETED
+}
+
+model EventActivation {
+  id          String @id @default(cuid())
+  eventId     String
+  type        String // checkin, trivia, prediction, noise_meter, photo, poll, custom
+  name        String
+  points      Int
+  description String
+
+  event       Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+}
+
+// ==========================================
+// POINTS
+// ==========================================
+
+model PointsEntry {
+  id             String   @id @default(cuid())
+  userId         String
+  eventId        String?
+  activationId   String?
+  activationName String
+  points         Int
+  schoolId       String?
+  timestamp      DateTime @default(now())
+
+  user           RallyUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event          Event?    @relation(fields: [eventId], references: [id])
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([timestamp])
+}
+
+// ==========================================
+// REWARDS
+// ==========================================
+
+model Reward {
+  id          String  @id @default(cuid())
+  schoolId    String
+  name        String
+  pointsCost  Int
+  description String?
+
+  school      School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([schoolId])
+}
+
+// ==========================================
+// NOTIFICATIONS
+// ==========================================
+
+model Notification {
+  id              String              @id @default(cuid())
+  title           String
+  body            String
+  schoolId        String
+  targetAudience  String              @default("all") // all, tier_gold, tier_platinum, event_attendees
+  status          NotificationStatus  @default(DRAFT)
+  scheduledFor    DateTime?
+  sentAt          DateTime?
+  createdBy       String
+
+  creator         RallyUser @relation("CreatedNotifications", fields: [createdBy], references: [id])
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([schoolId])
+  @@index([status])
+}
+
+enum NotificationStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+}
+
+// ==========================================
+// BONUS OFFERS
+// ==========================================
+
+model BonusOffer {
+  id              String   @id @default(cuid())
+  schoolId        String
+  name            String
+  description     String?
+  bonusMultiplier Float?
+  bonusPoints     Int?
+  activationType  String?  // checkin, trivia, etc. or null for all
+  startsAt        DateTime @default(now())
+  expiresAt       DateTime
+  isActive        Boolean  @default(true)
+  createdBy       String
+
+  school          School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  creator         RallyUser @relation("CreatedBonusOffers", fields: [createdBy], references: [id])
+
+  createdAt       DateTime  @default(now())
+
+  @@index([schoolId])
+  @@index([isActive])
+}
+
+// ==========================================
+// TEAMMATE INVITATIONS
+// ==========================================
+
+model TeammateInvitation {
+  id             String   @id @default(cuid())
+  email          String
+  name           String?
+  propertyId     String?
+  propertyLeague String?
+  permissions    Json     // TeammatePermissions object
+  invitedBy      String
+  invitedByName  String?
+  status         String   @default("pending") // pending, accepted
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  userId         String?
+
+  createdAt      DateTime @default(now())
+
+  @@index([email])
+  @@index([status])
+}
+
+// ==========================================
+// ANALYTICS
+// ==========================================
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  event     String
+  page      String?
+  metadata  Json?
+  timestamp DateTime @default(now())
+
+  user      RallyUser? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([event])
+  @@index([timestamp])
+}
+
+// ==========================================
+// CONTENT FEED
+// ==========================================
+
+model ContentItem {
+  id        String   @id @default(cuid())
+  type      String   // article, update, highlight
+  title     String
+  body      String?  @db.Text
+  imageUrl  String?
+  author    String?
+  createdAt DateTime @default(now())
+
+  @@index([type])
+}

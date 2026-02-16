@@ -236,6 +236,314 @@
   margin-top: 0.25rem;
 }
 
+.rally-admin-stat-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+.rally-admin-stat-tag {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* ─── Dashboard Grid ──────────────────────────────────────────── */
+
+.rally-admin-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 900px) {
+  .rally-admin-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Live Events ─────────────────────────────────────────────── */
+
+.rally-live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #E74C3C;
+  margin-right: 0.375rem;
+  animation: rally-pulse 1.5s infinite;
+}
+
+@keyframes rally-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.rally-admin-live-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.rally-admin-live-card {
+  background: rgba(231, 76, 60, 0.08);
+  border: 1px solid rgba(231, 76, 60, 0.25);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.rally-admin-live-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--rally-off-white);
+  margin-bottom: 0.25rem;
+}
+
+.rally-admin-live-meta {
+  font-size: 0.8125rem;
+  color: var(--rally-gray);
+  margin-bottom: 0.75rem;
+}
+
+.rally-admin-live-activations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.rally-admin-activation-tag {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: rgba(255, 107, 53, 0.12);
+  color: var(--rally-orange);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* ─── Card List ───────────────────────────────────────────────── */
+
+.rally-admin-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rally-admin-event-card {
+  background: var(--rally-navy-mid);
+  border: 1px solid var(--rally-navy-light);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.rally-admin-event-card-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--rally-off-white);
+}
+
+.rally-admin-event-card-meta {
+  font-size: 0.75rem;
+  color: var(--rally-gray);
+  margin-top: 0.125rem;
+}
+
+.rally-admin-event-card-venue {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.4);
+  margin-top: 0.125rem;
+}
+
+.rally-admin-event-card-activations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+/* ─── User Cards ──────────────────────────────────────────────── */
+
+.rally-admin-user-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--rally-navy-mid);
+  border: 1px solid var(--rally-navy-light);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+}
+
+.rally-admin-user-card-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rally-admin-user-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rally-admin-user-card-name {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--rally-off-white);
+}
+
+.rally-admin-user-card-email {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--rally-gray);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rally-admin-user-card-tier {
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+/* ─── Tier Bar ────────────────────────────────────────────────── */
+
+.rally-admin-tier-bar {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  height: 26px;
+  margin-top: 1rem;
+}
+
+.rally-admin-tier-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rally-admin-tier-segment span {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: rgba(0,0,0,0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ─── Quick Actions ───────────────────────────────────────────── */
+
+.rally-admin-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .rally-admin-quick-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.rally-admin-quick-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  background: var(--rally-navy-mid);
+  border: 1px solid var(--rally-navy-light);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-decoration: none;
+  color: var(--rally-off-white);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.rally-admin-quick-card:hover {
+  border-color: var(--rally-orange);
+  background: rgba(255,107,53,0.06);
+}
+
+.rally-admin-quick-icon {
+  display: flex;
+}
+
+/* ─── Conference Grid ─────────────────────────────────────────── */
+
+.rally-admin-conf-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .rally-admin-conf-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.rally-admin-conf-card {
+  background: var(--rally-navy-mid);
+  border: 1px solid var(--rally-navy-light);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.rally-admin-conf-name {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--rally-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.rally-admin-conf-count {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--rally-off-white);
+  margin-bottom: 0.5rem;
+}
+
+.rally-admin-conf-teams {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.rally-admin-conf-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* ─── Small Button ────────────────────────────────────────────── */
+
+.rally-btn--small {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--rally-orange);
+  background: rgba(255,107,53,0.1);
+  border: 1px solid rgba(255,107,53,0.2);
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.rally-btn--small:hover {
+  background: rgba(255,107,53,0.2);
+}
+
 .rally-admin-section {
   margin-bottom: 2rem;
 }

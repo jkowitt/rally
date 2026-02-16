@@ -62,17 +62,19 @@ async function main() {
   console.log(`Seeded ${schools.length} schools/teams`);
 
   // =====================
-  // DEMO ADMIN USER
+  // DEMO USERS
   // =====================
-  const adminPassword = await bcrypt.hash('rally2024', 10);
+  const demoPassword = await bcrypt.hash('Rally2026!', 10);
+
+  // Developer (you — full control)
   const admin = await prisma.rallyUser.upsert({
-    where: { email: 'admin@rally.fan' },
-    update: {},
+    where: { email: 'jason@rally.com' },
+    update: { password: demoPassword, role: 'DEVELOPER' },
     create: {
-      email: 'admin@rally.fan',
-      password: adminPassword,
-      name: 'Rally Developer',
-      handle: 'rally-dev',
+      email: 'jason@rally.com',
+      password: demoPassword,
+      name: 'Jason Kowitt',
+      handle: 'jkowitt',
       role: 'DEVELOPER',
       schoolId: 'sch-georgia',
       favoriteSchool: 'sch-georgia',
@@ -85,14 +87,34 @@ async function main() {
     },
   });
 
-  // Demo fan user
-  const fanPassword = await bcrypt.hash('rally2024', 10);
-  const fan = await prisma.rallyUser.upsert({
-    where: { email: 'fan@rally.fan' },
-    update: {},
+  // Admin demo user
+  await prisma.rallyUser.upsert({
+    where: { email: 'admin@rally.com' },
+    update: { password: demoPassword, role: 'ADMIN' },
     create: {
-      email: 'fan@rally.fan',
-      password: fanPassword,
+      email: 'admin@rally.com',
+      password: demoPassword,
+      name: 'Rally Admin',
+      handle: 'rally-admin',
+      role: 'ADMIN',
+      schoolId: 'sch-alabama',
+      favoriteSchool: 'sch-alabama',
+      supportingSchools: ['sch-alabama', 'sch-georgia'],
+      emailVerified: true,
+      acceptedTerms: true,
+      userType: 'general_fan',
+      points: 1500,
+      tier: 'Silver',
+    },
+  });
+
+  // Regular user
+  const fan = await prisma.rallyUser.upsert({
+    where: { email: 'user@rally.com' },
+    update: { password: demoPassword, role: 'USER' },
+    create: {
+      email: 'user@rally.com',
+      password: demoPassword,
       name: 'Demo Fan',
       handle: 'demo-fan',
       role: 'USER',
@@ -110,9 +132,11 @@ async function main() {
       tier: 'Bronze',
     },
   });
+
   console.log('Seeded demo users:');
-  console.log('  Developer: admin@rally.fan / rally2024 (full control)');
-  console.log('  Fan:       fan@rally.fan / rally2024');
+  console.log('  Developer: jason@rally.com / Rally2026! (full control)');
+  console.log('  Admin:     admin@rally.com / Rally2026!');
+  console.log('  User:      user@rally.com  / Rally2026!');
 
   // =====================
   // SAMPLE EVENTS
@@ -307,8 +331,9 @@ async function main() {
 
   console.log('\nSeed complete!');
   console.log('---');
-  console.log('Developer login: admin@rally.fan / rally2024 (full control, only role that can grant admin)');
-  console.log('Fan login:       fan@rally.fan / rally2024');
+  console.log('Developer: jason@rally.com / Rally2026! (full control, only role that can grant admin)');
+  console.log('Admin:     admin@rally.com / Rally2026!');
+  console.log('User:      user@rally.com  / Rally2026!');
 }
 
 main()

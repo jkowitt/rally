@@ -170,6 +170,10 @@
 .rally-admin-header {
   padding: 1.5rem 2rem;
   border-bottom: 1px solid var(--rally-navy-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .rally-admin-header h1 {
@@ -929,6 +933,97 @@
 .admin-demo-stat span {
   font-size: 0.75rem;
   color: rgba(255,255,255,0.5);
+}
+
+/* ─── View Switcher (Developer only) ──────────────────────────────────── */
+
+.rally-view-switcher {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--rally-navy-light);
+}
+
+.rally-view-switcher-label {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--rally-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.375rem;
+}
+
+.rally-view-switcher-buttons {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--rally-navy);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.rally-view-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--rally-gray);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.375rem 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.rally-view-btn:hover {
+  color: var(--rally-off-white);
+  background: rgba(255,255,255,0.05);
+}
+
+.rally-view-btn.active {
+  background: var(--view-color, var(--rally-orange));
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.rally-view-indicator {
+  color: var(--rally-orange);
+  font-size: 0.625rem;
+}
+
+.rally-view-message {
+  font-size: 0.75rem;
+  color: var(--rally-gray);
+  padding: 0.75rem;
+  line-height: 1.4;
+}
+
+.rally-view-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--rally-orange);
+  background: rgba(255,107,53,0.1);
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255,107,53,0.2);
+}
+
+.rally-view-banner-reset {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: var(--rally-off-white);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.rally-view-banner-reset:hover {
+  background: rgba(255,255,255,0.2);
 }
 
 @media (max-width: 768px) {

@@ -3,11 +3,17 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { rallyAuth, rallyAnalytics, type RallyUser } from "./rally-api";
 
+type ViewAsRole = 'developer' | 'admin' | 'user';
+
 interface RallyAuthContextType {
   user: RallyUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isAdmin: boolean;
+  isDeveloper: boolean;
+  viewAs: ViewAsRole;
+  setViewAs: (role: ViewAsRole) => void;
+  effectiveRole: string;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (params: {
     email: string;
@@ -33,6 +39,10 @@ const RallyAuthContext = createContext<RallyAuthContextType>({
   isAuthenticated: false,
   isLoading: true,
   isAdmin: false,
+  isDeveloper: false,
+  viewAs: 'developer',
+  setViewAs: () => {},
+  effectiveRole: 'user',
   signIn: async () => ({ success: false }),
   signUp: async () => ({ success: false }),
   updateProfile: async () => ({ success: false }),
@@ -50,6 +60,7 @@ const TOKEN_KEY = "rally-token";
 export function RallyAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<RallyUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewAs, setViewAsState] = useState<ViewAsRole>('developer');
 
   // Check for existing session on mount
   useEffect(() => {
@@ -112,6 +123,7 @@ export function RallyAuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
+    setViewAsState('developer');
   }, []);
 
   const trackPage = useCallback((page: string) => {
@@ -122,8 +134,21 @@ export function RallyAuthProvider({ children }: { children: ReactNode }) {
     rallyAnalytics.trackEvent(event, metadata).catch(() => {});
   }, []);
 
+  const actualRole = user?.role || 'user';
+  const isDeveloper = actualRole === 'developer';
+
+  // Only developer can switch views — others always see their own role
+  const setViewAs = useCallback((role: ViewAsRole) => {
+    if (isDeveloper) {
+      setViewAsState(role);
+    }
+  }, [isDeveloper]);
+
+  // The effective role used for UI gating (view switching only affects developer)
+  const effectiveRole = isDeveloper ? viewAs : actualRole;
+
   const isAuthenticated = !!user;
-  const isAdmin = user?.role === 'admin' || user?.role === 'developer' || user?.role === 'teammate';
+  const isAdmin = effectiveRole === 'admin' || effectiveRole === 'developer' || effectiveRole === 'teammate';
 
   return (
     <RallyAuthContext.Provider
@@ -132,6 +157,10 @@ export function RallyAuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isLoading,
         isAdmin,
+        isDeveloper,
+        viewAs: isDeveloper ? viewAs : (actualRole as ViewAsRole),
+        setViewAs,
+        effectiveRole,
         signIn,
         signUp,
         updateProfile,

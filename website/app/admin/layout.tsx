@@ -82,10 +82,16 @@ const icons: Record<string, JSX.Element> = {
   ),
 };
 
+const viewAsOptions = [
+  { value: 'developer' as const, label: 'Developer', color: '#A78BFA' },
+  { value: 'admin' as const, label: 'Admin', color: '#2D9CDB' },
+  { value: 'user' as const, label: 'User', color: '#8B95A5' },
+];
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, isAdmin, signOut, trackPage } = useRallyAuth();
+  const { user, isAuthenticated, isLoading, isAdmin, isDeveloper, viewAs, setViewAs, effectiveRole, signOut, trackPage } = useRallyAuth();
 
   useEffect(() => {
     if (isAuthenticated) trackPage(pathname);
@@ -97,21 +103,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [isLoading, isAuthenticated, isAdmin, router]);
 
-  // Filter nav items based on role and permissions
+  // Filter nav items based on effective role (respects view switching)
   const navItems = allNavItems.filter((item) => {
     if (!user) return false;
-    // Developer sees everything
-    if (user.role === 'developer') return true;
-    // Developer-only items (developers already returned above)
+    // Developer view sees everything
+    if (effectiveRole === 'developer') return true;
+    // Developer-only items
     if ('developerOnly' in item && item.developerOnly) return false;
-    // Admin-only items (developers already returned above)
-    if ('adminOnly' in item && item.adminOnly) return user.role === 'admin';
+    // Admin-only items
+    if ('adminOnly' in item && item.adminOnly) return effectiveRole === 'admin';
+    // User view — only items with permissions (simulating fan access to admin)
+    if (effectiveRole === 'user') return false;
     // Teammate permission check
-    if (user.role === 'teammate' && 'permission' in item && item.permission) {
+    if (effectiveRole === 'teammate' && 'permission' in item && item.permission) {
       const perms = (user as { teammatePermissions?: Record<string, boolean> }).teammatePermissions || {};
       return !!perms[item.permission];
     }
-    // Admins see everything not developer-only
     return true;
   });
 
@@ -154,14 +161,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span>{item.label}</span>
             </Link>
           ))}
+
+          {/* User view message */}
+          {effectiveRole === 'user' && (
+            <>
+              <div className="rally-admin-nav-divider" />
+              <div className="rally-view-message">
+                No admin access in User view. Switch back to Admin or Developer to see navigation.
+              </div>
+            </>
+          )}
         </nav>
 
         <div className="rally-admin-sidebar-footer">
+          {/* View Switcher — only for developer */}
+          {isDeveloper && (
+            <div className="rally-view-switcher">
+              <span className="rally-view-switcher-label">View as</span>
+              <div className="rally-view-switcher-buttons">
+                {viewAsOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={`rally-view-btn ${viewAs === opt.value ? 'active' : ''}`}
+                    style={{ '--view-color': opt.color } as React.CSSProperties}
+                    onClick={() => setViewAs(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="rally-admin-user">
             <span className="rally-admin-avatar">{user?.name?.substring(0, 2).toUpperCase()}</span>
             <div>
               <span className="rally-admin-user-name">{user?.name}</span>
-              <span className="rally-admin-user-role">{user?.role}</span>
+              <span className="rally-admin-user-role">
+                {user?.role}
+                {isDeveloper && viewAs !== 'developer' && (
+                  <span className="rally-view-indicator"> (viewing as {viewAs})</span>
+                )}
+              </span>
             </div>
           </div>
           <button className="rally-admin-signout" onClick={signOut}>Sign Out</button>
@@ -171,6 +212,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <main className="rally-admin-main">
         <header className="rally-admin-header">
           <h1>{navItems.find((n) => n.href === pathname)?.label || "Admin"}</h1>
+          {isDeveloper && viewAs !== 'developer' && (
+            <span className="rally-view-banner">
+              Previewing as {viewAs}
+              <button className="rally-view-banner-reset" onClick={() => setViewAs('developer')}>
+                Reset
+              </button>
+            </span>
+          )}
         </header>
         <div className="rally-admin-content">{children}</div>
       </main>

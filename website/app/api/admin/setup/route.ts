@@ -13,8 +13,15 @@ export async function POST(request: NextRequest) {
     const { email, password, name, secretKey } = body;
 
     // Require a secret key for creating admin accounts
-    // Set this in your environment variables
-    const ADMIN_SECRET = process.env.ADMIN_SETUP_SECRET || "loud-legacy-admin-setup-2024";
+    // MUST be set in environment variables — no fallback
+    const ADMIN_SECRET = process.env.ADMIN_SETUP_SECRET;
+
+    if (!ADMIN_SECRET) {
+      return NextResponse.json(
+        { success: false, error: "ADMIN_SETUP_SECRET not configured" },
+        { status: 500 }
+      );
+    }
 
     if (secretKey !== ADMIN_SECRET) {
       return NextResponse.json(

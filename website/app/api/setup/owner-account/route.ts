@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { getToken } from "next-auth/jwt";
 
 export const dynamic = 'force-dynamic';
 
@@ -11,11 +12,30 @@ const OWNER_NAME = "Jason Kowitt";
 
 /**
  * GET /api/setup/owner-account
- * Creates or updates the site owner account with SUPER_ADMIN role
- * and unlimited access to all platforms (no usage billing).
+ * Creates or updates the site owner account with SUPER_ADMIN role.
+ *
+ * Access control:
+ *  - Allowed on first run (no SUPER_ADMIN exists yet)
+ *  - After that, requires SUPER_ADMIN auth
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Check if any SUPER_ADMIN already exists
+    const adminCount = await prisma.user.count({
+      where: { role: "SUPER_ADMIN" },
+    });
+
+    // If admins exist, require SUPER_ADMIN auth to re-run setup
+    if (adminCount > 0) {
+      const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+      if (!token || token.role !== "SUPER_ADMIN") {
+        return NextResponse.json(
+          { success: false, error: "Setup already complete. SUPER_ADMIN auth required to re-run." },
+          { status: 403 }
+        );
+      }
+    }
+
     let user = await prisma.user.findUnique({
       where: { email: OWNER_EMAIL },
       include: { platformAccess: true },

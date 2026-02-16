@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { getToken } from "next-auth/jwt";
 
 export const dynamic = 'force-dynamic';
 
@@ -8,9 +9,18 @@ const PLATFORMS = ["VALORA", "BUSINESS_NOW", "LEGACY_CRM", "HUB", "VENUEVR", "LO
 const DEMO_EMAIL = "demo@loud-legacy.com";
 const DEMO_PASSWORD = "demo123";
 
-// GET - Create or verify demo account
-export async function GET() {
+// GET - Create or verify demo account (SUPER_ADMIN auth required)
+export async function GET(request: NextRequest) {
   try {
+    // Only SUPER_ADMIN can create demo accounts
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    if (!token || token.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { success: false, error: "Only SUPER_ADMIN can create demo accounts" },
+        { status: 403 }
+      );
+    }
+
     // Check if user exists
     let user = await prisma.user.findUnique({
       where: { email: DEMO_EMAIL },
@@ -20,15 +30,15 @@ export async function GET() {
     let userCreated = false;
 
     if (!user) {
-      // Create demo admin account
+      // Create demo account as regular USER — not admin
       const hashedPassword = await bcrypt.hash(DEMO_PASSWORD, 10);
 
       user = await prisma.user.create({
         data: {
           email: DEMO_EMAIL,
-          name: "Demo Admin",
+          name: "Demo User",
           password: hashedPassword,
-          role: "SUPER_ADMIN",
+          role: "USER",
           emailVerified: new Date(),
         },
         include: { platformAccess: true },
@@ -62,7 +72,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       message: userCreated
-        ? "Demo account created successfully!"
+        ? "Demo account created (USER role)"
         : "Demo account ready",
       account: {
         email: DEMO_EMAIL,
@@ -75,16 +85,10 @@ export async function GET() {
         enabled: pa.enabled,
       })),
       platformsGranted,
-      nextSteps: [
-        "Login at /auth/signin",
-        `Email: ${DEMO_EMAIL}`,
-        `Password: ${DEMO_PASSWORD}`,
-      ],
     });
   } catch (error: any) {
     console.error("Error creating demo account:", error);
 
-    // Check if it's a database connection error
     if (error.message?.includes("does not exist")) {
       return NextResponse.json(
         {

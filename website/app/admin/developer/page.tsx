@@ -75,9 +75,22 @@ const FALLBACK_TABLES: DatabaseTable[] = [];
 const demoPlatformSettings: PlatformSettings[] = [];
 const demoBetaTesters: BetaTester[] = [];
 
+interface ServerHealth {
+  status: string;
+  timestamp: string;
+  uptime: { seconds: number; formatted: string };
+  memory: { rss: string; heapUsed: string; heapTotal: string; rssMb: number; heapUsedMb: number };
+  database: { status: string; latencyMs: number };
+  counts: { users: number; events: number; pointsEntries: number };
+  node: { version: string; platform: string; arch: string };
+  env: string;
+}
+
 export default function DeveloperPage() {
-  const [activeTab, setActiveTab] = useState<"database" | "api" | "logs" | "env" | "webhooks" | "settings">("settings");
+  const [activeTab, setActiveTab] = useState<"health" | "database" | "api" | "logs" | "env" | "webhooks" | "settings">("health");
   const [logs, setLogs] = useState<LogEntry[]>(demoLogs);
+  const [serverHealth, setServerHealth] = useState<ServerHealth | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
   const [apiKeys, setApiKeys] = useState<APIKey[]>(demoAPIKeys);
   const [tables, setTables] = useState<DatabaseTable[]>(FALLBACK_TABLES);
   const [tablesLoading, setTablesLoading] = useState(false);
@@ -129,6 +142,29 @@ export default function DeveloperPage() {
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  // Fetch server health
+  const fetchHealth = async () => {
+    setHealthLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('rally-token') : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_RALLY_API_URL || 'http://localhost:3001/api'}/server-health`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json();
+      setServerHealth(data);
+    } catch {
+      setServerHealth(null);
+    } finally {
+      setHealthLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'health' && !serverHealth) {
+      fetchHealth();
+    }
+  }, [activeTab]);
 
   // Fetch live table list from database
   const fetchTables = async () => {
@@ -276,6 +312,7 @@ export default function DeveloperPage() {
       {/* Tabs */}
       <div className="admin-tabs">
         {[
+          { id: "health", label: "Server Health", icon: "💚" },
           { id: "settings", label: "Platform Settings", icon: "⚡" },
           { id: "database", label: "Database", icon: "🗄️" },
           { id: "api", label: "API Keys", icon: "🔑" },
@@ -293,6 +330,136 @@ export default function DeveloperPage() {
           </button>
         ))}
       </div>
+
+      {/* Server Health Tab */}
+      {activeTab === "health" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h3 style={{ margin: 0, fontSize: "1.125rem", fontWeight: 700 }}>Server Health Monitor</h3>
+            <button className="admin-btn admin-btn-secondary" onClick={fetchHealth} disabled={healthLoading}>
+              {healthLoading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+
+          {serverHealth ? (
+            <>
+              {/* Status banner */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: "0.75rem",
+                padding: "1rem 1.25rem",
+                background: serverHealth.status === "ok" ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                border: `1px solid ${serverHealth.status === "ok" ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                borderRadius: "12px",
+              }}>
+                <div style={{
+                  width: "12px", height: "12px", borderRadius: "50%",
+                  background: serverHealth.status === "ok" ? "#22c55e" : "#ef4444",
+                  boxShadow: serverHealth.status === "ok" ? "0 0 8px rgba(34, 197, 94, 0.6)" : "none",
+                }} />
+                <span style={{ fontWeight: 600, fontSize: "1rem" }}>
+                  {serverHealth.status === "ok" ? "All Systems Operational" : "Service Degraded"}
+                </span>
+                <span style={{ fontSize: "0.8125rem", color: "var(--admin-text-secondary)", marginLeft: "auto" }}>
+                  Last checked: {new Date(serverHealth.timestamp).toLocaleTimeString()}
+                </span>
+              </div>
+
+              {/* KPI row */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
+                <div className="admin-card" style={{ padding: "1.25rem", textAlign: "center" }}>
+                  <div style={{ fontSize: "0.8125rem", color: "var(--admin-text-secondary)" }}>Uptime</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#22c55e" }}>{serverHealth.uptime.formatted}</div>
+                </div>
+                <div className="admin-card" style={{ padding: "1.25rem", textAlign: "center" }}>
+                  <div style={{ fontSize: "0.8125rem", color: "var(--admin-text-secondary)" }}>Memory (RSS)</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#2D9CDB" }}>{serverHealth.memory.rss}</div>
+                </div>
+                <div className="admin-card" style={{ padding: "1.25rem", textAlign: "center" }}>
+                  <div style={{ fontSize: "0.8125rem", color: "var(--admin-text-secondary)" }}>Heap Used</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#FF9500" }}>{serverHealth.memory.heapUsed}</div>
+                </div>
+                <div className="admin-card" style={{ padding: "1.25rem", textAlign: "center" }}>
+                  <div style={{ fontSize: "0.8125rem", color: "var(--admin-text-secondary)" }}>DB Latency</div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 700, color: serverHealth.database.latencyMs < 50 ? "#22c55e" : "#FF9500" }}>
+                    {serverHealth.database.latencyMs}ms
+                  </div>
+                </div>
+              </div>
+
+              {/* Details grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                <div className="admin-card" style={{ padding: "1.25rem" }}>
+                  <h4 style={{ margin: "0 0 1rem", fontSize: "1rem" }}>Database</h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--admin-text-secondary)" }}>Status</span>
+                      <span style={{ fontWeight: 600, color: serverHealth.database.status === "connected" ? "#22c55e" : "#ef4444" }}>
+                        {serverHealth.database.status}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--admin-text-secondary)" }}>Users</span>
+                      <span style={{ fontWeight: 600 }}>{serverHealth.counts.users.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--admin-text-secondary)" }}>Events</span>
+                      <span style={{ fontWeight: 600 }}>{serverHealth.counts.events.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--admin-text-secondary)" }}>Points Entries</span>
+                      <span style={{ fontWeight: 600 }}>{serverHealth.counts.pointsEntries.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="admin-card" style={{ padding: "1.25rem" }}>
+                  <h4 style={{ margin: "0 0 1rem", fontSize: "1rem" }}>Runtime</h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--admin-text-secondary)" }}>Node.js</span>
+                      <span style={{ fontWeight: 600, fontFamily: "monospace" }}>{serverHealth.node.version}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--admin-text-secondary)" }}>Platform</span>
+                      <span style={{ fontWeight: 600 }}>{serverHealth.node.platform} / {serverHealth.node.arch}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--admin-text-secondary)" }}>Environment</span>
+                      <span className={`admin-badge ${serverHealth.env === "production" ? "admin-badge-success" : "admin-badge-warning"}`}>
+                        {serverHealth.env}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "var(--admin-text-secondary)" }}>Heap Total</span>
+                      <span style={{ fontWeight: 600 }}>{serverHealth.memory.heapTotal}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Memory usage bar */}
+              <div className="admin-card" style={{ padding: "1.25rem" }}>
+                <h4 style={{ margin: "0 0 0.75rem", fontSize: "1rem" }}>Memory Utilization</h4>
+                <div style={{ background: "var(--admin-bg)", borderRadius: "8px", height: "32px", overflow: "hidden", position: "relative" }}>
+                  <div style={{
+                    width: `${Math.min((serverHealth.memory.heapUsedMb / Math.max(serverHealth.memory.rssMb, 1)) * 100, 100)}%`,
+                    height: "100%",
+                    background: serverHealth.memory.heapUsedMb / serverHealth.memory.rssMb > 0.8 ? "#ef4444" : "#2D9CDB",
+                    borderRadius: "8px",
+                    display: "flex", alignItems: "center", paddingLeft: "0.75rem",
+                    fontSize: "0.8125rem", fontWeight: 600, color: "#fff",
+                  }}>
+                    {serverHealth.memory.heapUsed} / {serverHealth.memory.rss}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="admin-card" style={{ padding: "3rem", textAlign: "center", color: "var(--admin-text-secondary)" }}>
+              {healthLoading ? "Loading server health..." : "Unable to connect to server. Make sure the API is running."}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Settings Tab */}
       {activeTab === "settings" && (

@@ -286,6 +286,27 @@ export const rallyDemographics = {
 export const rallyAnalytics = {
   getSummary: () => rallyFetch<AnalyticsSummary>('/analytics'),
 
+  getGrowth: (days = 30) =>
+    rallyFetch<{ series: Array<{ date: string; signups: number }>; cumulative: Array<{ date: string; total: number }> }>(`/analytics/growth?days=${days}`),
+
+  getEngagement: (days = 30) =>
+    rallyFetch<Record<string, unknown>>(`/analytics/engagement?days=${days}`),
+
+  getRetention: () =>
+    rallyFetch<{ dauSeries: Array<{ date: string; activeUsers: number }>; cohort: Record<string, unknown> }>('/analytics/retention'),
+
+  getFunnel: () =>
+    rallyFetch<{ funnel: Array<{ step: string; count: number; rate: number }> }>('/analytics/funnel'),
+
+  getMonetization: () =>
+    rallyFetch<Record<string, unknown>>('/analytics/monetization'),
+
+  getPages: (days = 7) =>
+    rallyFetch<Record<string, unknown>>(`/analytics/pages?days=${days}`),
+
+  getServerHealth: () =>
+    rallyFetch<Record<string, unknown>>('/server-health'),
+
   trackPageVisit: (page: string, metadata?: Record<string, string>) =>
     rallyFetch('/analytics/track', {
       method: 'POST',

@@ -25,7 +25,8 @@ const navGroups: NavGroup[] = [
   {
     label: "",
     items: [
-      { href: "/admin", label: "Analytics", icon: "dashboard", permission: "analytics" },
+      { href: "/admin", label: "Dashboard", icon: "dashboard", permission: "analytics" },
+      { href: "/admin/analytics", label: "Analytics", icon: "demographics", permission: "analytics" },
     ],
   },
   {
@@ -35,6 +36,7 @@ const navGroups: NavGroup[] = [
       { href: "/admin/rewards", label: "Rewards", icon: "rewards", permission: "rewards" },
       { href: "/admin/bonus-offers", label: "Bonus Offers", icon: "bonus", permission: "bonusOffers" },
       { href: "/admin/notifications", label: "Notifications", icon: "notifications", permission: "notifications" },
+      { href: "/admin/monetization", label: "Monetization", icon: "bonus", developerOnly: true },
     ],
   },
   {

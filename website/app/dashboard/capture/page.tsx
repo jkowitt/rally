@@ -27,16 +27,25 @@ export default function CapturePage() {
   const [captureMoment, setCaptureMoment] = useState("STANDARD");
   const [captureInStadium, setCaptureInStadium] = useState(true);
 
-  // Load live/upcoming events
+  // Load all events — prioritise live, then upcoming, then recent completed
   useEffect(() => {
     rallyEvents.list().then((res) => {
       if (res.ok && res.data) {
         const evts = (res.data as { events: RallyEvent[] }).events || [];
-        const liveOrUpcoming = evts.filter((e) => e.status === "live" || e.status === "upcoming");
-        setEvents(liveOrUpcoming);
-        if (liveOrUpcoming.length > 0 && !selectedEventId) {
-          const live = liveOrUpcoming.find(e => e.status === "live");
-          setSelectedEventId(live?.id || liveOrUpcoming[0].id);
+        // Sort: live first, then upcoming (soonest first), then completed (most recent first)
+        const statusOrder: Record<string, number> = { live: 0, upcoming: 1, completed: 2 };
+        const sorted = [...evts].sort((a, b) => {
+          const sa = statusOrder[a.status] ?? 2;
+          const sb = statusOrder[b.status] ?? 2;
+          if (sa !== sb) return sa - sb;
+          if (a.status === "completed") return new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime();
+          return new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime();
+        });
+        setEvents(sorted);
+        if (sorted.length > 0 && !selectedEventId) {
+          const live = sorted.find(e => e.status === "live");
+          const upcoming = sorted.find(e => e.status === "upcoming");
+          setSelectedEventId(live?.id || upcoming?.id || sorted[0].id);
         }
       }
       setLoading(false);
@@ -95,8 +104,9 @@ export default function CapturePage() {
     }
   };
 
-  const liveEvent = events.find(e => e.id === selectedEventId);
-  const isLive = liveEvent?.status === "live";
+  const selectedEvent = events.find(e => e.id === selectedEventId);
+  const isLive = selectedEvent?.status === "live";
+  const isUpcoming = selectedEvent?.status === "upcoming";
 
   return (
     <div className="rally-dashboard-page">
@@ -142,12 +152,15 @@ export default function CapturePage() {
                 color: "var(--text-primary)", fontSize: "0.9375rem",
               }}
             >
-              {events.map((ev) => (
-                <option key={ev.id} value={ev.id}>
-                  {ev.status === "live" ? "LIVE " : ""}{ev.title} - {new Date(ev.dateTime).toLocaleDateString()}
-                </option>
-              ))}
-              {events.length === 0 && <option value="">No live or upcoming events</option>}
+              {events.map((ev) => {
+                const tag = ev.status === "live" ? "LIVE" : ev.status === "upcoming" ? "UPCOMING" : "ENDED";
+                return (
+                  <option key={ev.id} value={ev.id}>
+                    [{tag}] {ev.title} - {new Date(ev.dateTime).toLocaleDateString()}
+                  </option>
+                );
+              })}
+              {events.length === 0 && <option value="">No events found</option>}
             </select>
           </div>
 
@@ -186,6 +199,23 @@ export default function CapturePage() {
                 >
                   + Capture Moment
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* Upcoming game banner */}
+          {isUpcoming && (
+            <div style={{
+              padding: "0.75rem 1rem", marginBottom: "1rem", textAlign: "center",
+              background: "rgba(45, 156, 219, 0.1)", borderRadius: "8px",
+              fontSize: "0.875rem", color: "var(--rally-blue)",
+              border: "1px solid rgba(45, 156, 219, 0.2)",
+            }}>
+              This game hasn&apos;t started yet. Captures open when the game goes live!
+              {selectedEvent && (
+                <div style={{ marginTop: "0.25rem", fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+                  Scheduled: {new Date(selectedEvent.dateTime).toLocaleString()}
+                </div>
               )}
             </div>
           )}

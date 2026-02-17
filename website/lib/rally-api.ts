@@ -941,3 +941,95 @@ export const rallyCaptures = {
   getAttribution: (days = 30) =>
     rallyFetch<Record<string, unknown>>(`/captures/attribution?days=${days}`),
 };
+
+// ─── Banners ─────────────────────────────────
+export interface BannerData {
+  id: string;
+  name: string;
+  imageUrl: string;
+  linkUrl: string;
+  altText?: string;
+  position: string;
+  size: string;
+  customWidth?: number | null;
+  customHeight?: number | null;
+  pages: string[];
+  isActive: boolean;
+  startDate?: string | null;
+  endDate?: string | null;
+  impressions: number;
+  clicks: number;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const rallyBanners = {
+  list: (params?: { page?: string; active?: boolean }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', params.page);
+    if (params?.active) qs.set('active', 'true');
+    const query = qs.toString();
+    return rallyFetch<{ banners: BannerData[] }>(`/banners${query ? `?${query}` : ''}`);
+  },
+
+  get: (id: string) => rallyFetch<BannerData>(`/banners/${id}`),
+
+  create: (data: Omit<BannerData, 'id' | 'impressions' | 'clicks' | 'createdAt' | 'updatedAt' | 'createdBy'>) =>
+    rallyFetch<BannerData>('/banners', { method: 'POST', body: JSON.stringify(data) }),
+
+  update: (id: string, data: Partial<BannerData>) =>
+    rallyFetch<BannerData>(`/banners/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  track: (id: string, action: 'impression' | 'click') =>
+    rallyFetch<{ impressions: number; clicks: number }>(`/banners/${id}/track`, {
+      method: 'PATCH', body: JSON.stringify({ action }),
+    }),
+
+  delete: (id: string) =>
+    rallyFetch<{ success: boolean }>(`/banners/${id}`, { method: 'DELETE' }),
+};
+
+// ─── Media ───────────────────────────────────
+export interface MediaData {
+  id: string;
+  name: string;
+  type: 'image' | 'video' | 'document';
+  url: string;
+  thumbnailUrl?: string | null;
+  size: number;
+  mimeType?: string | null;
+  width?: number | null;
+  height?: number | null;
+  duration?: number | null;
+  tags: string[];
+  alt?: string | null;
+  caption?: string | null;
+  uploadedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const rallyMedia = {
+  list: (params?: { type?: string; search?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.type && params.type !== 'all') qs.set('type', params.type);
+    if (params?.search) qs.set('search', params.search);
+    const query = qs.toString();
+    return rallyFetch<{ media: MediaData[] }>(`/media${query ? `?${query}` : ''}`);
+  },
+
+  get: (id: string) => rallyFetch<MediaData>(`/media/${id}`),
+
+  create: (data: { name: string; type: string; url: string; thumbnailUrl?: string; size?: number; mimeType?: string; width?: number; height?: number; duration?: number; tags?: string[]; alt?: string; caption?: string }) =>
+    rallyFetch<MediaData>('/media', { method: 'POST', body: JSON.stringify(data) }),
+
+  update: (id: string, data: Partial<MediaData>) =>
+    rallyFetch<MediaData>(`/media/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    rallyFetch<{ success: boolean }>(`/media/${id}`, { method: 'DELETE' }),
+
+  bulkDelete: (ids: string[]) =>
+    rallyFetch<{ deleted: number }>('/media', { method: 'DELETE', body: JSON.stringify({ ids }) }),
+};

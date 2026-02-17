@@ -1930,6 +1930,152 @@ export async function main() {
   }
   console.log('Seeded milestones');
 
+  // =====================
+  // BANNERS
+  // =====================
+  const banners = [
+    {
+      id: 'banner-gameday-promo',
+      name: 'Gameday Check-in Promo',
+      imageUrl: 'https://placehold.co/728x90/FF6B35/FFFFFF?text=Check+In+at+the+Game+%E2%80%93+Earn+Double+Points',
+      linkUrl: '/dashboard/gameday',
+      altText: 'Check in at the game to earn double points',
+      position: 'top',
+      size: 'leaderboard',
+      pages: ['/dashboard', '/dashboard/gameday'],
+      isActive: true,
+    },
+    {
+      id: 'banner-capture-feature',
+      name: 'Rally Capture Launch',
+      imageUrl: 'https://placehold.co/300x250/2D9CDB/FFFFFF?text=Rally+Capture+%E2%80%93+Share+Game+Moments',
+      linkUrl: '/dashboard/capture',
+      altText: 'Try Rally Capture to share your game moments',
+      position: 'sidebar',
+      size: 'rectangle',
+      pages: ['/dashboard', '/dashboard/rewards'],
+      isActive: true,
+    },
+    {
+      id: 'banner-rewards-reminder',
+      name: 'Redeem Rewards',
+      imageUrl: 'https://placehold.co/468x60/22C55E/FFFFFF?text=You+Have+Points+%E2%80%93+Redeem+Rewards+Now',
+      linkUrl: '/dashboard/rewards',
+      altText: 'Redeem your points for rewards',
+      position: 'inline',
+      size: 'banner',
+      pages: ['/dashboard/profile', '/dashboard/gameday'],
+      isActive: true,
+    },
+    {
+      id: 'banner-crew-recruitment',
+      name: 'Start a Crew',
+      imageUrl: 'https://placehold.co/728x90/AF52DE/FFFFFF?text=Build+Your+Crew+%E2%80%93+Compete+Together',
+      linkUrl: '/dashboard/crews',
+      altText: 'Start or join a crew to compete with friends',
+      position: 'footer',
+      size: 'leaderboard',
+      pages: ['/dashboard'],
+      isActive: true,
+    },
+  ];
+
+  for (const banner of banners) {
+    await prisma.banner.upsert({
+      where: { id: banner.id },
+      update: banner,
+      create: banner,
+    });
+  }
+  console.log(`Seeded ${banners.length} banners`);
+
+  // =====================
+  // MEDIA LIBRARY
+  // =====================
+  const mediaItems = [
+    {
+      id: 'media-rally-logo',
+      name: 'rally-logo.png',
+      type: 'image',
+      url: 'https://placehold.co/400x400/FF6B35/FFFFFF?text=Rally+Logo',
+      thumbnailUrl: 'https://placehold.co/200x200/FF6B35/FFFFFF?text=Rally',
+      size: 45000,
+      mimeType: 'image/png',
+      width: 400,
+      height: 400,
+      tags: ['logo', 'brand'],
+    },
+    {
+      id: 'media-gameday-hero',
+      name: 'gameday-hero-bg.jpg',
+      type: 'image',
+      url: 'https://placehold.co/1920x1080/1a1a2e/FF6B35?text=Gameday+Hero+Background',
+      thumbnailUrl: 'https://placehold.co/400x225/1a1a2e/FF6B35?text=Gameday',
+      size: 285000,
+      mimeType: 'image/jpeg',
+      width: 1920,
+      height: 1080,
+      tags: ['hero', 'background', 'gameday'],
+    },
+    {
+      id: 'media-stadium-crowd',
+      name: 'stadium-crowd.jpg',
+      type: 'image',
+      url: 'https://placehold.co/1200x800/2D9CDB/FFFFFF?text=Stadium+Crowd+Photo',
+      thumbnailUrl: 'https://placehold.co/300x200/2D9CDB/FFFFFF?text=Stadium',
+      size: 195000,
+      mimeType: 'image/jpeg',
+      width: 1200,
+      height: 800,
+      tags: ['stadium', 'crowd', 'atmosphere'],
+    },
+    {
+      id: 'media-trophy-icon',
+      name: 'trophy-icon.png',
+      type: 'image',
+      url: 'https://placehold.co/256x256/FFD700/333333?text=Trophy',
+      thumbnailUrl: 'https://placehold.co/128x128/FFD700/333333?text=Trophy',
+      size: 18000,
+      mimeType: 'image/png',
+      width: 256,
+      height: 256,
+      tags: ['icon', 'trophy', 'rewards'],
+    },
+    {
+      id: 'media-sponsor-banner',
+      name: 'sponsor-template.png',
+      type: 'image',
+      url: 'https://placehold.co/728x90/333333/FFFFFF?text=Sponsor+Banner+Template',
+      thumbnailUrl: 'https://placehold.co/364x45/333333/FFFFFF?text=Sponsor',
+      size: 32000,
+      mimeType: 'image/png',
+      width: 728,
+      height: 90,
+      tags: ['sponsor', 'banner', 'template'],
+    },
+    {
+      id: 'media-intro-video',
+      name: 'rally-intro.mp4',
+      type: 'video',
+      url: 'https://placehold.co/1920x1080/FF6B35/FFFFFF?text=Rally+Intro+Video',
+      size: 15200000,
+      mimeType: 'video/mp4',
+      width: 1920,
+      height: 1080,
+      duration: 90,
+      tags: ['intro', 'marketing', 'video'],
+    },
+  ];
+
+  for (const item of mediaItems) {
+    await prisma.mediaItem.upsert({
+      where: { id: item.id },
+      update: item,
+      create: item,
+    });
+  }
+  console.log(`Seeded ${mediaItems.length} media items`);
+
   console.log('\nSeed complete!');
   console.log('---');
   console.log(`Total: ${schools.length} teams, ${events.length} events across MLB, NBA, NHL, MLS, WNBA, College, NFL, PGA`);

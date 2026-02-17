@@ -400,6 +400,59 @@ model ContentItem {
 }
 
 // ==========================================
+// BANNERS & ADS
+// ==========================================
+
+model Banner {
+  id            String   @id @default(cuid())
+  name          String
+  imageUrl      String
+  linkUrl       String
+  altText       String?
+  position      String   @default("top")      // top, sidebar, inline, footer, popup
+  size          String   @default("leaderboard") // leaderboard, rectangle, skyscraper, banner, custom
+  customWidth   Int?
+  customHeight  Int?
+  pages         String[]                       // paths where banner appears
+  isActive      Boolean  @default(true)
+  startDate     DateTime?
+  endDate       DateTime?
+  impressions   Int      @default(0)
+  clicks        Int      @default(0)
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([position])
+}
+
+// ==========================================
+// MEDIA LIBRARY
+// ==========================================
+
+model MediaItem {
+  id            String   @id @default(cuid())
+  name          String
+  type          String                         // image, video, document
+  url           String
+  thumbnailUrl  String?
+  size          Int      @default(0)           // file size in bytes
+  mimeType      String?
+  width         Int?
+  height        Int?
+  duration      Int?                           // video duration in seconds
+  tags          String[]
+  alt           String?
+  caption       String?
+  uploadedBy    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([type])
+}
+
+// ==========================================
 // SOCIAL IDENTITY — Fan Profile
 // ==========================================
 

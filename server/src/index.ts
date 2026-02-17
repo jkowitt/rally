@@ -21,6 +21,8 @@ import crewsRoutes from './routes/crews';
 import shareCardsRoutes from './routes/share-cards';
 import serverHealthRoutes from './routes/server-health';
 import capturesRoutes from './routes/captures';
+import bannersRoutes from './routes/banners';
+import mediaRoutes from './routes/media';
 import { startScheduler } from './services/scheduler';
 import { apiLimiter, authLimiter, loginLimiter } from './middleware/rate-limit';
 import { requestLogger } from './middleware/request-logger';
@@ -86,6 +88,8 @@ app.use('/api/crews', crewsRoutes);
 app.use('/api/share-cards', shareCardsRoutes);
 app.use('/api/server-health', serverHealthRoutes);
 app.use('/api/captures', capturesRoutes);
+app.use('/api/banners', bannersRoutes);
+app.use('/api/media', mediaRoutes);
 
 // 404 handler
 app.use('/api/*', (_req, res) => {

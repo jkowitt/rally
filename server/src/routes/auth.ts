@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../lib/prisma';
 import { getTier } from '../lib/tiers';
 import { AuthRequest, generateToken, requireAuth } from '../middleware/auth';
+import { evaluateHandleAttempt, generateSafeHandle } from '../services/handle-moderation';
 
 const router = Router();
 
@@ -32,10 +33,27 @@ function formatUser(user: any) {
     invitedBy: user.invitedBy,
     points: user.points,
     tier: user.tier,
+    handleWarnings: user.handleWarnings,
+    handleLockedUntil: user.handleLockedUntil?.toISOString() || null,
+    handleAutoAssigned: user.handleAutoAssigned,
     createdAt: user.createdAt.toISOString(),
     lastLogin: user.lastLogin?.toISOString() || null,
   };
 }
+
+// POST /auth/check-handle — Pre-check a handle before registration
+router.post('/check-handle', async (req, res) => {
+  try {
+    const { handle, name, currentWarnings } = req.body;
+    if (!handle) return res.status(400).json({ error: 'Handle is required' });
+
+    const result = evaluateHandleAttempt(handle, name || 'User', currentWarnings || 0);
+    return res.json(result);
+  } catch (err: any) {
+    console.error('Check handle error:', err);
+    return res.status(500).json({ error: 'Handle check failed' });
+  }
+});
 
 // POST /auth/register
 router.post('/register', async (req, res) => {
@@ -46,8 +64,40 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Email, password, name, and handle are required' });
     }
 
+    // Check handle for inappropriate content
+    const modResult = evaluateHandleAttempt(handle, name, 0);
+
+    if (!modResult.allowed && !modResult.forced) {
+      // Return the warning — the client tracks the warning count client-side during registration
+      return res.status(422).json({
+        error: modResult.message,
+        handleModeration: modResult,
+      });
+    }
+
+    // Determine the final handle: either their choice (clean) or the forced safe handle
+    let finalHandle = handle;
+    let handleWarnings = 0;
+    let handleLockedUntil: Date | null = null;
+    let handleAutoAssigned = false;
+
+    if (modResult.forced) {
+      // Force-assign safe handle
+      finalHandle = modResult.forcedHandle!;
+      handleWarnings = 3;
+      handleLockedUntil = new Date(modResult.lockedUntil!);
+      handleAutoAssigned = true;
+
+      // Ensure the auto-generated handle doesn't collide — append random digits if it does
+      let collision = await prisma.rallyUser.findUnique({ where: { handle: finalHandle } });
+      while (collision) {
+        finalHandle = finalHandle.replace(/\d+$/, '') + String(Math.floor(100 + Math.random() * 900));
+        collision = await prisma.rallyUser.findUnique({ where: { handle: finalHandle } });
+      }
+    }
+
     const existing = await prisma.rallyUser.findFirst({
-      where: { OR: [{ email }, { handle }] },
+      where: { OR: [{ email }, { handle: finalHandle }] },
     });
     if (existing) {
       return res.status(409).json({ error: existing.email === email ? 'Email already registered' : 'Handle already taken' });
@@ -59,7 +109,7 @@ router.post('/register', async (req, res) => {
         email,
         password: hashed,
         name,
-        handle,
+        handle: finalHandle,
         favoriteSchool: favoriteSchool || null,
         supportingSchools: supportingSchools || [],
         emailUpdates: emailUpdates ?? true,
@@ -69,12 +119,19 @@ router.post('/register', async (req, res) => {
         birthYear: birthYear || null,
         residingCity: residingCity || null,
         residingState: residingState || null,
+        handleWarnings,
+        handleLockedUntil,
+        handleAutoAssigned,
         lastLogin: new Date(),
       },
     });
 
     const token = generateToken(user.id);
-    return res.status(201).json({ token, user: formatUser(user) });
+    return res.status(201).json({
+      token,
+      user: formatUser(user),
+      ...(handleAutoAssigned ? { handleModeration: modResult } : {}),
+    });
   } catch (err: any) {
     console.error('Register error:', err);
     return res.status(500).json({ error: 'Registration failed' });
@@ -130,7 +187,6 @@ router.put('/me', requireAuth, async (req: AuthRequest, res) => {
 
     const data: any = {};
     if (name !== undefined) data.name = name;
-    if (handle !== undefined) data.handle = handle;
     if (favoriteSchool !== undefined) data.favoriteSchool = favoriteSchool;
     if (supportingSchools !== undefined) data.supportingSchools = supportingSchools;
     if (emailUpdates !== undefined) data.emailUpdates = emailUpdates;
@@ -140,6 +196,69 @@ router.put('/me', requireAuth, async (req: AuthRequest, res) => {
     if (residingCity !== undefined) data.residingCity = residingCity;
     if (residingState !== undefined) data.residingState = residingState;
 
+    // Handle change requires moderation check
+    if (handle !== undefined) {
+      const currentUser = await prisma.rallyUser.findUnique({ where: { id: req.userId } });
+      if (!currentUser) return res.status(404).json({ error: 'User not found' });
+
+      // Check if handle is locked (72-hour cooldown after forced rename)
+      if (currentUser.handleLockedUntil && new Date() < currentUser.handleLockedUntil) {
+        return res.status(403).json({
+          error: `Your handle is locked until ${currentUser.handleLockedUntil.toISOString()}. You can change it after the cooldown period.`,
+          handleLockedUntil: currentUser.handleLockedUntil.toISOString(),
+        });
+      }
+
+      // Check the new handle for inappropriate content
+      const modResult = evaluateHandleAttempt(handle, currentUser.name, currentUser.handleWarnings);
+
+      if (!modResult.allowed) {
+        if (modResult.forced) {
+          // 3rd strike: force-assign and lock
+          let safeHandle = modResult.forcedHandle!;
+          let collision = await prisma.rallyUser.findUnique({ where: { handle: safeHandle } });
+          while (collision) {
+            safeHandle = safeHandle.replace(/\d+$/, '') + String(Math.floor(100 + Math.random() * 900));
+            collision = await prisma.rallyUser.findUnique({ where: { handle: safeHandle } });
+          }
+
+          const user = await prisma.rallyUser.update({
+            where: { id: req.userId },
+            data: {
+              ...data,
+              handle: safeHandle,
+              handleWarnings: 3,
+              handleLockedUntil: new Date(modResult.lockedUntil!),
+              handleAutoAssigned: true,
+            },
+          });
+
+          return res.status(422).json({
+            user: formatUser(user),
+            handleModeration: { ...modResult, forcedHandle: safeHandle },
+          });
+        }
+
+        // Warning (1 or 2): increment warning count, reject the handle change
+        await prisma.rallyUser.update({
+          where: { id: req.userId },
+          data: { handleWarnings: modResult.warningNumber },
+        });
+
+        return res.status(422).json({
+          error: modResult.message,
+          handleModeration: modResult,
+        });
+      }
+
+      // Handle is clean — apply it
+      data.handle = handle;
+      // If they previously had an auto-assigned handle, clear the flag
+      if (currentUser.handleAutoAssigned) {
+        data.handleAutoAssigned = false;
+      }
+    }
+
     const user = await prisma.rallyUser.update({
       where: { id: req.userId },
       data,
@@ -147,6 +266,9 @@ router.put('/me', requireAuth, async (req: AuthRequest, res) => {
 
     return res.json(formatUser(user));
   } catch (err: any) {
+    if (err.code === 'P2002') {
+      return res.status(409).json({ error: 'That handle is already taken' });
+    }
     return res.status(500).json({ error: 'Failed to update profile' });
   }
 });

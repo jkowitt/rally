@@ -35,6 +35,34 @@ function formatUser(u: any) {
   };
 }
 
+// GET /users/flagged-handles — List users with handle warnings or forced renames (admin)
+router.get('/flagged-handles', requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const flaggedUsers = await prisma.rallyUser.findMany({
+      where: {
+        OR: [
+          { handleWarnings: { gt: 0 } },
+          { handleAutoAssigned: true },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        handle: true,
+        email: true,
+        handleWarnings: true,
+        handleLockedUntil: true,
+        handleAutoAssigned: true,
+        createdAt: true,
+      },
+      orderBy: { handleWarnings: 'desc' },
+    });
+    return res.json({ flaggedUsers });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch flagged handles' });
+  }
+});
+
 // GET /users (admin+ only)
 router.get('/', requireAuth, requireAdmin, async (_req, res) => {
   try {
@@ -100,6 +128,35 @@ router.put('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     return res.json(formatUser(user));
   } catch (err) {
     return res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// PUT /users/:id/reset-handle — Admin resets a user's handle warnings and lock (admin)
+router.put('/:id/reset-handle', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const userId = String(req.params.id);
+    const { handle } = req.body;
+
+    const updateData: any = {
+      handleWarnings: 0,
+      handleLockedUntil: null,
+      handleAutoAssigned: false,
+    };
+
+    // Admin can optionally set a new clean handle
+    if (handle) {
+      updateData.handle = handle;
+    }
+
+    const user = await prisma.rallyUser.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    return res.json(formatUser(user));
+  } catch (err: any) {
+    if (err.code === 'P2002') return res.status(409).json({ error: 'That handle is already taken' });
+    return res.status(500).json({ error: 'Failed to reset handle' });
   }
 });
 

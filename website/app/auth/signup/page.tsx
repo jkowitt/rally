@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useRallyAuth } from "@/lib/rally-auth";
+import { rallyAuth, type HandleModerationResult } from "@/lib/rally-api";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -26,9 +27,16 @@ export default function SignUpPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleStep1 = (e: React.FormEvent) => {
+  // Handle moderation state
+  const [handleWarnings, setHandleWarnings] = useState(0);
+  const [handleWarning, setHandleWarning] = useState<string | null>(null);
+  const [handleForced, setHandleForced] = useState<HandleModerationResult | null>(null);
+  const [handleAcknowledged, setHandleAcknowledged] = useState(false);
+
+  const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setHandleWarning(null);
 
     if (!formData.name.trim()) { setError("Please enter your name"); return; }
     if (!formData.email.trim()) { setError("Please enter your email"); return; }
@@ -37,7 +45,29 @@ export default function SignUpPage() {
     if (formData.password !== formData.confirmPassword) { setError("Passwords do not match"); return; }
     if (!agreedToTerms) { setError("You must agree to the Terms of Service"); return; }
 
-    setStep(2);
+    // Pre-check handle for inappropriate content
+    const handle = formData.handle.startsWith("@") ? formData.handle : `@${formData.handle}`;
+    const res = await rallyAuth.checkHandle(handle, formData.name.trim(), handleWarnings);
+
+    if (res.ok && res.data) {
+      if (res.data.allowed) {
+        // Handle is clean — proceed
+        setStep(2);
+      } else if (res.data.forced) {
+        // 3rd strike — handle was force-assigned
+        setHandleForced(res.data);
+        setHandleWarnings(3);
+        setStep(3); // go to forced-handle acknowledgment
+      } else {
+        // Warning 1 or 2
+        setHandleWarnings(res.data.warningNumber);
+        setHandleWarning(res.data.message);
+        setFormData({ ...formData, handle: "" });
+      }
+    } else {
+      // API error — let them through (server will validate on register)
+      setStep(2);
+    }
   };
 
   const handleSubmit = async () => {
@@ -45,7 +75,10 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const handle = formData.handle.startsWith("@") ? formData.handle : `@${formData.handle}`;
+      // Use forced handle if it was assigned, otherwise use their chosen handle
+      const handle = handleForced?.forcedHandle
+        ? handleForced.forcedHandle
+        : formData.handle.startsWith("@") ? formData.handle : `@${formData.handle}`;
       const birthYearNum = formData.birthYear ? parseInt(formData.birthYear, 10) : undefined;
       const result = await signUp({
         email: formData.email.trim(),
@@ -93,6 +126,27 @@ export default function SignUpPage() {
                     <line x1="9" y1="9" x2="15" y2="15" />
                   </svg>
                   {error}
+                </div>
+              )}
+
+              {handleWarning && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  background: handleWarnings >= 2 ? 'rgba(239,68,68,0.15)' : 'rgba(255,165,0,0.15)',
+                  border: `1px solid ${handleWarnings >= 2 ? 'rgba(239,68,68,0.3)' : 'rgba(255,165,0,0.3)'}`,
+                  fontSize: '13px',
+                  color: handleWarnings >= 2 ? '#ff6b6b' : '#ffaa33',
+                  marginBottom: '4px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                      <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                    <strong>Warning {handleWarnings} of 2</strong>
+                  </div>
+                  {handleWarning}
                 </div>
               )}
 
@@ -322,6 +376,72 @@ export default function SignUpPage() {
                   disabled={loading}
                 >
                   Go Back
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 3 && handleForced && (
+            <>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%',
+                background: 'rgba(239,68,68,0.15)', border: '2px solid rgba(239,68,68,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px',
+              }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" strokeWidth="2" width="32" height="32">
+                  <path d="M12 9v4m0 4h.01M3.6 20h16.8c.8 0 1.3-.9.9-1.6L13 4c-.4-.7-1.5-.7-1.9 0L3.6 18.4c-.4.7.1 1.6.9 1.6z" />
+                </svg>
+              </div>
+              <h1 className="rally-auth-heading" style={{ fontSize: '20px' }}>Handle Auto-Assigned</h1>
+              <p className="rally-auth-subheading" style={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
+                Due to repeated inappropriate language, your handle has been set to:
+              </p>
+              <div style={{
+                padding: '16px', borderRadius: '12px', textAlign: 'center',
+                background: 'rgba(255,107,53,0.1)', border: '1px solid rgba(255,107,53,0.3)',
+                margin: '12px 0',
+              }}>
+                <span style={{ fontSize: '24px', fontWeight: 700, color: '#FF6B35' }}>
+                  {handleForced.forcedHandle}
+                </span>
+              </div>
+              {handleForced.lockedUntil && (
+                <p style={{
+                  fontSize: '13px', color: 'rgba(255,255,255,0.4)', textAlign: 'center',
+                  lineHeight: 1.5, margin: '8px 0 16px',
+                }}>
+                  You can change your handle after{" "}
+                  <strong style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    {new Date(handleForced.lockedUntil).toLocaleDateString()} at{" "}
+                    {new Date(handleForced.lockedUntil).toLocaleTimeString()}
+                  </strong>
+                  . A 72-hour cooldown has been applied.
+                </p>
+              )}
+
+              <div className="rally-auth-form" style={{ gap: '12px', marginTop: '8px' }}>
+                <label style={{
+                  display: 'flex', alignItems: 'flex-start', gap: '10px',
+                  padding: '12px', borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.03)', cursor: 'pointer',
+                  fontSize: '13px', color: 'rgba(255,255,255,0.6)',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={handleAcknowledged}
+                    onChange={(e) => setHandleAcknowledged(e.target.checked)}
+                    style={{ marginTop: '2px' }}
+                  />
+                  I understand my handle has been auto-assigned and I can change it after the 72-hour cooldown period.
+                </label>
+                <button
+                  className="rally-btn rally-btn--primary rally-btn--full"
+                  disabled={!handleAcknowledged}
+                  onClick={() => setStep(2)}
+                  style={{ opacity: handleAcknowledged ? 1 : 0.5 }}
+                >
+                  Continue to Profile Setup
                 </button>
               </div>
             </>

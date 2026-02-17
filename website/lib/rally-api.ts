@@ -48,9 +48,15 @@ export const rallyAuth = {
     }),
 
   register: (params: RegisterParams) =>
-    rallyFetch<{ token: string; user: RallyUser }>('/auth/register', {
+    rallyFetch<{ token: string; user: RallyUser; handleModeration?: HandleModerationResult }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(params),
+    }),
+
+  checkHandle: (handle: string, name: string, currentWarnings: number) =>
+    rallyFetch<HandleModerationResult>('/auth/check-handle', {
+      method: 'POST',
+      body: JSON.stringify({ handle, name, currentWarnings }),
     }),
 
   me: () => rallyFetch<{ user: RallyUser }>('/auth/me'),
@@ -321,8 +327,22 @@ export interface RallyUser {
   invitedBy?: string | null;
   points?: number;
   tier?: string;
+  // Handle moderation
+  handleWarnings?: number;
+  handleLockedUntil?: string | null;
+  handleAutoAssigned?: boolean;
   createdAt?: string;
   lastLogin?: string;
+}
+
+export interface HandleModerationResult {
+  allowed: boolean;
+  warning: boolean;
+  warningNumber: number;
+  forced: boolean;
+  forcedHandle: string | null;
+  lockedUntil: string | null;
+  message: string;
 }
 
 export interface TeammatePermissions {

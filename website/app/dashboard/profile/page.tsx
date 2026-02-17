@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRallyAuth } from "@/lib/rally-auth";
+import { rallyAuth, type HandleModerationResult } from "@/lib/rally-api";
 
 const AVAILABLE_SCHOOL = { id: "rally-university", name: "Rally University", mascot: "Ralliers", primaryColor: "#FF6B35" };
 
@@ -15,14 +16,39 @@ export default function ProfilePage() {
   const { user, updateProfile } = useRallyAuth();
   const [isChangingSchool, setIsChangingSchool] = useState(false);
   const [isEditingDemographics, setIsEditingDemographics] = useState(false);
+  const [isEditingHandle, setIsEditingHandle] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [newHandle, setNewHandle] = useState("");
+  const [handleMessage, setHandleMessage] = useState<string | null>(null);
+  const [handleForced, setHandleForced] = useState<HandleModerationResult | null>(null);
   const [demoForm, setDemoForm] = useState({
     userType: user?.userType || "",
     birthYear: user?.birthYear?.toString() || "",
     residingCity: user?.residingCity || "",
     residingState: user?.residingState || "",
   });
+
+  const handleLocked = user?.handleLockedUntil && new Date(user.handleLockedUntil) > new Date();
+
+  const handleSaveHandle = async () => {
+    if (!newHandle.trim()) return;
+    setSaving(true);
+    setHandleMessage(null);
+    setHandleForced(null);
+
+    const handle = newHandle.startsWith("@") ? newHandle : `@${newHandle}`;
+    const result = await updateProfile({ handle });
+
+    if (result.success) {
+      setHandleMessage("Handle updated successfully!");
+      setIsEditingHandle(false);
+      setNewHandle("");
+    } else {
+      setHandleMessage(result.error || "Failed to update handle");
+    }
+    setSaving(false);
+  };
 
   const handleChangeSchool = async () => {
     setSaving(true);
@@ -58,6 +84,107 @@ export default function ProfilePage() {
           <p className="rally-dash-profile-handle">{user?.handle || "@fan"}</p>
           <span className="rally-dash-profile-role">{user?.role}</span>
         </div>
+      </div>
+
+      {/* Handle Management */}
+      <div className="rally-dash-section">
+        <h3>Handle</h3>
+        {handleMessage && (
+          <div style={{
+            padding: '8px 12px', marginBottom: '12px', borderRadius: '8px', fontSize: '13px',
+            background: handleMessage.includes("success") ? 'rgba(52,199,89,0.15)' : 'rgba(239,68,68,0.15)',
+            color: handleMessage.includes("success") ? '#34C759' : '#ef4444',
+          }}>
+            {handleMessage}
+          </div>
+        )}
+
+        {user?.handleAutoAssigned && (
+          <div style={{
+            padding: '10px 14px', marginBottom: '12px', borderRadius: '10px',
+            background: 'rgba(255,165,0,0.1)', border: '1px solid rgba(255,165,0,0.25)',
+            fontSize: '13px', color: '#ffaa33', lineHeight: 1.5,
+          }}>
+            Your handle was auto-assigned due to content policy violations.
+            {handleLocked ? (
+              <> You can change it after <strong>{new Date(user.handleLockedUntil!).toLocaleDateString()}</strong> at <strong>{new Date(user.handleLockedUntil!).toLocaleTimeString()}</strong>.</>
+            ) : (
+              <> The cooldown period has ended. You can now change your handle.</>
+            )}
+          </div>
+        )}
+
+        {user?.handleWarnings !== undefined && user.handleWarnings > 0 && (
+          <div style={{
+            padding: '8px 12px', marginBottom: '12px', borderRadius: '8px', fontSize: '12px',
+            background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.4)',
+          }}>
+            Content policy warnings: {user.handleWarnings}/3
+          </div>
+        )}
+
+        <div className="rally-dash-detail-grid">
+          <div className="rally-dash-detail-row">
+            <span className="rally-dash-detail-label">Current Handle</span>
+            <span className="rally-dash-detail-value" style={{ fontWeight: 600 }}>{user?.handle || "@fan"}</span>
+          </div>
+        </div>
+
+        {!isEditingHandle ? (
+          <button
+            className="rally-btn rally-btn--primary"
+            style={{ marginTop: '12px', width: '100%' }}
+            onClick={() => {
+              setIsEditingHandle(true);
+              setNewHandle(user?.handle?.replace(/^@/, '') || '');
+              setHandleMessage(null);
+              setHandleForced(null);
+            }}
+            disabled={!!handleLocked}
+          >
+            {handleLocked ? `Locked until ${new Date(user!.handleLockedUntil!).toLocaleDateString()}` : 'Change Handle'}
+          </button>
+        ) : (
+          <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
+              <span style={{
+                padding: '10px 12px', borderRadius: '8px 0 0 8px',
+                background: 'rgba(255,107,53,0.15)', color: '#FF6B35',
+                fontWeight: 600, fontSize: '14px',
+                border: '1px solid rgba(255,255,255,0.1)', borderRight: 'none',
+              }}>@</span>
+              <input
+                type="text"
+                value={newHandle.replace(/^@/, '')}
+                onChange={(e) => setNewHandle(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                placeholder="newhandle"
+                style={{
+                  flex: 1, padding: '10px 12px', borderRadius: '0 8px 8px 0',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '14px',
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="rally-btn rally-btn--secondary"
+                style={{ flex: 1 }}
+                onClick={() => { setIsEditingHandle(false); setHandleMessage(null); setHandleForced(null); }}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                className="rally-btn rally-btn--primary"
+                style={{ flex: 1 }}
+                onClick={handleSaveHandle}
+                disabled={saving || !newHandle.trim()}
+              >
+                {saving ? "Saving..." : "Save Handle"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* School Affiliation */}

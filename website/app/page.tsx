@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
+import UpcomingEvents from "@/components/UpcomingEvents";
 
 const features = [
   {
@@ -221,6 +222,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Upcoming Events */}
+      <UpcomingEvents />
 
       {/* Features */}
       <section id="features" className="rally-features">

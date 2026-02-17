@@ -31,3 +31,4 @@ google-services.json
 # Secrets
 *.env
 credentials.json
+keystore.properties

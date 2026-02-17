@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { getTier } from '../lib/tiers';
 import { AuthRequest, requireAuth, requireAdmin, optionalAuth } from '../middleware/auth';
+import { triggerManualUpdate, getLastRunResult, isUpdateRunning } from '../services/scheduler';
 
 const router = Router();
 
@@ -30,6 +31,33 @@ function formatEvent(event: any) {
     updatedAt: event.updatedAt?.toISOString(),
   };
 }
+
+// ─────────────────────────────────────────────
+// Auto-update admin endpoints (must be before /:eventId to avoid param capture)
+// ─────────────────────────────────────────────
+
+// POST /events/sync — trigger an immediate event update (admin+ only)
+router.post('/sync', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const lookAheadDays = parseInt(req.query.days as string) || 10;
+    const result = await triggerManualUpdate(lookAheadDays);
+    return res.json(result);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('already in progress')) {
+      return res.status(409).json({ error: err.message });
+    }
+    console.error('Manual sync error:', err);
+    return res.status(500).json({ error: 'Sync failed' });
+  }
+});
+
+// GET /events/sync/status — check last sync result (admin+ only)
+router.get('/sync/status', requireAuth, requireAdmin, async (_req, res) => {
+  return res.json({
+    running: isUpdateRunning(),
+    lastRun: getLastRunResult(),
+  });
+});
 
 // GET /events
 router.get('/', optionalAuth, async (req, res) => {

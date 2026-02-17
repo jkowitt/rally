@@ -12,6 +12,7 @@ import usersRoutes from './routes/users';
 import teammatesRoutes from './routes/teammates';
 import analyticsRoutes from './routes/analytics';
 import demographicsRoutes from './routes/demographics';
+import { startScheduler } from './services/scheduler';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -40,6 +41,11 @@ app.use('/api/demographics', demographicsRoutes);
 
 app.listen(PORT, () => {
   console.log(`Rally API running on http://localhost:${PORT}`);
+
+  // Start the event-update scheduler (every 3 days + initial sync on boot)
+  if (process.env.DISABLE_SCHEDULER !== 'true') {
+    startScheduler();
+  }
 });
 
 export default app;

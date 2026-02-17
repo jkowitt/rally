@@ -1757,6 +1757,179 @@ async function main() {
   });
   console.log('Seeded monetization settings');
 
+  // =====================
+  // SOCIAL IDENTITY — Fan Profiles
+  // =====================
+  const fanProfiles = [
+    {
+      userId: admin.id,
+      totalCheckins: 47,
+      totalPredictions: 38,
+      correctPredictions: 29,
+      totalTrivia: 32,
+      correctTrivia: 24,
+      totalPhotos: 15,
+      totalPolls: 22,
+      totalNoiseMeter: 18,
+      eventsAttended: 42,
+      uniqueVenues: 12,
+      currentStreak: 8,
+      longestStreak: 15,
+      verifiedLevel: 'DEDICATED' as const,
+      isPublic: true,
+      tagline: 'Die-hard Dawg since \'09. If it barks, I back it.',
+      sportBreakdown: { Football: 18, Basketball: 12, Baseball: 8, Hockey: 4 },
+    },
+    {
+      userId: fan.id,
+      totalCheckins: 12,
+      totalPredictions: 9,
+      correctPredictions: 5,
+      totalTrivia: 8,
+      correctTrivia: 6,
+      totalPhotos: 4,
+      totalPolls: 7,
+      totalNoiseMeter: 3,
+      eventsAttended: 10,
+      uniqueVenues: 4,
+      currentStreak: 3,
+      longestStreak: 5,
+      verifiedLevel: 'CASUAL' as const,
+      isPublic: true,
+      tagline: 'Roll Tide. Points collector. Tailgate connoisseur.',
+      sportBreakdown: { Football: 5, Basketball: 3, Baseball: 2 },
+    },
+  ];
+
+  for (const profile of fanProfiles) {
+    await prisma.fanProfile.upsert({
+      where: { userId: profile.userId },
+      update: profile,
+      create: profile,
+    });
+  }
+  console.log('Seeded fan profiles');
+
+  // =====================
+  // SOCIAL IDENTITY — Crews
+  // =====================
+  const sampleCrews = [
+    {
+      id: 'crew-dawg-pound',
+      name: 'The Dawg Pound',
+      slug: 'dawg-pound',
+      description: 'Georgia faithful. Gameday isn\'t gameday without the Dawg Pound.',
+      schoolId: 'sch-georgia',
+      sport: 'Football',
+      avatarEmoji: '🐶',
+      color: '#BA0C2F',
+      memberCount: 2,
+      totalPoints: 485,
+      totalCheckins: 59,
+      totalEvents: 52,
+      isPublic: true,
+    },
+    {
+      id: 'crew-tide-tailgate',
+      name: 'Tide Tailgate Crew',
+      slug: 'tide-tailgate',
+      description: 'Bama fans who show up early and stay late. Tailgate kings.',
+      schoolId: 'sch-alabama',
+      sport: 'Football',
+      avatarEmoji: '🏈',
+      color: '#9E1B32',
+      memberCount: 1,
+      totalPoints: 410,
+      totalCheckins: 12,
+      totalEvents: 10,
+      isPublic: true,
+    },
+    {
+      id: 'crew-baseline-ballers',
+      name: 'Baseline Ballers',
+      slug: 'baseline-ballers',
+      description: 'NBA court-side energy, every night. Multi-team basketball crew.',
+      sport: 'Basketball',
+      avatarEmoji: '🏀',
+      color: '#1D428A',
+      memberCount: 1,
+      totalPoints: 410,
+      totalCheckins: 12,
+      totalEvents: 10,
+      isPublic: true,
+    },
+    {
+      id: 'crew-diamond-diehards',
+      name: 'Diamond Diehards',
+      slug: 'diamond-diehards',
+      description: '162 games? We\'re at every single one. Baseball season is our season.',
+      sport: 'Baseball',
+      avatarEmoji: '⚾',
+      color: '#003087',
+      memberCount: 0,
+      totalPoints: 0,
+      totalCheckins: 0,
+      totalEvents: 0,
+      isPublic: true,
+    },
+  ];
+
+  for (const crew of sampleCrews) {
+    await prisma.crew.upsert({
+      where: { id: crew.id },
+      update: crew,
+      create: crew,
+    });
+  }
+
+  // Add crew memberships
+  const crewMemberships = [
+    { crewId: 'crew-dawg-pound', userId: admin.id, role: 'CAPTAIN' as const },
+    { crewId: 'crew-dawg-pound', userId: fan.id, role: 'MEMBER' as const },
+    { crewId: 'crew-tide-tailgate', userId: fan.id, role: 'CAPTAIN' as const },
+    { crewId: 'crew-baseline-ballers', userId: admin.id, role: 'CAPTAIN' as const },
+  ];
+
+  for (const membership of crewMemberships) {
+    await prisma.crewMember.upsert({
+      where: { crewId_userId: { crewId: membership.crewId, userId: membership.userId } },
+      update: { role: membership.role },
+      create: membership,
+    });
+  }
+  console.log('Seeded crews and memberships');
+
+  // =====================
+  // SOCIAL IDENTITY — Milestones
+  // =====================
+  const milestones = [
+    // Admin milestones
+    { userId: admin.id, type: 'FIRST_CHECKIN' as const, title: 'First Check-in', description: 'Checked in to your first event', icon: '📍', stat: '1 check-in' },
+    { userId: admin.id, type: 'EVENTS_5' as const, title: '5 Events', description: 'Attended 5 events', icon: '🎟️', stat: '42 events' },
+    { userId: admin.id, type: 'EVENTS_25' as const, title: '25 Events', description: 'Attended 25 events', icon: '🏟️', stat: '42 events' },
+    { userId: admin.id, type: 'CHECKIN_STREAK_5' as const, title: '5-Game Streak', description: 'Maintained a 5-game check-in streak', icon: '🔥', stat: '15 streak' },
+    { userId: admin.id, type: 'CHECKIN_STREAK_10' as const, title: '10-Game Streak', description: 'Maintained a 10-game check-in streak', icon: '⚡', stat: '15 streak' },
+    { userId: admin.id, type: 'VENUE_COLLECTOR_5' as const, title: '5 Venues', description: 'Visited 5 unique venues', icon: '🗺️', stat: '12 venues' },
+    { userId: admin.id, type: 'VENUE_COLLECTOR_10' as const, title: '10 Venues', description: 'Visited 10 unique venues', icon: '🌎', stat: '12 venues' },
+    { userId: admin.id, type: 'MULTI_SPORT' as const, title: 'Multi-Sport Fan', description: 'Attended events in 3+ sports', icon: '🏅', stat: '4 sports' },
+    { userId: admin.id, type: 'PREDICTION_ACCURACY_75' as const, title: 'Oracle', description: '75%+ prediction accuracy', icon: '🔮', stat: '76% accuracy' },
+    { userId: admin.id, type: 'CREW_FOUNDER' as const, title: 'Crew Founder', description: 'Founded your first crew', icon: '👥', stat: 'The Dawg Pound' },
+    // Fan milestones
+    { userId: fan.id, type: 'FIRST_CHECKIN' as const, title: 'First Check-in', description: 'Checked in to your first event', icon: '📍', stat: '1 check-in' },
+    { userId: fan.id, type: 'EVENTS_5' as const, title: '5 Events', description: 'Attended 5 events', icon: '🎟️', stat: '10 events' },
+    { userId: fan.id, type: 'CHECKIN_STREAK_5' as const, title: '5-Game Streak', description: 'Maintained a 5-game check-in streak', icon: '🔥', stat: '5 streak' },
+  ];
+
+  for (const milestone of milestones) {
+    await prisma.fanMilestone.create({
+      data: {
+        ...milestone,
+        earnedAt: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+  console.log('Seeded milestones');
+
   console.log('\nSeed complete!');
   console.log('---');
   console.log(`Total: ${schools.length} teams, ${events.length} events across MLB, NBA, NHL, MLS, WNBA, College, NFL, PGA`);

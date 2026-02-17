@@ -56,6 +56,14 @@ model RallyUser {
   bonusOffers        BonusOffer[]   @relation("CreatedBonusOffers")
   analyticsEvents    AnalyticsEvent[]
 
+  // Social Identity relations
+  fanProfile         FanProfile?
+  lobbyPresences     LobbyPresence[]
+  lobbyReactions     LobbyReaction[]
+  crewMemberships    CrewMember[]
+  milestones         FanMilestone[]
+  shareCards         ShareCard[]
+
   lastLogin          DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -365,4 +373,260 @@ model ContentItem {
   createdAt DateTime @default(now())
 
   @@index([type])
+}
+
+// ==========================================
+// SOCIAL IDENTITY — Fan Profile
+// ==========================================
+
+model FanProfile {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 RallyUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Computed stats (refreshed periodically or on action)
+  totalCheckins        Int      @default(0)
+  totalPredictions     Int      @default(0)
+  correctPredictions   Int      @default(0)
+  totalTrivia          Int      @default(0)
+  correctTrivia        Int      @default(0)
+  totalPhotos          Int      @default(0)
+  totalPolls           Int      @default(0)
+  totalNoiseMeter      Int      @default(0)
+  eventsAttended       Int      @default(0)
+  uniqueVenues         Int      @default(0)
+
+  // Streaks
+  currentStreak        Int      @default(0)   // consecutive events attended
+  longestStreak        Int      @default(0)
+  lastCheckinDate      DateTime?
+
+  // Sports breakdown (JSON: { "Basketball": 12, "Football": 8, ... })
+  sportBreakdown       Json?
+
+  // Verified fandom level
+  verifiedLevel        VerifiedFanLevel @default(ROOKIE)
+
+  // Profile visibility
+  isPublic             Boolean  @default(true)
+  profileSlug          String?  @unique        // vanity URL: rally.com/fan/slugname
+
+  // Bio / tagline
+  tagline              String?                  // "Die-hard Celtics fan since '08"
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([verifiedLevel])
+}
+
+enum VerifiedFanLevel {
+  ROOKIE      // Just joined
+  CASUAL      // 5+ events
+  DEDICATED   // 25+ events
+  SUPERFAN    // 100+ events, high accuracy
+  LEGEND      // 250+ events, top-tier engagement
+}
+
+// ==========================================
+// SOCIAL IDENTITY — Game Lobby
+// ==========================================
+
+model GameLobby {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  isActive    Boolean  @default(true)
+
+  // Aggregate counts (denormalized for fast reads)
+  fanCount    Int      @default(0)
+  reactionCount Int    @default(0)
+
+  presences   LobbyPresence[]
+  reactions   LobbyReaction[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model LobbyPresence {
+  id          String   @id @default(cuid())
+  lobbyId     String
+  userId      String
+  lobby       GameLobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  user        RallyUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  checkedInAt DateTime @default(now())
+  isActive    Boolean  @default(true)
+
+  @@unique([lobbyId, userId])
+  @@index([lobbyId])
+  @@index([userId])
+}
+
+model LobbyReaction {
+  id          String   @id @default(cuid())
+  lobbyId     String
+  userId      String
+  lobby       GameLobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  user        RallyUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        LobbyReactionType
+  createdAt   DateTime @default(now())
+
+  @@index([lobbyId])
+  @@index([userId])
+}
+
+enum LobbyReactionType {
+  FIRE        // hype moment
+  CLAP        // great play
+  CRY         // heartbreaker
+  HORN        // let's go / rally
+  WAVE        // the wave
+  HUNDRED     // perfect / clutch
+}
+
+// ==========================================
+// SOCIAL IDENTITY — Crews (Fan Groups)
+// ==========================================
+
+model Crew {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  schoolId        String?              // primary team affiliation
+  sport           String?              // primary sport
+
+  // Branding
+  avatarEmoji     String   @default("🏟️")
+  color           String   @default("#FF6B35")
+
+  // Aggregate stats (denormalized)
+  memberCount     Int      @default(0)
+  totalPoints     Int      @default(0)
+  totalCheckins   Int      @default(0)
+  totalEvents     Int      @default(0)
+
+  // Settings
+  isPublic        Boolean  @default(true)
+  maxMembers      Int      @default(50)
+
+  members         CrewMember[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([schoolId])
+  @@index([totalPoints])
+}
+
+model CrewMember {
+  id          String   @id @default(cuid())
+  crewId      String
+  userId      String
+  crew        Crew      @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  user        RallyUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role        CrewRole  @default(MEMBER)
+  joinedAt    DateTime  @default(now())
+
+  @@unique([crewId, userId])
+  @@index([crewId])
+  @@index([userId])
+}
+
+enum CrewRole {
+  CAPTAIN     // creator / admin
+  LIEUTENANT  // co-admin
+  MEMBER
+}
+
+// ==========================================
+// SOCIAL IDENTITY — Milestones & Badges
+// ==========================================
+
+model FanMilestone {
+  id          String   @id @default(cuid())
+  userId      String
+  user        RallyUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        MilestoneType
+  title       String              // "First Check-in", "10-Game Streak", "Prediction King"
+  description String?
+  icon        String              // emoji or icon key
+  sport       String?             // null = global milestone
+
+  // For shareable cards
+  stat        String?             // "10 games", "85% accuracy", etc.
+  earnedAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([earnedAt])
+}
+
+enum MilestoneType {
+  FIRST_CHECKIN
+  CHECKIN_STREAK_5
+  CHECKIN_STREAK_10
+  CHECKIN_STREAK_25
+  CHECKIN_STREAK_50
+  EVENTS_5
+  EVENTS_25
+  EVENTS_50
+  EVENTS_100
+  EVENTS_250
+  PREDICTION_ACCURACY_75
+  PREDICTION_ACCURACY_90
+  TRIVIA_MASTER
+  ALL_ACTIVATIONS        // completed every activation at an event
+  MULTI_SPORT            // attended events in 3+ sports
+  TIER_SILVER
+  TIER_GOLD
+  TIER_PLATINUM
+  CREW_FOUNDER
+  VENUE_COLLECTOR_5      // visited 5 unique venues
+  VENUE_COLLECTOR_10
+  VENUE_COLLECTOR_25
+  SUPERFAN_VERIFIED
+  LEGEND_VERIFIED
+}
+
+// ==========================================
+// SOCIAL IDENTITY — Shareable Cards
+// ==========================================
+
+model ShareCard {
+  id          String   @id @default(cuid())
+  userId      String
+  user        RallyUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        ShareCardType
+  title       String              // "Season Recap", "Head-to-Head Result"
+  data        Json                // Flexible payload for card rendering
+
+  // Tracking
+  viewCount   Int      @default(0)
+  shareCount  Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?           // optional expiry for event-specific cards
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum ShareCardType {
+  MILESTONE           // badge / achievement earned
+  HEAD_TO_HEAD        // fan comparison result
+  SEASON_RECAP        // end-of-season stats
+  EVENT_RECAP         // single event summary
+  STREAK              // streak achievement
+  TIER_UP             // tier promotion
+  CREW_LEADERBOARD    // crew ranking
+  FAN_RESUME          // full fan identity card
 }

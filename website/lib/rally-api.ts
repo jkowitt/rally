@@ -595,3 +595,226 @@ export interface MonetizationConfig {
   admobInterstitialId: string | null;
   admobRewardedVideoId: string | null;
 }
+
+// ==========================================
+// SOCIAL IDENTITY — Types
+// ==========================================
+
+export interface FanProfile {
+  id: string;
+  userId: string;
+  totalCheckins: number;
+  totalPredictions: number;
+  correctPredictions: number;
+  totalTrivia: number;
+  correctTrivia: number;
+  totalPhotos: number;
+  totalPolls: number;
+  totalNoiseMeter: number;
+  eventsAttended: number;
+  uniqueVenues: number;
+  currentStreak: number;
+  longestStreak: number;
+  sportBreakdown: Record<string, number> | null;
+  verifiedLevel: 'ROOKIE' | 'CASUAL' | 'DEDICATED' | 'SUPERFAN' | 'LEGEND';
+  isPublic: boolean;
+  profileSlug: string | null;
+  tagline: string | null;
+  user?: {
+    name: string;
+    handle: string;
+    tier: string;
+    points: number;
+    favoriteSchool: string | null;
+    favoriteSports: string[];
+    createdAt: string;
+  };
+}
+
+export interface FanMilestone {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  description: string | null;
+  icon: string;
+  sport: string | null;
+  stat: string | null;
+  earnedAt: string;
+}
+
+export interface CrewData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  schoolId: string | null;
+  sport: string | null;
+  avatarEmoji: string;
+  color: string;
+  memberCount: number;
+  totalPoints: number;
+  totalCheckins: number;
+  totalEvents: number;
+  isPublic: boolean;
+  maxMembers: number;
+  myRole?: string | null;
+}
+
+export interface CrewMemberData {
+  id: string;
+  name: string;
+  handle: string;
+  points: number;
+  tier: string;
+  profile: { eventsAttended: number; currentStreak: number; verifiedLevel: string } | null;
+  role: string;
+  joinedAt: string;
+}
+
+export interface GameLobbyData {
+  lobbyId: string;
+  eventId: string;
+  isActive: boolean;
+  fanCount: number;
+  fans: Array<{
+    id: string;
+    name: string;
+    handle: string;
+    tier: string;
+    favoriteSchool: string | null;
+    fanProfile: { verifiedLevel: string; currentStreak: number; tagline: string | null } | null;
+    checkedInAt: string;
+  }>;
+  recentReactions: Record<string, number>;
+  isCheckedIn: boolean;
+}
+
+export interface ShareCardData {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  data: Record<string, unknown>;
+  viewCount: number;
+  shareCount: number;
+  createdAt: string;
+  user?: { name: string; handle: string; tier: string; favoriteSchool: string | null };
+}
+
+export interface HeadToHeadComparison {
+  fanA: { name: string; handle: string; points: number; tier: string; profile: FanProfile | null; milestoneCount: number };
+  fanB: { name: string; handle: string; points: number; tier: string; profile: FanProfile | null; milestoneCount: number };
+  categories: Array<{ label: string; a: number; b: number }>;
+  winner: 'A' | 'B' | 'TIE';
+}
+
+export interface LeaderboardEntry {
+  id: string;
+  name: string;
+  handle: string;
+  points: number;
+  tier: string;
+  favoriteSchool: string | null;
+  fanProfile: {
+    eventsAttended: number;
+    currentStreak: number;
+    verifiedLevel: string;
+    tagline: string | null;
+  } | null;
+}
+
+// ==========================================
+// SOCIAL IDENTITY — API Client
+// ==========================================
+
+// Fan Profile
+export const rallyFanProfile = {
+  me: () => rallyFetch<FanProfile>('/fan-profile/me'),
+
+  getByHandle: (handle: string) =>
+    rallyFetch<{ user: RallyUser; profile: FanProfile; milestones: FanMilestone[]; crews: Array<CrewData & { role: string }> }>(`/fan-profile/by-handle/${handle}`),
+
+  update: (fields: { tagline?: string; isPublic?: boolean; profileSlug?: string }) =>
+    rallyFetch<FanProfile>('/fan-profile/me', { method: 'PUT', body: JSON.stringify(fields) }),
+
+  refresh: () =>
+    rallyFetch<FanProfile>('/fan-profile/refresh', { method: 'POST' }),
+
+  leaderboard: () =>
+    rallyFetch<{ leaderboard: LeaderboardEntry[] }>('/fan-profile/leaderboard'),
+
+  compare: (handleA: string, handleB: string) =>
+    rallyFetch<HeadToHeadComparison>(`/fan-profile/compare/${handleA}/${handleB}`),
+};
+
+// Game Lobby
+export const rallyGameLobby = {
+  get: (eventId: string) =>
+    rallyFetch<GameLobbyData>(`/game-lobby/${eventId}`),
+
+  checkin: (eventId: string) =>
+    rallyFetch<{ success: boolean; fanCount: number }>(`/game-lobby/${eventId}/checkin`, { method: 'POST' }),
+
+  checkout: (eventId: string) =>
+    rallyFetch<{ success: boolean; fanCount: number }>(`/game-lobby/${eventId}/checkout`, { method: 'POST' }),
+
+  react: (eventId: string, type: 'FIRE' | 'CLAP' | 'CRY' | 'HORN' | 'WAVE' | 'HUNDRED') =>
+    rallyFetch<{ success: boolean; type: string }>(`/game-lobby/${eventId}/react`, { method: 'POST', body: JSON.stringify({ type }) }),
+};
+
+// Crews
+export const rallyCrews = {
+  list: (params?: { schoolId?: string; sort?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.schoolId) qs.set('schoolId', params.schoolId);
+    if (params?.sort) qs.set('sort', params.sort);
+    const query = qs.toString();
+    return rallyFetch<{ crews: Array<CrewData & { previewMembers: Array<{ id: string; name: string; handle: string; tier: string; role: string }> }> }>(`/crews${query ? `?${query}` : ''}`);
+  },
+
+  mine: () =>
+    rallyFetch<{ crews: Array<CrewData & { myRole: string; joinedAt: string }> }>('/crews/mine'),
+
+  get: (slug: string) =>
+    rallyFetch<CrewData & { members: CrewMemberData[]; myRole: string | null }>(`/crews/${slug}`),
+
+  create: (params: { name: string; description?: string; schoolId?: string; sport?: string; avatarEmoji?: string; color?: string; isPublic?: boolean }) =>
+    rallyFetch<CrewData>('/crews', { method: 'POST', body: JSON.stringify(params) }),
+
+  join: (slug: string) =>
+    rallyFetch<{ success: boolean; message: string }>(`/crews/${slug}/join`, { method: 'POST' }),
+
+  leave: (slug: string) =>
+    rallyFetch<{ success: boolean; message: string }>(`/crews/${slug}/leave`, { method: 'POST' }),
+
+  promote: (slug: string, memberId: string, role: string) =>
+    rallyFetch<{ success: boolean }>(`/crews/${slug}/members/${memberId}/promote`, { method: 'PUT', body: JSON.stringify({ role }) }),
+
+  leaderboard: (schoolId?: string) => {
+    const qs = schoolId ? `?schoolId=${schoolId}` : '';
+    return rallyFetch<{ leaderboard: CrewData[] }>(`/crews/leaderboard${qs}`);
+  },
+};
+
+// Share Cards & Milestones
+export const rallyShareCards = {
+  mine: () => rallyFetch<{ cards: ShareCardData[] }>('/share-cards/mine'),
+
+  get: (id: string) => rallyFetch<ShareCardData>(`/share-cards/${id}`),
+
+  createFanResume: () =>
+    rallyFetch<ShareCardData>('/share-cards/fan-resume', { method: 'POST' }),
+
+  createMilestoneCard: (milestoneId: string) =>
+    rallyFetch<ShareCardData>(`/share-cards/milestone/${milestoneId}`, { method: 'POST' }),
+
+  createHeadToHead: (opponentHandle: string) =>
+    rallyFetch<ShareCardData>('/share-cards/head-to-head', { method: 'POST', body: JSON.stringify({ opponentHandle }) }),
+
+  trackShare: (cardId: string) =>
+    rallyFetch<{ success: boolean }>(`/share-cards/${cardId}/shared`, { method: 'POST' }),
+
+  myMilestones: () =>
+    rallyFetch<{ milestones: FanMilestone[] }>('/share-cards/milestones/mine'),
+};

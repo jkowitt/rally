@@ -14,6 +14,10 @@ import analyticsRoutes from './routes/analytics';
 import demographicsRoutes from './routes/demographics';
 import affiliatesRoutes from './routes/affiliates';
 import monetizationRoutes from './routes/monetization';
+import fanProfileRoutes from './routes/fan-profile';
+import gameLobbyRoutes from './routes/game-lobby';
+import crewsRoutes from './routes/crews';
+import shareCardsRoutes from './routes/share-cards';
 import { startScheduler } from './services/scheduler';
 
 const app = express();
@@ -42,6 +46,10 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/demographics', demographicsRoutes);
 app.use('/api/affiliates', affiliatesRoutes);
 app.use('/api/monetization', monetizationRoutes);
+app.use('/api/fan-profile', fanProfileRoutes);
+app.use('/api/game-lobby', gameLobbyRoutes);
+app.use('/api/crews', crewsRoutes);
+app.use('/api/share-cards', shareCardsRoutes);
 
 app.listen(PORT, () => {
   console.log(`Rally API running on http://localhost:${PORT}`);

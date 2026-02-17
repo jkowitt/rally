@@ -237,6 +237,39 @@ export const rallyTeammates = {
     rallyFetch<{ message: string }>(`/teammates/invitations/${invitationId}`, { method: 'DELETE' }),
 };
 
+// Affiliate Offers
+export const rallyAffiliates = {
+  list: (params?: { category?: string; sport?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.category) qs.set('category', params.category);
+    if (params?.sport) qs.set('sport', params.sport);
+    const query = qs.toString();
+    return rallyFetch<{ offers: AffiliateOffer[]; total: number; enabled: boolean }>(`/affiliates${query ? `?${query}` : ''}`);
+  },
+  listAll: () => rallyFetch<{ offers: AffiliateOffer[]; total: number }>('/affiliates/all'),
+  create: (offer: CreateAffiliateParams) =>
+    rallyFetch<AffiliateOffer>('/affiliates', { method: 'POST', body: JSON.stringify(offer) }),
+  update: (offerId: string, fields: Partial<CreateAffiliateParams & { isActive: boolean }>) =>
+    rallyFetch<AffiliateOffer>(`/affiliates/${offerId}`, { method: 'PUT', body: JSON.stringify(fields) }),
+  delete: (offerId: string) =>
+    rallyFetch<{ message: string }>(`/affiliates/${offerId}`, { method: 'DELETE' }),
+  trackClick: (offerId: string) =>
+    rallyFetch<{ affiliateUrl: string }>(`/affiliates/${offerId}/click`, { method: 'POST' }),
+  redeem: (offerId: string) =>
+    rallyFetch<{ affiliateUrl: string; pointsDeducted: number }>(`/affiliates/${offerId}/redeem`, { method: 'POST' }),
+};
+
+// Monetization
+export const rallyMonetization = {
+  getSettings: () => rallyFetch<MonetizationSettingsData>('/monetization/settings'),
+  updateSettings: (fields: Partial<MonetizationSettingsData>) =>
+    rallyFetch<MonetizationSettingsData>('/monetization/settings', { method: 'PUT', body: JSON.stringify(fields) }),
+  getConfig: () => rallyFetch<MonetizationConfig>('/monetization/config'),
+  trackAdImpression: () => rallyFetch('/monetization/ad-impression', { method: 'POST' }),
+  claimRewardedVideo: () =>
+    rallyFetch<{ pointsAwarded: number; totalPoints: number }>('/monetization/rewarded-video', { method: 'POST' }),
+};
+
 // Demographics (admin — aggregate only)
 export const rallyDemographics = {
   get: (propertyId: string) =>
@@ -501,4 +534,64 @@ export interface AnalyticsSummary {
   verifiedUsers: number;
   usersBySchool: Record<string, number>;
   recentEvents: Array<{ event: string; page: string; timestamp: string; userId?: string }>;
+}
+
+export interface AffiliateOffer {
+  id: string;
+  brand: string;
+  title: string;
+  description: string | null;
+  category: string;
+  affiliateUrl: string;
+  imageUrl: string | null;
+  pointsCost: number;
+  sport: string | null;
+  priority: number;
+  isActive: boolean;
+  clickCount: number;
+  redeemCount: number;
+  createdAt: string;
+}
+
+export interface CreateAffiliateParams {
+  brand: string;
+  title: string;
+  description?: string;
+  category: string;
+  affiliateUrl: string;
+  imageUrl?: string;
+  pointsCost?: number;
+  commissionType?: string;
+  commissionValue?: string;
+  sport?: string;
+  priority?: number;
+}
+
+export interface MonetizationSettingsData {
+  affiliatesEnabled: boolean;
+  affiliateMaxPerPage: number;
+  admobEnabled: boolean;
+  admobBannerId: string | null;
+  admobInterstitialId: string | null;
+  admobRewardedVideoId: string | null;
+  admobBannerEnabled: boolean;
+  admobInterstitialEnabled: boolean;
+  admobRewardedVideoEnabled: boolean;
+  admobRewardedPoints: number;
+  totalAffiliateClicks: number;
+  totalAffiliateRedemptions: number;
+  totalAdImpressions: number;
+  updatedAt: string;
+}
+
+export interface MonetizationConfig {
+  affiliatesEnabled: boolean;
+  admobEnabled: boolean;
+  admobBannerEnabled: boolean;
+  admobInterstitialEnabled: boolean;
+  admobRewardedVideoEnabled: boolean;
+  admobRewardedPoints: number;
+  admobBannerId: string | null;
+  admobInterstitialId: string | null;
+  admobRewardedVideoId: string | null;
 }

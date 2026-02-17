@@ -284,6 +284,74 @@ model AnalyticsEvent {
 }
 
 // ==========================================
+// AFFILIATE OFFERS (Monetization)
+// ==========================================
+
+model AffiliateOffer {
+  id              String   @id @default(cuid())
+  brand           String                        // e.g. "Fanatics", "SeatGeek"
+  title           String                        // "20% Off Team Gear"
+  description     String?
+  category        AffiliateCategory
+  affiliateUrl    String                        // Click-through URL with affiliate tag
+  imageUrl        String?                       // Brand logo or promo image
+  pointsCost      Int      @default(0)          // 0 = free click-through, >0 = points redemption
+  commissionType  String?                       // "CPA", "CPC", "rev_share"
+  commissionValue String?                       // "8%", "$5 per signup", etc. (internal note)
+  sport           String?                       // null = all sports, or "Baseball", "Basketball", etc.
+  priority        Int      @default(0)          // Higher = shown first
+  isActive        Boolean  @default(true)
+  clickCount      Int      @default(0)
+  redeemCount     Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([category])
+  @@index([priority])
+}
+
+enum AffiliateCategory {
+  MERCHANDISE       // Fanatics, team stores
+  TICKETS           // SeatGeek, StubHub, Vivid Seats
+  BETTING           // DraftKings, FanDuel
+  STREAMING         // ESPN+, Peacock, Prime Video
+  FOOD_DELIVERY     // Uber Eats, DoorDash (gameday ordering)
+  SPORTS_EQUIPMENT  // Nike, Under Armour, Dick's
+  TRAVEL            // Hotels.com, Airbnb (away game travel)
+  OTHER
+}
+
+// ==========================================
+// MONETIZATION SETTINGS (Developer-managed)
+// ==========================================
+
+model MonetizationSettings {
+  id                        String   @id @default("global")
+
+  // Affiliate Offers
+  affiliatesEnabled         Boolean  @default(true)
+  affiliateMaxPerPage       Int      @default(6)
+
+  // AdMob / Ads
+  admobEnabled              Boolean  @default(false)
+  admobBannerId             String?  // ca-app-pub-XXXX/YYYY
+  admobInterstitialId       String?
+  admobRewardedVideoId      String?
+  admobBannerEnabled        Boolean  @default(false)
+  admobInterstitialEnabled  Boolean  @default(false)
+  admobRewardedVideoEnabled Boolean  @default(true)
+  admobRewardedPoints       Int      @default(50)   // Points per rewarded video
+
+  // Revenue tracking (internal)
+  totalAffiliateClicks      Int      @default(0)
+  totalAffiliateRedemptions Int      @default(0)
+  totalAdImpressions        Int      @default(0)
+
+  updatedAt                 DateTime @updatedAt
+}
+
+// ==========================================
 // CONTENT FEED
 // ==========================================
 

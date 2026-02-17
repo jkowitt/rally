@@ -1516,6 +1516,247 @@ async function main() {
   });
   console.log('Seeded bonus offer');
 
+  // =====================
+  // AFFILIATE OFFERS — Real sports-adjacent brands
+  // =====================
+  // NOTE: Replace placeholder affiliate URLs with your actual affiliate links
+  // after signing up for each program. All listed programs are self-serve.
+  const affiliateOffers = [
+    // ── Merchandise ──
+    {
+      id: 'aff-fanatics',
+      brand: 'Fanatics',
+      title: 'Up to 65% Off Team Gear',
+      description: 'Official jerseys, hats, and apparel for every team. Rally fans get exclusive markdowns on gameday gear.',
+      category: 'MERCHANDISE' as const,
+      affiliateUrl: 'https://www.fanatics.com/?_s=affiliate&utm_source=rally',
+      imageUrl: '/affiliates/fanatics.png',
+      commissionType: 'rev_share',
+      commissionValue: '8% on all sales',
+      priority: 100,
+    },
+    {
+      id: 'aff-nike',
+      brand: 'Nike',
+      title: 'Team Sideline Collection',
+      description: 'Official Nike team gear — the same styles worn on the sidelines. Dri-FIT jerseys, shoes, and training apparel.',
+      category: 'MERCHANDISE' as const,
+      affiliateUrl: 'https://www.nike.com/fan-gear?cp=rally_affiliate',
+      imageUrl: '/affiliates/nike.png',
+      commissionType: 'rev_share',
+      commissionValue: '7% on all sales',
+      priority: 90,
+    },
+    {
+      id: 'aff-dicks',
+      brand: "Dick's Sporting Goods",
+      title: 'Tailgate & Fan Essentials',
+      description: 'Everything for gameday — coolers, chairs, cornhole, team tents, and fan gear from every league.',
+      category: 'MERCHANDISE' as const,
+      affiliateUrl: 'https://www.dickssportinggoods.com/c/fan-shop?affiliate=rally',
+      imageUrl: '/affiliates/dicks.png',
+      commissionType: 'rev_share',
+      commissionValue: '5% on all sales',
+      priority: 60,
+    },
+
+    // ── Tickets ──
+    {
+      id: 'aff-seatgeek',
+      brand: 'SeatGeek',
+      title: '$20 Off Your First Ticket Purchase',
+      description: 'Find the best seats at the best prices. Use Rally to discover events, then grab tickets on SeatGeek.',
+      category: 'TICKETS' as const,
+      affiliateUrl: 'https://seatgeek.com/?aid=rally&promo=RALLY20',
+      imageUrl: '/affiliates/seatgeek.png',
+      commissionType: 'CPA',
+      commissionValue: '$5 per first purchase',
+      priority: 95,
+    },
+    {
+      id: 'aff-stubhub',
+      brand: 'StubHub',
+      title: 'Sold-Out Games? We Got You.',
+      description: 'Access tickets to every game, even sold-out ones. Verified tickets with StubHub\'s FanProtect guarantee.',
+      category: 'TICKETS' as const,
+      affiliateUrl: 'https://www.stubhub.com/?gcid=rally_affiliate',
+      imageUrl: '/affiliates/stubhub.png',
+      commissionType: 'rev_share',
+      commissionValue: '6% on ticket sales',
+      priority: 85,
+    },
+    {
+      id: 'aff-vividseats',
+      brand: 'Vivid Seats',
+      title: '10% Reward Credit on Tickets',
+      description: 'Buy tickets, earn Vivid Seats reward credit. Stack with your Rally points for the ultimate fan savings.',
+      category: 'TICKETS' as const,
+      affiliateUrl: 'https://www.vividseats.com/?utm_source=rally_affiliate',
+      imageUrl: '/affiliates/vividseats.png',
+      commissionType: 'CPA',
+      commissionValue: '$4 per transaction',
+      priority: 70,
+    },
+
+    // ── Betting ──
+    {
+      id: 'aff-draftkings',
+      brand: 'DraftKings',
+      title: 'Bet $5, Get $200 in Bonus Bets',
+      description: 'Put your predictions where your mouth is. DraftKings Sportsbook — bet on the games you\'re already watching.',
+      category: 'BETTING' as const,
+      affiliateUrl: 'https://www.draftkings.com/sportsbook?ref=rally',
+      imageUrl: '/affiliates/draftkings.png',
+      commissionType: 'CPA',
+      commissionValue: '$50-$100 per depositing user',
+      priority: 92,
+    },
+    {
+      id: 'aff-fanduel',
+      brand: 'FanDuel',
+      title: 'Bet $5, Win $150 in Bonus Bets',
+      description: 'America\'s #1 sportsbook. Same-game parlays, live betting, and daily fantasy sports.',
+      category: 'BETTING' as const,
+      affiliateUrl: 'https://www.fanduel.com/sportsbook?ref=rally',
+      imageUrl: '/affiliates/fanduel.png',
+      commissionType: 'CPA',
+      commissionValue: '$50-$100 per depositing user',
+      priority: 88,
+    },
+    {
+      id: 'aff-espnbet',
+      brand: 'ESPN BET',
+      title: 'First Bet Reset Up to $1,000',
+      description: 'Bet with ESPN BET. Integrated with the ESPN ecosystem — stats, scores, and bets in one place.',
+      category: 'BETTING' as const,
+      affiliateUrl: 'https://www.espnbet.com/?ref=rally',
+      imageUrl: '/affiliates/espnbet.png',
+      commissionType: 'CPA',
+      commissionValue: '$40-$80 per depositing user',
+      priority: 75,
+    },
+
+    // ── Streaming ──
+    {
+      id: 'aff-espnplus',
+      brand: 'ESPN+',
+      title: 'Stream Live Sports — $11.99/mo',
+      description: 'Thousands of live games, 30 for 30 documentaries, and exclusive ESPN originals. Bundle with Disney+ and Hulu.',
+      category: 'STREAMING' as const,
+      affiliateUrl: 'https://plus.espn.com/?src=rally_affiliate',
+      imageUrl: '/affiliates/espnplus.png',
+      commissionType: 'CPA',
+      commissionValue: '$8 per subscription',
+      priority: 80,
+    },
+    {
+      id: 'aff-peacock',
+      brand: 'Peacock',
+      title: 'Sunday Night Football + NBA on NBC',
+      description: 'Stream NFL Sunday Night Football, Premier League, NBA, and more. Plans start at $7.99/mo.',
+      category: 'STREAMING' as const,
+      affiliateUrl: 'https://www.peacocktv.com/?cid=rally_affiliate',
+      imageUrl: '/affiliates/peacock.png',
+      commissionType: 'CPA',
+      commissionValue: '$6 per subscription',
+      priority: 78,
+    },
+    {
+      id: 'aff-prime-video',
+      brand: 'Amazon Prime Video',
+      title: 'Thursday Night Football + NBA',
+      description: 'Watch Thursday Night Football, NBA games, and Prime Video originals. Included with Prime membership.',
+      category: 'STREAMING' as const,
+      affiliateUrl: 'https://www.amazon.com/primevideo?tag=rally-affiliate',
+      imageUrl: '/affiliates/primevideo.png',
+      commissionType: 'CPA',
+      commissionValue: '$3 per trial signup',
+      priority: 76,
+    },
+
+    // ── Food Delivery (Gameday) ──
+    {
+      id: 'aff-ubereats',
+      brand: 'Uber Eats',
+      title: '$10 Off Gameday Delivery',
+      description: 'Order food to the tailgate or your couch. Wings, pizza, and everything you need for the big game.',
+      category: 'FOOD_DELIVERY' as const,
+      affiliateUrl: 'https://www.ubereats.com/?utm_source=rally_affiliate',
+      imageUrl: '/affiliates/ubereats.png',
+      commissionType: 'CPA',
+      commissionValue: '$3 per first order',
+      priority: 65,
+    },
+    {
+      id: 'aff-doordash',
+      brand: 'DoorDash',
+      title: '25% Off Your First 3 Orders',
+      description: 'Gameday grub delivered. Order from local spots or chains — DoorDash delivers in 45 minutes or less.',
+      category: 'FOOD_DELIVERY' as const,
+      affiliateUrl: 'https://www.doordash.com/?utm_source=rally_affiliate',
+      imageUrl: '/affiliates/doordash.png',
+      commissionType: 'CPA',
+      commissionValue: '$4 per first order',
+      priority: 62,
+    },
+
+    // ── Travel (Away Games) ──
+    {
+      id: 'aff-hotelscom',
+      brand: 'Hotels.com',
+      title: 'Away Game Hotels — Collect 10 Nights, Get 1 Free',
+      description: 'Heading to an away game? Book hotels through Hotels.com and earn a free night after 10 stays.',
+      category: 'TRAVEL' as const,
+      affiliateUrl: 'https://www.hotels.com/?affcid=rally',
+      imageUrl: '/affiliates/hotelscom.png',
+      commissionType: 'rev_share',
+      commissionValue: '4% on bookings',
+      priority: 55,
+    },
+
+    // ── Sports Equipment ──
+    {
+      id: 'aff-underarmour',
+      brand: 'Under Armour',
+      title: 'Performance Gear for Every Sport',
+      description: 'Train like a pro. Under Armour athletic gear, shoes, and college team collections.',
+      category: 'SPORTS_EQUIPMENT' as const,
+      affiliateUrl: 'https://www.underarmour.com/?iref=rally_affiliate',
+      imageUrl: '/affiliates/underarmour.png',
+      commissionType: 'rev_share',
+      commissionValue: '5% on all sales',
+      priority: 58,
+    },
+  ];
+
+  for (const offer of affiliateOffers) {
+    await prisma.affiliateOffer.upsert({
+      where: { id: offer.id },
+      update: offer,
+      create: offer,
+    });
+  }
+  console.log(`Seeded ${affiliateOffers.length} affiliate offers`);
+
+  // =====================
+  // MONETIZATION SETTINGS (defaults)
+  // =====================
+  await prisma.monetizationSettings.upsert({
+    where: { id: 'global' },
+    update: {},
+    create: {
+      id: 'global',
+      affiliatesEnabled: true,
+      affiliateMaxPerPage: 6,
+      admobEnabled: false,           // Off by default — developer enters ad unit IDs to enable
+      admobBannerEnabled: false,
+      admobInterstitialEnabled: false,
+      admobRewardedVideoEnabled: true,
+      admobRewardedPoints: 50,
+    },
+  });
+  console.log('Seeded monetization settings');
+
   console.log('\nSeed complete!');
   console.log('---');
   console.log(`Total: ${schools.length} teams, ${events.length} events across MLB, NBA, NHL, MLS, WNBA, College, NFL, PGA`);

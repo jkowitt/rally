@@ -12,6 +12,8 @@ import usersRoutes from './routes/users';
 import teammatesRoutes from './routes/teammates';
 import analyticsRoutes from './routes/analytics';
 import demographicsRoutes from './routes/demographics';
+import affiliatesRoutes from './routes/affiliates';
+import monetizationRoutes from './routes/monetization';
 import { startScheduler } from './services/scheduler';
 
 const app = express();
@@ -38,6 +40,8 @@ app.use('/api/users', usersRoutes);
 app.use('/api/teammates', teammatesRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/demographics', demographicsRoutes);
+app.use('/api/affiliates', affiliatesRoutes);
+app.use('/api/monetization', monetizationRoutes);
 
 app.listen(PORT, () => {
   console.log(`Rally API running on http://localhost:${PORT}`);

@@ -17,7 +17,839 @@
   ],
   "content": [],
   "analytics": [],
-  "events": [],
+  "events": [
+    {
+      "id": "evt-001",
+      "title": "Rally University vs Davidson",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "davidson",
+      "awayTeam": "Davidson Wildcats",
+      "venue": "Rally Arena",
+      "city": "Rally City",
+      "dateTime": "2026-02-17T19:00:00.000Z",
+      "status": "live",
+      "venueAddress": "100 Rally Blvd, Rally City",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.8,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-001a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-001b",
+          "type": "photo",
+          "name": "Spirit Selfie",
+          "points": 50,
+          "isEnabled": true
+        },
+        {
+          "id": "act-001c",
+          "type": "poll",
+          "name": "Halftime Poll",
+          "points": 25,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-002",
+      "title": "Rally University vs Dayton",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "dayton",
+      "awayTeam": "Dayton Flyers",
+      "venue": "Rally Arena",
+      "city": "Rally City",
+      "dateTime": "2026-02-20T19:30:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "100 Rally Blvd, Rally City",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.8,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-002a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-002b",
+          "type": "photo",
+          "name": "Rally Selfie",
+          "points": 50,
+          "isEnabled": true
+        },
+        {
+          "id": "act-002c",
+          "type": "trivia",
+          "name": "Pre-Game Trivia",
+          "points": 30,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-003",
+      "title": "Rally University vs Duquesne",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "duquesne",
+      "awayTeam": "Duquesne Dukes",
+      "venue": "Rally Arena",
+      "city": "Rally City",
+      "dateTime": "2026-02-22T14:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "100 Rally Blvd, Rally City",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.8,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-003a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-003b",
+          "type": "poll",
+          "name": "Score Prediction",
+          "points": 40,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-004",
+      "title": "Rally University vs Fordham",
+      "sport": "Football",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "fordham",
+      "awayTeam": "Fordham Rams",
+      "venue": "Rally Stadium",
+      "city": "Rally City",
+      "dateTime": "2026-02-25T18:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "200 Rally Blvd, Rally City",
+      "venueLatitude": 35.51,
+      "venueLongitude": -80.81,
+      "checkinRadius": 0.5,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-004a",
+          "type": "check_in",
+          "name": "Kickoff Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-004b",
+          "type": "photo",
+          "name": "Tailgate Photo",
+          "points": 50,
+          "isEnabled": true
+        },
+        {
+          "id": "act-004c",
+          "type": "trivia",
+          "name": "Football Trivia",
+          "points": 30,
+          "isEnabled": true
+        },
+        {
+          "id": "act-004d",
+          "type": "poll",
+          "name": "MVP Vote",
+          "points": 25,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-005",
+      "title": "Rally University vs George Mason",
+      "sport": "Basketball",
+      "homeSchoolId": "george-mason",
+      "homeTeam": "George Mason Patriots",
+      "awaySchoolId": "rally-university",
+      "awayTeam": "Rally Ralliers",
+      "venue": "EagleBank Arena",
+      "city": "Fairfax",
+      "dateTime": "2026-02-28T17:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "4500 Patriot Cir, Fairfax, VA",
+      "venueLatitude": 38.83,
+      "venueLongitude": -77.31,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-005a",
+          "type": "check_in",
+          "name": "Away Game Check-In",
+          "points": 150,
+          "isEnabled": true
+        },
+        {
+          "id": "act-005b",
+          "type": "photo",
+          "name": "Road Trip Photo",
+          "points": 75,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-006",
+      "title": "Rally University vs Richmond",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "richmond",
+      "awayTeam": "Richmond Spiders",
+      "venue": "Rally Arena",
+      "city": "Rally City",
+      "dateTime": "2026-03-03T19:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "100 Rally Blvd, Rally City",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.8,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-006a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-006b",
+          "type": "trivia",
+          "name": "Rivalry Trivia",
+          "points": 50,
+          "isEnabled": true
+        },
+        {
+          "id": "act-006c",
+          "type": "photo",
+          "name": "Student Section Selfie",
+          "points": 50,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-007",
+      "title": "Rally University vs VCU",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "vcu",
+      "awayTeam": "VCU Rams",
+      "venue": "Rally Arena",
+      "city": "Rally City",
+      "dateTime": "2026-03-06T20:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "100 Rally Blvd, Rally City",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.8,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-007a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-007b",
+          "type": "poll",
+          "name": "Fan Favorite",
+          "points": 25,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-008",
+      "title": "Rally University vs La Salle",
+      "sport": "Basketball",
+      "homeSchoolId": "la-salle",
+      "homeTeam": "La Salle Explorers",
+      "awaySchoolId": "rally-university",
+      "awayTeam": "Rally Ralliers",
+      "venue": "Tom Gola Arena",
+      "city": "Philadelphia",
+      "dateTime": "2026-03-10T19:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "1900 W Olney Ave, Philadelphia, PA",
+      "venueLatitude": 40.04,
+      "venueLongitude": -75.16,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-008a",
+          "type": "check_in",
+          "name": "Away Game Check-In",
+          "points": 150,
+          "isEnabled": true
+        },
+        {
+          "id": "act-008b",
+          "type": "photo",
+          "name": "Philly Trip Photo",
+          "points": 75,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-009",
+      "title": "Rally University vs Saint Louis",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "saint-louis",
+      "awayTeam": "Saint Louis Billikens",
+      "venue": "Rally Arena",
+      "city": "Rally City",
+      "dateTime": "2026-03-13T19:30:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "100 Rally Blvd, Rally City",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.8,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-009a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-009b",
+          "type": "trivia",
+          "name": "March Madness Trivia",
+          "points": 50,
+          "isEnabled": true
+        },
+        {
+          "id": "act-009c",
+          "type": "poll",
+          "name": "Bracket Prediction",
+          "points": 40,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-010",
+      "title": "Rally University vs Loyola Chicago",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "loyola-chicago",
+      "awayTeam": "Loyola Ramblers",
+      "venue": "Rally Arena",
+      "city": "Rally City",
+      "dateTime": "2026-03-15T15:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "100 Rally Blvd, Rally City",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.8,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-010a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-010b",
+          "type": "photo",
+          "name": "Senior Day Photo",
+          "points": 75,
+          "isEnabled": true
+        },
+        {
+          "id": "act-010c",
+          "type": "poll",
+          "name": "Season Highlight Vote",
+          "points": 30,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-011",
+      "title": "Davidson vs Dayton",
+      "sport": "Basketball",
+      "homeSchoolId": "davidson",
+      "homeTeam": "Davidson Wildcats",
+      "awaySchoolId": "dayton",
+      "awayTeam": "Dayton Flyers",
+      "venue": "Belk Arena",
+      "city": "Davidson",
+      "dateTime": "2026-02-18T19:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "Box 7149, Davidson, NC",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.84,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-011a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-011b",
+          "type": "trivia",
+          "name": "A-10 Trivia",
+          "points": 30,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-012",
+      "title": "Rally University Spring Football Scrimmage",
+      "sport": "Football",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": null,
+      "awayTeam": "",
+      "venue": "Rally Stadium",
+      "city": "Rally City",
+      "dateTime": "2026-03-20T13:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "200 Rally Blvd, Rally City",
+      "venueLatitude": 35.51,
+      "venueLongitude": -80.81,
+      "checkinRadius": 0.5,
+      "broadcastEnabled": false,
+      "activations": [
+        {
+          "id": "act-012a",
+          "type": "check_in",
+          "name": "Spring Game Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-012b",
+          "type": "photo",
+          "name": "Spring Football Photo",
+          "points": 50,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-013",
+      "title": "Rally University vs George Washington",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "george-washington",
+      "awayTeam": "GW Revolutionaries",
+      "venue": "Rally Arena",
+      "city": "Rally City",
+      "dateTime": "2026-02-19T19:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "100 Rally Blvd, Rally City",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.8,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-013a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-013b",
+          "type": "photo",
+          "name": "Fan Photo",
+          "points": 50,
+          "isEnabled": true
+        },
+        {
+          "id": "act-013c",
+          "type": "poll",
+          "name": "Player of the Game",
+          "points": 25,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-014",
+      "title": "Rally University vs Massachusetts",
+      "sport": "Basketball",
+      "homeSchoolId": "massachusetts",
+      "homeTeam": "UMass Minutemen",
+      "awaySchoolId": "rally-university",
+      "awayTeam": "Rally Ralliers",
+      "venue": "Mullins Center",
+      "city": "Amherst",
+      "dateTime": "2026-02-24T18:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "200 Commonwealth Ave, Amherst, MA",
+      "venueLatitude": 42.39,
+      "venueLongitude": -72.53,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-014a",
+          "type": "check_in",
+          "name": "Away Game Check-In",
+          "points": 150,
+          "isEnabled": true
+        },
+        {
+          "id": "act-014b",
+          "type": "photo",
+          "name": "Road Trip Selfie",
+          "points": 75,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-015",
+      "title": "Rally University vs St. Bonaventure",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "st-bonaventure",
+      "awayTeam": "St. Bonaventure Bonnies",
+      "venue": "Rally Arena",
+      "city": "Rally City",
+      "dateTime": "2026-03-01T14:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "100 Rally Blvd, Rally City",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.8,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-015a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-015b",
+          "type": "trivia",
+          "name": "Basketball Trivia",
+          "points": 40,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-016",
+      "title": "Rally University vs Saint Joseph's",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "saint-josephs",
+      "awayTeam": "Saint Joseph's Hawks",
+      "venue": "Rally Arena",
+      "city": "Rally City",
+      "dateTime": "2026-03-08T16:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "100 Rally Blvd, Rally City",
+      "venueLatitude": 35.5,
+      "venueLongitude": -80.8,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-016a",
+          "type": "check_in",
+          "name": "Game Day Check-In",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-016b",
+          "type": "photo",
+          "name": "Hawk Walk Photo",
+          "points": 50,
+          "isEnabled": true
+        },
+        {
+          "id": "act-016c",
+          "type": "poll",
+          "name": "Best Cheer",
+          "points": 20,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-017",
+      "title": "Rally University vs Rhode Island",
+      "sport": "Basketball",
+      "homeSchoolId": "rhode-island",
+      "homeTeam": "Rhode Island Rams",
+      "awaySchoolId": "rally-university",
+      "awayTeam": "Rally Ralliers",
+      "venue": "Ryan Center",
+      "city": "Kingston",
+      "dateTime": "2026-03-17T19:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "1 Lincoln Almond Plaza, Kingston, RI",
+      "venueLatitude": 41.49,
+      "venueLongitude": -71.53,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-017a",
+          "type": "check_in",
+          "name": "Away Game Check-In",
+          "points": 150,
+          "isEnabled": true
+        },
+        {
+          "id": "act-017b",
+          "type": "photo",
+          "name": "Road Warrior Photo",
+          "points": 75,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-018",
+      "title": "A-10 Conference Tournament - Quarterfinals",
+      "sport": "Basketball",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": null,
+      "awayTeam": "TBD",
+      "venue": "Barclays Center",
+      "city": "Brooklyn",
+      "dateTime": "2026-03-22T12:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "620 Atlantic Ave, Brooklyn, NY",
+      "venueLatitude": 40.68,
+      "venueLongitude": -73.97,
+      "checkinRadius": 0.5,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-018a",
+          "type": "check_in",
+          "name": "Tournament Check-In",
+          "points": 200,
+          "isEnabled": true
+        },
+        {
+          "id": "act-018b",
+          "type": "photo",
+          "name": "Tournament Selfie",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-018c",
+          "type": "trivia",
+          "name": "Conference Trivia",
+          "points": 50,
+          "isEnabled": true
+        },
+        {
+          "id": "act-018d",
+          "type": "poll",
+          "name": "Championship Pick",
+          "points": 40,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-019",
+      "title": "Rally University vs Duke",
+      "sport": "Basketball",
+      "homeSchoolId": "duke",
+      "homeTeam": "Duke Blue Devils",
+      "awaySchoolId": "rally-university",
+      "awayTeam": "Rally Ralliers",
+      "venue": "Cameron Indoor Stadium",
+      "city": "Durham",
+      "dateTime": "2026-02-21T20:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "115 Whitford Dr, Durham, NC",
+      "venueLatitude": 36.0,
+      "venueLongitude": -78.94,
+      "checkinRadius": 0.25,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-019a",
+          "type": "check_in",
+          "name": "Big Game Check-In",
+          "points": 200,
+          "isEnabled": true
+        },
+        {
+          "id": "act-019b",
+          "type": "photo",
+          "name": "Cameron Crazies Photo",
+          "points": 100,
+          "isEnabled": true
+        },
+        {
+          "id": "act-019c",
+          "type": "trivia",
+          "name": "Rivalry Trivia",
+          "points": 50,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    },
+    {
+      "id": "evt-020",
+      "title": "Rally University vs Clemson",
+      "sport": "Football",
+      "homeSchoolId": "rally-university",
+      "homeTeam": "Rally Ralliers",
+      "awaySchoolId": "clemson",
+      "awayTeam": "Clemson Tigers",
+      "venue": "Rally Stadium",
+      "city": "Rally City",
+      "dateTime": "2026-03-28T18:00:00.000Z",
+      "status": "upcoming",
+      "venueAddress": "200 Rally Blvd, Rally City",
+      "venueLatitude": 35.51,
+      "venueLongitude": -80.81,
+      "checkinRadius": 0.5,
+      "broadcastEnabled": true,
+      "activations": [
+        {
+          "id": "act-020a",
+          "type": "check_in",
+          "name": "Rivalry Check-In",
+          "points": 150,
+          "isEnabled": true
+        },
+        {
+          "id": "act-020b",
+          "type": "photo",
+          "name": "Tailgate Photo",
+          "points": 75,
+          "isEnabled": true
+        },
+        {
+          "id": "act-020c",
+          "type": "poll",
+          "name": "Predict the Score",
+          "points": 40,
+          "isEnabled": true
+        }
+      ],
+      "engagements": [],
+      "checkins": [],
+      "createdAt": "2026-02-10T12:00:00.000Z"
+    }
+  ],
   "pointsLedger": [],
   "notifications": [],
   "bonusOffers": [],

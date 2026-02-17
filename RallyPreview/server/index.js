@@ -3204,6 +3204,229 @@ app.delete('/api/content/:id', authenticateToken, requireRole(['admin', 'develop
   res.json({ message: 'Content deleted' });
 });
 
+// ─── Banner routes ──────────────────────────────────────────────────────────
+
+function ensureBannersInDb() {
+  const db = getDb();
+  if (!db.banners) { db.banners = []; writeDb(db); }
+}
+
+app.get('/api/banners', (req, res) => {
+  ensureBannersInDb();
+  const db = getDb();
+  const { page, active } = req.query || {};
+  let banners = db.banners || [];
+  if (active === 'true') {
+    const now = new Date();
+    banners = banners.filter((b) => {
+      if (!b.isActive) return false;
+      if (b.startDate && new Date(b.startDate) > now) return false;
+      if (b.endDate && new Date(b.endDate) < now) return false;
+      return true;
+    });
+  }
+  if (page) {
+    banners = banners.filter((b) => (b.pages || []).includes(page));
+  }
+  banners.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json({ banners });
+});
+
+app.get('/api/banners/:id', (req, res) => {
+  ensureBannersInDb();
+  const db = getDb();
+  const banner = (db.banners || []).find((b) => b.id === req.params.id);
+  if (!banner) return res.status(404).json({ error: 'Banner not found' });
+  res.json(banner);
+});
+
+app.post('/api/banners', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureBannersInDb();
+  const { name, imageUrl, linkUrl, altText, position, size, customWidth, customHeight, pages, isActive, startDate, endDate } = req.body;
+  if (!name || !imageUrl || !linkUrl) {
+    return res.status(400).json({ error: 'name, imageUrl, and linkUrl are required' });
+  }
+  const now = new Date().toISOString();
+  const banner = {
+    id: uuidv4(),
+    name,
+    imageUrl,
+    linkUrl,
+    altText: altText || null,
+    position: position || 'top',
+    size: size || 'leaderboard',
+    customWidth: customWidth || null,
+    customHeight: customHeight || null,
+    pages: pages || [],
+    isActive: isActive !== undefined ? isActive : true,
+    startDate: startDate || null,
+    endDate: endDate || null,
+    impressions: 0,
+    clicks: 0,
+    createdBy: req.user?.id || null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const db = getDb();
+  db.banners.push(banner);
+  writeDb(db);
+  res.status(201).json(banner);
+});
+
+app.put('/api/banners/:id', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureBannersInDb();
+  const db = getDb();
+  const banner = (db.banners || []).find((b) => b.id === req.params.id);
+  if (!banner) return res.status(404).json({ error: 'Banner not found' });
+
+  const { name, imageUrl, linkUrl, altText, position, size, customWidth, customHeight, pages, isActive, startDate, endDate } = req.body;
+  if (name !== undefined) banner.name = name;
+  if (imageUrl !== undefined) banner.imageUrl = imageUrl;
+  if (linkUrl !== undefined) banner.linkUrl = linkUrl;
+  if (altText !== undefined) banner.altText = altText;
+  if (position !== undefined) banner.position = position;
+  if (size !== undefined) banner.size = size;
+  if (customWidth !== undefined) banner.customWidth = customWidth;
+  if (customHeight !== undefined) banner.customHeight = customHeight;
+  if (pages !== undefined) banner.pages = pages;
+  if (isActive !== undefined) banner.isActive = isActive;
+  if (startDate !== undefined) banner.startDate = startDate;
+  if (endDate !== undefined) banner.endDate = endDate;
+  banner.updatedAt = new Date().toISOString();
+
+  writeDb(db);
+  res.json(banner);
+});
+
+app.patch('/api/banners/:id/track', (req, res) => {
+  ensureBannersInDb();
+  const db = getDb();
+  const banner = (db.banners || []).find((b) => b.id === req.params.id);
+  if (!banner) return res.status(404).json({ error: 'Banner not found' });
+  const { action } = req.body;
+  if (action === 'impression') banner.impressions = (banner.impressions || 0) + 1;
+  else if (action === 'click') banner.clicks = (banner.clicks || 0) + 1;
+  else return res.status(400).json({ error: 'action must be "impression" or "click"' });
+  writeDb(db);
+  res.json({ impressions: banner.impressions, clicks: banner.clicks });
+});
+
+app.delete('/api/banners/:id', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureBannersInDb();
+  const db = getDb();
+  const index = (db.banners || []).findIndex((b) => b.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: 'Banner not found' });
+  db.banners.splice(index, 1);
+  writeDb(db);
+  res.json({ success: true });
+});
+
+// ─── Media routes ───────────────────────────────────────────────────────────
+
+function ensureMediaInDb() {
+  const db = getDb();
+  if (!db.media) { db.media = []; writeDb(db); }
+}
+
+app.get('/api/media', (req, res) => {
+  ensureMediaInDb();
+  const db = getDb();
+  const { type, search } = req.query || {};
+  let items = db.media || [];
+  if (type && type !== 'all') items = items.filter((m) => m.type === type);
+  if (search) {
+    const q = search.toLowerCase();
+    items = items.filter((m) =>
+      (m.name || '').toLowerCase().includes(q) ||
+      (m.caption || '').toLowerCase().includes(q) ||
+      (m.tags || []).some((t) => t.toLowerCase().includes(q))
+    );
+  }
+  items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json({ media: items });
+});
+
+app.get('/api/media/:id', (req, res) => {
+  ensureMediaInDb();
+  const db = getDb();
+  const item = (db.media || []).find((m) => m.id === req.params.id);
+  if (!item) return res.status(404).json({ error: 'Media item not found' });
+  res.json(item);
+});
+
+app.post('/api/media', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureMediaInDb();
+  const { name, type, url, thumbnailUrl, size, mimeType, width, height, duration, tags, alt, caption } = req.body;
+  if (!name || !type || !url) {
+    return res.status(400).json({ error: 'name, type, and url are required' });
+  }
+  const now = new Date().toISOString();
+  const item = {
+    id: uuidv4(),
+    name,
+    type,
+    url,
+    thumbnailUrl: thumbnailUrl || null,
+    size: size || 0,
+    mimeType: mimeType || null,
+    width: width || null,
+    height: height || null,
+    duration: duration || null,
+    tags: tags || [],
+    alt: alt || null,
+    caption: caption || null,
+    uploadedBy: req.user?.id || null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const db = getDb();
+  db.media.push(item);
+  writeDb(db);
+  res.status(201).json(item);
+});
+
+app.put('/api/media/:id', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureMediaInDb();
+  const db = getDb();
+  const item = (db.media || []).find((m) => m.id === req.params.id);
+  if (!item) return res.status(404).json({ error: 'Media item not found' });
+
+  const { name, tags, alt, caption, url, thumbnailUrl } = req.body;
+  if (name !== undefined) item.name = name;
+  if (tags !== undefined) item.tags = tags;
+  if (alt !== undefined) item.alt = alt;
+  if (caption !== undefined) item.caption = caption;
+  if (url !== undefined) item.url = url;
+  if (thumbnailUrl !== undefined) item.thumbnailUrl = thumbnailUrl;
+  item.updatedAt = new Date().toISOString();
+
+  writeDb(db);
+  res.json(item);
+});
+
+app.delete('/api/media/:id', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureMediaInDb();
+  const db = getDb();
+  const index = (db.media || []).findIndex((m) => m.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: 'Media item not found' });
+  db.media.splice(index, 1);
+  writeDb(db);
+  res.json({ success: true });
+});
+
+app.delete('/api/media', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {
+  ensureMediaInDb();
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'ids array is required' });
+  }
+  const db = getDb();
+  const before = db.media.length;
+  db.media = db.media.filter((m) => !ids.includes(m.id));
+  writeDb(db);
+  res.json({ deleted: before - db.media.length });
+});
+
 // ─── Analytics routes ────────────────────────────────────────────────────────
 
 app.get('/api/analytics', authenticateToken, requireRole(['admin', 'developer']), (req, res) => {

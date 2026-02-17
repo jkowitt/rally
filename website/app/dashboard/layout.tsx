@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect } from "react";
 import { useRallyAuth } from "@/lib/rally-auth";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default function DashboardLayout({
   children,
@@ -157,7 +158,9 @@ export default function DashboardLayout({
       </aside>
 
       <main className="rally-dashboard-main">
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </main>
     </div>
   );

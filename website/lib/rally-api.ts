@@ -53,10 +53,10 @@ export const rallyAuth = {
       body: JSON.stringify(params),
     }),
 
-  checkHandle: (handle: string, name: string, currentWarnings: number) =>
+  checkHandle: (handle: string, name: string) =>
     rallyFetch<HandleModerationResult>('/auth/check-handle', {
       method: 'POST',
-      body: JSON.stringify({ handle, name, currentWarnings }),
+      body: JSON.stringify({ handle, name }),
     }),
 
   me: () => rallyFetch<{ user: RallyUser }>('/auth/me'),

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest, requireAuth, optionalAuth } from '../middleware/auth';
+import { validate, profileUpdateSchema } from '../lib/validation';
+import type { FanProfile, VerifiedFanLevel, MilestoneType } from '@prisma/client';
 
 const router = Router();
 
@@ -84,7 +86,7 @@ router.get('/by-handle/:handle', optionalAuth, async (req: AuthRequest, res) => 
 });
 
 // PUT /fan-profile/me — Update profile settings (tagline, visibility, slug)
-router.put('/me', requireAuth, async (req: AuthRequest, res) => {
+router.put('/me', requireAuth, validate(profileUpdateSchema), async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!;
     const { tagline, isPublic, profileSlug } = req.body;
@@ -93,10 +95,6 @@ router.put('/me', requireAuth, async (req: AuthRequest, res) => {
     if (tagline !== undefined) updateData.tagline = tagline;
     if (isPublic !== undefined) updateData.isPublic = isPublic;
     if (profileSlug !== undefined) {
-      // Validate slug format
-      if (profileSlug && !/^[a-z0-9_-]{3,30}$/.test(profileSlug)) {
-        return res.status(400).json({ error: 'Slug must be 3-30 chars, lowercase alphanumeric, hyphens, or underscores' });
-      }
       updateData.profileSlug = profileSlug || null;
     }
 
@@ -107,8 +105,9 @@ router.put('/me', requireAuth, async (req: AuthRequest, res) => {
     });
 
     res.json(profile);
-  } catch (err: any) {
-    if (err.code === 'P2002') {
+  } catch (err: unknown) {
+    const prismaErr = err as { code?: string };
+    if (prismaErr.code === 'P2002') {
       return res.status(409).json({ error: 'That profile slug is already taken' });
     }
     console.error('Profile update error:', err);
@@ -169,7 +168,7 @@ router.post('/refresh', requireAuth, async (req: AuthRequest, res) => {
         eventsAttended,
         uniqueVenues,
         sportBreakdown: sportCounts,
-        verifiedLevel: verifiedLevel as any,
+        verifiedLevel: verifiedLevel as VerifiedFanLevel,
       },
       create: {
         userId,
@@ -182,7 +181,7 @@ router.post('/refresh', requireAuth, async (req: AuthRequest, res) => {
         eventsAttended,
         uniqueVenues,
         sportBreakdown: sportCounts,
-        verifiedLevel: verifiedLevel as any,
+        verifiedLevel: verifiedLevel as VerifiedFanLevel,
       },
     });
 
@@ -318,7 +317,7 @@ function calculateWinner(
   return 'TIE';
 }
 
-async function checkAndAwardMilestones(userId: string, profile: any) {
+async function checkAndAwardMilestones(userId: string, profile: FanProfile) {
   const existing = await prisma.fanMilestone.findMany({
     where: { userId },
     select: { type: true },
@@ -373,7 +372,7 @@ async function checkAndAwardMilestones(userId: string, profile: any) {
 
   // Multi-sport
   if (profile.sportBreakdown) {
-    const sportsCount = Object.keys(profile.sportBreakdown).length;
+    const sportsCount = Object.keys(profile.sportBreakdown as Record<string, number>).length;
     if (sportsCount >= 3 && !earned.has('MULTI_SPORT')) {
       toAward.push({ type: 'MULTI_SPORT', title: 'Multi-Sport Fan', description: 'Attended events in 3+ sports', icon: '🏅', stat: `${sportsCount} sports` });
     }
@@ -392,7 +391,7 @@ async function checkAndAwardMilestones(userId: string, profile: any) {
     await prisma.fanMilestone.createMany({
       data: toAward.map(m => ({
         userId,
-        type: m.type as any,
+        type: m.type as MilestoneType,
         title: m.title,
         description: m.description,
         icon: m.icon,

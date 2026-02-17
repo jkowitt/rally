@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest, requireAuth, requireAdmin, requireDeveloper } from '../middleware/auth';
+import { validate, adminUpdateUserSchema } from '../lib/validation';
+import type { RallyUser } from '@prisma/client';
 
 const router = Router();
 
-function formatUser(u: any) {
+function formatUser(u: RallyUser) {
   return {
     id: u.id,
     email: u.email,
@@ -87,23 +89,21 @@ router.get('/:id', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // PUT /users/:id (admin+ can edit, but ONLY developer can change roles)
-router.put('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.put('/:id', requireAuth, requireAdmin, validate(adminUpdateUserSchema), async (req: AuthRequest, res) => {
   try {
     const { name, handle, role, schoolId, propertyId, propertyLeague, favoriteSchool, supportingSchools, emailUpdates, pushNotifications, userType, birthYear, residingCity, residingState, teammatePermissions } = req.body;
 
-    // Role changes require DEVELOPER permission
     if (role !== undefined) {
       if (req.userRole !== 'developer') {
         return res.status(403).json({ error: 'Only the developer can change user roles' });
       }
-      // Cannot create another developer
       const targetRole = role.toUpperCase();
       if (targetRole === 'DEVELOPER') {
         return res.status(403).json({ error: 'Cannot assign developer role' });
       }
     }
 
-    const data: any = {};
+    const data: Record<string, unknown> = {};
     if (name !== undefined) data.name = name;
     if (handle !== undefined) data.handle = handle;
     if (role !== undefined) data.role = role.toUpperCase();
@@ -137,7 +137,7 @@ router.put('/:id/reset-handle', requireAuth, requireAdmin, async (req: AuthReque
     const userId = String(req.params.id);
     const { handle } = req.body;
 
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       handleWarnings: 0,
       handleLockedUntil: null,
       handleAutoAssigned: false,
@@ -154,8 +154,9 @@ router.put('/:id/reset-handle', requireAuth, requireAdmin, async (req: AuthReque
     });
 
     return res.json(formatUser(user));
-  } catch (err: any) {
-    if (err.code === 'P2002') return res.status(409).json({ error: 'That handle is already taken' });
+  } catch (err: unknown) {
+    const prismaErr = err as { code?: string };
+    if (prismaErr.code === 'P2002') return res.status(409).json({ error: 'That handle is already taken' });
     return res.status(500).json({ error: 'Failed to reset handle' });
   }
 });

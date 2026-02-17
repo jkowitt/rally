@@ -74,8 +74,11 @@ model RallyUser {
   updatedAt          DateTime @updatedAt
 
   @@index([email])
+  @@index([handle])
   @@index([schoolId])
   @@index([role])
+  @@index([points])
+  @@index([handleWarnings])
 }
 
 enum RallyRole {

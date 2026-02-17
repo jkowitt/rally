@@ -26169,3 +26169,62 @@ body {
   overflow: hidden;
   margin-bottom: 12px;
 }
+
+/* ===========================
+   ERROR BOUNDARY
+   =========================== */
+.rally-error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 64px 24px;
+  gap: 16px;
+}
+.rally-error-boundary-icon {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.2);
+  display: flex; align-items: center; justify-content: center;
+  color: #ef4444;
+}
+.rally-error-boundary h3 { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+.rally-error-boundary p { font-size: 14px; color: var(--text-secondary); max-width: 400px; }
+
+/* ===========================
+   LOADING SKELETONS
+   =========================== */
+@keyframes rally-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.rally-skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: rally-shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+.rally-skeleton--text { height: 14px; width: 80%; margin-bottom: 10px; }
+.rally-skeleton--text-short { height: 14px; width: 50%; margin-bottom: 10px; }
+.rally-skeleton--text-long { height: 14px; width: 90%; }
+.rally-skeleton--heading { height: 28px; width: 60%; margin-bottom: 8px; }
+.rally-skeleton--avatar { width: 48px; height: 48px; border-radius: 50%; }
+.rally-skeleton--avatar-sm { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; }
+.rally-skeleton--card-header { height: 20px; width: 60%; margin-bottom: 12px; }
+.rally-skeleton--stat-value { height: 32px; width: 60px; margin: 0 auto 6px; }
+.rally-skeleton--stat-label { height: 12px; width: 80px; margin: 0 auto; }
+.rally-skeleton-text-group { display: flex; flex-direction: column; gap: 4px; }
+.rally-skeleton-row { display: flex; gap: 12px; }
+.rally-skeleton-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 16px 0; }
+.rally-skeleton-stat { text-align: center; }
+.rally-skeleton-cards { display: flex; flex-direction: column; gap: 12px; }
+.rally-skeleton-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.rally-skeleton-list { display: flex; flex-direction: column; gap: 12px; }
+.rally-skeleton-list-item { display: flex; align-items: center; gap: 12px; }
+.rally-skeleton-list-content { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.rally-skeleton-page-header { margin-bottom: 24px; }

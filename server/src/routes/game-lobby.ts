@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest, requireAuth, optionalAuth } from '../middleware/auth';
+import { validate, lobbyReactionSchema } from '../lib/validation';
+import type { LobbyReactionType } from '@prisma/client';
 
 const router = Router();
 
@@ -10,7 +12,7 @@ router.get('/:eventId', optionalAuth, async (req: AuthRequest, res) => {
     const eventId = req.params.eventId as string;
 
     // Find or auto-create lobby
-    let lobby: any = await prisma.gameLobby.findUnique({
+    let lobby = await prisma.gameLobby.findUnique({
       where: { eventId },
       include: {
         presences: {
@@ -94,7 +96,7 @@ router.get('/:eventId', optionalAuth, async (req: AuthRequest, res) => {
       eventId,
       isActive: lobby.isActive,
       fanCount: lobby.fanCount,
-      fans: lobby.presences.map((p: any) => ({
+      fans: lobby.presences.map((p: { user: Record<string, unknown>; checkedInAt: Date }) => ({
         ...p.user,
         checkedInAt: p.checkedInAt,
       })),
@@ -174,31 +176,25 @@ router.post('/:eventId/checkout', requireAuth, async (req: AuthRequest, res) => 
 });
 
 // POST /game-lobby/:eventId/react — Send a reaction
-router.post('/:eventId/react', requireAuth, async (req: AuthRequest, res) => {
+router.post('/:eventId/react', requireAuth, validate(lobbyReactionSchema), async (req: AuthRequest, res) => {
   try {
     const eventId = req.params.eventId as string;
-    const { type } = req.body;
+    const { type } = req.body as { type: LobbyReactionType };
     const userId = req.userId!;
-
-    const validTypes = ['FIRE', 'CLAP', 'CRY', 'HORN', 'WAVE', 'HUNDRED'];
-    if (!validTypes.includes(type)) {
-      return res.status(400).json({ error: `Invalid reaction type. Must be one of: ${validTypes.join(', ')}` });
-    }
 
     const lobby = await prisma.gameLobby.findUnique({ where: { eventId } });
     if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
 
-    // Rate limit: max 1 reaction per type per 5 seconds
     const fiveSecAgo = new Date(Date.now() - 5000);
     const recent = await prisma.lobbyReaction.findFirst({
-      where: { lobbyId: lobby.id, userId, type: type as any, createdAt: { gte: fiveSecAgo } },
+      where: { lobbyId: lobby.id, userId, type, createdAt: { gte: fiveSecAgo } },
     });
     if (recent) {
       return res.status(429).json({ error: 'Slow down! Wait a few seconds between reactions.' });
     }
 
     await prisma.lobbyReaction.create({
-      data: { lobbyId: lobby.id, userId, type: type as any },
+      data: { lobbyId: lobby.id, userId, type },
     });
 
     await prisma.gameLobby.update({

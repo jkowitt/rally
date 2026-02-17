@@ -3,10 +3,14 @@ import prisma from '../lib/prisma';
 import { getTier } from '../lib/tiers';
 import { AuthRequest, requireAuth, requireAdmin, optionalAuth } from '../middleware/auth';
 import { triggerManualUpdate, getLastRunResult, isUpdateRunning } from '../services/scheduler';
+import { validate, createEventSchema, earnPointsSchema } from '../lib/validation';
+import type { Event, EventActivation } from '@prisma/client';
 
 const router = Router();
 
-function formatEvent(event: any) {
+type EventWithActivations = Event & { activations?: EventActivation[] };
+
+function formatEvent(event: EventWithActivations) {
   return {
     id: event.id,
     title: event.title,
@@ -19,7 +23,7 @@ function formatEvent(event: any) {
     city: event.city,
     dateTime: event.dateTime.toISOString(),
     status: event.status.toLowerCase(),
-    activations: (event.activations || []).map((a: any) => ({
+    activations: (event.activations || []).map((a) => ({
       id: a.id,
       type: a.type,
       name: a.name,
@@ -63,7 +67,7 @@ router.get('/sync/status', requireAuth, requireAdmin, async (_req, res) => {
 router.get('/', optionalAuth, async (req, res) => {
   try {
     const { schoolId, status } = req.query;
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (schoolId) where.homeSchoolId = schoolId as string;
     if (status) where.status = (status as string).toUpperCase();
 
@@ -98,13 +102,9 @@ router.get('/:eventId', optionalAuth, async (req, res) => {
 });
 
 // POST /events (admin+ only)
-router.post('/', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.post('/', requireAuth, requireAdmin, validate(createEventSchema), async (req: AuthRequest, res) => {
   try {
     const { title, sport, homeSchoolId, homeTeam, awaySchoolId, awayTeam, venue, city, dateTime, status, activations } = req.body;
-
-    if (!title || !homeSchoolId || !dateTime) {
-      return res.status(400).json({ error: 'Title, homeSchoolId, and dateTime are required' });
-    }
 
     const event = await prisma.event.create({
       data: {
@@ -120,7 +120,7 @@ router.post('/', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
         status: status ? status.toUpperCase() : 'UPCOMING',
         createdBy: req.userId,
         activations: activations?.length ? {
-          create: activations.map((a: any) => ({
+          create: activations.map((a: { type: string; name: string; points: number; description?: string }) => ({
             type: a.type,
             name: a.name,
             points: a.points,
@@ -143,7 +143,7 @@ router.put('/:eventId', requireAuth, requireAdmin, async (req: AuthRequest, res)
   try {
     const { title, sport, homeSchoolId, homeTeam, awaySchoolId, awayTeam, venue, city, dateTime, status, activations } = req.body;
 
-    const data: any = {};
+    const data: Record<string, unknown> = {};
     if (title !== undefined) data.title = title;
     if (sport !== undefined) data.sport = sport;
     if (homeSchoolId !== undefined) data.homeSchoolId = homeSchoolId;
@@ -159,7 +159,7 @@ router.put('/:eventId', requireAuth, requireAdmin, async (req: AuthRequest, res)
     if (activations) {
       await prisma.eventActivation.deleteMany({ where: { eventId: String(req.params.eventId) } });
       await prisma.eventActivation.createMany({
-        data: activations.map((a: any) => ({
+        data: activations.map((a: { type: string; name: string; points: number; description?: string }) => ({
           eventId: String(req.params.eventId),
           type: a.type,
           name: a.name,
@@ -193,10 +193,9 @@ router.delete('/:eventId', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // POST /events/:eventId/earn
-router.post('/:eventId/earn', requireAuth, async (req: AuthRequest, res) => {
+router.post('/:eventId/earn', requireAuth, validate(earnPointsSchema), async (req: AuthRequest, res) => {
   try {
     const { activationId } = req.body;
-    if (!activationId) return res.status(400).json({ error: 'activationId is required' });
 
     const activation = await prisma.eventActivation.findUnique({ where: { id: activationId } });
     if (!activation) return res.status(404).json({ error: 'Activation not found' });

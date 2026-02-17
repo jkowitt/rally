@@ -47,7 +47,7 @@ export default function SignUpPage() {
 
     // Pre-check handle for inappropriate content
     const handle = formData.handle.startsWith("@") ? formData.handle : `@${formData.handle}`;
-    const res = await rallyAuth.checkHandle(handle, formData.name.trim(), handleWarnings);
+    const res = await rallyAuth.checkHandle(handle, formData.name.trim());
 
     if (res.ok && res.data) {
       if (res.data.allowed) {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest, requireAuth, optionalAuth } from '../middleware/auth';
+import { validate, headToHeadSchema } from '../lib/validation';
 
 const router = Router();
 
@@ -164,14 +165,10 @@ router.post('/milestone/:milestoneId', requireAuth, async (req: AuthRequest, res
 });
 
 // POST /share-cards/head-to-head — Generate a head-to-head comparison share card
-router.post('/head-to-head', requireAuth, async (req: AuthRequest, res) => {
+router.post('/head-to-head', requireAuth, validate(headToHeadSchema), async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!;
     const { opponentHandle } = req.body;
-
-    if (!opponentHandle) {
-      return res.status(400).json({ error: 'opponentHandle required' });
-    }
 
     const [me, opponent] = await Promise.all([
       prisma.rallyUser.findUnique({

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest, requireAuth, optionalAuth } from '../middleware/auth';
+import { validate, createCrewSchema, promoteSchema } from '../lib/validation';
+import type { CrewRole } from '@prisma/client';
 
 const router = Router();
 
@@ -107,7 +109,7 @@ router.get('/leaderboard', optionalAuth, async (req: AuthRequest, res) => {
 // GET /crews/:slug — Get crew detail
 router.get('/:slug', optionalAuth, async (req: AuthRequest, res) => {
   try {
-    const crew: any = await prisma.crew.findUnique({
+    const crew = await prisma.crew.findUnique({
       where: { slug: req.params.slug as string },
       include: {
         members: {
@@ -131,13 +133,13 @@ router.get('/:slug', optionalAuth, async (req: AuthRequest, res) => {
     // Check membership
     let myRole = null;
     if (req.userId) {
-      const membership = crew.members.find((m: any) => m.userId === req.userId);
+      const membership = crew.members.find((m) => m.userId === req.userId);
       myRole = membership?.role || null;
     }
 
     res.json({
       ...crew,
-      members: crew.members.map((m: any) => ({
+      members: crew.members.map((m) => ({
         id: m.user.id,
         name: m.user.name,
         handle: m.user.handle,
@@ -156,14 +158,10 @@ router.get('/:slug', optionalAuth, async (req: AuthRequest, res) => {
 });
 
 // POST /crews — Create a crew
-router.post('/', requireAuth, async (req: AuthRequest, res) => {
+router.post('/', requireAuth, validate(createCrewSchema), async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!;
     const { name, description, schoolId, sport, avatarEmoji, color, isPublic } = req.body;
-
-    if (!name || name.trim().length < 2) {
-      return res.status(400).json({ error: 'Crew name must be at least 2 characters' });
-    }
 
     // Generate slug from name
     const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -234,8 +232,9 @@ router.post('/:slug/join', requireAuth, async (req: AuthRequest, res) => {
     await recalcCrewStats(crew.id);
 
     res.json({ success: true, message: `Joined ${crew.name}` });
-  } catch (err: any) {
-    if (err.code === 'P2002') return res.status(400).json({ error: 'Already a member' });
+  } catch (err: unknown) {
+    const prismaErr = err as { code?: string };
+    if (prismaErr.code === 'P2002') return res.status(400).json({ error: 'Already a member' });
     console.error('Join crew error:', err);
     res.status(500).json({ error: 'Failed to join crew' });
   }
@@ -278,24 +277,18 @@ router.post('/:slug/leave', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // PUT /crews/:slug/members/:memberId/promote — Promote/demote a member
-router.put('/:slug/members/:memberId/promote', requireAuth, async (req: AuthRequest, res) => {
+router.put('/:slug/members/:memberId/promote', requireAuth, validate(promoteSchema), async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!;
-    const { role } = req.body;
+    const { role } = req.body as { role: CrewRole };
     const crew = await prisma.crew.findUnique({ where: { slug: req.params.slug as string } });
     if (!crew) return res.status(404).json({ error: 'Crew not found' });
 
-    // Verify requester is captain
     const myMembership = await prisma.crewMember.findUnique({
       where: { crewId_userId: { crewId: crew.id, userId } },
     });
     if (!myMembership || myMembership.role !== 'CAPTAIN') {
       return res.status(403).json({ error: 'Only the captain can manage roles' });
-    }
-
-    const validRoles = ['MEMBER', 'LIEUTENANT', 'CAPTAIN'];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
     }
 
     const targetMembership = await prisma.crewMember.findFirst({
@@ -313,7 +306,7 @@ router.put('/:slug/members/:memberId/promote', requireAuth, async (req: AuthRequ
 
     await prisma.crewMember.update({
       where: { id: targetMembership.id },
-      data: { role: role as any },
+      data: { role },
     });
 
     res.json({ success: true });

@@ -20,6 +20,7 @@ import gameLobbyRoutes from './routes/game-lobby';
 import crewsRoutes from './routes/crews';
 import shareCardsRoutes from './routes/share-cards';
 import serverHealthRoutes from './routes/server-health';
+import capturesRoutes from './routes/captures';
 import { startScheduler } from './services/scheduler';
 import { apiLimiter, authLimiter, loginLimiter } from './middleware/rate-limit';
 import { requestLogger } from './middleware/request-logger';
@@ -83,6 +84,7 @@ app.use('/api/game-lobby', gameLobbyRoutes);
 app.use('/api/crews', crewsRoutes);
 app.use('/api/share-cards', shareCardsRoutes);
 app.use('/api/server-health', serverHealthRoutes);
+app.use('/api/captures', capturesRoutes);
 
 // 404 handler
 app.use('/api/*', (_req, res) => {

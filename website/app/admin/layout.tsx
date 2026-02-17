@@ -37,6 +37,7 @@ const navGroups: NavGroup[] = [
       { href: "/admin/bonus-offers", label: "Bonus Offers", icon: "bonus", permission: "bonusOffers" },
       { href: "/admin/notifications", label: "Notifications", icon: "notifications", permission: "notifications" },
       { href: "/admin/monetization", label: "Monetization", icon: "bonus", developerOnly: true },
+      { href: "/admin/attribution", label: "Attribution", icon: "media", permission: "analytics" },
     ],
   },
   {

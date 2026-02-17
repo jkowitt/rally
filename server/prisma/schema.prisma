@@ -69,6 +69,10 @@ model RallyUser {
   milestones         FanMilestone[]
   shareCards         ShareCard[]
 
+  // Rally Capture relations
+  captures           GameCapture[]
+  captureRallies     CaptureRally[]
+
   lastLogin          DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -127,10 +131,14 @@ model Event {
   dateTime       DateTime
   status         EventStatus @default(UPCOMING)
 
+  // Game significance for point multipliers
+  significance   GameSignificance @default(REGULAR)
+
   // Relations
   homeSchool     School      @relation(fields: [homeSchoolId], references: [id])
   activations    EventActivation[]
   pointsEntries  PointsEntry[]
+  captures       GameCapture[]
 
   createdBy      String?
   createdAt      DateTime    @default(now())
@@ -145,6 +153,14 @@ enum EventStatus {
   UPCOMING
   LIVE
   COMPLETED
+}
+
+enum GameSignificance {
+  REGULAR       // 1x
+  CONFERENCE    // 1.5x
+  RIVALRY       // 2x
+  POSTSEASON    // 2.5x
+  CHAMPIONSHIP  // 3x
 }
 
 model EventActivation {
@@ -637,4 +653,77 @@ enum ShareCardType {
   TIER_UP             // tier promotion
   CREW_LEADERBOARD    // crew ranking
   FAN_RESUME          // full fan identity card
+  MOMENT_OF_GAME      // Rally Capture — moment of the game
+}
+
+// ==========================================
+// RALLY CAPTURE — In-Game Photo Engagement
+// ==========================================
+
+model GameCapture {
+  id              String   @id @default(cuid())
+  eventId         String
+  userId          String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user            RallyUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Photo
+  imageUrl        String              // URL to uploaded photo
+  caption         String?             // optional fan caption
+
+  // Moment classification
+  momentType      MomentCategory @default(STANDARD)
+  isInStadium     Boolean        @default(true)    // true = venue, false = at-home/TV
+
+  // Scoring
+  basePoints      Int            @default(10)       // points earned just for posting
+  rallyCount      Int            @default(0)        // denormalized count of CaptureRallies
+  totalPoints     Int            @default(0)        // total points earned (base + rally bonus)
+
+  // Recognition
+  isMomentOfGame  Boolean        @default(false)    // crowned best moment post-game
+  isReported      Boolean        @default(false)    // flagged by moderation
+
+  createdAt       DateTime @default(now())
+
+  rallies         CaptureRally[]
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([rallyCount])
+  @@index([createdAt])
+}
+
+model CaptureRally {
+  id          String   @id @default(cuid())
+  captureId   String
+  userId      String
+  capture     GameCapture @relation(fields: [captureId], references: [id], onDelete: Cascade)
+  user        RallyUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([captureId, userId])    // one rally per fan per capture
+  @@index([captureId])
+  @@index([userId])
+}
+
+enum MomentCategory {
+  STANDARD        // general moment, 1x multiplier
+  SPONSORED       // sponsor activation captured, 2-3x
+  EMOTIONAL       // tributes, recognitions, the Wave, 2x
+  HISTORIC        // record-breaking, buzzer beater, 4-5x
+}
+
+// Milestone types for Rally Capture
+enum CaptureMilestoneType {
+  FIRST_CAPTURE           // first photo posted
+  RALLIES_RECEIVED_100    // 100 lifetime rallies
+  RALLIES_RECEIVED_500
+  RALLIES_RECEIVED_1000
+  MOMENT_OF_GAME_1        // first Moment of the Game
+  MOMENT_OF_GAME_5
+  MOMENT_OF_GAME_10
+  BEST_EYE                // consistently top-rallied captures
+  RALLY_CAPTAIN           // top contributor at a game
 }

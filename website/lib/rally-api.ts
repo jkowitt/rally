@@ -859,3 +859,85 @@ export const rallyShareCards = {
   myMilestones: () =>
     rallyFetch<{ milestones: FanMilestone[] }>('/share-cards/milestones/mine'),
 };
+
+// ==========================================
+// RALLY CAPTURE — API Client
+// ==========================================
+
+export interface CaptureData {
+  id: string;
+  imageUrl: string;
+  caption: string | null;
+  momentType: 'STANDARD' | 'SPONSORED' | 'EMOTIONAL' | 'HISTORIC';
+  isInStadium: boolean;
+  rallyCount: number;
+  totalPoints: number;
+  isMomentOfGame: boolean;
+  hasRallied?: boolean;
+  user: { id: string; name: string; handle: string; tier: string; favoriteSchool?: string | null };
+  createdAt: string;
+}
+
+export interface CaptureFeed {
+  eventId: string;
+  eventTitle: string;
+  isLocked: boolean;
+  sort: string;
+  totalCaptures: number;
+  ralliesRemaining: number;
+  ralliesPerGame: number;
+  momentOfGame: { id: string; imageUrl: string; caption: string | null; rallyCount: number; user: { name: string; handle: string } } | null;
+  feed: CaptureData[];
+}
+
+export interface CaptureLeaderboardEntry {
+  rank: number;
+  captureId: string;
+  imageUrl: string;
+  caption: string | null;
+  momentType: string;
+  rallyCount: number;
+  totalPoints: number;
+  isMomentOfGame: boolean;
+  user: { id: string; name: string; handle: string; tier: string };
+}
+
+export interface SeasonLeaderboardEntry {
+  rank: number;
+  user: { id: string; name: string; handle: string; tier: string; favoriteSchool: string | null };
+  totalRallies: number;
+  captureCount: number;
+  momentOfGameCount: number;
+}
+
+export const rallyCaptures = {
+  postCapture: (eventId: string, params: { imageUrl: string; caption?: string; momentType?: string; isInStadium?: boolean }) =>
+    rallyFetch<{ capture: CaptureData; pointsAwarded: number }>(`/captures/${eventId}/capture`, {
+      method: 'POST', body: JSON.stringify(params),
+    }),
+
+  getFeed: (eventId: string, sort: 'latest' | 'top' = 'latest') =>
+    rallyFetch<CaptureFeed>(`/captures/${eventId}/feed?sort=${sort}`),
+
+  rally: (captureId: string) =>
+    rallyFetch<{ success: boolean; newRallyCount: number; ralliesRemaining: number; voterPointsAwarded: number }>(
+      `/captures/${captureId}/rally`, { method: 'POST' }
+    ),
+
+  report: (captureId: string) =>
+    rallyFetch<{ success: boolean }>(`/captures/${captureId}/report`, { method: 'POST' }),
+
+  gameLeaderboard: (eventId: string) =>
+    rallyFetch<{ leaderboard: CaptureLeaderboardEntry[] }>(`/captures/${eventId}/leaderboard`),
+
+  seasonLeaderboard: () =>
+    rallyFetch<{ leaderboard: SeasonLeaderboardEntry[] }>('/captures/leaderboard/season'),
+
+  crownMomentOfGame: (eventId: string) =>
+    rallyFetch<{ momentOfGame: { captureId: string; imageUrl: string; rallyCount: number; bonusPointsAwarded: number } }>(
+      `/captures/${eventId}/crown`, { method: 'POST' }
+    ),
+
+  getAttribution: (days = 30) =>
+    rallyFetch<Record<string, unknown>>(`/captures/attribution?days=${days}`),
+};

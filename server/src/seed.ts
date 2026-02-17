@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-async function main() {
+export async function main() {
   console.log('Seeding Rally database...');
 
   // =====================
@@ -1938,9 +1938,13 @@ async function main() {
   console.log('User:      user@rally.com  / Rally2026!');
 }
 
-main()
-  .catch(e => {
-    console.error('Seed error:', e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+// Run directly when invoked as a script (not when imported)
+const isDirectRun = process.argv[1]?.includes('seed');
+if (isDirectRun) {
+  main()
+    .catch(e => {
+      console.error('Seed error:', e);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}

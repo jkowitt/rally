@@ -25,6 +25,7 @@ import { startScheduler } from './services/scheduler';
 import { apiLimiter, authLimiter, loginLimiter } from './middleware/rate-limit';
 import { requestLogger } from './middleware/request-logger';
 import prisma from './lib/prisma';
+import { main as seedDatabase } from './seed';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -97,8 +98,20 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   console.log(`Rally API running on http://localhost:${PORT}`);
+
+  // Auto-seed database if empty (no schools = fresh database)
+  try {
+    const schoolCount = await prisma.school.count();
+    if (schoolCount === 0) {
+      console.log('[Startup] Empty database detected — running auto-seed...');
+      await seedDatabase();
+      console.log('[Startup] Auto-seed complete.');
+    }
+  } catch (err) {
+    console.error('[Startup] Auto-seed check failed:', err);
+  }
 
   // Start the event-update scheduler (every 3 days + initial sync on boot)
   if (process.env.DISABLE_SCHEDULER !== 'true') {

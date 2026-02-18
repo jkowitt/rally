@@ -33,8 +33,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Generate Android credentials
-        run: eas credentials --platform android --non-interactive
+      - name: Install and configure expo-updates
+        run: |
+          npx expo install expo-updates
+          npx eas-cli update:configure --platform android --non-interactive
 
       - name: Build Android AAB
         run: eas build --platform android --profile production --non-interactive --no-wait

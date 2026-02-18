@@ -50,11 +50,11 @@
       ]
     ],
     "updates": {
-      "url": "https://u.expo.dev/your-project-id"
+      "url": "https://u.expo.dev/2ff5afe3-4268-44fb-9d15-44ad4ec291df"
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "2ff5afe3-4268-44fb-9d15-44ad4ec291df"
       }
     }
   }

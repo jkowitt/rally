@@ -12,6 +12,7 @@
     },
     "preview": {
       "channel": "preview",
+      "credentialsSource": "remote",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
@@ -19,6 +20,7 @@
     },
     "production": {
       "channel": "production",
+      "credentialsSource": "remote",
       "android": {
         "buildType": "app-bundle"
       }

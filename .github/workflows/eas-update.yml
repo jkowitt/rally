@@ -1,0 +1,47 @@
+name: EAS Update (OTA)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'RallyPreview/**'
+      - '!RallyPreview/eas.json'
+      - '!RallyPreview/app.json'
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'Update message'
+        required: false
+        default: 'OTA update'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: RallyPreview
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Publish OTA update
+        run: |
+          eas update --branch production \
+            --message "${{ github.event.inputs.message || github.event.head_commit.message }}" \
+            --non-interactive

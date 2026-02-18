@@ -7,6 +7,9 @@
     "icon": "./assets/rally-appicon-orange.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": false,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "scheme": "rally",
     "splash": {
       "image": "./assets/rally-logo-on-dark.png",
@@ -46,6 +49,9 @@
         }
       ]
     ],
+    "updates": {
+      "url": "https://u.expo.dev/your-project-id"
+    },
     "extra": {
       "eas": {
         "projectId": ""

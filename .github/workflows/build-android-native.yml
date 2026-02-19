@@ -114,7 +114,7 @@ jobs:
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.vanwagner.rally
+          packageName: com.jasonl123.RallyPreview
           releaseFiles: Android/app/build/outputs/bundle/release/*.aab
           track: ${{ github.event.inputs.play_store_track }}
           status: completed
@@ -122,7 +122,7 @@ jobs:
       - name: Build Summary
         run: |
           echo "### Build Complete" >> $GITHUB_STEP_SUMMARY
-          echo "- **App:** com.vanwagner.rally" >> $GITHUB_STEP_SUMMARY
+          echo "- **App:** com.jasonl123.RallyPreview" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** $(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*= "//' | sed 's/"//')" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Type:** ${{ github.event.inputs.build_type || 'release' }}" >> $GITHUB_STEP_SUMMARY
           if [ "${{ github.event.inputs.submit_to_play_store }}" == "true" ]; then

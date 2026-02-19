@@ -11,6 +11,21 @@ on:
         options:
           - release
           - staging
+      submit_to_play_store:
+        description: 'Submit to Google Play Store'
+        required: false
+        default: false
+        type: boolean
+      play_store_track:
+        description: 'Google Play track'
+        required: false
+        default: 'internal'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
   push:
     branches:
       - main
@@ -94,10 +109,24 @@ jobs:
           path: Android/app/build/outputs/bundle/staging/*.aab
           retention-days: 30
 
+      - name: Upload to Google Play Store
+        if: ${{ github.event.inputs.submit_to_play_store == 'true' && github.event.inputs.build_type != 'staging' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.vanwagner.rally
+          releaseFiles: Android/app/build/outputs/bundle/release/*.aab
+          track: ${{ github.event.inputs.play_store_track }}
+          status: completed
+
       - name: Build Summary
         run: |
           echo "### Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "- **App:** com.vanwagner.rally" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** $(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*= "//' | sed 's/"//')" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Type:** ${{ github.event.inputs.build_type || 'release' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **AAB ready for Google Play Console upload**" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.submit_to_play_store }}" == "true" ]; then
+            echo "- **Submitted to Google Play:** ${{ github.event.inputs.play_store_track }} track" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **AAB ready for Google Play Console upload**" >> $GITHUB_STEP_SUMMARY
+          fi

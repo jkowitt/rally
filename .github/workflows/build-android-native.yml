@@ -80,10 +80,11 @@ jobs:
         run: |
           cat > keystore.properties <<EOF
           storeFile=keystore/rally-release.jks
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
+          storePassword=${KEYSTORE_PASSWORD}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PASSWORD}
           EOF
+          sed -i 's/^[[:space:]]*//' keystore.properties
 
       - name: Build Release AAB
         if: ${{ github.event.inputs.build_type != 'staging' }}

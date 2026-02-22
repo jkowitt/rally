@@ -3,10 +3,11 @@ package com.vanwagner.rally.networking.api
 import com.vanwagner.rally.core.model.Activation
 import com.vanwagner.rally.core.model.AuthResponse
 import com.vanwagner.rally.core.model.CheckInResponse
-import com.vanwagner.rally.core.model.ContentItem
 import com.vanwagner.rally.core.model.Event
 import com.vanwagner.rally.core.model.GoogleAuthRequest
 import com.vanwagner.rally.core.model.PaginatedResponse
+import com.vanwagner.rally.core.model.PointsHistory
+import com.vanwagner.rally.core.model.PointsTransaction
 import com.vanwagner.rally.core.model.RedemptionResult
 import com.vanwagner.rally.core.model.RefreshTokenRequest
 import com.vanwagner.rally.core.model.Reward
@@ -85,11 +86,15 @@ interface RallyApi {
         @Path("id") rewardId: String,
     ): Response<RedemptionResult>
 
-    // ── Content Feed ────────────────────────────────────────────────────
+    // ── Points ────────────────────────────────────────────────────────
 
-    @GET("content/feed")
-    suspend fun getContentFeed(
-        @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 20,
-    ): Response<PaginatedResponse<ContentItem>>
+    @POST("points/award")
+    suspend fun awardPoints(
+        @Query("amount") amount: Int,
+        @Query("source") source: String,
+        @Query("description") description: String,
+    ): PointsTransaction
+
+    @GET("points/history")
+    suspend fun getPointsHistory(): PointsHistory
 }

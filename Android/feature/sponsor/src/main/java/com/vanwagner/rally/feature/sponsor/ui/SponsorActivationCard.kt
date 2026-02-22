@@ -146,8 +146,7 @@ fun SponsorActivationCard(
 private fun tierColor(tier: com.vanwagner.rally.core.model.SponsorTier): Color {
     return when (tier) {
         com.vanwagner.rally.core.model.SponsorTier.PRESENTING -> RallyOrange
-        com.vanwagner.rally.core.model.SponsorTier.GOLD -> Color(0xFFFFD700)
-        com.vanwagner.rally.core.model.SponsorTier.SILVER -> Color(0xFFC0C0C0)
-        com.vanwagner.rally.core.model.SponsorTier.BRONZE -> Color(0xFFCD7F32)
+        com.vanwagner.rally.core.model.SponsorTier.PREMIUM -> RallyBlue
+        com.vanwagner.rally.core.model.SponsorTier.STANDARD -> Color(0xFFC0C0C0)
     }
 }

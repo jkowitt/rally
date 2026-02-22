@@ -51,6 +51,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vanwagner.rally.core.model.School
+import com.vanwagner.rally.core.model.SchoolTheme
 import com.vanwagner.rally.core.theme.RallyTheme
 import com.vanwagner.rally.feature.auth.viewmodel.AuthViewModel
 
@@ -196,8 +197,8 @@ private fun SchoolCard(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape)
-                    .background(Color(school.primaryColorHex.toColorInt()))
-                    .border(2.dp, Color(school.secondaryColorHex.toColorInt()), CircleShape),
+                    .background(Color(school.theme.primaryColor.toColorInt()))
+                    .border(2.dp, Color(school.theme.secondaryColor.toColorInt()), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -240,7 +241,7 @@ private fun SchoolCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(Color(school.primaryColorHex.toColorInt())),
+                    .background(Color(school.theme.primaryColor.toColorInt())),
             )
         }
     }
@@ -260,18 +261,18 @@ private fun String.toColorInt(): Long {
 
 /** Sample schools for preview and initial development. */
 private fun sampleSchools(): List<School> = listOf(
-    School(id = "duke", name = "Duke University", mascot = "Blue Devils", primaryColorHex = "#003087", secondaryColorHex = "#FFFFFF"),
-    School(id = "unc", name = "UNC Chapel Hill", mascot = "Tar Heels", primaryColorHex = "#7BAFD4", secondaryColorHex = "#13294B"),
-    School(id = "ncstate", name = "NC State", mascot = "Wolfpack", primaryColorHex = "#CC0000", secondaryColorHex = "#000000"),
-    School(id = "wake", name = "Wake Forest", mascot = "Demon Deacons", primaryColorHex = "#9E7E38", secondaryColorHex = "#000000"),
-    School(id = "clemson", name = "Clemson University", mascot = "Tigers", primaryColorHex = "#F56600", secondaryColorHex = "#522D80"),
-    School(id = "uva", name = "University of Virginia", mascot = "Cavaliers", primaryColorHex = "#232D4B", secondaryColorHex = "#F84C1E"),
-    School(id = "vt", name = "Virginia Tech", mascot = "Hokies", primaryColorHex = "#630031", secondaryColorHex = "#CF4420"),
-    School(id = "louisville", name = "Louisville", mascot = "Cardinals", primaryColorHex = "#AD0000", secondaryColorHex = "#000000"),
-    School(id = "pitt", name = "University of Pittsburgh", mascot = "Panthers", primaryColorHex = "#003594", secondaryColorHex = "#FFB81C"),
-    School(id = "fsu", name = "Florida State", mascot = "Seminoles", primaryColorHex = "#782F40", secondaryColorHex = "#CEB888"),
-    School(id = "gatech", name = "Georgia Tech", mascot = "Yellow Jackets", primaryColorHex = "#B3A369", secondaryColorHex = "#003057"),
-    School(id = "miami", name = "University of Miami", mascot = "Hurricanes", primaryColorHex = "#F47321", secondaryColorHex = "#005030"),
+    School(id = "duke", name = "Duke University", mascot = "Blue Devils", abbreviation = "DUKE", theme = SchoolTheme(primaryColor = "#003087", secondaryColor = "#FFFFFF", accentColor = "#003087")),
+    School(id = "unc", name = "UNC Chapel Hill", mascot = "Tar Heels", abbreviation = "UNC", theme = SchoolTheme(primaryColor = "#7BAFD4", secondaryColor = "#13294B", accentColor = "#7BAFD4")),
+    School(id = "ncstate", name = "NC State", mascot = "Wolfpack", abbreviation = "NCST", theme = SchoolTheme(primaryColor = "#CC0000", secondaryColor = "#000000", accentColor = "#CC0000")),
+    School(id = "wake", name = "Wake Forest", mascot = "Demon Deacons", abbreviation = "WAKE", theme = SchoolTheme(primaryColor = "#9E7E38", secondaryColor = "#000000", accentColor = "#9E7E38")),
+    School(id = "clemson", name = "Clemson University", mascot = "Tigers", abbreviation = "CLEM", theme = SchoolTheme(primaryColor = "#F56600", secondaryColor = "#522D80", accentColor = "#F56600")),
+    School(id = "uva", name = "University of Virginia", mascot = "Cavaliers", abbreviation = "UVA", theme = SchoolTheme(primaryColor = "#232D4B", secondaryColor = "#F84C1E", accentColor = "#232D4B")),
+    School(id = "vt", name = "Virginia Tech", mascot = "Hokies", abbreviation = "VT", theme = SchoolTheme(primaryColor = "#630031", secondaryColor = "#CF4420", accentColor = "#630031")),
+    School(id = "louisville", name = "Louisville", mascot = "Cardinals", abbreviation = "LOU", theme = SchoolTheme(primaryColor = "#AD0000", secondaryColor = "#000000", accentColor = "#AD0000")),
+    School(id = "pitt", name = "University of Pittsburgh", mascot = "Panthers", abbreviation = "PITT", theme = SchoolTheme(primaryColor = "#003594", secondaryColor = "#FFB81C", accentColor = "#003594")),
+    School(id = "fsu", name = "Florida State", mascot = "Seminoles", abbreviation = "FSU", theme = SchoolTheme(primaryColor = "#782F40", secondaryColor = "#CEB888", accentColor = "#782F40")),
+    School(id = "gatech", name = "Georgia Tech", mascot = "Yellow Jackets", abbreviation = "GT", theme = SchoolTheme(primaryColor = "#B3A369", secondaryColor = "#003057", accentColor = "#B3A369")),
+    School(id = "miami", name = "University of Miami", mascot = "Hurricanes", abbreviation = "MIA", theme = SchoolTheme(primaryColor = "#F47321", secondaryColor = "#005030", accentColor = "#F47321")),
 )
 
 // ── Previews ────────────────────────────────────────────────────────────

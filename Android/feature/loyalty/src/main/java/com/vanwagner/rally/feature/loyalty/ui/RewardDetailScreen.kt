@@ -119,8 +119,8 @@ fun RewardDetailScreen(
         ) {
             // --- Hero image ---
             AsyncImage(
-                model = reward.imageUrl,
-                contentDescription = reward.name,
+                model = reward.imageURL,
+                contentDescription = reward.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -132,7 +132,7 @@ fun RewardDetailScreen(
             ) {
                 // --- Category label ---
                 Text(
-                    text = reward.category.uppercase(),
+                    text = reward.category.displayName.uppercase(),
                     style = MaterialTheme.typography.labelMedium,
                     color = Blue,
                     fontWeight = FontWeight.Bold,
@@ -142,7 +142,7 @@ fun RewardDetailScreen(
 
                 // --- Reward name ---
                 Text(
-                    text = reward.name,
+                    text = reward.title,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = Navy,
@@ -259,7 +259,7 @@ fun RewardDetailScreen(
             text = {
                 Column {
                     Text(
-                        text = "Redeem \"${reward.name}\" for ${reward.pointsCost} points?",
+                        text = "Redeem \"${reward.title}\" for ${reward.pointsCost} points?",
                         color = Navy,
                     )
                     Spacer(Modifier.height(8.dp))
@@ -312,7 +312,7 @@ fun RewardDetailScreen(
             },
             text = {
                 Text(
-                    text = "You have successfully redeemed \"${reward.name}\". Check your email for redemption details.",
+                    text = "You have successfully redeemed \"${reward.title}\". Check your email for redemption details.",
                     textAlign = TextAlign.Center,
                     color = Gray,
                 )

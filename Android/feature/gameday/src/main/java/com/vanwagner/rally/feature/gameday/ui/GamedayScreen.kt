@@ -564,7 +564,12 @@ private fun GamedayLoadingPreview() {
 
 private fun previewEvent() = Event(
     id = "1",
+    schoolID = "school1",
+    sport = com.vanwagner.rally.core.model.Sport.FOOTBALL,
     title = "Wildcats vs Tigers",
+    opponent = "Tigers",
+    venueID = "venue1",
+    startTime = System.currentTimeMillis(),
     venue = "Memorial Stadium",
     formattedDate = "Sat, Nov 15 - 3:30 PM",
     homeTeam = "Wildcats",
@@ -577,6 +582,7 @@ private fun previewEvent() = Event(
 private fun previewActivations() = listOf(
     Activation(
         id = "1",
+        eventID = "1",
         title = "Halftime Prediction",
         type = ActivationType.PREDICTION,
         pointsValue = 50,
@@ -584,6 +590,7 @@ private fun previewActivations() = listOf(
     ),
     Activation(
         id = "2",
+        eventID = "1",
         title = "Rally Trivia",
         type = ActivationType.TRIVIA,
         pointsValue = 75,
@@ -591,6 +598,7 @@ private fun previewActivations() = listOf(
     ),
     Activation(
         id = "3",
+        eventID = "1",
         title = "Crowd Noise Challenge",
         type = ActivationType.NOISE_METER,
         pointsValue = 100,

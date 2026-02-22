@@ -106,7 +106,7 @@ fun RewardsCatalogScreen(
             state.rewards
         } else {
             state.rewards.filter {
-                it.category.equals(selectedCategory.label, ignoreCase = true)
+                it.category.displayName.equals(selectedCategory.label, ignoreCase = true)
             }
         }
     }
@@ -284,8 +284,8 @@ private fun RewardCard(
         Column {
             // Reward image
             AsyncImage(
-                model = reward.imageUrl,
-                contentDescription = reward.name,
+                model = reward.imageURL,
+                contentDescription = reward.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -295,7 +295,7 @@ private fun RewardCard(
 
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    text = reward.name,
+                    text = reward.title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = Navy,
@@ -306,7 +306,7 @@ private fun RewardCard(
                 Spacer(Modifier.height(4.dp))
 
                 Text(
-                    text = reward.category,
+                    text = reward.category.displayName,
                     style = MaterialTheme.typography.labelSmall,
                     color = Gray,
                 )

@@ -34,7 +34,7 @@ class PointsEngine @Inject constructor(
     private val _currentPoints = MutableStateFlow(0)
     val currentPoints: StateFlow<Int> = _currentPoints.asStateFlow()
 
-    private val _currentTier = MutableStateFlow(Tier.Rookie)
+    private val _currentTier = MutableStateFlow(Tier.ROOKIE)
     val currentTier: StateFlow<Tier> = _currentTier.asStateFlow()
 
     private val _transactions = MutableStateFlow<List<PointsTransaction>>(emptyList())
@@ -86,10 +86,10 @@ class PointsEngine @Inject constructor(
 
         _isProcessing.value = true
         try {
-            val transaction = api.redeemReward(rewardId = reward.id)
+            val response = api.redeemReward(rewardId = reward.id)
+            if (!response.isSuccessful) return@withContext false
             _currentPoints.update { it - reward.pointsCost }
             _currentTier.value = computeTier(_currentPoints.value)
-            _transactions.update { listOf(transaction) + it }
             true
         } catch (e: Exception) {
             false
@@ -127,11 +127,11 @@ class PointsEngine @Inject constructor(
      * - HallOfFame  : 15 000
      */
     fun computeTier(points: Int): Tier = when {
-        points >= 15_000 -> Tier.HallOfFame
+        points >= 15_000 -> Tier.HALL_OF_FAME
         points >= 5_000  -> Tier.MVP
-        points >= 2_000  -> Tier.AllStar
-        points >= 500    -> Tier.Starter
-        else             -> Tier.Rookie
+        points >= 2_000  -> Tier.ALL_STAR
+        points >= 500    -> Tier.STARTER
+        else             -> Tier.ROOKIE
     }
 
     // --------------- helpers ------------------------------------------------------

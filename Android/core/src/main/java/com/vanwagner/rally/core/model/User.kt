@@ -4,6 +4,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
+ * Lightweight user identity used during authentication and onboarding.
+ */
+@Serializable
+data class User(
+    val id: String,
+    val email: String? = null,
+    val displayName: String? = null,
+    val schoolId: String? = null
+)
+
+/**
  * Represents the authenticated user's profile.
  */
 @Serializable

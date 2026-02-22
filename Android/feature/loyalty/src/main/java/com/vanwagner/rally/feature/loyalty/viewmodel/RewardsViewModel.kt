@@ -35,7 +35,7 @@ class RewardsViewModel @Inject constructor(
     data class UiState(
         val rewards: List<Reward> = emptyList(),
         val currentPoints: Int = 0,
-        val currentTier: Tier = Tier.Rookie,
+        val currentTier: Tier = Tier.ROOKIE,
         val isLoading: Boolean = false,
         val error: String? = null,
         val redemptionResult: RedemptionResult? = null,
@@ -82,8 +82,8 @@ class RewardsViewModel @Inject constructor(
             _isLoading.value = true
             _error.value = null
             try {
-                val rewardsList = api.getRewards()
-                _rewards.value = rewardsList
+                val response = api.getRewards()
+                _rewards.value = response.body() ?: emptyList()
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load rewards"
             } finally {

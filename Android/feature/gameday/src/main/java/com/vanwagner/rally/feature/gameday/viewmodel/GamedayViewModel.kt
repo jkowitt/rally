@@ -9,8 +9,6 @@ import com.vanwagner.rally.core.model.ActivationType
 import com.vanwagner.rally.core.model.CheckInResponse
 import com.vanwagner.rally.core.model.Event
 import com.vanwagner.rally.core.model.LeaderboardEntry
-import com.vanwagner.rally.core.model.NoiseMeterResult
-import com.vanwagner.rally.core.model.PredictionOption
 import com.vanwagner.rally.core.model.SubmissionResult
 import com.vanwagner.rally.networking.api.RallyApi
 import dagger.hilt.android.lifecycle.HiltViewModel

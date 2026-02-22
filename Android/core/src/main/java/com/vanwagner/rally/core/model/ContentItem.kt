@@ -4,23 +4,40 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Represents a content item in the year-round engagement feed.
+ * Sealed interface representing content items in the year-round engagement feed.
  */
 @Serializable
-data class ContentItem(
-    val id: String,
-    val schoolID: String,
-    val type: ContentType,
-    val title: String,
-    val body: String? = null,
-    val imageURL: String? = null,
-    val externalURL: String? = null,
-    val author: String? = null,
-    val publishedAt: Long = System.currentTimeMillis(),
-    val tags: List<String> = emptyList(),
-    val sponsorID: String? = null,
-    val engagementData: ContentEngagement? = null
-)
+sealed interface ContentItem {
+    val id: String
+    val title: String
+
+    @Serializable
+    @SerialName("article")
+    data class ArticleItem(
+        override val id: String,
+        override val title: String,
+        val summary: String = "",
+        val imageUrl: String? = null,
+        val authorName: String = "",
+        val publishedAt: Long = System.currentTimeMillis(),
+    ) : ContentItem
+
+    @Serializable
+    @SerialName("poll")
+    data class PollItem(
+        override val id: String,
+        override val title: String,
+        val poll: Poll,
+    ) : ContentItem
+
+    @Serializable
+    @SerialName("countdown")
+    data class CountdownItem(
+        override val id: String,
+        override val title: String,
+        val targetEpochMillis: Long,
+    ) : ContentItem
+}
 
 /**
  * Types of content that can appear in the feed.
@@ -47,4 +64,31 @@ data class ContentEngagement(
     val comments: Int = 0,
     val shares: Int = 0,
     val pointsValue: Int? = null
+)
+
+/**
+ * Represents a poll with options and vote tracking.
+ */
+@Serializable
+data class Poll(
+    val question: String,
+    val options: List<String> = emptyList(),
+    val voteCounts: List<Int> = emptyList(),
+    val selectedOptionIndex: Int? = null,
+    val hasVoted: Boolean = false
+)
+
+/**
+ * Detailed article content for the detail screen.
+ */
+@Serializable
+data class ArticleDetail(
+    val id: String,
+    val title: String,
+    val category: String = "",
+    val authorName: String = "",
+    val publishedAt: Long = System.currentTimeMillis(),
+    val heroImageUrl: String? = null,
+    val bodyParagraphs: List<String> = emptyList(),
+    val tags: List<String> = emptyList()
 )

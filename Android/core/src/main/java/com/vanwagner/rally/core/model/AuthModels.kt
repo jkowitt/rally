@@ -3,6 +3,22 @@ package com.vanwagner.rally.core.model
 import kotlinx.serialization.Serializable
 
 /**
+ * Request body for Google Sign-In authentication.
+ */
+@Serializable
+data class GoogleAuthRequest(
+    val idToken: String
+)
+
+/**
+ * Request body for token refresh.
+ */
+@Serializable
+data class RefreshTokenRequest(
+    val refreshToken: String
+)
+
+/**
  * Response from authentication endpoints.
  */
 @Serializable

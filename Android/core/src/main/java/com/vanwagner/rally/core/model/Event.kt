@@ -20,7 +20,12 @@ data class Event(
     val imageURL: String? = null,
     val activations: List<Activation> = emptyList(),
     val homeScore: Int? = null,
-    val awayScore: Int? = null
+    val awayScore: Int? = null,
+    val venue: String = "",
+    val homeTeam: String = "",
+    val awayTeam: String = "",
+    val period: String = "",
+    val formattedDate: String = ""
 )
 
 /**

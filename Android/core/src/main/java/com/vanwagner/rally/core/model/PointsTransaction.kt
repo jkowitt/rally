@@ -4,6 +4,15 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
+ * Response from the points history endpoint.
+ */
+@Serializable
+data class PointsHistory(
+    val transactions: List<PointsTransaction>,
+    val totalPoints: Int
+)
+
+/**
  * Represents a single points transaction in the loyalty ledger.
  */
 @Serializable

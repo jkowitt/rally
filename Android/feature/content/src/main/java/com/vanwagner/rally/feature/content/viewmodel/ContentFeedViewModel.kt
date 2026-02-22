@@ -3,7 +3,6 @@ package com.vanwagner.rally.feature.content.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vanwagner.rally.core.model.ContentItem
-import com.vanwagner.rally.core.model.ContentType
 import com.vanwagner.rally.core.model.Poll
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay

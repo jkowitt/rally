@@ -51,6 +51,7 @@ android {
         create("staging") {
             applicationIdSuffix = ".staging"
             isMinifyEnabled = true
+            matchingFallbacks += "release"
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

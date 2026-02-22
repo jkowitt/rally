@@ -12,7 +12,8 @@ data class Sponsor(
     val name: String,
     val logoURL: String? = null,
     val websiteURL: String? = null,
-    val tier: SponsorTier = SponsorTier.STANDARD
+    val tier: SponsorTier = SponsorTier.STANDARD,
+    val isActive: Boolean = true
 )
 
 /**

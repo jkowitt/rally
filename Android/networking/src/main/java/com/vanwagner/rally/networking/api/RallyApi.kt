@@ -5,13 +5,13 @@ import com.vanwagner.rally.core.model.AuthResponse
 import com.vanwagner.rally.core.model.CheckInResponse
 import com.vanwagner.rally.core.model.Event
 import com.vanwagner.rally.core.model.GoogleAuthRequest
-import com.vanwagner.rally.core.model.PaginatedResponse
 import com.vanwagner.rally.core.model.PointsHistory
 import com.vanwagner.rally.core.model.PointsTransaction
 import com.vanwagner.rally.core.model.RedemptionResult
 import com.vanwagner.rally.core.model.RefreshTokenRequest
 import com.vanwagner.rally.core.model.Reward
 import com.vanwagner.rally.core.model.School
+import com.vanwagner.rally.core.model.Sponsor
 import com.vanwagner.rally.core.model.SubmissionResult
 import com.vanwagner.rally.core.model.TokenPair
 import com.vanwagner.rally.core.model.UserProfile
@@ -85,6 +85,11 @@ interface RallyApi {
     suspend fun redeemReward(
         @Path("id") rewardId: String,
     ): Response<RedemptionResult>
+
+    // ── Sponsors ──────────────────────────────────────────────────────
+
+    @GET("sponsors")
+    suspend fun getSponsors(): Response<List<Sponsor>>
 
     // ── Points ────────────────────────────────────────────────────────
 

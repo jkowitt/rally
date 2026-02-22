@@ -54,12 +54,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      - name: Regenerate Gradle wrapper
-        run: gradle wrapper --gradle-version 8.9
+        with:
+          gradle-version: '8.9'
 
       - name: Decode keystore
         env:
@@ -84,11 +80,11 @@ jobs:
 
       - name: Build Release AAB
         if: ${{ github.event.inputs.build_type != 'staging' }}
-        run: ./gradlew bundleRelease --no-daemon
+        run: gradle bundleRelease --no-daemon
 
       - name: Build Staging AAB
         if: ${{ github.event.inputs.build_type == 'staging' }}
-        run: ./gradlew bundleStaging --no-daemon
+        run: gradle bundleStaging --no-daemon
 
       - name: Upload Release AAB
         if: ${{ github.event.inputs.build_type != 'staging' }}

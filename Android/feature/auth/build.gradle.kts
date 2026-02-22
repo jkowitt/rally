@@ -31,6 +31,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation)
     ksp(libs.hilt.compiler)
+    implementation(libs.activity.compose)
     implementation(libs.credentials)
     implementation(libs.credentials.play)
     implementation(libs.googleid)

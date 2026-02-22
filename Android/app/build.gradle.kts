@@ -105,6 +105,8 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.timber)
     implementation(libs.coil.compose)
+    implementation(libs.glance)
+    implementation(libs.glance.material)
 
     debugImplementation(libs.compose.ui.tooling)
 }

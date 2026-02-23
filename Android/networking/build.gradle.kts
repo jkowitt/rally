@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.vanwagner.rally.networking"
+    namespace = "com.rally.app.networking"
     compileSdk = 35
 
     defaultConfig {

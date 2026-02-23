@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.vanwagner.rally"
+    namespace = "com.rally.app"
     compileSdk = 35
 
     defaultConfig {

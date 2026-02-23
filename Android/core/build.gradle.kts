@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.vanwagner.rally.core"
+    namespace = "com.rally.app.core"
     compileSdk = 35
 
     defaultConfig {

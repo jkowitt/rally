@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.vanwagner.rally.analytics"
+    namespace = "com.rally.app.analytics"
     compileSdk = 35
 
     defaultConfig {

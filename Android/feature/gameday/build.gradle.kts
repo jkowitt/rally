@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.vanwagner.rally.feature.gameday"
+    namespace = "com.rally.app.feature.gameday"
     compileSdk = 35
     defaultConfig { minSdk = 26 }
     buildFeatures { compose = true }

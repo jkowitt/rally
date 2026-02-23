@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.vanwagner.rally.feature.auth"
+    namespace = "com.rally.app.feature.auth"
     compileSdk = 35
     defaultConfig { minSdk = 26 }
     buildFeatures { compose = true }

@@ -9,11 +9,11 @@
 -keepclasseswithmembers class kotlinx.serialization.json.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep,includedescriptorclasses class com.vanwagner.rally.**$$serializer { *; }
--keepclassmembers class com.vanwagner.rally.** {
+-keep,includedescriptorclasses class com.rally.app.**$$serializer { *; }
+-keepclassmembers class com.rally.app.** {
     *** Companion;
 }
--keepclasseswithmembers class com.vanwagner.rally.** {
+-keepclasseswithmembers class com.rally.app.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 
@@ -49,4 +49,4 @@
 -keep class androidx.glance.** { *; }
 
 # Keep data classes for serialization
--keep class com.vanwagner.rally.core.model.** { *; }
+-keep class com.rally.app.core.model.** { *; }

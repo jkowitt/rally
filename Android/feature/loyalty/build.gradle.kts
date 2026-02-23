@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.vanwagner.rally.feature.loyalty"
+    namespace = "com.rally.app.feature.loyalty"
     compileSdk = 35
     defaultConfig { minSdk = 26 }
     buildFeatures { compose = true }

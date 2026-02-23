@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.vanwagner.rally.ui"
+    namespace = "com.rally.app.ui"
     compileSdk = 35
 
     defaultConfig {

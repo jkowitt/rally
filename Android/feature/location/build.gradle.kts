@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.vanwagner.rally.feature.location"
+    namespace = "com.rally.app.feature.location"
     compileSdk = 35
     defaultConfig { minSdk = 26 }
     compileOptions {

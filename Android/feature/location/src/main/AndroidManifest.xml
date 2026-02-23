@@ -8,7 +8,7 @@
 
     <application>
         <receiver
-            android:name="com.vanwagner.rally.feature.location.GeofenceBroadcastReceiver"
+            android:name="com.rally.app.feature.location.GeofenceBroadcastReceiver"
             android:exported="false" />
     </application>
 </manifest>

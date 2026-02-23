@@ -9,7 +9,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,10 +51,9 @@ class ImpressionTracker @Inject constructor(
     ) {
         scope.launch {
             val impression = SponsorImpression(
-                id = UUID.randomUUID().toString(),
-                sponsorId = sponsorId,
-                activationId = activationId,
-                viewDuration = viewDuration,
+                sponsorID = sponsorId,
+                placement = activationId,
+                durationSeconds = viewDuration / 1000.0,
                 timestamp = System.currentTimeMillis(),
             )
 

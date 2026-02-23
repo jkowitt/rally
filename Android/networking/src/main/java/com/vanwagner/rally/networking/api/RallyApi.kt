@@ -12,6 +12,7 @@ import com.vanwagner.rally.core.model.RefreshTokenRequest
 import com.vanwagner.rally.core.model.Reward
 import com.vanwagner.rally.core.model.School
 import com.vanwagner.rally.core.model.Sponsor
+import com.vanwagner.rally.core.model.SponsorImpression
 import com.vanwagner.rally.core.model.SubmissionResult
 import com.vanwagner.rally.core.model.TokenPair
 import com.vanwagner.rally.core.model.UserProfile
@@ -90,6 +91,11 @@ interface RallyApi {
 
     @GET("sponsors")
     suspend fun getSponsors(): Response<List<Sponsor>>
+
+    @POST("impressions/batch")
+    suspend fun sendImpressions(
+        @Body impressions: List<SponsorImpression>,
+    ): Response<Unit>
 
     // ── Points ────────────────────────────────────────────────────────
 

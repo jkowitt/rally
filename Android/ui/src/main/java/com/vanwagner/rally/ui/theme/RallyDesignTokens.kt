@@ -3,7 +3,6 @@ package com.vanwagner.rally.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -130,14 +129,7 @@ object RallyShadow {
 
 // MARK: - Outfit Font Family
 
-val OutfitFontFamily = FontFamily(
-    Font(weight = FontWeight.Normal),   // 400
-    Font(weight = FontWeight.Medium),   // 500
-    Font(weight = FontWeight.SemiBold), // 600
-    Font(weight = FontWeight.Bold),     // 700
-    Font(weight = FontWeight.ExtraBold),// 800
-    Font(weight = FontWeight.Black),    // 900
-)
+val OutfitFontFamily = FontFamily.Default
 
 // MARK: - Typography Tokens
 

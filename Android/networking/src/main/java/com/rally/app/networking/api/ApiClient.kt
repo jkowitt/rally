@@ -1,6 +1,6 @@
 package com.rally.app.networking.api
 
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.rally.app.networking.BuildConfig
 import com.rally.app.networking.interceptor.AuthInterceptor
 import com.rally.app.networking.interceptor.RetryInterceptor

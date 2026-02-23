@@ -114,3 +114,12 @@ data class ActivationOption(
     val text: String,
     val imageURL: String? = null
 )
+
+/**
+ * A selectable option within a prediction activation (e.g., "Who will score next?").
+ */
+@Serializable
+data class PredictionOption(
+    val id: String,
+    val text: String,
+)

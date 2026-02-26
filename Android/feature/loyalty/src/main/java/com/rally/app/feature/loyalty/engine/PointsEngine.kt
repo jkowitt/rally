@@ -61,7 +61,9 @@ class PointsEngine @Inject constructor(
         require(amount > 0) { "Award amount must be positive, was $amount" }
         _isProcessing.value = true
         try {
-            val transaction = api.awardPoints(amount = amount, source = source, description = description)
+            val response = api.awardPoints(amount = amount, source = source, description = description)
+            if (!response.isSuccessful) return@withContext null
+            val transaction = response.body() ?: return@withContext null
             _currentPoints.update { it + amount }
             _currentTier.value = computeTier(_currentPoints.value)
             _transactions.update { listOf(transaction) + it }
@@ -104,7 +106,9 @@ class PointsEngine @Inject constructor(
     suspend fun fetchHistory() = withContext(Dispatchers.IO) {
         _isProcessing.value = true
         try {
-            val history = api.getPointsHistory()
+            val response = api.getPointsHistory()
+            if (!response.isSuccessful) return@withContext
+            val history = response.body() ?: return@withContext
             _transactions.value = history.transactions
             _currentPoints.value = history.totalPoints
             _currentTier.value = computeTier(history.totalPoints)

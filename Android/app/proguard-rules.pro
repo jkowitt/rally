@@ -50,3 +50,24 @@
 
 # Keep data classes for serialization
 -keep class com.rally.app.core.model.** { *; }
+
+# Serializable enums
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# AndroidX Security / EncryptedSharedPreferences
+-keep class androidx.security.crypto.** { *; }
+
+# Google Play Services
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.android.gms.**
+
+# AndroidX Credentials & Google Identity
+-keep class androidx.credentials.** { *; }
+-keep class com.google.android.libraries.identity.googleid.** { *; }
+
+# Coil (image loading)
+-keep class coil.** { *; }
+-dontwarn coil.**

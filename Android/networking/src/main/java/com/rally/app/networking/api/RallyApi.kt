@@ -104,8 +104,8 @@ interface RallyApi {
         @Query("amount") amount: Int,
         @Query("source") source: String,
         @Query("description") description: String,
-    ): PointsTransaction
+    ): Response<PointsTransaction>
 
     @GET("points/history")
-    suspend fun getPointsHistory(): PointsHistory
+    suspend fun getPointsHistory(): Response<PointsHistory>
 }

@@ -36,7 +36,7 @@ class TierProgressWidget : GlanceAppWidget() {
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(day = RallyWidgetColors.Navy, night = RallyWidgetColors.Navy))
+                .background(ColorProvider(RallyWidgetColors.Navy))
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -47,7 +47,7 @@ class TierProgressWidget : GlanceAppWidget() {
                 Text(
                     text = "All-Star",
                     style = TextStyle(
-                        color = ColorProvider(day = RallyWidgetColors.Orange, night = RallyWidgetColors.Orange),
+                        color = ColorProvider(RallyWidgetColors.Orange),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -57,7 +57,7 @@ class TierProgressWidget : GlanceAppWidget() {
             Text(
                 text = "1,250 / 5,000 pts to MVP",
                 style = TextStyle(
-                    color = ColorProvider(day = RallyWidgetColors.Gray, night = RallyWidgetColors.Gray),
+                    color = ColorProvider(RallyWidgetColors.Gray),
                     fontSize = 12.sp,
                 ),
             )
@@ -67,7 +67,7 @@ class TierProgressWidget : GlanceAppWidget() {
                 modifier = GlanceModifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .background(ColorProvider(day = RallyWidgetColors.NavyMid, night = RallyWidgetColors.NavyMid)),
+                    .background(ColorProvider(RallyWidgetColors.NavyMid)),
             ) {}
         }
     }

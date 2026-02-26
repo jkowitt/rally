@@ -36,7 +36,7 @@ class CountdownWidget : GlanceAppWidget() {
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(day = RallyWidgetColors.NavyMid, night = RallyWidgetColors.NavyMid))
+                .background(ColorProvider(RallyWidgetColors.NavyMid))
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -44,7 +44,7 @@ class CountdownWidget : GlanceAppWidget() {
             Text(
                 text = "Next Game",
                 style = TextStyle(
-                    color = ColorProvider(day = RallyWidgetColors.Gray, night = RallyWidgetColors.Gray),
+                    color = ColorProvider(RallyWidgetColors.Gray),
                     fontSize = 12.sp,
                 ),
             )
@@ -52,7 +52,7 @@ class CountdownWidget : GlanceAppWidget() {
             Text(
                 text = "vs Wildcats",
                 style = TextStyle(
-                    color = ColorProvider(day = RallyWidgetColors.OffWhite, night = RallyWidgetColors.OffWhite),
+                    color = ColorProvider(RallyWidgetColors.OffWhite),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                 ),
@@ -74,7 +74,7 @@ class CountdownWidget : GlanceAppWidget() {
             Text(
                 text = value,
                 style = TextStyle(
-                    color = ColorProvider(day = RallyWidgetColors.Orange, night = RallyWidgetColors.Orange),
+                    color = ColorProvider(RallyWidgetColors.Orange),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                 ),
@@ -82,7 +82,7 @@ class CountdownWidget : GlanceAppWidget() {
             Text(
                 text = label,
                 style = TextStyle(
-                    color = ColorProvider(day = RallyWidgetColors.Gray, night = RallyWidgetColors.Gray),
+                    color = ColorProvider(RallyWidgetColors.Gray),
                     fontSize = 10.sp,
                 ),
             )

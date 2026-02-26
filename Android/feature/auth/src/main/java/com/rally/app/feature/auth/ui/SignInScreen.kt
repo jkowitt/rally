@@ -1,6 +1,9 @@
 package com.rally.app.feature.auth.ui
 
-import androidx.compose.foundation.Image
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +46,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -60,9 +65,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.android.gms.auth.api.identity.BeginSignInRequest
+import com.google.android.gms.auth.api.identity.Identity
 import com.rally.app.core.theme.RallyTheme
 import com.rally.app.feature.auth.viewmodel.AuthEvent
 import com.rally.app.feature.auth.viewmodel.AuthViewModel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import timber.log.Timber
 
 // ── Public Screen Entry ─────────────────────────────────────────────────
 
@@ -73,6 +83,32 @@ fun SignInScreen(
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val oneTapClient = remember { Identity.getSignInClient(context) }
+
+    // Handle the result from Google One Tap sign-in
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            try {
+                val credential = oneTapClient.getSignInCredentialFromIntent(result.data)
+                val idToken = credential.googleIdToken
+                val email = credential.id
+                val displayName = credential.displayName
+                if (idToken != null) {
+                    viewModel.onGoogleSignInSuccess(idToken, email, displayName)
+                } else {
+                    scope.launch { snackbarHostState.showSnackbar("Google sign-in failed: no ID token") }
+                }
+            } catch (e: Exception) {
+                Timber.tag("Rally.SignIn").e(e, "Google credential parsing failed")
+                scope.launch { snackbarHostState.showSnackbar("Google sign-in failed") }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -89,7 +125,26 @@ fun SignInScreen(
         SignInContent(
             isLoading = isLoading,
             onGoogleSignIn = {
-                // TODO: launch Google Sign-In intent / Credential Manager
+                scope.launch {
+                    try {
+                        val signInRequest = BeginSignInRequest.builder()
+                            .setGoogleIdTokenRequestOptions(
+                                BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
+                                    .setSupported(true)
+                                    .setFilterByAuthorizedAccounts(false)
+                                    .build(),
+                            )
+                            .setAutoSelectEnabled(true)
+                            .build()
+                        val beginSignInResult = oneTapClient.beginSignIn(signInRequest).await()
+                        googleSignInLauncher.launch(
+                            IntentSenderRequest.Builder(beginSignInResult.pendingIntent.intentSender).build(),
+                        )
+                    } catch (e: Exception) {
+                        Timber.tag("Rally.SignIn").e(e, "Google One Tap failed")
+                        snackbarHostState.showSnackbar("Google sign-in unavailable")
+                    }
+                }
             },
             onEmailSignIn = { email, password ->
                 viewModel.signInWithEmail(email, password)

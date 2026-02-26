@@ -11,6 +11,49 @@ data class GoogleAuthRequest(
 )
 
 /**
+ * Request body for email/password login.
+ */
+@Serializable
+data class LoginRequest(
+    val email: String,
+    val password: String,
+)
+
+/**
+ * Response from email/password login (matches server POST /auth/login).
+ */
+@Serializable
+data class LoginResponse(
+    val token: String,
+    val user: LoginUser,
+)
+
+/**
+ * User object returned by the server's /auth/login and /auth/register endpoints.
+ */
+@Serializable
+data class LoginUser(
+    val id: String,
+    val email: String,
+    val name: String,
+    val handle: String,
+    val role: String = "user",
+    val schoolId: String? = null,
+    val favoriteSchool: String? = null,
+    val points: Int = 0,
+    val tier: String = "Bronze",
+    val emailVerified: Boolean = false,
+)
+
+/**
+ * Request body for submitting a poll vote.
+ */
+@Serializable
+data class PollVoteRequest(
+    val optionIndex: Int,
+)
+
+/**
  * Request body for token refresh.
  */
 @Serializable

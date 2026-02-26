@@ -35,7 +35,10 @@ dependencies {
     implementation(libs.credentials)
     implementation(libs.credentials.play)
     implementation(libs.googleid)
+    implementation(libs.play.services.auth)
+    implementation(libs.coroutines.play.services)
     implementation(libs.security.crypto)
+    implementation(libs.timber)
     implementation(libs.coil.compose)
     debugImplementation(libs.compose.ui.tooling)
 }

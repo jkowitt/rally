@@ -99,15 +99,42 @@ router.delete('/:notifId', requireAuth, requireAdmin, async (req, res) => {
 // POST /notifications/:notifId/send
 router.post('/:notifId/send', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const notification = await prisma.notification.update({
+    const notif = await prisma.notification.findUnique({
       where: { id: String(req.params.notifId) },
+    });
+    if (!notif) return res.status(404).json({ error: 'Notification not found' });
+    if (notif.status === 'SENT') return res.status(409).json({ error: 'Notification already sent' });
+
+    // Determine recipients based on targetAudience
+    const audienceFilter: Record<string, unknown> = { schoolId: notif.schoolId };
+    if (notif.targetAudience !== 'all') {
+      const tierMatch = notif.targetAudience.match(/^tier_(.+)$/i);
+      if (tierMatch) {
+        audienceFilter.tier = tierMatch[1].charAt(0).toUpperCase() + tierMatch[1].slice(1);
+      }
+    }
+
+    const recipients = await prisma.rallyUser.findMany({
+      where: { ...audienceFilter, pushNotifications: true },
+      select: { id: true, email: true },
+    });
+
+    // TODO: integrate push notification service (FCM, OneSignal, etc.) to deliver
+    // to each recipient. For now we resolve the audience, log, and mark as sent.
+    console.log(`[Rally] Sending notification "${notif.title}" to ${recipients.length} recipients`);
+
+    const notification = await prisma.notification.update({
+      where: { id: notif.id },
       data: {
         status: 'SENT',
         sentAt: new Date(),
       },
     });
 
-    return res.json(formatNotification(notification));
+    return res.json({
+      ...formatNotification(notification),
+      recipientCount: recipients.length,
+    });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to send notification' });
   }

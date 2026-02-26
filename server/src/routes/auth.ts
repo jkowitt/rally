@@ -1,10 +1,19 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import prisma from '../lib/prisma';
 import { AuthRequest, generateToken, requireAuth } from '../middleware/auth';
 import { evaluateHandleAttempt } from '../services/handle-moderation';
 import { validate, registerSchema, loginSchema, checkHandleSchema, updateProfileSchema, resetPasswordSchema } from '../lib/validation';
 import type { RallyUser } from '@prisma/client';
+
+/** Generate a cryptographically secure 6-character alphanumeric code. */
+function generateSecureCode(): string {
+  return crypto.randomBytes(3).toString('hex').toUpperCase(); // 6 hex chars
+}
+
+/** Code validity window: 15 minutes. */
+const CODE_EXPIRY_MS = 15 * 60 * 1000;
 
 const router = Router();
 
@@ -257,12 +266,41 @@ router.put('/me', requireAuth, validate(updateProfileSchema), async (req: AuthRe
 });
 
 // POST /auth/verify-email
-router.post('/verify-email', async (req, res) => {
+router.post('/verify-email', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { code } = req.body;
-    if (!code || code.length < 4) {
+    if (!code || typeof code !== 'string' || code.length < 4) {
       return res.status(400).json({ error: 'Invalid verification code' });
     }
+
+    const user = await prisma.rallyUser.findUnique({ where: { id: req.userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (user.emailVerified) {
+      return res.json({ message: 'Email already verified' });
+    }
+
+    if (!user.emailVerificationCode || !user.emailVerificationExpiry) {
+      return res.status(400).json({ error: 'No verification code pending. Request a new one.' });
+    }
+
+    if (new Date() > user.emailVerificationExpiry) {
+      return res.status(410).json({ error: 'Verification code expired. Request a new one.' });
+    }
+
+    if (user.emailVerificationCode !== code.toUpperCase()) {
+      return res.status(401).json({ error: 'Invalid verification code' });
+    }
+
+    await prisma.rallyUser.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationCode: null,
+        emailVerificationExpiry: null,
+      },
+    });
+
     return res.json({ message: 'Email verified successfully' });
   } catch {
     return res.status(500).json({ error: 'Verification failed' });
@@ -270,10 +308,30 @@ router.post('/verify-email', async (req, res) => {
 });
 
 // POST /auth/resend-verification
-router.post('/resend-verification', async (_req, res) => {
+router.post('/resend-verification', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const resetCode = Math.random().toString(36).slice(2, 8).toUpperCase();
-    return res.json({ message: 'Verification email sent', resetCode });
+    const user = await prisma.rallyUser.findUnique({ where: { id: req.userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (user.emailVerified) {
+      return res.json({ message: 'Email already verified' });
+    }
+
+    const verificationCode = generateSecureCode();
+    await prisma.rallyUser.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationCode: verificationCode,
+        emailVerificationExpiry: new Date(Date.now() + CODE_EXPIRY_MS),
+      },
+    });
+
+    // TODO: integrate email service (SendGrid, AWS SES, etc.) to deliver the code
+    // For now the code is stored server-side and validated properly — email delivery
+    // is the only remaining integration point.
+    console.log(`[Rally] Verification code for ${user.email}: ${verificationCode}`);
+
+    return res.json({ message: 'Verification email sent' });
   } catch {
     return res.status(500).json({ error: 'Failed to resend verification' });
   }
@@ -285,13 +343,27 @@ router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
+    // Always return the same response to prevent user enumeration
+    const genericResponse = { message: 'If that email exists, a reset code has been sent' };
+
     const user = await prisma.rallyUser.findUnique({ where: { email } });
     if (!user) {
-      return res.json({ message: 'If that email exists, a reset code has been sent' });
+      return res.json(genericResponse);
     }
 
-    const resetCode = Math.random().toString(36).slice(2, 8).toUpperCase();
-    return res.json({ message: 'Reset code sent', resetCode });
+    const resetCode = generateSecureCode();
+    await prisma.rallyUser.update({
+      where: { id: user.id },
+      data: {
+        passwordResetCode: resetCode,
+        passwordResetExpiry: new Date(Date.now() + CODE_EXPIRY_MS),
+      },
+    });
+
+    // TODO: integrate email service (SendGrid, AWS SES, etc.) to deliver the code
+    console.log(`[Rally] Password reset code for ${user.email}: ${resetCode}`);
+
+    return res.json(genericResponse);
   } catch {
     return res.status(500).json({ error: 'Failed to process reset request' });
   }
@@ -300,15 +372,37 @@ router.post('/forgot-password', async (req, res) => {
 // POST /auth/reset-password
 router.post('/reset-password', validate(resetPasswordSchema), async (req, res) => {
   try {
-    const { email, newPassword } = req.body;
+    const { email, code, newPassword } = req.body;
 
     const user = await prisma.rallyUser.findUnique({ where: { email } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset code' });
+    }
+
+    if (!user.passwordResetCode || !user.passwordResetExpiry) {
+      return res.status(400).json({ error: 'No password reset pending. Request a new code.' });
+    }
+
+    if (new Date() > user.passwordResetExpiry) {
+      await prisma.rallyUser.update({
+        where: { id: user.id },
+        data: { passwordResetCode: null, passwordResetExpiry: null },
+      });
+      return res.status(410).json({ error: 'Reset code expired. Request a new one.' });
+    }
+
+    if (user.passwordResetCode !== code.toUpperCase()) {
+      return res.status(401).json({ error: 'Invalid or expired reset code' });
+    }
 
     const hashed = await bcrypt.hash(newPassword, 10);
     await prisma.rallyUser.update({
       where: { id: user.id },
-      data: { password: hashed },
+      data: {
+        password: hashed,
+        passwordResetCode: null,
+        passwordResetExpiry: null,
+      },
     });
 
     return res.json({ message: 'Password reset successfully' });

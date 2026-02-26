@@ -3,10 +3,14 @@ package com.rally.app.networking.api
 import com.rally.app.core.model.Activation
 import com.rally.app.core.model.AuthResponse
 import com.rally.app.core.model.CheckInResponse
+import com.rally.app.core.model.ContentItem
 import com.rally.app.core.model.Event
 import com.rally.app.core.model.GoogleAuthRequest
+import com.rally.app.core.model.LoginRequest
+import com.rally.app.core.model.LoginResponse
 import com.rally.app.core.model.PointsHistory
 import com.rally.app.core.model.PointsTransaction
+import com.rally.app.core.model.PollVoteRequest
 import com.rally.app.core.model.RedemptionResult
 import com.rally.app.core.model.RefreshTokenRequest
 import com.rally.app.core.model.Reward
@@ -37,6 +41,11 @@ interface RallyApi {
     suspend fun authenticateWithGoogle(
         @Body request: GoogleAuthRequest,
     ): Response<AuthResponse>
+
+    @POST("auth/login")
+    suspend fun loginWithEmail(
+        @Body request: LoginRequest,
+    ): Response<LoginResponse>
 
     @POST("auth/refresh")
     suspend fun refreshToken(
@@ -108,4 +117,18 @@ interface RallyApi {
 
     @GET("points/history")
     suspend fun getPointsHistory(): Response<PointsHistory>
+
+    // ── Content Feed ─────────────────────────────────────────────────────
+
+    @GET("content")
+    suspend fun getContent(
+        @Query("page") page: Int = 0,
+        @Query("pageSize") pageSize: Int = 20,
+    ): Response<List<ContentItem>>
+
+    @POST("content/{id}/vote")
+    suspend fun votePoll(
+        @Path("id") pollId: String,
+        @Body vote: PollVoteRequest,
+    ): Response<Unit>
 }

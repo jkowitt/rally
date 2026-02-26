@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,6 +35,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +56,7 @@ import com.rally.app.core.model.School
 import com.rally.app.core.model.SchoolTheme
 import com.rally.app.core.theme.RallyTheme
 import com.rally.app.feature.auth.viewmodel.AuthViewModel
+import com.rally.app.feature.auth.viewmodel.SchoolListViewModel
 
 // ── Public Screen Entry ─────────────────────────────────────────────────
 
@@ -61,13 +64,19 @@ import com.rally.app.feature.auth.viewmodel.AuthViewModel
 @Composable
 fun SchoolSelectorScreen(
     viewModel: AuthViewModel = hiltViewModel(),
+    schoolListViewModel: SchoolListViewModel = hiltViewModel(),
     onSchoolSelected: () -> Unit = {},
     onNavigateBack: () -> Unit = {},
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
-    // TODO: Replace with actual school list from repository / API
-    val schools = remember { sampleSchools() }
+    val schools by schoolListViewModel.schools.collectAsState()
+    val isLoading by schoolListViewModel.isLoading.collectAsState()
+    val error by schoolListViewModel.error.collectAsState()
+
+    LaunchedEffect(Unit) {
+        schoolListViewModel.loadSchools()
+    }
 
     val filteredSchools = remember(searchQuery, schools) {
         if (searchQuery.isBlank()) {
@@ -95,16 +104,44 @@ fun SchoolSelectorScreen(
             )
         },
     ) { paddingValues ->
-        SchoolSelectorContent(
-            schools = filteredSchools,
-            searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it },
-            onSchoolTap = { school ->
-                viewModel.selectSchool(school)
-                onSchoolSelected()
-            },
-            modifier = Modifier.padding(paddingValues),
-        )
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            error != null -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = error ?: "Failed to load schools",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+            else -> {
+                SchoolSelectorContent(
+                    schools = filteredSchools,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
+                    onSchoolTap = { school ->
+                        viewModel.selectSchool(school)
+                        onSchoolSelected()
+                    },
+                    modifier = Modifier.padding(paddingValues),
+                )
+            }
+        }
     }
 }
 
@@ -259,23 +296,12 @@ private fun String.toColorInt(): Long {
     }
 }
 
-/** Sample schools for preview and initial development. */
+// ── Previews ────────────────────────────────────────────────────────────
+
 private fun sampleSchools(): List<School> = listOf(
     School(id = "duke", name = "Duke University", mascot = "Blue Devils", abbreviation = "DUKE", theme = SchoolTheme(primaryColor = "#003087", secondaryColor = "#FFFFFF", accentColor = "#003087")),
     School(id = "unc", name = "UNC Chapel Hill", mascot = "Tar Heels", abbreviation = "UNC", theme = SchoolTheme(primaryColor = "#7BAFD4", secondaryColor = "#13294B", accentColor = "#7BAFD4")),
-    School(id = "ncstate", name = "NC State", mascot = "Wolfpack", abbreviation = "NCST", theme = SchoolTheme(primaryColor = "#CC0000", secondaryColor = "#000000", accentColor = "#CC0000")),
-    School(id = "wake", name = "Wake Forest", mascot = "Demon Deacons", abbreviation = "WAKE", theme = SchoolTheme(primaryColor = "#9E7E38", secondaryColor = "#000000", accentColor = "#9E7E38")),
-    School(id = "clemson", name = "Clemson University", mascot = "Tigers", abbreviation = "CLEM", theme = SchoolTheme(primaryColor = "#F56600", secondaryColor = "#522D80", accentColor = "#F56600")),
-    School(id = "uva", name = "University of Virginia", mascot = "Cavaliers", abbreviation = "UVA", theme = SchoolTheme(primaryColor = "#232D4B", secondaryColor = "#F84C1E", accentColor = "#232D4B")),
-    School(id = "vt", name = "Virginia Tech", mascot = "Hokies", abbreviation = "VT", theme = SchoolTheme(primaryColor = "#630031", secondaryColor = "#CF4420", accentColor = "#630031")),
-    School(id = "louisville", name = "Louisville", mascot = "Cardinals", abbreviation = "LOU", theme = SchoolTheme(primaryColor = "#AD0000", secondaryColor = "#000000", accentColor = "#AD0000")),
-    School(id = "pitt", name = "University of Pittsburgh", mascot = "Panthers", abbreviation = "PITT", theme = SchoolTheme(primaryColor = "#003594", secondaryColor = "#FFB81C", accentColor = "#003594")),
-    School(id = "fsu", name = "Florida State", mascot = "Seminoles", abbreviation = "FSU", theme = SchoolTheme(primaryColor = "#782F40", secondaryColor = "#CEB888", accentColor = "#782F40")),
-    School(id = "gatech", name = "Georgia Tech", mascot = "Yellow Jackets", abbreviation = "GT", theme = SchoolTheme(primaryColor = "#B3A369", secondaryColor = "#003057", accentColor = "#B3A369")),
-    School(id = "miami", name = "University of Miami", mascot = "Hurricanes", abbreviation = "MIA", theme = SchoolTheme(primaryColor = "#F47321", secondaryColor = "#005030", accentColor = "#F47321")),
 )
-
-// ── Previews ────────────────────────────────────────────────────────────
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
@@ -284,19 +310,6 @@ private fun SchoolSelectorPreview() {
         SchoolSelectorContent(
             schools = sampleSchools(),
             searchQuery = "",
-            onSearchQueryChange = {},
-            onSchoolTap = {},
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true, name = "With Search")
-@Composable
-private fun SchoolSelectorSearchPreview() {
-    RallyTheme {
-        SchoolSelectorContent(
-            schools = sampleSchools().filter { it.name.contains("Duke", ignoreCase = true) },
-            searchQuery = "Duke",
             onSearchQueryChange = {},
             onSchoolTap = {},
         )

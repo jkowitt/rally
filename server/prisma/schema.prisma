@@ -50,6 +50,14 @@ model RallyUser {
   points             Int      @default(0)
   tier               String   @default("Bronze")
 
+  // Email verification
+  emailVerificationCode   String?
+  emailVerificationExpiry DateTime?
+
+  // Password reset
+  passwordResetCode       String?
+  passwordResetExpiry     DateTime?
+
   // Handle moderation
   handleWarnings     Int      @default(0)    // 0-2 warnings before forced rename
   handleLockedUntil  DateTime?               // if set, handle cannot be changed until this time

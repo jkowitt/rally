@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -21,11 +22,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.rally.app.core.model.ArticleDetail
 import com.rally.app.core.theme.RallyTheme
 import java.text.SimpleDateFormat
@@ -128,25 +131,18 @@ private fun ContentDetailBody(
 
         Spacer(Modifier.height(16.dp))
 
-        // ── Hero Image Placeholder ──────────────────────────────────────
+        // ── Hero Image ────────────────────────────────────────────────────
         if (article.heroImageUrl != null) {
-            // TODO: Replace with AsyncImage (Coil) when image loading is wired up
-            androidx.compose.foundation.layout.Box(
+            AsyncImage(
+                model = article.heroImageUrl,
+                contentDescription = article.title,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .padding(bottom = 16.dp),
-            ) {
-                Text(
-                    text = "[Hero Image]",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            )
         }
 
         HorizontalDivider()

@@ -78,6 +78,13 @@ router.get('/:propertyId', requireAuth, requireAdmin, async (req, res) => {
     const totalPointsEarned = pointsEntries.reduce((sum, e) => sum + e.points, 0);
     const totalCheckins = pointsEntries.filter(e => e.activationName.toLowerCase().includes('check')).length;
 
+    // Use actual venue/remote data from GameCapture isInStadium field
+    const fanIds = fans.map(f => f.id);
+    const [atVenueCount, remoteCount] = await Promise.all([
+      prisma.gameCapture.count({ where: { userId: { in: fanIds }, isInStadium: true } }),
+      prisma.gameCapture.count({ where: { userId: { in: fanIds }, isInStadium: false } }),
+    ]);
+
     // Tier distribution
     const tierMap: Record<string, number> = {};
     for (const f of fans) {
@@ -111,8 +118,8 @@ router.get('/:propertyId', requireAuth, requireAdmin, async (req, res) => {
       interests: interestsMap,
       engagement: {
         totalCheckins,
-        atVenue: Math.round(totalCheckins * 0.7), // Estimate
-        remote: Math.round(totalCheckins * 0.3),
+        atVenue: atVenueCount,
+        remote: remoteCount,
         totalPointsEarned,
         avgPointsPerFan: totalFans > 0 ? Math.round(totalPointsEarned / totalFans) : 0,
       },

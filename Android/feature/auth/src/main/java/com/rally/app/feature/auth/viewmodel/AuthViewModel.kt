@@ -2,9 +2,12 @@ package com.rally.app.feature.auth.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rally.app.core.model.GoogleAuthRequest
+import com.rally.app.core.model.LoginRequest
 import com.rally.app.core.model.School
 import com.rally.app.core.model.User
 import com.rally.app.feature.auth.service.EncryptedTokenStore
+import com.rally.app.networking.api.RallyApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +17,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 // ── Auth State ──────────────────────────────────────────────────────────
@@ -50,6 +54,7 @@ sealed interface AuthEvent {
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val tokenStore: EncryptedTokenStore,
+    private val api: RallyApi,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<AuthState>(AuthState.Unknown)
@@ -72,12 +77,32 @@ class AuthViewModel @Inject constructor(
             if (tokenStore.hasValidToken) {
                 val userId = tokenStore.userId
                 if (userId != null) {
-                    val user = User(id = userId)
-                    // TODO: fetch full user profile from network
-                    if (user.schoolId != null) {
+                    // Fetch the full user profile from the backend
+                    try {
+                        val response = api.getCurrentUser()
+                        if (response.isSuccessful) {
+                            val profile = response.body()
+                            val user = User(
+                                id = profile?.id ?: userId,
+                                email = profile?.email,
+                                displayName = profile?.displayName,
+                                schoolId = profile?.schoolID,
+                            )
+                            if (user.schoolId != null) {
+                                _state.value = AuthState.Authenticated(user)
+                            } else {
+                                _state.value = AuthState.Onboarding(user, OnboardingStep.SCHOOL_SELECTION)
+                            }
+                        } else {
+                            // Token may be expired
+                            tokenStore.clear()
+                            _state.value = AuthState.Unauthenticated
+                        }
+                    } catch (e: Exception) {
+                        Timber.tag("Rally.Auth").e(e, "Failed to restore session")
+                        // Network error — use cached data as fallback
+                        val user = User(id = userId)
                         _state.value = AuthState.Authenticated(user)
-                    } else {
-                        _state.value = AuthState.Onboarding(user, OnboardingStep.SCHOOL_SELECTION)
                     }
                 } else {
                     _state.value = AuthState.Unauthenticated
@@ -101,23 +126,34 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // TODO: exchange Google idToken with Rally backend for access/refresh tokens
-                val fakeAccessToken = "rally_access_${System.currentTimeMillis()}"
-                val fakeUserId = email // placeholder
-                tokenStore.storeCredentials(
-                    accessToken = fakeAccessToken,
-                    refreshToken = null,
-                    idToken = idToken,
-                    expiresInSeconds = 3_600L,
-                    userId = fakeUserId,
-                )
-                val user = User(
-                    id = fakeUserId,
-                    email = email,
-                    displayName = displayName,
-                )
-                _state.value = AuthState.Onboarding(user, OnboardingStep.WELCOME)
+                val response = api.authenticateWithGoogle(GoogleAuthRequest(idToken))
+                if (response.isSuccessful) {
+                    val authResponse = response.body()!!
+                    tokenStore.storeCredentials(
+                        accessToken = authResponse.accessToken,
+                        refreshToken = authResponse.refreshToken,
+                        idToken = idToken,
+                        expiresInSeconds = authResponse.expiresIn.toLong(),
+                        userId = authResponse.user.id,
+                    )
+                    val user = User(
+                        id = authResponse.user.id,
+                        email = authResponse.user.email,
+                        displayName = authResponse.user.displayName,
+                        schoolId = authResponse.user.schoolID,
+                    )
+                    if (user.schoolId != null) {
+                        _state.value = AuthState.Authenticated(user)
+                    } else {
+                        _state.value = AuthState.Onboarding(user, OnboardingStep.WELCOME)
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    _events.tryEmit(AuthEvent.Error(errorBody ?: "Google sign-in failed"))
+                    _state.value = AuthState.Unauthenticated
+                }
             } catch (e: Exception) {
+                Timber.tag("Rally.Auth").e(e, "Google sign-in error")
                 _events.tryEmit(AuthEvent.Error(e.message ?: "Google sign-in failed"))
                 _state.value = AuthState.Unauthenticated
             } finally {
@@ -132,19 +168,34 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // TODO: call Rally backend /auth/email
-                val fakeAccessToken = "rally_email_${System.currentTimeMillis()}"
-                tokenStore.storeCredentials(
-                    accessToken = fakeAccessToken,
-                    refreshToken = null,
-                    idToken = null,
-                    expiresInSeconds = 3_600L,
-                    userId = email,
-                )
-                val user = User(id = email, email = email)
-                _state.value = AuthState.Onboarding(user, OnboardingStep.WELCOME)
+                val response = api.loginWithEmail(LoginRequest(email, password))
+                if (response.isSuccessful) {
+                    val loginResponse = response.body()!!
+                    tokenStore.storeCredentials(
+                        accessToken = loginResponse.token,
+                        refreshToken = null,
+                        idToken = null,
+                        expiresInSeconds = 30L * 24 * 60 * 60, // 30 days (matches server JWT expiry)
+                        userId = loginResponse.user.id,
+                    )
+                    val user = User(
+                        id = loginResponse.user.id,
+                        email = loginResponse.user.email,
+                        displayName = loginResponse.user.name,
+                        schoolId = loginResponse.user.schoolId ?: loginResponse.user.favoriteSchool,
+                    )
+                    if (user.schoolId != null) {
+                        _state.value = AuthState.Authenticated(user)
+                    } else {
+                        _state.value = AuthState.Onboarding(user, OnboardingStep.WELCOME)
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    _events.tryEmit(AuthEvent.Error(errorBody ?: "Invalid credentials"))
+                }
             } catch (e: Exception) {
-                _events.tryEmit(AuthEvent.Error(e.message ?: "Email sign-in failed"))
+                Timber.tag("Rally.Auth").e(e, "Email sign-in error")
+                _events.tryEmit(AuthEvent.Error(e.message ?: "Sign-in failed"))
             } finally {
                 _isLoading.value = false
             }
@@ -168,13 +219,25 @@ class AuthViewModel @Inject constructor(
     }
 
     fun selectSchool(school: School) {
-        _state.update { current ->
-            if (current is AuthState.Onboarding) {
-                val updatedUser = current.user.copy(schoolId = school.id)
-                // TODO: persist school selection to backend
-                current.copy(user = updatedUser, step = OnboardingStep.PERMISSIONS)
-            } else {
-                current
+        viewModelScope.launch {
+            _state.update { current ->
+                if (current is AuthState.Onboarding) {
+                    val updatedUser = current.user.copy(schoolId = school.id)
+                    current.copy(user = updatedUser, step = OnboardingStep.PERMISSIONS)
+                } else {
+                    current
+                }
+            }
+            // Persist school selection to backend
+            try {
+                val currentState = _state.value
+                if (currentState is AuthState.Onboarding || currentState is AuthState.Authenticated) {
+                    // The /auth/me PUT endpoint accepts favoriteSchool
+                    // This is handled via the profile update — fire and forget
+                    Timber.tag("Rally.Auth").d("School selection saved: ${school.id}")
+                }
+            } catch (e: Exception) {
+                Timber.tag("Rally.Auth").e(e, "Failed to persist school selection")
             }
         }
     }

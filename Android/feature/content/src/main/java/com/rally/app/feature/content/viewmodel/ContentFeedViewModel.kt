@@ -4,13 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rally.app.core.model.ContentItem
 import com.rally.app.core.model.Poll
+import com.rally.app.core.model.PollVoteRequest
+import com.rally.app.networking.api.RallyApi
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 // ── Feed State ──────────────────────────────────────────────────────────
@@ -36,7 +38,7 @@ data class ContentFeedState(
 
 @HiltViewModel
 class ContentFeedViewModel @Inject constructor(
-    // TODO: inject ContentRepository when available
+    private val api: RallyApi,
 ) : ViewModel() {
 
     companion object {
@@ -71,6 +73,7 @@ class ContentFeedViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Timber.tag("Rally.Content").e(e, "Initial content load failed")
                 _state.update { it.copy(isLoading = false, error = e.message) }
             }
         }
@@ -93,6 +96,7 @@ class ContentFeedViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Timber.tag("Rally.Content").e(e, "Content refresh failed")
                 _state.update { it.copy(isRefreshing = false, error = e.message) }
             }
         }
@@ -118,6 +122,7 @@ class ContentFeedViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Timber.tag("Rally.Content").e(e, "Content pagination failed")
                 _state.update { it.copy(isLoadingMore = false, error = e.message) }
             }
         }
@@ -142,6 +147,7 @@ class ContentFeedViewModel @Inject constructor(
 
     fun votePoll(pollId: String, optionIndex: Int) {
         viewModelScope.launch {
+            // Optimistic UI update
             _state.update { state ->
                 state.copy(
                     items = state.items.map { item ->
@@ -158,55 +164,43 @@ class ContentFeedViewModel @Inject constructor(
                     },
                 )
             }
-            // TODO: send vote to backend
+            // Send vote to backend
+            try {
+                val response = api.votePoll(pollId, PollVoteRequest(optionIndex))
+                if (!response.isSuccessful) {
+                    Timber.tag("Rally.Content").w("Poll vote failed: %d", response.code())
+                    // Revert optimistic update on failure
+                    _state.update { state ->
+                        state.copy(
+                            items = state.items.map { item ->
+                                if (item.id == pollId && item is ContentItem.PollItem) {
+                                    item.copy(
+                                        poll = item.poll.copy(
+                                            selectedOptionIndex = null,
+                                            hasVoted = false,
+                                        ),
+                                    )
+                                } else {
+                                    item
+                                }
+                            },
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.tag("Rally.Content").e(e, "Poll vote network error")
+            }
         }
     }
 
     // ── Data Fetching ───────────────────────────────────────────────────
 
-    /**
-     * Fetches a page of content items from the repository.
-     * TODO: Replace with real repository call.
-     */
     private suspend fun fetchPage(page: Int): List<ContentItem> {
-        // Simulated network delay
-        delay(500)
-
-        val offset = page * PAGE_SIZE
-        return buildList {
-            for (i in 0 until PAGE_SIZE) {
-                val index = offset + i
-                when {
-                    index % 5 == 0 -> add(
-                        ContentItem.PollItem(
-                            id = "poll_$index",
-                            title = "Game Day Poll #${index + 1}",
-                            poll = Poll(
-                                question = "Who will score the first touchdown?",
-                                options = listOf("Player A", "Player B", "Player C", "Other"),
-                                voteCounts = listOf(42, 38, 15, 5),
-                            ),
-                        ),
-                    )
-                    index % 7 == 0 -> add(
-                        ContentItem.CountdownItem(
-                            id = "countdown_$index",
-                            title = "Next Home Game",
-                            targetEpochMillis = System.currentTimeMillis() + (3 * 24 * 60 * 60 * 1_000L),
-                        ),
-                    )
-                    else -> add(
-                        ContentItem.ArticleItem(
-                            id = "article_$index",
-                            title = "Rally Feature Story #${index + 1}",
-                            summary = "An exciting preview of the upcoming game day experience with exclusive behind-the-scenes access.",
-                            imageUrl = null,
-                            authorName = "Rally Staff",
-                            publishedAt = System.currentTimeMillis() - (index * 3_600_000L),
-                        ),
-                    )
-                }
-            }
+        val response = api.getContent(page = page, pageSize = PAGE_SIZE)
+        if (response.isSuccessful) {
+            return response.body() ?: emptyList()
+        } else {
+            throw RuntimeException("Content fetch failed (${response.code()})")
         }
     }
 }

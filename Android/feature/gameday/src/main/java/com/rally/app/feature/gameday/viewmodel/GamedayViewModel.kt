@@ -10,11 +10,16 @@ import com.rally.app.core.model.CheckInResponse
 import com.rally.app.core.model.Event
 import com.rally.app.core.model.LeaderboardEntry
 import com.rally.app.core.model.SubmissionResult
+import com.rally.app.networking.api.ApiClient
 import com.rally.app.networking.api.RallyApi
+import com.rally.app.networking.websocket.GamedayWebSocket
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -60,6 +65,7 @@ sealed interface GamedayEvent {
 @HiltViewModel
 class GamedayViewModel @Inject constructor(
     private val api: RallyApi,
+    private val gamedayWebSocket: GamedayWebSocket,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -220,19 +226,47 @@ class GamedayViewModel @Inject constructor(
     // ── WebSocket ───────────────────────────────────────────────────────
 
     private fun connectWebSocket() {
+        if (eventId.isBlank()) return
         webSocketJob?.cancel()
+
+        // Connect the real WebSocket
+        gamedayWebSocket.connect(eventId)
+
+        // Observe connection state
         webSocketJob = viewModelScope.launch {
-            _uiState.update { it.copy(webSocketConnected = true) }
-            // In a real implementation, this would connect to an OkHttp WebSocket
-            // and parse incoming messages to update activations, scores, and leaderboard.
-            // For now, we mark the connection state and poll as a fallback.
-            try {
+            launch {
+                gamedayWebSocket.connectionState.collect { state ->
+                    _uiState.update {
+                        it.copy(webSocketConnected = state == GamedayWebSocket.ConnectionState.CONNECTED)
+                    }
+                }
+            }
+
+            // Parse incoming WebSocket messages
+            launch {
+                gamedayWebSocket.messages.collect { rawMessage ->
+                    try {
+                        val json = ApiClient.json.parseToJsonElement(rawMessage)
+                        val type = json.jsonObject["type"]?.jsonPrimitive?.contentOrNull
+                        when (type) {
+                            "activation_update" -> refresh()
+                            "leaderboard_update" -> refresh()
+                            "score_update" -> refresh()
+                            else -> Timber.tag("Rally.Gameday").d("WS message type: %s", type)
+                        }
+                    } catch (e: Exception) {
+                        Timber.tag("Rally.Gameday").w(e, "Failed to parse WS message")
+                    }
+                }
+            }
+
+            // Fallback polling in case WebSocket drops
+            launch {
                 while (true) {
-                    delay(30_000) // Poll every 30s as fallback
+                    delay(60_000) // Poll every 60s as backup
+                    if (_uiState.value.webSocketConnected) continue
                     refresh()
                 }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(webSocketConnected = false) }
             }
         }
     }
@@ -240,6 +274,7 @@ class GamedayViewModel @Inject constructor(
     fun disconnectWebSocket() {
         webSocketJob?.cancel()
         webSocketJob = null
+        gamedayWebSocket.disconnect()
         _uiState.update { it.copy(webSocketConnected = false) }
     }
 

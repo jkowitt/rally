@@ -12,6 +12,7 @@ coroutines = "1.10.2"
 serialization = "1.8.0"
 coil = "2.7.0"
 play-services-location = "21.3.0"
+play-services-auth = "21.3.0"
 timber = "5.0.1"
 credentials = "1.5.0-alpha05"
 googleid = "1.1.1"
@@ -51,12 +52,14 @@ okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor",
 # Kotlin
 kotlin-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
 # Image loading
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 # Location
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "play-services-location" }
+play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "play-services-auth" }
 
 # Auth
 credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }

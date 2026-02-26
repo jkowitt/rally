@@ -373,33 +373,16 @@ export default function InvestorPage() {
 
           <div className="investor-investment-details">
             <div className="investor-investment-detail-card">
-              <h4>What&apos;s Included</h4>
+              <h4>Return on Investment</h4>
               <ul>
-                <li>Next.js web application with 29+ pages and admin panel</li>
-                <li>Express API with 24+ endpoints and PostgreSQL database</li>
-                <li>Native iOS app (SwiftUI) with 13 modular packages</li>
-                <li>Native Android app (Kotlin/Jetpack Compose)</li>
-                <li>Geofenced check-in system with location verification</li>
-                <li>Real-time game lobbies, trivia, and prediction engines</li>
-                <li>Four-tier loyalty system with rewards marketplace</li>
-                <li>Full admin dashboard with analytics and CMS</li>
-                <li>AI integration for content and fan insights</li>
-                <li>Payment processing, push notifications, and CDN</li>
-              </ul>
-            </div>
-            <div className="investor-investment-detail-card">
-              <h4>What a Partner Gets</h4>
-              <ul>
-                <li>Full source code and IP ownership for their deployment</li>
-                <li>White-label capability for any sports property or league</li>
-                <li>520+ team database covering all major U.S. leagues</li>
-                <li>Scalable architecture handling millions of concurrent fans</li>
-                <li>Behavioral data pipeline ready for Business Now and Valora</li>
-                <li>12 months of technical support and knowledge transfer</li>
-                <li>Production deployment on cloud infrastructure</li>
-                <li>App Store and Google Play submission support</li>
-                <li>Security audit and compliance documentation</li>
-                <li>Access to the Loud Legacy product roadmap</li>
+                <li>Full IP ownership of a production-ready behavioral data platform</li>
+                <li>Cross-platform ecosystem (web, iOS, Android) built to scale</li>
+                <li>First-mover access to verified fan identity — an asset no competitor owns</li>
+                <li>Four interlocking revenue streams from a single data asset</li>
+                <li>Built-in viral growth through fan rivalry — no paid acquisition needed</li>
+                <li>White-label ready for any sports property, league, or venue</li>
+                <li>Behavioral data pipeline feeding Business Now, Valora, and Legacy CRM from day one</li>
+                <li>12 months of dedicated technical support and knowledge transfer</li>
               </ul>
             </div>
           </div>

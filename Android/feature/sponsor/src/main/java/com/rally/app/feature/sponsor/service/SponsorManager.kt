@@ -52,7 +52,8 @@ class SponsorManager @Inject constructor(
      */
     suspend fun loadSponsors() {
         try {
-            val sponsors = api.getSponsors()
+            val response = api.getSponsors()
+            val sponsors = response.body() ?: return
             mutex.withLock {
                 val active = sponsors.filter { it.isActive }
                 _activeSponsorsList.value = active

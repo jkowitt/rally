@@ -75,7 +75,7 @@ private data class TierInfo(
 
 private val tierInfoList = listOf(
     TierInfo(
-        tier = Tier.Rookie,
+        tier = Tier.ROOKIE,
         threshold = 0,
         benefits = listOf(
             "Access to rewards catalog",
@@ -84,7 +84,7 @@ private val tierInfoList = listOf(
         ),
     ),
     TierInfo(
-        tier = Tier.Starter,
+        tier = Tier.STARTER,
         threshold = 500,
         benefits = listOf(
             "All Rookie benefits",
@@ -94,7 +94,7 @@ private val tierInfoList = listOf(
         ),
     ),
     TierInfo(
-        tier = Tier.AllStar,
+        tier = Tier.ALL_STAR,
         threshold = 2_000,
         benefits = listOf(
             "All Starter benefits",
@@ -117,7 +117,7 @@ private val tierInfoList = listOf(
         ),
     ),
     TierInfo(
-        tier = Tier.HallOfFame,
+        tier = Tier.HALL_OF_FAME,
         threshold = 15_000,
         benefits = listOf(
             "All MVP benefits",
@@ -271,7 +271,7 @@ private fun CurrentTierHeader(
             Spacer(Modifier.height(12.dp))
 
             Text(
-                text = tier.name,
+                text = tier.displayName,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -307,12 +307,12 @@ private fun CurrentTierHeader(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = tier.name,
+                        text = tier.displayName,
                         style = MaterialTheme.typography.labelSmall,
                         color = Gray,
                     )
                     Text(
-                        text = nextTier.tier.name,
+                        text = nextTier.tier.displayName,
                         style = MaterialTheme.typography.labelSmall,
                         color = Gray,
                     )
@@ -322,7 +322,7 @@ private fun CurrentTierHeader(
 
                 val pointsNeeded = nextTier.threshold - points
                 Text(
-                    text = "$pointsNeeded points to ${nextTier.tier.name}",
+                    text = "$pointsNeeded points to ${nextTier.tier.displayName}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = Blue,
@@ -377,7 +377,7 @@ private fun TierBenefitCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = tierInfo.tier.name,
+                        text = tierInfo.tier.displayName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (isCurrent) Color.White else if (isUnlocked) Navy else Gray,

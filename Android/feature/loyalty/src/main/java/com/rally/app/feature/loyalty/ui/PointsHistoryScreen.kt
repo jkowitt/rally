@@ -57,7 +57,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rally.app.core.model.PointsTransaction
+import com.rally.app.core.model.TransactionSource
 import com.rally.app.feature.loyalty.viewmodel.PointsHistoryViewModel
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -87,8 +89,7 @@ fun PointsHistoryScreen(
     val groupedTransactions = remember(state.transactions) {
         state.transactions
             .groupBy { transaction ->
-                transaction.timestamp
-                    .toInstant()
+                Instant.ofEpochMilli(transaction.createdAt)
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
             }
@@ -332,8 +333,7 @@ private fun TransactionRow(transaction: PointsTransaction) {
                     color = Navy,
                 )
                 Text(
-                    text = transaction.timestamp
-                        .toInstant()
+                    text = Instant.ofEpochMilli(transaction.createdAt)
                         .atZone(ZoneId.systemDefault())
                         .format(timeFormatter),
                     style = MaterialTheme.typography.bodySmall,
@@ -355,12 +355,16 @@ private fun TransactionRow(transaction: PointsTransaction) {
 /**
  * Maps a transaction source tag to an appropriate Material icon.
  */
-private fun resolveTransactionIcon(source: String): ImageVector = when {
-    source.contains("checkin", ignoreCase = true) -> Icons.Default.CheckCircle
-    source.contains("prediction", ignoreCase = true) -> Icons.Default.SportsScore
-    source.contains("redeem", ignoreCase = true) -> Icons.Default.CardGiftcard
-    source.contains("reward", ignoreCase = true) -> Icons.Default.CardGiftcard
-    source.contains("trivia", ignoreCase = true) -> Icons.Default.EmojiEvents
-    source.contains("bonus", ignoreCase = true) -> Icons.Default.Star
-    else -> if (source.contains("redeem", ignoreCase = true)) Icons.Default.Remove else Icons.Default.Add
+private fun resolveTransactionIcon(source: TransactionSource): ImageVector = when (source) {
+    TransactionSource.CHECK_IN -> Icons.Default.CheckCircle
+    TransactionSource.PREDICTION -> Icons.Default.SportsScore
+    TransactionSource.REWARD -> Icons.Default.CardGiftcard
+    TransactionSource.TRIVIA -> Icons.Default.EmojiEvents
+    TransactionSource.NOISE_METER -> Icons.Default.Star
+    TransactionSource.POLL -> Icons.Default.Star
+    TransactionSource.PHOTO_CHALLENGE -> Icons.Default.Star
+    TransactionSource.REFERRAL -> Icons.Default.Star
+    TransactionSource.STREAK -> Icons.Default.Star
+    TransactionSource.ADMIN -> Icons.Default.Star
+    TransactionSource.CONTENT -> Icons.Default.Star
 }

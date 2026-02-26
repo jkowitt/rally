@@ -32,6 +32,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation)
     ksp(libs.hilt.compiler)
+    implementation(libs.retrofit)
     implementation(libs.coil.compose)
     debugImplementation(libs.compose.ui.tooling)
 }

@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.rally.app.core.model.LeaderboardEntry
+import com.rally.app.core.model.Tier
 import com.rally.app.feature.gameday.viewmodel.GamedayUiState
 import com.rally.app.feature.gameday.viewmodel.GamedayViewModel
 import kotlinx.coroutines.delay
@@ -128,10 +129,10 @@ private fun LeaderboardContent(
             // Rest of the leaderboard
             itemsIndexed(
                 items = rest,
-                key = { _, entry -> entry.userId },
+                key = { _, entry -> entry.userID },
             ) { index, entry ->
                 val rank = index + 4 // Rank starts at 4 after podium
-                val isCurrentUser = entry.userId == currentUserId
+                val isCurrentUser = entry.userID == currentUserId
                 LeaderboardRow(
                     rank = rank,
                     entry = entry,
@@ -268,7 +269,7 @@ private fun PodiumPlace(
         )
 
         Text(
-            text = "${entry.points} pts",
+            text = "${entry.score} pts",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold,
@@ -399,7 +400,7 @@ private fun LeaderboardRow(
                     }
                 }
                 Text(
-                    text = entry.tier,
+                    text = entry.tier.displayName,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 )
@@ -407,7 +408,7 @@ private fun LeaderboardRow(
 
             // Points
             Text(
-                text = "${entry.points}",
+                text = "${entry.score}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -425,14 +426,14 @@ private fun LeaderboardRow(
 // ── Previews ────────────────────────────────────────────────────────────────
 
 private fun previewLeaderboard() = listOf(
-    LeaderboardEntry(userId = "1", displayName = "Sarah M.", points = 2450, tier = "All-Star"),
-    LeaderboardEntry(userId = "2", displayName = "Jake T.", points = 2100, tier = "All-Star"),
-    LeaderboardEntry(userId = "3", displayName = "Emily R.", points = 1890, tier = "Starter"),
-    LeaderboardEntry(userId = "current", displayName = "You", points = 1750, tier = "Starter"),
-    LeaderboardEntry(userId = "5", displayName = "Mike D.", points = 1620, tier = "Starter"),
-    LeaderboardEntry(userId = "6", displayName = "Alex K.", points = 1400, tier = "Starter"),
-    LeaderboardEntry(userId = "7", displayName = "Jordan P.", points = 1200, tier = "Rookie"),
-    LeaderboardEntry(userId = "8", displayName = "Taylor W.", points = 950, tier = "Rookie"),
+    LeaderboardEntry(id = "1", userID = "1", displayName = "Sarah M.", score = 2450, rank = 1, tier = Tier.ALL_STAR),
+    LeaderboardEntry(id = "2", userID = "2", displayName = "Jake T.", score = 2100, rank = 2, tier = Tier.ALL_STAR),
+    LeaderboardEntry(id = "3", userID = "3", displayName = "Emily R.", score = 1890, rank = 3, tier = Tier.STARTER),
+    LeaderboardEntry(id = "4", userID = "current", displayName = "You", score = 1750, rank = 4, tier = Tier.STARTER),
+    LeaderboardEntry(id = "5", userID = "5", displayName = "Mike D.", score = 1620, rank = 5, tier = Tier.STARTER),
+    LeaderboardEntry(id = "6", userID = "6", displayName = "Alex K.", score = 1400, rank = 6, tier = Tier.STARTER),
+    LeaderboardEntry(id = "7", userID = "7", displayName = "Jordan P.", score = 1200, rank = 7, tier = Tier.ROOKIE),
+    LeaderboardEntry(id = "8", userID = "8", displayName = "Taylor W.", score = 950, rank = 8, tier = Tier.ROOKIE),
 )
 
 @Preview(showBackground = true)

@@ -1,13 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Header } from "@/components/Header";
-import Footer from "@/components/Footer";
-import UpcomingEvents from "@/components/UpcomingEvents";
+import { InvestorHeader } from "@/components/InvestorHeader";
+import InvestorFooter from "@/components/InvestorFooter";
 
-const features = [
+const products = [
   {
-    title: "Check In on Gameday",
-    description: "Show up, check in, earn points. Rally uses your location to verify you're at the game — then rewards you for being there.",
+    name: "Rally",
+    tagline: "Fan Engagement Platform",
+    description:
+      "Direct-to-consumer app where fans prove fandom through geofenced stadium check-ins, earning status across a four-tier loyalty system while building persistent identity profiles validated by actual behavior.",
+    stats: ["520+ Teams", "7 Leagues", "4 Loyalty Tiers"],
+    color: "#FF6B35",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
@@ -16,297 +19,461 @@ const features = [
     ),
   },
   {
-    title: "Trivia & Predictions",
-    description: "Test your knowledge with live trivia, predict game outcomes, and vote in real-time polls. Every answer earns you points.",
+    name: "Business Now",
+    tagline: "Commerce Layer",
+    description:
+      "Connects verified fan audiences to local and national businesses through targeted offers, real-time attribution, and transaction data that closes the loop between fan presence and commercial activity.",
+    stats: ["Real-Time Attribution", "Closed-Loop Data", "Targeted Offers"],
+    color: "#2D9CDB",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" strokeLinecap="round" />
-        <circle cx="12" cy="17" r="0.5" fill="currentColor" />
+        <rect x="2" y="3" width="20" height="18" rx="2" />
+        <path d="M2 9h20M8 9v12" />
       </svg>
     ),
   },
   {
-    title: "Earn Points & Level Up",
-    description: "Every check-in, every trivia answer, every prediction earns points. Climb from Bronze to Silver to Gold to Platinum across all your teams.",
+    name: "Legacy RE",
+    tagline: "Real Estate Intelligence",
+    description:
+      "Transforms behavioral data into real estate intelligence — giving developers, REITs, and municipalities the first-ever verified picture of how fans actually move around venues and what it means for stadium-adjacent development.",
+    stats: ["Behavioral Heatmaps", "Development Insights", "REIT-Ready Data"],
+    color: "#34C759",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
       </svg>
     ),
   },
   {
-    title: "Redeem Real Rewards",
-    description: "Cash in your points for merch, concessions, VIP experiences, meet-and-greets, and exclusive perks from your favorite teams.",
+    name: "Legacy CRM",
+    tagline: "Intelligence Engine",
+    description:
+      "The connective tissue — a relationship management backbone where every fan interaction, business transaction, property data point, and sponsor engagement flows through a single intelligence engine.",
+    stats: ["Unified Data Layer", "Cross-Product Intelligence", "Predictive Insights"],
+    color: "#AF52DE",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <rect x="2" y="7" width="20" height="14" rx="2" />
-        <path d="M16 7V5a4 4 0 00-8 0v2" />
-      </svg>
-    ),
-  },
-  {
-    title: "Watch from Anywhere",
-    description: "Can't make the game? Tune in remotely and still earn points, play trivia, make predictions, and compete on leaderboards from the couch.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <rect x="2" y="3" width="20" height="14" rx="2" />
-        <path d="M8 21h8M12 17v4" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    title: "Your Team, Your Colors",
-    description: "Rally transforms to match your team's brand — colors, logo, and content. Follow up to 20 teams across any league.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M12 2L2 7l10 5 10-5-10-5z" />
-        <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
       </svg>
     ),
   },
 ];
 
-const stats = [
-  { value: "520+", label: "Teams & Schools" },
-  { value: "7", label: "Leagues" },
-  { value: "4", label: "Loyalty Tiers" },
-  { value: "15+", label: "Ways to Earn" },
-];
-
-const leagues = [
-  { name: "College", count: "353+ Schools", color: "#FF6B35" },
-  { name: "NBA", count: "30 Teams", color: "#1D428A" },
-  { name: "NFL", count: "32 Teams", color: "#013369" },
-  { name: "MLB", count: "30 Teams", color: "#002D72" },
-  { name: "NHL", count: "32 Teams", color: "#000000" },
-  { name: "MLS", count: "29 Teams", color: "#6CC24A" },
-  { name: "UWSL", count: "14 Teams", color: "#B31942" },
-];
-
-const communityTypes = [
+const marketOpportunity = [
   {
-    title: "Students & Student Sections",
-    description: "Compete with your section, rep your dorm or org on leaderboards, and earn exclusive rewards just for showing up and being loud.",
+    label: "Global Sports Market",
+    value: "$620B",
+    description: "Annual global sports industry revenue",
   },
   {
-    title: "Season Ticket Holders",
-    description: "Get more from every game. Check-in streaks, tier progression, and VIP rewards that recognize your loyalty all season long.",
+    label: "Fan Data & Analytics",
+    value: "$8.4B",
+    description: "Sports analytics market by 2028",
   },
   {
-    title: "Die-Hard Fans",
-    description: "Follow multiple teams across any league. Earn points everywhere, track your stats, and prove you're the biggest fan in your crew.",
+    label: "Stadium-Adjacent RE",
+    value: "$25B+",
+    description: "Active stadium district developments in the U.S.",
   },
   {
-    title: "Casual & Remote Fans",
-    description: "Watching from the couch counts. Tune in, play trivia, make predictions, and earn rewards even when you can't be at the venue.",
-  },
-  {
-    title: "Alumni & Boosters",
-    description: "Stay connected to your school's athletics long after graduation. Check in at away games, compete with fellow alumni, and support your program.",
+    label: "Sports Sponsorship",
+    value: "$97B",
+    description: "Global sponsorship spending with limited attribution",
   },
 ];
 
-export default function HomePage() {
+const investmentBreakdown = [
+  { category: "Engineering Team (10 engineers, 12 months)", amount: "$1,330,000", pct: 62 },
+  { category: "Product & Design", amount: "$310,000", pct: 14 },
+  { category: "Infrastructure & DevOps", amount: "$132,000", pct: 6 },
+  { category: "Quality Assurance", amount: "$130,000", pct: 6 },
+  { category: "Legal, Security & Compliance", amount: "$100,000", pct: 5 },
+  { category: "Contingency & Buffer", amount: "$148,000", pct: 7 },
+];
+
+const competitiveAdvantages = [
+  {
+    title: "Verified Behavioral Data",
+    description: "Not surveys. Not self-reported preferences. Geofenced, timestamped proof of physical presence.",
+  },
+  {
+    title: "Cross-Product Network Effects",
+    description: "Every product feeds the others. More fans means better data means more value for businesses, sponsors, and developers.",
+  },
+  {
+    title: "Viral Growth Engine",
+    description: "Fan rivalry is the growth engine. 50 fans from one side start proving dedication, and the other side shows up on their own.",
+  },
+  {
+    title: "First-Mover Advantage",
+    description: "No one owns the identity layer for the physical world. Sports is the most passionate, tribal, viral place to start.",
+  },
+];
+
+const timeline = [
+  {
+    phase: "Phase 1",
+    title: "Iowa Beachhead",
+    description: "Prove the model in a contained, passionate college sports market. Campus ambassadors, rivalry activation, initial data collection.",
+    status: "active",
+  },
+  {
+    phase: "Phase 2",
+    title: "Power Five Expansion",
+    description: "Roll out across Power Five conferences. Activate Business Now partnerships and Legacy RE pilot projects.",
+    status: "upcoming",
+  },
+  {
+    phase: "Phase 3",
+    title: "Professional Sports",
+    description: "Expand into NFL, NBA, MLB, NHL, MLS stadiums. Launch Legacy CRM for enterprise sponsors and properties.",
+    status: "upcoming",
+  },
+  {
+    phase: "Phase 4",
+    title: "Beyond Sports",
+    description: "Concerts, festivals, conferences, theme parks, retail districts. Rally becomes the credit score for real-world engagement.",
+    status: "future",
+  },
+];
+
+export default function InvestorPage() {
   return (
-    <main className="rally-landing">
-      <Header />
+    <main className="investor-landing">
+      <InvestorHeader />
 
       {/* Hero */}
-      <section className="rally-hero">
+      <section className="investor-hero">
         <div className="container">
-          <Image
-            src="/logos/rally-logo-transparent-white.png"
-            alt="Rally"
-            width={240}
-            height={60}
-            className="rally-hero-logo"
-            priority
-          />
-          <div className="rally-badge">The Sports Community App</div>
-          <h1 className="rally-hero-headline">
-            Your Teams. Your Rewards.<br />Your Community.
+          <div className="investor-hero-eyebrow">Loud Legacy Ventures</div>
+          <h1 className="investor-hero-headline">
+            The Identity Layer<br />for the Physical World
           </h1>
-          <p className="rally-tagline">
-            Rally is the gameday experience app for sports fans. Check in at games,
-            compete in trivia, earn points, climb loyalty tiers, and redeem real
-            rewards — across College, NBA, NFL, MLB, NHL, MLS, UWSL, and live events.
+          <p className="investor-hero-sub">
+            We&apos;re building the behavioral data infrastructure that proves who actually shows up —
+            starting with sports, ending everywhere humans gather.
           </p>
-          <div className="hero-actions">
-            <Link href="/auth/signup" className="rally-btn rally-btn--primary rally-btn--large">
-              Join Rally Free
+          <div className="investor-hero-tagline">
+            Prove you were there.
+          </div>
+          <div className="investor-hero-actions">
+            <Link href="#ecosystem" className="rally-btn rally-btn--primary rally-btn--large">
+              Explore the Ecosystem
             </Link>
-            <Link href="/how-it-works" className="rally-btn rally-btn--secondary rally-btn--large">
-              See How It Works
+            <Link href="#investment" className="rally-btn rally-btn--secondary rally-btn--large">
+              View Investment Thesis
             </Link>
+          </div>
+        </div>
+        <div className="investor-hero-gradient" />
+      </section>
+
+      {/* Problem Statement */}
+      <section className="investor-problem">
+        <div className="container">
+          <div className="investor-section-label">The Problem</div>
+          <h2>Billions Spent on Guesswork</h2>
+          <div className="investor-problem-grid">
+            <div className="investor-problem-card">
+              <div className="investor-problem-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" strokeLinecap="round" /><circle cx="12" cy="17" r="0.5" fill="currentColor" /></svg>
+              </div>
+              <h3>Sports Properties</h3>
+              <p>Know almost nothing about who actually shows up, how engaged they are, or what drives them to come back.</p>
+            </div>
+            <div className="investor-problem-card">
+              <div className="investor-problem-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a4 4 0 00-8 0v2" /></svg>
+              </div>
+              <h3>Sponsors</h3>
+              <p>Spend billions on stadium signage and hope it works. No verified attribution between presence and purchase.</p>
+            </div>
+            <div className="investor-problem-card">
+              <div className="investor-problem-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" /></svg>
+              </div>
+              <h3>Developers & REITs</h3>
+              <p>Build billion-dollar mixed-use districts next to venues based on traffic counts and gut feel.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Bar */}
-      <section className="rally-stats">
+      {/* Solution */}
+      <section className="investor-solution">
         <div className="container">
-          <div className="rally-stats-grid">
-            {stats.map((stat) => (
-              <div key={stat.label} className="rally-stat">
-                <span className="rally-stat-value">{stat.value}</span>
-                <span className="rally-stat-label">{stat.label}</span>
+          <div className="investor-section-label">The Solution</div>
+          <h2>One Data Asset Solves All of It</h2>
+          <p className="investor-solution-sub">
+            Verified behavioral proof of fan presence and engagement. Not surveys. Not self-reported preferences.
+            Geofenced, timestamped proof of showing up.
+          </p>
+          <div className="investor-solution-visual">
+            <div className="investor-data-flow">
+              <div className="investor-data-node investor-data-node--source">
+                <span>Fan Shows Up</span>
+              </div>
+              <div className="investor-data-arrow">&rarr;</div>
+              <div className="investor-data-node investor-data-node--core">
+                <span>Verified Behavioral Data</span>
+              </div>
+              <div className="investor-data-arrow">&rarr;</div>
+              <div className="investor-data-node investor-data-node--output">
+                <span>Identity + Intelligence</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Product Ecosystem */}
+      <section id="ecosystem" className="investor-ecosystem">
+        <div className="container">
+          <div className="investor-section-label">Product Ecosystem</div>
+          <h2>Four Products. One Data Asset.</h2>
+          <p className="investor-ecosystem-sub">
+            Each product feeds the others, creating compounding network effects and an expanding moat
+            with every check-in, transaction, and data point.
+          </p>
+          <div className="investor-product-grid">
+            {products.map((product) => (
+              <div key={product.name} className="investor-product-card" style={{ borderTopColor: product.color }}>
+                <div className="investor-product-icon" style={{ color: product.color }}>
+                  {product.icon}
+                </div>
+                <div className="investor-product-name" style={{ color: product.color }}>
+                  {product.name}
+                </div>
+                <div className="investor-product-tagline">{product.tagline}</div>
+                <p className="investor-product-desc">{product.description}</p>
+                <div className="investor-product-stats">
+                  {product.stats.map((stat) => (
+                    <span key={stat} className="investor-product-stat" style={{ borderColor: product.color, color: product.color }}>
+                      {stat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Ecosystem Diagram */}
+          <div className="investor-ecosystem-diagram">
+            <div className="investor-ecosystem-center">
+              <div className="investor-ecosystem-hub">
+                <span>Verified Fan Identity</span>
+                <small>The Core Data Asset</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Market Opportunity */}
+      <section className="investor-market">
+        <div className="container">
+          <div className="investor-section-label">Market Opportunity</div>
+          <h2>Massive, Underserved Markets</h2>
+          <div className="investor-market-grid">
+            {marketOpportunity.map((item) => (
+              <div key={item.label} className="investor-market-card">
+                <div className="investor-market-value">{item.value}</div>
+                <div className="investor-market-label">{item.label}</div>
+                <p className="investor-market-desc">{item.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* App Preview */}
-      <section className="rally-preview">
+      {/* Competitive Advantages */}
+      <section className="investor-moat">
         <div className="container">
-          <h2>One App. Every Team. Every Gameday.</h2>
-          <p className="rally-section-subtitle">
-            Rally adapts to every team&apos;s brand — colors, logo, and content —
-            creating a unique experience for every fanbase, from college to the pros.
-          </p>
-
-          <div className="rally-phone-mockup">
-            <div className="rally-phone">
-              <div className="rally-screen">
-                <div className="rally-screen-header">
-                  <div className="rally-screen-logo-text">RALLY</div>
-                  <div className="rally-screen-avatar" />
-                </div>
-                <div className="rally-screen-card">
-                  <div className="rally-screen-label">YOUR TEAM</div>
-                  <div className="rally-screen-title">Gameday Experience</div>
-                  <div className="rally-screen-date">Events &middot; Points &middot; Rewards</div>
-                </div>
-                <div className="rally-screen-stats-row">
-                  <div className="rally-screen-stat"><span className="rally-accent">2,450</span><small>Points</small></div>
-                  <div className="rally-screen-stat"><span className="rally-tier-pill">Gold</span><small>Tier</small></div>
-                  <div className="rally-screen-stat"><span className="rally-accent">#12</span><small>Rank</small></div>
-                </div>
-                <div className="rally-screen-actions">
-                  <div className="rally-screen-action"><div className="rally-sa-icon rally-sa-icon--orange" /><small>Check In</small></div>
-                  <div className="rally-screen-action"><div className="rally-sa-icon rally-sa-icon--blue" /><small>Trivia</small></div>
-                  <div className="rally-screen-action"><div className="rally-sa-icon rally-sa-icon--purple" /><small>Predict</small></div>
-                  <div className="rally-screen-action"><div className="rally-sa-icon rally-sa-icon--pink" /><small>Rewards</small></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Leagues */}
-      <section id="leagues" className="rally-conferences">
-        <div className="container">
-          <h2>Follow Your Favorite Teams</h2>
-          <p className="rally-section-subtitle">
-            520+ teams and schools across 7 leagues. Find your team, follow them in Rally,
-            and start earning.
-          </p>
-          <div className="rally-conference-tags">
-            {leagues.map((league) => (
-              <Link
-                key={league.name}
-                href="/leagues"
-                className="rally-conf-tag"
-                style={{ borderColor: league.color, color: league.color }}
-              >
-                {league.name} &middot; {league.count}
-              </Link>
-            ))}
-          </div>
-          <div className="rally-features-cta" style={{ marginTop: '2rem' }}>
-            <Link href="/leagues" className="rally-btn rally-btn--secondary">
-              Browse All Leagues &rarr;
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Upcoming Events */}
-      <UpcomingEvents />
-
-      {/* Features */}
-      <section id="features" className="rally-features">
-        <div className="container">
-          <h2>Everything You Need on Gameday</h2>
-          <p className="rally-section-subtitle">
-            Rally gives you more reasons to show up, more ways to engage,
-            and real rewards for being a fan.
-          </p>
-          <div className="rally-feature-grid">
-            {features.map((feature) => (
-              <div key={feature.title} className="rally-feature-card">
-                <div className="rally-feature-icon">{feature.icon}</div>
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
+          <div className="investor-section-label">Competitive Moat</div>
+          <h2>Why Loud Legacy Wins</h2>
+          <div className="investor-moat-grid">
+            {competitiveAdvantages.map((advantage, i) => (
+              <div key={advantage.title} className="investor-moat-card">
+                <div className="investor-moat-num">{String(i + 1).padStart(2, "0")}</div>
+                <h3>{advantage.title}</h3>
+                <p>{advantage.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Who Rally Is For */}
-      <section className="rally-audience">
+      {/* Go-to-Market */}
+      <section className="investor-gtm">
         <div className="container">
-          <h2>Rally Is for Every Kind of Fan</h2>
-          <div className="rally-audience-grid">
-            {communityTypes.map((ct) => (
-              <div key={ct.title} className="rally-audience-card">
-                <h4>{ct.title}</h4>
-                <p>{ct.description}</p>
+          <div className="investor-section-label">Go-to-Market</div>
+          <h2>Iowa First. Then Everywhere.</h2>
+          <p className="investor-gtm-sub">
+            Leveraging founder Jason&apos;s alma mater connection and campus ambassador network to prove the model
+            in a contained, passionate college sports market before expanding nationally.
+          </p>
+          <div className="investor-timeline">
+            {timeline.map((item) => (
+              <div key={item.phase} className={`investor-timeline-item investor-timeline-item--${item.status}`}>
+                <div className="investor-timeline-marker" />
+                <div className="investor-timeline-content">
+                  <div className="investor-timeline-phase">{item.phase}</div>
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
+                </div>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="rally-how">
-        <div className="container">
-          <h2>How It Works</h2>
-          <div className="rally-steps">
-            <div className="rally-step">
-              <div className="rally-step-num">1</div>
-              <h3>Follow Your Teams</h3>
-              <p>Pick your favorites across College, NBA, NFL, MLB, NHL, MLS, and UWSL — follow up to 20 teams from any league.</p>
+          <div className="investor-gtm-insight">
+            <div className="investor-gtm-insight-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
             </div>
-            <div className="rally-step">
-              <div className="rally-step-num">2</div>
-              <h3>Show Up & Engage</h3>
-              <p>Check in at the venue or tune in from home. Play trivia, make predictions, vote in polls, and interact with live content.</p>
-            </div>
-            <div className="rally-step">
-              <div className="rally-step-num">3</div>
-              <h3>Earn Points & Climb</h3>
-              <p>Every action earns points. Level up through Bronze, Silver, Gold, and Platinum tiers across all your teams.</p>
-            </div>
-            <div className="rally-step">
-              <div className="rally-step-num">4</div>
-              <h3>Redeem Rewards</h3>
-              <p>Cash in points for merch, VIP access, concessions, meet-and-greets, and exclusive experiences from your teams.</p>
+            <div>
+              <strong>The Growth Insight:</strong> Fan rivalry is the growth engine. You don&apos;t need to market to opposing fanbases.
+              You need 50 fans from one side to start proving they&apos;re more dedicated, and the other side shows up on their own.
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="rally-cta">
+      {/* Rally Build-Out Investment */}
+      <section id="investment" className="investor-investment">
         <div className="container">
-          <h2>Ready to Rally?</h2>
-          <p>Join the community of fans earning rewards across every league. Free to join, free to play.</p>
-          <div className="rally-cta-actions">
-            <Link href="/auth/signup" className="rally-btn rally-btn--primary rally-btn--large">
-              Get Started Free
-            </Link>
-            <Link href="/rewards" className="rally-btn rally-btn--secondary rally-btn--large">
-              See Rewards
-            </Link>
+          <div className="investor-section-label">Rally Build-Out Estimate</div>
+          <h2>What It Takes to Build Rally</h2>
+          <p className="investor-investment-sub">
+            Full-stack platform build across web, iOS, Android, API, and data infrastructure.
+            12-month timeline with a team of 10 engineers plus product and design.
+          </p>
+
+          <div className="investor-investment-total">
+            <div className="investor-investment-amount">$2.15M</div>
+            <div className="investor-investment-label">Total Rally Build-Out Investment</div>
+            <div className="investor-investment-period">12-month full-platform development</div>
+          </div>
+
+          <div className="investor-investment-grid">
+            {investmentBreakdown.map((item) => (
+              <div key={item.category} className="investor-investment-item">
+                <div className="investor-investment-item-header">
+                  <span className="investor-investment-category">{item.category}</span>
+                  <span className="investor-investment-item-amount">{item.amount}</span>
+                </div>
+                <div className="investor-investment-bar-track">
+                  <div
+                    className="investor-investment-bar-fill"
+                    style={{ width: `${item.pct}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="investor-investment-details">
+            <div className="investor-investment-detail-card">
+              <h4>What&apos;s Included</h4>
+              <ul>
+                <li>Next.js web application with 29+ pages and admin panel</li>
+                <li>Express API with 24+ endpoints and PostgreSQL database</li>
+                <li>Native iOS app (SwiftUI) with 13 modular packages</li>
+                <li>Native Android app (Kotlin/Jetpack Compose)</li>
+                <li>Geofenced check-in system with location verification</li>
+                <li>Real-time game lobbies, trivia, and prediction engines</li>
+                <li>Four-tier loyalty system with rewards marketplace</li>
+                <li>Full admin dashboard with analytics and CMS</li>
+                <li>AI integration for content and fan insights</li>
+                <li>Payment processing, push notifications, and CDN</li>
+              </ul>
+            </div>
+            <div className="investor-investment-detail-card">
+              <h4>What a Partner Gets</h4>
+              <ul>
+                <li>Full source code and IP ownership for their deployment</li>
+                <li>White-label capability for any sports property or league</li>
+                <li>520+ team database covering all major U.S. leagues</li>
+                <li>Scalable architecture handling millions of concurrent fans</li>
+                <li>Behavioral data pipeline ready for Business Now and Legacy RE</li>
+                <li>12 months of technical support and knowledge transfer</li>
+                <li>Production deployment on cloud infrastructure</li>
+                <li>App Store and Google Play submission support</li>
+                <li>Security audit and compliance documentation</li>
+                <li>Access to the Loud Legacy product roadmap</li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
 
-      <Footer />
+      {/* Vision */}
+      <section className="investor-vision">
+        <div className="container">
+          <div className="investor-section-label">The Long-Term Vision</div>
+          <h2>Beyond Sports. Everywhere Humans Gather.</h2>
+          <p className="investor-vision-sub">
+            The check-in and behavioral verification mechanics that prove fandom apply everywhere.
+            Rally&apos;s credit score for fandom is really a credit score for real-world engagement.
+          </p>
+          <div className="investor-vision-grid">
+            <div className="investor-vision-card">
+              <span className="investor-vision-emoji-placeholder">Stadiums</span>
+              <p>520+ teams across 7 leagues</p>
+            </div>
+            <div className="investor-vision-card">
+              <span className="investor-vision-emoji-placeholder">Concerts</span>
+              <p>Live music and festivals</p>
+            </div>
+            <div className="investor-vision-card">
+              <span className="investor-vision-emoji-placeholder">Conferences</span>
+              <p>Industry events and expos</p>
+            </div>
+            <div className="investor-vision-card">
+              <span className="investor-vision-emoji-placeholder">Theme Parks</span>
+              <p>Attractions and entertainment</p>
+            </div>
+            <div className="investor-vision-card">
+              <span className="investor-vision-emoji-placeholder">Retail</span>
+              <p>Shopping districts and malls</p>
+            </div>
+            <div className="investor-vision-card">
+              <span className="investor-vision-emoji-placeholder">Everywhere</span>
+              <p>Any physical gathering space</p>
+            </div>
+          </div>
+          <div className="investor-vision-quote">
+            <blockquote>
+              Sports is the most passionate, tribal, viral place to start.<br />
+              The physical world is where it ends up.
+            </blockquote>
+          </div>
+        </div>
+      </section>
+
+      {/* Strategic Partner CTA */}
+      <section className="investor-cta">
+        <div className="container">
+          <h2>We&apos;re Looking for a Strategic Partner</h2>
+          <p>
+            Loud Legacy Ventures needs a partner who understands the behavioral data opportunity,
+            the sports engagement space, and the vision to build the identity layer for the physical world.
+            This is the ground floor.
+          </p>
+          <div className="investor-cta-actions">
+            <Link href="/contact" className="rally-btn rally-btn--primary rally-btn--large">
+              Request Investor Deck
+            </Link>
+            <Link href="/contact" className="rally-btn rally-btn--secondary rally-btn--large">
+              Schedule a Call
+            </Link>
+          </div>
+          <div className="investor-cta-tagline">
+            Loud Legacy Ventures. Prove you were there.
+          </div>
+        </div>
+      </section>
+
+      <InvestorFooter />
     </main>
   );
 }

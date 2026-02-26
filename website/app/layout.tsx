@@ -4,23 +4,23 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Rally - Fan Engagement & Loyalty Platform | Loud Legacy",
+  title: "Loud Legacy Ventures — The Identity Layer for the Physical World",
   description:
-    "The gameday experience platform built for collegiate athletics. Check-ins, predictions, trivia, rewards, and real-time engagement for 353+ NCAA D1 schools.",
-  keywords: "fan engagement, loyalty platform, collegiate athletics, NCAA, gameday, check-in, trivia, rewards, Loud Legacy",
+    "Behavioral data infrastructure company building the identity layer for the physical world. Four interconnected products — Rally, Business Now, Legacy RE, Legacy CRM — proving who actually shows up, starting with sports.",
+  keywords: "behavioral data, fan engagement, sports analytics, real estate intelligence, verified identity, stadium data, sports sponsorship attribution, Loud Legacy Ventures, Rally",
   icons: {
     icon: "/favicon.ico"
   },
   openGraph: {
-    title: "Rally - Fan Engagement & Loyalty Platform",
-    description: "The gameday experience platform built for collegiate athletics. 353+ NCAA D1 schools.",
+    title: "Loud Legacy Ventures — The Identity Layer for the Physical World",
+    description: "Behavioral data infrastructure company proving who actually shows up. Four products. One data asset. Starting with sports.",
     type: "website",
-    siteName: "Rally",
+    siteName: "Loud Legacy Ventures",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rally - Fan Engagement & Loyalty Platform",
-    description: "The gameday experience platform built for collegiate athletics.",
+    title: "Loud Legacy Ventures — Prove You Were There",
+    description: "Building the identity layer for the physical world, starting with sports. 520+ teams. 7 leagues. Verified behavioral data.",
   },
   robots: {
     index: true,

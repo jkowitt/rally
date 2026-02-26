@@ -23,7 +23,7 @@ const InvestorFooter = () => {
             <ul className="footer-links">
               <li><Link href="/rally">Rally</Link></li>
               <li><Link href="/business-now">Business Now</Link></li>
-              <li><Link href="/valora">Legacy RE</Link></li>
+              <li><Link href="/valora">Valora</Link></li>
               <li><Link href="/legacy-crm">Legacy CRM</Link></li>
             </ul>
           </div>

@@ -6,7 +6,7 @@ import { Providers } from "./providers";
 export const metadata: Metadata = {
   title: "Loud Legacy Ventures — The Identity Layer for the Physical World",
   description:
-    "Behavioral data infrastructure company building the identity layer for the physical world. Four interconnected products — Rally, Business Now, Legacy RE, Legacy CRM — proving who actually shows up, starting with sports.",
+    "Behavioral data infrastructure company building the identity layer for the physical world. Four interconnected products — Rally, Business Now, Valora, Legacy CRM — proving who actually shows up, starting with sports.",
   keywords: "behavioral data, fan engagement, sports analytics, real estate intelligence, verified identity, stadium data, sports sponsorship attribution, Loud Legacy Ventures, Rally",
   icons: {
     icon: "/favicon.ico"

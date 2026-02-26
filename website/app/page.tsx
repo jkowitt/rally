@@ -33,7 +33,7 @@ const products = [
     ),
   },
   {
-    name: "Legacy RE",
+    name: "Valora",
     tagline: "Real Estate Intelligence",
     description:
       "Transforms behavioral data into real estate intelligence — giving developers, REITs, and municipalities the first-ever verified picture of how fans actually move around venues and what it means for stadium-adjacent development.",
@@ -122,7 +122,7 @@ const timeline = [
   {
     phase: "Phase 2",
     title: "Power Five Expansion",
-    description: "Roll out across Power Five conferences. Activate Business Now partnerships and Legacy RE pilot projects.",
+    description: "Roll out across Power Five conferences. Activate Business Now partnerships and Valora pilot projects.",
     status: "upcoming",
   },
   {
@@ -394,7 +394,7 @@ export default function InvestorPage() {
                 <li>White-label capability for any sports property or league</li>
                 <li>520+ team database covering all major U.S. leagues</li>
                 <li>Scalable architecture handling millions of concurrent fans</li>
-                <li>Behavioral data pipeline ready for Business Now and Legacy RE</li>
+                <li>Behavioral data pipeline ready for Business Now and Valora</li>
                 <li>12 months of technical support and knowledge transfer</li>
                 <li>Production deployment on cloud infrastructure</li>
                 <li>App Store and Google Play submission support</li>

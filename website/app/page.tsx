@@ -389,6 +389,192 @@ export default function InvestorPage() {
         </div>
       </section>
 
+      {/* Platform Rollout Roadmap */}
+      <section className="investor-roadmap">
+        <div className="container">
+          <div className="investor-section-label">Platform Rollout</div>
+          <h2>Rally Is the Launch Point. Everything Else Layers In.</h2>
+          <p className="investor-roadmap-sub">
+            Rally isn&apos;t just a product — it&apos;s the data engine that funds and fuels every product after it.
+            Each platform launches from Rally&apos;s verified fan base and behavioral data, meaning no additional
+            fundraising is required to build what comes next.
+          </p>
+
+          {/* Layered Timeline Graphic */}
+          <div className="investor-roadmap-layers">
+            <div className="investor-roadmap-layer investor-roadmap-layer--rally">
+              <div className="investor-roadmap-layer-bar" />
+              <div className="investor-roadmap-layer-info">
+                <div className="investor-roadmap-layer-header">
+                  <span className="investor-roadmap-layer-name" style={{ color: "#FF6B35" }}>Rally</span>
+                  <span className="investor-roadmap-layer-time">Months 1 &ndash; 12</span>
+                </div>
+                <p>The foundation. Fan check-ins, loyalty tiers, and verified identity profiles generate the behavioral data asset everything else is built on.</p>
+                <div className="investor-roadmap-layer-revenue">
+                  <span className="investor-roadmap-revenue-tag">Revenue from Day 1</span>
+                  White-label licensing to sports properties, premium fan subscriptions, and sponsored check-in activations.
+                </div>
+              </div>
+            </div>
+
+            <div className="investor-roadmap-layer investor-roadmap-layer--bn">
+              <div className="investor-roadmap-layer-bar" />
+              <div className="investor-roadmap-layer-info">
+                <div className="investor-roadmap-layer-header">
+                  <span className="investor-roadmap-layer-name" style={{ color: "#2D9CDB" }}>Business Now</span>
+                  <span className="investor-roadmap-layer-time">Months 8 &ndash; 18</span>
+                </div>
+                <p>Plugs directly into Rally&apos;s verified fan audiences. Local and national businesses pay for targeted offers with real attribution — no new data collection needed.</p>
+                <div className="investor-roadmap-layer-revenue">
+                  <span className="investor-roadmap-revenue-tag">Funded by Rally</span>
+                  Transaction fees, offer placement revenue, and attribution-based sponsor billing.
+                </div>
+              </div>
+            </div>
+
+            <div className="investor-roadmap-layer investor-roadmap-layer--valora">
+              <div className="investor-roadmap-layer-bar" />
+              <div className="investor-roadmap-layer-info">
+                <div className="investor-roadmap-layer-header">
+                  <span className="investor-roadmap-layer-name" style={{ color: "#34C759" }}>Valora</span>
+                  <span className="investor-roadmap-layer-time">Months 14 &ndash; 24</span>
+                </div>
+                <p>Rally&apos;s behavioral heatmaps become real estate intelligence. Developers and REITs pay for verified foot traffic data they can&apos;t get anywhere else.</p>
+                <div className="investor-roadmap-layer-revenue">
+                  <span className="investor-roadmap-revenue-tag">Funded by Rally + Business Now</span>
+                  Data licensing to REITs, municipal consulting, and development feasibility reports.
+                </div>
+              </div>
+            </div>
+
+            <div className="investor-roadmap-layer investor-roadmap-layer--crm">
+              <div className="investor-roadmap-layer-bar" />
+              <div className="investor-roadmap-layer-info">
+                <div className="investor-roadmap-layer-header">
+                  <span className="investor-roadmap-layer-name" style={{ color: "#AF52DE" }}>Legacy CRM</span>
+                  <span className="investor-roadmap-layer-time">Months 18 &ndash; 30</span>
+                </div>
+                <p>The intelligence engine that ties it all together. Every fan interaction, business transaction, and property insight flows through one unified system.</p>
+                <div className="investor-roadmap-layer-revenue">
+                  <span className="investor-roadmap-revenue-tag">Funded by All Products</span>
+                  Enterprise SaaS subscriptions for sports properties, sponsors, and venue operators.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Interaction Map */}
+          <div className="investor-roadmap-interactions">
+            <h3>How They Feed Each Other</h3>
+            <div className="investor-roadmap-flow">
+              <div className="investor-roadmap-flow-node investor-roadmap-flow-node--rally">
+                <div className="investor-roadmap-flow-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                    <circle cx="12" cy="9" r="2.5" />
+                  </svg>
+                </div>
+                <span>Rally</span>
+                <small>Fan Identity &amp; Behavior</small>
+              </div>
+
+              <div className="investor-roadmap-flow-connections">
+                <div className="investor-roadmap-flow-line investor-roadmap-flow-line--right" />
+                <div className="investor-roadmap-flow-line investor-roadmap-flow-line--down" />
+                <div className="investor-roadmap-flow-line investor-roadmap-flow-line--left" />
+              </div>
+
+              <div className="investor-roadmap-flow-ring">
+                <div className="investor-roadmap-flow-node investor-roadmap-flow-node--bn">
+                  <div className="investor-roadmap-flow-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="2" y="3" width="20" height="18" rx="2" />
+                      <path d="M2 9h20M8 9v12" />
+                    </svg>
+                  </div>
+                  <span>Business Now</span>
+                  <small>Verified audiences drive commerce</small>
+                </div>
+
+                <div className="investor-roadmap-flow-node investor-roadmap-flow-node--valora">
+                  <div className="investor-roadmap-flow-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                    </svg>
+                  </div>
+                  <span>Valora</span>
+                  <small>Foot traffic becomes RE intel</small>
+                </div>
+
+                <div className="investor-roadmap-flow-node investor-roadmap-flow-node--crm">
+                  <div className="investor-roadmap-flow-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                    </svg>
+                  </div>
+                  <span>Legacy CRM</span>
+                  <small>Unifies all data streams</small>
+                </div>
+              </div>
+            </div>
+
+            <div className="investor-roadmap-arrows-legend">
+              <div className="investor-roadmap-arrow-item">
+                <span className="investor-roadmap-arrow-dot" style={{ background: "#FF6B35" }} />
+                <span>Rally feeds verified fan profiles to every product</span>
+              </div>
+              <div className="investor-roadmap-arrow-item">
+                <span className="investor-roadmap-arrow-dot" style={{ background: "#2D9CDB" }} />
+                <span>Business Now transaction data enriches fan profiles and informs Valora</span>
+              </div>
+              <div className="investor-roadmap-arrow-item">
+                <span className="investor-roadmap-arrow-dot" style={{ background: "#34C759" }} />
+                <span>Valora location intelligence flows back into targeting and CRM</span>
+              </div>
+              <div className="investor-roadmap-arrow-item">
+                <span className="investor-roadmap-arrow-dot" style={{ background: "#AF52DE" }} />
+                <span>Legacy CRM makes every product smarter with cross-platform insights</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Self-Funding Growth */}
+          <div className="investor-roadmap-funding">
+            <div className="investor-roadmap-funding-header">
+              <h3>Self-Funding Growth &mdash; No Further Fundraising Required</h3>
+              <p>
+                Rally generates revenue from day one through three immediate channels. That cash flow
+                directly funds the development and launch of every subsequent platform — eliminating
+                the need for additional funding rounds.
+              </p>
+            </div>
+            <div className="investor-roadmap-funding-grid">
+              <div className="investor-roadmap-funding-card">
+                <div className="investor-roadmap-funding-num">01</div>
+                <h4>White-Label Licensing</h4>
+                <p>Sports properties and leagues pay to deploy Rally under their own brand. Each deployment expands the data asset while generating recurring revenue.</p>
+              </div>
+              <div className="investor-roadmap-funding-card">
+                <div className="investor-roadmap-funding-num">02</div>
+                <h4>Premium Fan Subscriptions</h4>
+                <p>Power users pay for enhanced status tracking, exclusive rewards tiers, and priority access — turning the most passionate fans into a direct revenue stream.</p>
+              </div>
+              <div className="investor-roadmap-funding-card">
+                <div className="investor-roadmap-funding-num">03</div>
+                <h4>Sponsored Activations</h4>
+                <p>Brands pay for sponsored check-in challenges, co-branded loyalty events, and verified attribution on gameday activations — measurable ROI from day one.</p>
+              </div>
+            </div>
+            <div className="investor-roadmap-funding-insight">
+              <strong>The compounding effect:</strong> Every dollar Rally earns funds the next platform.
+              Every platform launched adds new revenue streams. By month 18, multiple products are generating
+              revenue simultaneously — and the data asset compounds with every interaction across the entire ecosystem.
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Vision */}
       <section className="investor-vision">
         <div className="container">

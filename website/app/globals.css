@@ -27210,6 +27210,356 @@ body {
 }
 
 /* Investor Responsive */
+/* Platform Roadmap Section */
+.investor-roadmap {
+  padding: 6rem 0;
+  background: var(--rally-navy);
+}
+
+.investor-roadmap h2 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--rally-off-white);
+  text-align: center;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.investor-roadmap-sub {
+  text-align: center;
+  color: var(--rally-gray);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  max-width: 700px;
+  margin: 0 auto 3.5rem;
+}
+
+/* Layered Timeline */
+.investor-roadmap-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 4rem;
+}
+
+.investor-roadmap-layer {
+  display: grid;
+  grid-template-columns: 6px 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.investor-roadmap-layer-bar {
+  width: 6px;
+  border-radius: 3px;
+  min-height: 100%;
+}
+
+.investor-roadmap-layer--rally .investor-roadmap-layer-bar {
+  background: linear-gradient(180deg, #FF6B35, #FF6B35aa);
+}
+
+.investor-roadmap-layer--bn .investor-roadmap-layer-bar {
+  background: linear-gradient(180deg, #2D9CDB, #2D9CDBaa);
+}
+
+.investor-roadmap-layer--valora .investor-roadmap-layer-bar {
+  background: linear-gradient(180deg, #34C759, #34C759aa);
+}
+
+.investor-roadmap-layer--crm .investor-roadmap-layer-bar {
+  background: linear-gradient(180deg, #AF52DE, #AF52DEaa);
+}
+
+.investor-roadmap-layer-info {
+  background: var(--rally-navy-mid);
+  border: 1px solid var(--rally-navy-light);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
+  transition: all 0.2s ease;
+}
+
+.investor-roadmap-layer-info:hover {
+  border-color: var(--rally-navy-light);
+  transform: translateX(4px);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.investor-roadmap-layer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.investor-roadmap-layer-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.investor-roadmap-layer-time {
+  font-size: 0.8125rem;
+  color: var(--rally-gray);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.25rem 0.75rem;
+  border-radius: 100px;
+  font-weight: 500;
+}
+
+.investor-roadmap-layer-info > p {
+  color: var(--rally-off-white);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0 0 1rem;
+  opacity: 0.9;
+}
+
+.investor-roadmap-layer-revenue {
+  font-size: 0.875rem;
+  color: var(--rally-gray);
+  line-height: 1.6;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rally-navy-light);
+}
+
+.investor-roadmap-revenue-tag {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rally-orange);
+  background: rgba(255, 107, 53, 0.1);
+  padding: 0.2rem 0.625rem;
+  border-radius: 100px;
+  margin-right: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Interaction Map */
+.investor-roadmap-interactions {
+  margin-bottom: 4rem;
+}
+
+.investor-roadmap-interactions h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--rally-off-white);
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.investor-roadmap-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.investor-roadmap-flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.25rem 1.5rem;
+  background: var(--rally-navy-mid);
+  border: 1px solid var(--rally-navy-light);
+  border-radius: var(--radius-lg);
+  min-width: 180px;
+  transition: all 0.2s ease;
+}
+
+.investor-roadmap-flow-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.investor-roadmap-flow-node--rally {
+  border-color: rgba(255, 107, 53, 0.4);
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.08), var(--rally-navy-mid));
+  padding: 1.75rem 2.5rem;
+  min-width: 240px;
+}
+
+.investor-roadmap-flow-node--rally span {
+  color: #FF6B35;
+  font-size: 1.25rem;
+}
+
+.investor-roadmap-flow-node--bn {
+  border-color: rgba(45, 156, 219, 0.3);
+}
+
+.investor-roadmap-flow-node--bn span {
+  color: #2D9CDB;
+}
+
+.investor-roadmap-flow-node--valora {
+  border-color: rgba(52, 199, 89, 0.3);
+}
+
+.investor-roadmap-flow-node--valora span {
+  color: #34C759;
+}
+
+.investor-roadmap-flow-node--crm {
+  border-color: rgba(175, 82, 222, 0.3);
+}
+
+.investor-roadmap-flow-node--crm span {
+  color: #AF52DE;
+}
+
+.investor-roadmap-flow-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
+}
+
+.investor-roadmap-flow-node span {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.investor-roadmap-flow-node small {
+  font-size: 0.75rem;
+  color: var(--rally-gray);
+  margin-top: 0.25rem;
+}
+
+.investor-roadmap-flow-connections {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 0.5rem 0;
+}
+
+.investor-roadmap-flow-line {
+  width: 2px;
+  height: 28px;
+  background: linear-gradient(180deg, rgba(255, 107, 53, 0.6), rgba(255, 107, 53, 0.1));
+  border-radius: 1px;
+}
+
+.investor-roadmap-flow-ring {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 700px;
+}
+
+.investor-roadmap-arrows-legend {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.investor-roadmap-arrow-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--rally-gray);
+  line-height: 1.5;
+}
+
+.investor-roadmap-arrow-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+/* Self-Funding Growth */
+.investor-roadmap-funding {
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.05), rgba(45, 156, 219, 0.03));
+  border: 1px solid var(--rally-navy-light);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+}
+
+.investor-roadmap-funding-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.investor-roadmap-funding-header h3 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--rally-off-white);
+  margin-bottom: 0.75rem;
+}
+
+.investor-roadmap-funding-header p {
+  color: var(--rally-gray);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.investor-roadmap-funding-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.investor-roadmap-funding-card {
+  background: var(--rally-navy-mid);
+  border: 1px solid var(--rally-navy-light);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.investor-roadmap-funding-card:hover {
+  border-color: rgba(255, 107, 53, 0.3);
+  transform: translateY(-2px);
+}
+
+.investor-roadmap-funding-num {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--rally-orange);
+  opacity: 0.4;
+  margin-bottom: 0.5rem;
+}
+
+.investor-roadmap-funding-card h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--rally-off-white);
+  margin-bottom: 0.5rem;
+}
+
+.investor-roadmap-funding-card p {
+  font-size: 0.875rem;
+  color: var(--rally-gray);
+  line-height: 1.6;
+}
+
+.investor-roadmap-funding-insight {
+  font-size: 0.9375rem;
+  color: var(--rally-off-white);
+  line-height: 1.7;
+  text-align: center;
+  padding: 1.5rem 2rem;
+  background: rgba(255, 107, 53, 0.06);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 107, 53, 0.15);
+}
+
+.investor-roadmap-funding-insight strong {
+  color: var(--rally-orange);
+}
+
 @media (max-width: 768px) {
   .investor-hero {
     padding: 7rem 0 4rem;
@@ -27275,6 +27625,32 @@ body {
     transform: rotate(90deg);
   }
 
+  .investor-roadmap h2 {
+    font-size: 1.75rem;
+  }
+
+  .investor-roadmap-flow-ring {
+    grid-template-columns: 1fr;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .investor-roadmap-flow-connections {
+    gap: 1rem;
+  }
+
+  .investor-roadmap-arrows-legend {
+    grid-template-columns: 1fr;
+  }
+
+  .investor-roadmap-funding-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .investor-roadmap-funding {
+    padding: 1.75rem;
+  }
+
   .investor-problem,
   .investor-solution,
   .investor-ecosystem,
@@ -27282,6 +27658,7 @@ body {
   .investor-moat,
   .investor-gtm,
   .investor-investment,
+  .investor-roadmap,
   .investor-vision,
   .investor-cta {
     padding: 4rem 0;

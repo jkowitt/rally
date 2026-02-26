@@ -1,7 +1,5 @@
-import Link from "next/link";
-import Image from "next/image";
-import { Header } from "@/components/Header";
-import Footer from "@/components/Footer";
+import { InvestorHeader } from "@/components/InvestorHeader";
+import InvestorFooter from "@/components/InvestorFooter";
 
 export const metadata = {
   title: "Business Now - Structured Execution | Loud Legacy Ventures",
@@ -11,36 +9,19 @@ export const metadata = {
 export default function BusinessNowPage() {
   return (
     <main className="business-now-page">
-      <Header />
+      <InvestorHeader />
 
       {/* Hero Section */}
       <section className="bn-hero">
         <div className="bn-hero-bg"></div>
         <div className="container bn-hero-content">
-          <Link href="/business-now" className="bn-logo-link" aria-label="Business Now Home">
-            <Image
-              src="/logos/business-now.svg"
-              alt="Business Now"
-              width={220}
-              height={70}
-              priority
-              className="bn-hero-logo"
-            />
-          </Link>
+          <h1 className="bn-hero-text-logo">Business Now</h1>
           <div className="bn-badge">Structured Execution Platform</div>
-          <h1>From chaos to clarity.<br/>From reaction to intention.</h1>
+          <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>From chaos to clarity.<br/>From reaction to intention.</h2>
           <p className="bn-tagline">
             Business Now is a practical operating toolkit that helps individuals and small businesses
-            build the discipline of execution. Not education for education's sake—structure for results.
+            build the discipline of execution. Not education for education&apos;s sake—structure for results.
           </p>
-          <div className="bn-hero-actions">
-            <Link href="#features" className="button bn-button-primary">
-              Explore Features
-            </Link>
-            <Link href="#audience" className="button bn-button-secondary">
-              Who It's For
-            </Link>
-          </div>
         </div>
       </section>
 
@@ -100,7 +81,7 @@ export default function BusinessNowPage() {
                   <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
                 </svg>
               </div>
-              <h3>Goal & Priority Tracking</h3>
+              <h3>Goal &amp; Priority Tracking</h3>
               <p>Short and medium-term goals with defined actions—not vague ambitions. What matters this week, this month, this quarter.</p>
             </div>
             <div className="bn-feature-card">
@@ -109,7 +90,7 @@ export default function BusinessNowPage() {
                   <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
                 </svg>
               </div>
-              <h3>Income & Expense Visibility</h3>
+              <h3>Income &amp; Expense Visibility</h3>
               <p>Simple financial tracking to understand cash flow without accounting complexity. Know your numbers.</p>
             </div>
             <div className="bn-feature-card">
@@ -151,7 +132,7 @@ export default function BusinessNowPage() {
       <section id="audience" className="bn-audience">
         <div className="container">
           <div className="bn-section-header">
-            <span className="bn-section-label">Who It's For</span>
+            <span className="bn-section-label">Who It&apos;s For</span>
             <h2>Built for operators who want structure, not noise</h2>
           </div>
           <div className="bn-audience-grid">
@@ -173,7 +154,7 @@ export default function BusinessNowPage() {
                 </svg>
               </div>
               <h4>Small Business Owners</h4>
-              <p>Get structure for operations, finances, and planning without complexity. Run your business, don't let it run you.</p>
+              <p>Get structure for operations, finances, and planning without complexity. Run your business, don&apos;t let it run you.</p>
             </div>
             <div className="bn-audience-card">
               <div className="bn-audience-icon">
@@ -205,7 +186,7 @@ export default function BusinessNowPage() {
                 </svg>
               </div>
               <h4>Professionals in Transition</h4>
-              <p>Build the foundation for your next chapter with clarity and intention. Know where you're going.</p>
+              <p>Build the foundation for your next chapter with clarity and intention. Know where you&apos;re going.</p>
             </div>
           </div>
         </div>
@@ -226,7 +207,7 @@ export default function BusinessNowPage() {
               </div>
               <p className="bn-problem-desc">Operating reactively without clear goals or priorities. Every day feels different.</p>
               <div className="bn-solution">
-                <span className="bn-solution-arrow">→</span>
+                <span className="bn-solution-arrow">&rarr;</span>
                 <span>Structured planning system with weekly execution rhythm</span>
               </div>
             </div>
@@ -235,9 +216,9 @@ export default function BusinessNowPage() {
                 <span className="bn-problem-icon">!</span>
                 <h4>No Visibility Into Numbers</h4>
               </div>
-              <p className="bn-problem-desc">Can't answer basic questions about cash flow or profitability without digging.</p>
+              <p className="bn-problem-desc">Can&apos;t answer basic questions about cash flow or profitability without digging.</p>
               <div className="bn-solution">
-                <span className="bn-solution-arrow">→</span>
+                <span className="bn-solution-arrow">&rarr;</span>
                 <span>Simple financial tracking without accounting complexity</span>
               </div>
             </div>
@@ -248,7 +229,7 @@ export default function BusinessNowPage() {
               </div>
               <p className="bn-problem-desc">Chasing every opportunity without focus or completion. Nothing gets finished.</p>
               <div className="bn-solution">
-                <span className="bn-solution-arrow">→</span>
+                <span className="bn-solution-arrow">&rarr;</span>
                 <span>Priority framework that forces focus and follow-through</span>
               </div>
             </div>
@@ -259,7 +240,7 @@ export default function BusinessNowPage() {
               </div>
               <p className="bn-problem-desc">Start strong but fade when motivation dips. Intensity without consistency.</p>
               <div className="bn-solution">
-                <span className="bn-solution-arrow">→</span>
+                <span className="bn-solution-arrow">&rarr;</span>
                 <span>Systems that build consistency over intensity</span>
               </div>
             </div>
@@ -271,8 +252,8 @@ export default function BusinessNowPage() {
       <section className="bn-resources-preview">
         <div className="container">
           <div className="bn-section-header">
-            <span className="bn-section-label">Free Resources</span>
-            <h2>Download the tools to get started</h2>
+            <span className="bn-section-label">Resources</span>
+            <h2>Tools to get started</h2>
             <p>How-to guides and Excel templates to implement Business Now in your operations.</p>
           </div>
           <div className="bn-resources-preview-grid">
@@ -308,14 +289,9 @@ export default function BusinessNowPage() {
                   <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
               </div>
-              <h4>Free Downloads</h4>
-              <p>Start with our free Business Overview Framework and Income Tracker—no signup required.</p>
+              <h4>Available Resources</h4>
+              <p>Business Overview Framework, Income Tracker, and more — designed for immediate use.</p>
             </div>
-          </div>
-          <div className="bn-resources-preview-cta">
-            <Link href="/business-now/resources" className="button bn-button-primary">
-              Browse All Resources
-            </Link>
           </div>
         </div>
       </section>
@@ -326,19 +302,14 @@ export default function BusinessNowPage() {
           <div className="bn-cta-content">
             <h2>Build with structure, not shortcuts</h2>
             <p>Business Now is your entry point to operational excellence. Start with structure, scale with systems.</p>
-            <div className="bn-cta-actions">
-              <Link href="/contact" className="button bn-button-primary bn-button-large">
-                Get Started
-              </Link>
-              <Link href="/business-now/resources" className="button bn-button-ghost">
-                Download Resources
-              </Link>
-            </div>
+            <p className="bn-cta-contact">
+              Contact jason@loud-legacy.com for more information.
+            </p>
           </div>
         </div>
       </section>
 
-      <Footer />
+      <InvestorFooter />
     </main>
   );
 }

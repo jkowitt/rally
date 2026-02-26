@@ -4090,6 +4090,20 @@ textarea:focus-visible {
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
 }
 
+.bn-hero-text-logo {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #2D9CDB;
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
+}
+
+.bn-cta-contact {
+  color: var(--text-secondary);
+  font-size: 1.0625rem;
+  margin-top: 1rem;
+}
+
 .bn-badge {
   display: inline-block;
   padding: 0.5rem 1.5rem;
@@ -5439,6 +5453,14 @@ textarea:focus-visible {
 
 .lcrm-hero-logo {
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+}
+
+.lcrm-hero-text-logo {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #27AE60;
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
 }
 
 .lcrm-badge {
@@ -16671,6 +16693,25 @@ textarea:focus-visible {
   color: #ffffff;
 }
 
+.footer-contact-line {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 0.875rem;
+  padding-top: 1.25rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  letter-spacing: 0.01em;
+}
+
+.footer-logo-text {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--rally-off-white, #F5F7FA);
+  letter-spacing: -0.02em;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
 /* ===========================
    RESPONSIVE: AUTH & LEGAL
    =========================== */
@@ -17866,6 +17907,32 @@ textarea:focus-visible {
 /* ===========================
    VALORA PAGE SPECIFIC
    =========================== */
+.valora-hero-text-logo {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.25rem;
+}
+
+.valora-feature-section {
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.valora-feature-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.valora-feature-section-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
 .valora-property-types {
   display: flex;
   justify-content: center;
@@ -22342,6 +22409,20 @@ textarea:focus-visible {
   width: auto;
 }
 
+.rally-hero-text-logo {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #FF6B35;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.5rem;
+}
+
+.rally-cta-contact {
+  color: var(--rally-gray);
+  font-size: 1.0625rem;
+  margin-top: 1rem;
+}
+
 .rally-badge {
   display: inline-block;
   background: rgba(255,107,53,0.15);
@@ -22373,8 +22454,9 @@ textarea:focus-visible {
   font-size: 0.9375rem;
   text-decoration: none;
   transition: all 0.2s ease;
-  cursor: pointer;
+  cursor: default;
   border: none;
+  pointer-events: none;
 }
 
 .rally-btn--primary {
@@ -27207,6 +27289,11 @@ body {
 
 .investor-footer .footer-copyright {
   color: var(--rally-gray);
+}
+
+.investor-footer .footer-contact-line {
+  color: var(--rally-gray);
+  border-top-color: var(--rally-navy-light);
 }
 
 /* Investor Responsive */

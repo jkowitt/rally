@@ -1,43 +1,27 @@
-"use client";
+import { InvestorHeader } from "@/components/InvestorHeader";
+import InvestorFooter from "@/components/InvestorFooter";
 
-import Link from "next/link";
-import Image from "next/image";
-import { Header } from "@/components/Header";
-import Footer from "@/components/Footer";
+export const metadata = {
+  title: "Legacy CRM - Relationship Discipline Platform | Loud Legacy Ventures",
+  description: "A relationship management system for professionals whose success depends on follow-up, trust, and long-term connection.",
+};
 
 export default function LegacyCRMPage() {
   return (
     <main className="legacy-crm-page">
-      <Header />
+      <InvestorHeader />
 
       {/* Hero Section */}
       <section className="lcrm-hero">
         <div className="lcrm-hero-bg"></div>
         <div className="container lcrm-hero-content">
-          <Link href="/legacy-crm" className="lcrm-logo-link" aria-label="Legacy CRM Home">
-            <Image
-              src="/logos/legacy-crm.svg"
-              alt="Legacy CRM"
-              width={220}
-              height={70}
-              priority
-              className="lcrm-hero-logo"
-            />
-          </Link>
+          <h1 className="lcrm-hero-text-logo">Legacy CRM</h1>
           <div className="lcrm-badge">Relationship Discipline Platform</div>
-          <h1>Relationships are built.<br/>Not collected.</h1>
+          <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>Relationships are built.<br/>Not collected.</h2>
           <p className="lcrm-tagline">
             Legacy CRM is a relationship management system for professionals whose success depends
             on follow-up, trust, and long-term connection. Not another contact dump—a discipline system.
           </p>
-          <div className="lcrm-hero-actions">
-            <Link href="/auth/signin" className="button lcrm-button-primary">
-              Get Started Free
-            </Link>
-            <Link href="/legacy-crm/dashboard" className="button lcrm-button-secondary">
-              View Dashboard
-            </Link>
-          </div>
         </div>
       </section>
 
@@ -121,7 +105,7 @@ export default function LegacyCRMPage() {
                 </svg>
               </div>
               <h3>Pipeline Visualization</h3>
-              <p>See what's active, warm, cold, or stalled at a glance. Kanban and list views that match how you think.</p>
+              <p>See what&apos;s active, warm, cold, or stalled at a glance. Kanban and list views that match how you think.</p>
             </div>
             <div className="lcrm-feature-card">
               <div className="lcrm-feature-icon">
@@ -152,7 +136,7 @@ export default function LegacyCRMPage() {
       <section id="audience" className="lcrm-audience">
         <div className="container">
           <div className="lcrm-section-header">
-            <span className="lcrm-section-label">Who It's For</span>
+            <span className="lcrm-section-label">Who It&apos;s For</span>
             <h2>Built for professionals who win through relationships</h2>
           </div>
           <div className="lcrm-audience-grid">
@@ -187,7 +171,7 @@ export default function LegacyCRMPage() {
                   <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
                 </svg>
               </div>
-              <h4>Consultants & Advisors</h4>
+              <h4>Consultants &amp; Advisors</h4>
               <p>Maintain client relationships across engagements. Track project opportunities and referral potential.</p>
             </div>
             <div className="lcrm-audience-card">
@@ -198,7 +182,7 @@ export default function LegacyCRMPage() {
                   <polyline points="2,12 12,17 22,12"/>
                 </svg>
               </div>
-              <h4>Founders & Executives</h4>
+              <h4>Founders &amp; Executives</h4>
               <p>Manage investor relations, board contacts, and strategic connections with structure and intention.</p>
             </div>
             <div className="lcrm-audience-card">
@@ -231,7 +215,7 @@ export default function LegacyCRMPage() {
               </div>
               <p className="lcrm-problem-desc">Relationships fade because you lost track of when to reach out. Opportunities slip away silently.</p>
               <div className="lcrm-solution">
-                <span className="lcrm-solution-arrow">→</span>
+                <span className="lcrm-solution-arrow">&rarr;</span>
                 <span>Smart reminders based on relationship importance and last contact</span>
               </div>
             </div>
@@ -240,9 +224,9 @@ export default function LegacyCRMPage() {
                 <span className="lcrm-problem-icon">!</span>
                 <h4>Lost Context</h4>
               </div>
-              <p className="lcrm-problem-desc">You can't remember what you discussed or promised. Every conversation starts from scratch.</p>
+              <p className="lcrm-problem-desc">You can&apos;t remember what you discussed or promised. Every conversation starts from scratch.</p>
               <div className="lcrm-solution">
-                <span className="lcrm-solution-arrow">→</span>
+                <span className="lcrm-solution-arrow">&rarr;</span>
                 <span>Complete interaction history with notes and commitments</span>
               </div>
             </div>
@@ -253,7 +237,7 @@ export default function LegacyCRMPage() {
               </div>
               <p className="lcrm-problem-desc">Contact info in your phone, notes in documents, deals in your head. Nothing is centralized.</p>
               <div className="lcrm-solution">
-                <span className="lcrm-solution-arrow">→</span>
+                <span className="lcrm-solution-arrow">&rarr;</span>
                 <span>Single source of truth for all relationship data</span>
               </div>
             </div>
@@ -264,7 +248,7 @@ export default function LegacyCRMPage() {
               </div>
               <p className="lcrm-problem-desc">You only reach out when you need something. Relationships feel transactional, not genuine.</p>
               <div className="lcrm-solution">
-                <span className="lcrm-solution-arrow">→</span>
+                <span className="lcrm-solution-arrow">&rarr;</span>
                 <span>Proactive touchpoint system for consistent relationship nurturing</span>
               </div>
             </div>
@@ -304,36 +288,28 @@ export default function LegacyCRMPage() {
                 </svg>
                 <span>Business Now Sync</span>
               </div>
-              <div className="lcrm-integration-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                  <path d="M2 17l10 5 10-5"/>
-                  <path d="M2 12l10 5 10-5"/>
-                </svg>
-                <span>API Access</span>
-              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Get Started Section */}
+      {/* Benefits Section */}
       <section id="get-started" className="lcrm-waitlist">
         <div className="container">
           <div className="lcrm-waitlist-content">
             <div className="lcrm-waitlist-info">
-              <span className="lcrm-section-label">Start Building Relationships</span>
-              <h2>Get started today</h2>
+              <span className="lcrm-section-label">Why Legacy CRM</span>
+              <h2>Built for relationship-driven professionals</h2>
               <p>
-                Legacy CRM is ready to help you manage relationships with intention.
-                Start free and upgrade as your network grows.
+                Legacy CRM helps you manage relationships with intention.
+                The system that ensures you never let an important connection go cold.
               </p>
               <div className="lcrm-waitlist-benefits">
                 <div className="lcrm-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
                     <polyline points="20,6 9,17 4,12"/>
                   </svg>
-                  <span>Free tier with up to 100 contacts</span>
+                  <span>Manage up to 100 contacts on the free tier</span>
                 </div>
                 <div className="lcrm-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
@@ -345,32 +321,14 @@ export default function LegacyCRMPage() {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
                     <polyline points="20,6 9,17 4,12"/>
                   </svg>
-                  <span>No credit card required</span>
+                  <span>Part of the Loud Legacy ecosystem</span>
                 </div>
                 <div className="lcrm-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
                     <polyline points="20,6 9,17 4,12"/>
                   </svg>
-                  <span>Part of the Loud Legacy ecosystem</span>
+                  <span>Integrates with Business Now and Valora</span>
                 </div>
-              </div>
-            </div>
-
-            <div className="lcrm-waitlist-form-container">
-              <div className="lcrm-get-started-card">
-                <h3>Ready to transform your relationships?</h3>
-                <p>Sign in with your Loud Legacy account to access Legacy CRM and all our business tools.</p>
-                <div className="lcrm-get-started-actions">
-                  <Link href="/auth/signin" className="button lcrm-button-primary lcrm-button-full">
-                    Sign In to Get Started
-                  </Link>
-                  <Link href="/auth/signup" className="button lcrm-button-secondary lcrm-button-full">
-                    Create Free Account
-                  </Link>
-                </div>
-                <p className="lcrm-form-note">
-                  Already have a Loud Legacy account? Your Legacy CRM is waiting.
-                </p>
               </div>
             </div>
           </div>
@@ -383,16 +341,16 @@ export default function LegacyCRMPage() {
           <div className="lcrm-demo-cta-box">
             <div className="lcrm-demo-cta-content">
               <h3>One platform. All your business tools.</h3>
-              <p>Legacy CRM works seamlessly with Legacy RE, Business Now, Sportify, and Loud Works.</p>
+              <p>Legacy CRM works seamlessly with Valora, Business Now, and Rally.</p>
+              <p style={{ marginTop: '1rem' }}>
+                Contact jason@loud-legacy.com for more information.
+              </p>
             </div>
-            <Link href="/dashboard" className="button lcrm-button-secondary lcrm-button-large">
-              View All Platforms
-            </Link>
           </div>
         </div>
       </section>
 
-      <Footer />
+      <InvestorFooter />
     </main>
   );
 }

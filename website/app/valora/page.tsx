@@ -1,16 +1,11 @@
-import Link from "next/link";
-import Image from "next/image";
-import { Header } from "@/components/Header";
-import Footer from "@/components/Footer";
-import { CollapsibleSection } from "@/components/CollapsibleSection";
-import LiveRatesTicker from "@/components/LiveRatesTicker";
+import { InvestorHeader } from "@/components/InvestorHeader";
+import InvestorFooter from "@/components/InvestorFooter";
 
 export const metadata = {
-  title: "Legacy RE - Smart Property Analysis for Real Estate Pros",
-  description: "Analyze any property in minutes. Get AI-powered valuations, real comparable sales, financial projections, and improvement recommendations. Free during beta.",
+  title: "Valora - Smart Property Analysis for Real Estate Pros",
+  description: "Analyze any property in minutes. Get AI-powered valuations, real comparable sales, financial projections, and improvement recommendations.",
 };
 
-// Property Type Icons
 const PropertyTypeIcons = {
   commercial: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="20" height="20">
@@ -35,7 +30,6 @@ const PropertyTypeIcons = {
   ),
 };
 
-// User Type Icons
 const UserTypeIcons = {
   brokers: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48">
@@ -66,36 +60,17 @@ const UserTypeIcons = {
 export default function ValoraPage() {
   return (
     <main className="product-page">
-      <Header />
+      <InvestorHeader />
 
       <section className="product-hero" style={{ background: "linear-gradient(160deg, #F0F4F8 0%, #E2E8F0 40%, #CBD5E1 100%)" }}>
         <div className="container">
-          <Link href="/valora" className="product-hero-logo" aria-label="Legacy RE Home">
-            <Image
-              src="/logos/legacy-re.svg"
-              alt="Legacy RE"
-              width={280}
-              height={70}
-              priority
-            />
-          </Link>
+          <h1 className="valora-hero-text-logo" style={{ color: '#1B2A4A' }}>Valora</h1>
           <p style={{ fontStyle: 'italic', color: '#1B2A4A', fontSize: '1.1rem', letterSpacing: '0.05em', marginTop: '0.25rem', marginBottom: '0' }}>Built to Last</p>
           <p className="tagline" style={{ color: '#1E293B' }}>
             Know what a property is worth, what it costs to own, and how to make it worth more — all from one place.
           </p>
-          <div className="hero-actions">
-            <Link href="/valora/dashboard" className="button button--primary" style={{ background: '#1B2A4A', color: '#D4A843' }}>
-              Try Demo
-            </Link>
-            <Link href="#features" className="button button--secondary" style={{ borderColor: '#1B2A4A', color: '#1B2A4A' }}>
-              Explore Features
-            </Link>
-          </div>
         </div>
       </section>
-
-      {/* Live Interest Rates Ticker */}
-      <LiveRatesTicker />
 
       {/* Property Types Supported */}
       <section className="product-section" style={{ background: 'var(--bg-secondary)', paddingTop: '3rem', paddingBottom: '3rem' }}>
@@ -114,157 +89,138 @@ export default function ValoraPage() {
         </div>
       </section>
 
-      {/* Collapsible Feature Sections */}
+      {/* Feature Sections */}
       <section id="features" className="product-section">
         <div className="container">
           <h2 style={{ marginBottom: '2rem' }}>What You Can Do</h2>
 
-          <CollapsibleSection title="AI-Powered Property Intelligence" icon="🤖" defaultOpen={true}>
+          <div className="valora-feature-section">
+            <h3 className="valora-feature-section-title">AI-Powered Property Intelligence</h3>
             <p style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>
               Upload photos or enter an address — our AI does the rest. Get property condition scores, value estimates, and improvement ideas automatically.
             </p>
             <div className="features-grid">
               <div className="feature-card">
-                <h3>📸 AI Image Recognition</h3>
+                <h3>AI Image Recognition</h3>
                 <p>Upload a photo of any property. AI spots issues, rates condition, and suggests improvements with cost estimates.</p>
               </div>
               <div className="feature-card">
-                <h3>📍 Smart Geocoding</h3>
-                <p>Snap a photo on-site and Legacy RE figures out where you are and starts the analysis for you.</p>
+                <h3>Smart Geocoding</h3>
+                <p>Snap a photo on-site and Valora figures out where you are and starts the analysis for you.</p>
               </div>
               <div className="feature-card">
-                <h3>🎯 Address Input & Validation</h3>
+                <h3>Address Input &amp; Validation</h3>
                 <p>Type in any address. We pull in tax rates, insurance estimates, comparable sales, and market data for that area.</p>
               </div>
               <div className="feature-card">
-                <h3>💡 AI Recommendations</h3>
+                <h3>AI Recommendations</h3>
                 <p>Get a list of specific upgrades that add value — with cost breakdowns, ROI projections, and contractor-ready action items.</p>
               </div>
             </div>
-          </CollapsibleSection>
+          </div>
 
-          <CollapsibleSection title="Financial Analysis & Underwriting" icon="📊">
+          <div className="valora-feature-section">
+            <h3 className="valora-feature-section-title">Financial Analysis &amp; Underwriting</h3>
             <p style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>
               Run the numbers on any deal. See your cash flow, returns, and risk — updated in real time as you adjust assumptions.
             </p>
             <div className="features-grid">
               <div className="feature-card">
-                <h3>📊 Customizable P&L Models</h3>
+                <h3>Customizable P&amp;L Models</h3>
                 <p>Build a profit and loss statement with every expense category pre-filled from local area data. Edit anything to match your deal.</p>
               </div>
               <div className="feature-card">
-                <h3>💰 Dynamic Financial Modeling</h3>
+                <h3>Dynamic Financial Modeling</h3>
                 <p>Change the rent, vacancy, or interest rate and watch your cash flow, cap rate, and returns update instantly.</p>
               </div>
               <div className="feature-card">
-                <h3>🔬 Scenario Analysis</h3>
+                <h3>Scenario Analysis</h3>
                 <p>Compare conservative, base, and optimistic scenarios side by side. See how different assumptions change your bottom line.</p>
               </div>
               <div className="feature-card">
-                <h3>📈 Sensitivity Testing</h3>
+                <h3>Sensitivity Testing</h3>
                 <p>Find out which numbers matter most. See how a 1% rate change or 5% rent increase impacts your returns.</p>
               </div>
             </div>
-          </CollapsibleSection>
+          </div>
 
-          <CollapsibleSection title="Market Intelligence & Comparables" icon="🏘️">
+          <div className="valora-feature-section">
+            <h3 className="valora-feature-section-title">Market Intelligence &amp; Comparables</h3>
             <p style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>
               See what similar properties actually sold for, how far away they are, and how fresh the data is. Real comps, not guesses.
             </p>
             <div className="features-grid">
               <div className="feature-card">
-                <h3>🏘️ On-Market Valuations</h3>
+                <h3>On-Market Valuations</h3>
                 <p>Browse properties listed for sale with asking prices, days on market, and seller details.</p>
               </div>
               <div className="feature-card">
-                <h3>📋 Comparable Sales Database</h3>
+                <h3>Comparable Sales Database</h3>
                 <p>Find recent sales near your property — filtered by type, size, and date. Each comp shows distance, recency score, and price adjustments.</p>
               </div>
               <div className="feature-card">
-                <h3>🗺️ Market Reports</h3>
+                <h3>Market Reports</h3>
                 <p>Track cap rates, rent trends, vacancy rates, and population growth for any area. Data updates automatically.</p>
               </div>
             </div>
-          </CollapsibleSection>
+          </div>
 
-          <CollapsibleSection title="Portfolio & Valuation Management" icon="📚">
+          <div className="valora-feature-section">
+            <h3 className="valora-feature-section-title">Portfolio &amp; Valuation Management</h3>
             <p style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>
               Save every analysis you run. Come back to compare, update, or share with your team.
             </p>
             <div className="features-grid">
               <div className="feature-card">
-                <h3>📚 Valuation History Database</h3>
+                <h3>Valuation History Database</h3>
                 <p>Every property you analyze is saved automatically. Go back to any analysis to review, update, or export.</p>
               </div>
               <div className="feature-card">
-                <h3>🔒 Private Valuations</h3>
-                <p>Keep your work private or share it when you're ready. You control who sees what.</p>
+                <h3>Private Valuations</h3>
+                <p>Keep your work private or share it when you&apos;re ready. You control who sees what.</p>
               </div>
               <div className="feature-card">
-                <h3>📊 Portfolio Dashboard</h3>
+                <h3>Portfolio Dashboard</h3>
                 <p>See all your properties in one view — total value, returns, and performance at a glance.</p>
               </div>
               <div className="feature-card">
-                <h3>🔍 Search & Filter</h3>
+                <h3>Search &amp; Filter</h3>
                 <p>Find any past analysis by address, date, property type, or custom tags.</p>
               </div>
             </div>
-          </CollapsibleSection>
+          </div>
 
-          <CollapsibleSection title="Team Collaboration & Admin Controls" icon="👥">
+          <div className="valora-feature-section">
+            <h3 className="valora-feature-section-title">Team Collaboration &amp; Admin Controls</h3>
             <p style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>
               Invite your team, control who can view or edit, and set up approval workflows for quality control.
             </p>
             <div className="features-grid">
               <div className="feature-card">
-                <h3>👥 Team Management</h3>
+                <h3>Team Management</h3>
                 <p>Add team members and assign roles — Admin, Analyst, or Viewer. Everyone sees only what they should.</p>
               </div>
               <div className="feature-card">
-                <h3>🔐 Account Signup & SSO</h3>
+                <h3>Account Access</h3>
                 <p>Sign up with email or Google. Enterprise teams can use single sign-on.</p>
               </div>
               <div className="feature-card">
-                <h3>⚙️ Admin Dashboard</h3>
+                <h3>Admin Controls</h3>
                 <p>Manage your team, review activity, and adjust permissions from one place.</p>
               </div>
               <div className="feature-card">
-                <h3>📋 Workflow Approval</h3>
+                <h3>Workflow Approval</h3>
                 <p>Junior analysts create valuations, seniors review and approve. Keep quality consistent across your team.</p>
               </div>
             </div>
-          </CollapsibleSection>
-
-          <CollapsibleSection title="Developer & Content Management" icon="⚙️">
-            <p style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>
-              For power users who want deeper access to data and customization.
-            </p>
-            <div className="features-grid">
-              <div className="feature-card">
-                <h3>💻 Backend Database Access</h3>
-                <p>Run custom queries against your data for advanced reporting and integrations.</p>
-              </div>
-              <div className="feature-card">
-                <h3>📝 Admin CMS</h3>
-                <p>Update text and settings across the platform without touching code.</p>
-              </div>
-              <div className="feature-card">
-                <h3>🔌 API Access</h3>
-                <p>Connect Legacy RE data to your existing tools and workflows via our REST API.</p>
-              </div>
-              <div className="feature-card">
-                <h3>📤 Bulk Operations</h3>
-                <p>Import and export valuations in bulk. Batch-update properties and sync data automatically.</p>
-              </div>
-            </div>
-          </CollapsibleSection>
+          </div>
         </div>
       </section>
 
       {/* User Types */}
       <section className="product-section" style={{ background: 'var(--bg-secondary)' }}>
         <div className="container">
-          <h2 style={{ textAlign: 'center', marginBottom: '3rem' }}>Who It's For</h2>
+          <h2 style={{ textAlign: 'center', marginBottom: '3rem' }}>Who It&apos;s For</h2>
           <div className="features-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
             <div className="feature-card valora-user-card">
               <div className="valora-user-icon">{UserTypeIcons.brokers}</div>
@@ -294,23 +250,18 @@ export default function ValoraPage() {
       <section className="product-section">
         <div className="container" style={{ textAlign: 'center', maxWidth: '700px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '2.5rem', marginBottom: '1.5rem' }}>
-            Ready to Try It?
+            Smarter Property Decisions
           </h2>
           <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '2.5rem', lineHeight: 1.6 }}>
-            Join brokers, investors, and lenders who use Legacy RE to make smarter property decisions. Free during beta.
+            Valora helps brokers, investors, and lenders make smarter property decisions with AI-powered analysis and real comparable data.
           </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/valora/dashboard" className="button button--primary" style={{ fontSize: '1.125rem', padding: '0.875rem 2rem' }}>
-              Try Demo Dashboard
-            </Link>
-            <Link href="/auth/signup" className="button button--secondary" style={{ fontSize: '1.125rem', padding: '0.875rem 2rem' }}>
-              Create Account
-            </Link>
-          </div>
+          <p style={{ fontSize: '1.0625rem', color: 'var(--text-secondary)' }}>
+            Contact jason@loud-legacy.com for more information.
+          </p>
         </div>
       </section>
 
-      <Footer />
+      <InvestorFooter />
     </main>
   );
 }

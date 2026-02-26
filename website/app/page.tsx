@@ -1,5 +1,3 @@
-import Link from "next/link";
-import Image from "next/image";
 import { InvestorHeader } from "@/components/InvestorHeader";
 import InvestorFooter from "@/components/InvestorFooter";
 
@@ -159,12 +157,12 @@ export default function InvestorPage() {
             Prove you were there.
           </div>
           <div className="investor-hero-actions">
-            <Link href="#ecosystem" className="rally-btn rally-btn--primary rally-btn--large">
+            <span className="rally-btn rally-btn--primary rally-btn--large">
               Explore the Ecosystem
-            </Link>
-            <Link href="#investment" className="rally-btn rally-btn--secondary rally-btn--large">
+            </span>
+            <span className="rally-btn rally-btn--secondary rally-btn--large">
               View Investment Thesis
-            </Link>
+            </span>
           </div>
         </div>
         <div className="investor-hero-gradient" />
@@ -628,13 +626,8 @@ export default function InvestorPage() {
             the sports engagement space, and the vision to build the identity layer for the physical world.
             This is the ground floor.
           </p>
-          <div className="investor-cta-actions">
-            <Link href="/contact" className="rally-btn rally-btn--primary rally-btn--large">
-              Request Investor Deck
-            </Link>
-            <Link href="/contact" className="rally-btn rally-btn--secondary rally-btn--large">
-              Schedule a Call
-            </Link>
+          <div className="investor-cta-tagline">
+            Contact jason@loud-legacy.com to request an investor deck or schedule a call.
           </div>
           <div className="investor-cta-tagline">
             Loud Legacy Ventures. Prove you were there.

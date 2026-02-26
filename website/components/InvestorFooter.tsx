@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 const InvestorFooter = () => {
   return (
     <footer className="footer investor-footer">
@@ -21,30 +19,29 @@ const InvestorFooter = () => {
           <div className="footer-section">
             <h4 className="footer-title">Ecosystem</h4>
             <ul className="footer-links">
-              <li><Link href="/rally">Rally</Link></li>
-              <li><Link href="/business-now">Business Now</Link></li>
-              <li><Link href="/valora">Valora</Link></li>
-              <li><Link href="/legacy-crm">Legacy CRM</Link></li>
+              <li><span>Rally</span></li>
+              <li><span>Business Now</span></li>
+              <li><span>Valora</span></li>
+              <li><span>Legacy CRM</span></li>
             </ul>
           </div>
 
           <div className="footer-section">
             <h4 className="footer-title">Coverage</h4>
             <ul className="footer-links">
-              <li><Link href="/leagues">College (353+ Schools)</Link></li>
-              <li><Link href="/leagues">NBA, NFL, MLB</Link></li>
-              <li><Link href="/leagues">NHL, MLS, UWSL</Link></li>
-              <li><Link href="/leagues">520+ Total Teams</Link></li>
+              <li><span>College (353+ Schools)</span></li>
+              <li><span>NBA, NFL, MLB</span></li>
+              <li><span>NHL, MLS, UWSL</span></li>
+              <li><span>520+ Total Teams</span></li>
             </ul>
           </div>
 
           <div className="footer-section">
             <h4 className="footer-title">Company</h4>
             <ul className="footer-links">
-              <li><Link href="/why-loud-legacy">About</Link></li>
-              <li><Link href="/contact">Contact / Invest</Link></li>
-              <li><Link href="/privacy">Privacy Policy</Link></li>
-              <li><Link href="/terms">Terms of Service</Link></li>
+              <li><span>About</span></li>
+              <li><span>Privacy Policy</span></li>
+              <li><span>Terms of Service</span></li>
             </ul>
           </div>
         </div>
@@ -53,10 +50,9 @@ const InvestorFooter = () => {
           <p className="footer-copyright">
             &copy; {new Date().getFullYear()} Loud Legacy Ventures. All rights reserved.
           </p>
-          <div className="footer-bottom-links">
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-          </div>
+        </div>
+        <div className="footer-contact-line">
+          Contact jason@loud-legacy.com for more information
         </div>
       </div>
     </footer>

@@ -1,7 +1,5 @@
-import Link from "next/link";
-import Image from "next/image";
-import { Header } from "@/components/Header";
-import Footer from "@/components/Footer";
+import { InvestorHeader } from "@/components/InvestorHeader";
+import InvestorFooter from "@/components/InvestorFooter";
 
 export const metadata = {
   title: "Rally - Fan Engagement & Loyalty Platform | Loud Legacy",
@@ -124,32 +122,17 @@ const conferences = [
 export default function RallyPage() {
   return (
     <main className="rally-landing">
-      <Header />
+      <InvestorHeader />
 
       {/* Hero */}
       <section className="rally-hero">
         <div className="container">
-          <Image
-            src="/logos/rally-logo-transparent-white.png"
-            alt="Rally"
-            width={240}
-            height={60}
-            className="rally-hero-logo"
-            priority
-          />
-          <div className="rally-badge">Fan Engagement & Loyalty Platform</div>
+          <h1 className="rally-hero-text-logo">Rally</h1>
+          <div className="rally-badge">Fan Engagement &amp; Loyalty Platform</div>
           <p className="rally-tagline">
             The gameday experience platform built for collegiate athletics.
             Check-ins, predictions, trivia, rewards, and real-time engagement for 353+ NCAA D1 schools.
           </p>
-          <div className="hero-actions">
-            <Link href="#features" className="rally-btn rally-btn--primary">
-              Explore Features
-            </Link>
-            <Link href="/contact" className="rally-btn rally-btn--secondary">
-              Request Demo
-            </Link>
-          </div>
         </div>
       </section>
 
@@ -172,13 +155,12 @@ export default function RallyPage() {
         <div className="container">
           <h2>One App. Every School. Every Gameday.</h2>
           <p className="rally-section-subtitle">
-            Rally adapts to each school's brand — colors, mascot, and content —
+            Rally adapts to each school&apos;s brand — colors, mascot, and content —
             creating a unique experience for every fanbase.
           </p>
 
           <div className="rally-phone-mockup">
             <div className="rally-phone">
-              {/* Simulated App Screen */}
               <div className="rally-screen">
                 <div className="rally-screen-header">
                   <div className="rally-screen-logo-text">RALLY</div>
@@ -187,7 +169,7 @@ export default function RallyPage() {
                 <div className="rally-screen-card">
                   <div className="rally-screen-label">NEXT GAME</div>
                   <div className="rally-screen-title">Eagles vs Tigers</div>
-                  <div className="rally-screen-date">Sat, Feb 15 · 7:00 PM</div>
+                  <div className="rally-screen-date">Sat, Feb 15 &middot; 7:00 PM</div>
                   <div className="rally-screen-countdown">
                     <div className="rally-cd-box"><span>02</span><small>D</small></div>
                     <div className="rally-cd-box"><span>14</span><small>H</small></div>
@@ -279,7 +261,7 @@ export default function RallyPage() {
             </div>
             <div className="rally-step">
               <div className="rally-step-num">3</div>
-              <h3>Earn Points & Climb</h3>
+              <h3>Earn Points &amp; Climb</h3>
               <p>Every action earns points. Level up through Bronze, Silver, Gold, and Platinum tiers.</p>
             </div>
             <div className="rally-step">
@@ -296,18 +278,13 @@ export default function RallyPage() {
         <div className="container">
           <h2>Ready to Rally Your Fanbase?</h2>
           <p>The next generation of fan engagement, built by Loud Legacy.</p>
-          <div className="rally-cta-actions">
-            <Link href="/contact" className="rally-btn rally-btn--primary rally-btn--large">
-              Request a Demo
-            </Link>
-            <Link href="/auth/signup" className="rally-btn rally-btn--secondary rally-btn--large">
-              Start Free Trial
-            </Link>
-          </div>
+          <p className="rally-cta-contact">
+            Contact jason@loud-legacy.com for more information.
+          </p>
         </div>
       </section>
 
-      <Footer />
+      <InvestorFooter />
     </main>
   );
 }

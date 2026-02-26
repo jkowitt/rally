@@ -183,7 +183,7 @@ private fun PodiumSection(
                         rank = 2,
                         podiumHeight = 100.dp.value,
                         medalColor = Color(0xFFC0C0C0), // Silver
-                        isCurrentUser = top3[1].userId == currentUserId,
+                        isCurrentUser = top3[1].userID == currentUserId,
                     )
                 }
 
@@ -194,7 +194,7 @@ private fun PodiumSection(
                         rank = 1,
                         podiumHeight = 140.dp.value,
                         medalColor = Color(0xFFFFD700), // Gold
-                        isCurrentUser = top3[0].userId == currentUserId,
+                        isCurrentUser = top3[0].userID == currentUserId,
                     )
                 }
 
@@ -205,7 +205,7 @@ private fun PodiumSection(
                         rank = 3,
                         podiumHeight = 70.dp.value,
                         medalColor = Color(0xFFCD7F32), // Bronze
-                        isCurrentUser = top3[2].userId == currentUserId,
+                        isCurrentUser = top3[2].userID == currentUserId,
                     )
                 }
             }

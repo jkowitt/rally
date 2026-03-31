@@ -1,26 +1,27 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
-import "./globals.css";
-import { Providers } from "./providers";
+import "./loud-legacy.css";
 
 export const metadata: Metadata = {
-  title: "Loud Legacy Ventures — The Identity Layer for the Physical World",
+  title: "Loud Legacy | Building Platforms That Create Opportunity",
   description:
-    "Behavioral data infrastructure company building the identity layer for the physical world. Four interconnected products — Rally, Business Now, Valora, Legacy CRM — proving who actually shows up, starting with sports.",
-  keywords: "behavioral data, fan engagement, sports analytics, real estate intelligence, verified identity, stadium data, sports sponsorship attribution, Loud Legacy Ventures, Rally",
+    "Loud Legacy builds platforms at the intersection of business, relationships, and long-term impact. The Collective is our first initiative — a private network designed to create real business opportunities.",
+  keywords: "Loud Legacy, The Collective, platform builder, business network, curated membership, strategic introductions, premium experiences, Chicago",
   icons: {
-    icon: "/favicon.ico"
+    icon: "/favicon.ico",
   },
   openGraph: {
-    title: "Loud Legacy Ventures — The Identity Layer for the Physical World",
-    description: "Behavioral data infrastructure company proving who actually shows up. Four products. One data asset. Starting with sports.",
+    title: "Loud Legacy | Building Platforms That Create Opportunity",
+    description:
+      "Platforms designed to connect people, ideas, and opportunity. The Collective is live — a private network of business leaders creating real outcomes.",
     type: "website",
-    siteName: "Loud Legacy Ventures",
+    siteName: "Loud Legacy",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Loud Legacy Ventures — Prove You Were There",
-    description: "Building the identity layer for the physical world, starting with sports. 520+ teams. 7 leagues. Verified behavioral data.",
+    title: "Loud Legacy | Building Platforms That Create Opportunity",
+    description:
+      "Platforms designed to connect people, ideas, and opportunity. The Collective is live.",
   },
   robots: {
     index: true,
@@ -31,8 +32,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="antialiased">
+        {children}
       </body>
     </html>
   );

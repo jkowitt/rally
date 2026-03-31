@@ -1,79 +1,32 @@
-import Link from "next/link";
-import { Header } from "@/components/Header";
-import Footer from "@/components/Footer";
+"use client";
 
-export const metadata = {
-  title: "About Us - Loud Legacy",
-  description: "Loud Legacy exists to help people show up with confidence, clarity, and presence. Built by operators who believe impact is created when people stop shrinking and start using their voice with intention.",
-};
+import { Header } from "@/components/ll/Header";
+import { Footer } from "@/components/ll/Footer";
+import { Section, SectionHeader } from "@/components/ll/Section";
+import { FeatureGrid } from "@/components/ll/FeatureGrid";
+import { CTABlock } from "@/components/ll/CTABlock";
 
-const team = [
+const principles = [
   {
-    name: "Founder & Vision",
-    description: "Sets the philosophy, direction, and long-term mission. Ensures everything stays aligned with purpose, impact, and legacy."
+    title: "Platforms, Not Projects",
+    description:
+      "Everything we build is designed to grow, evolve, and create compounding value over time. We don't build one-off ideas — we build infrastructure for opportunity.",
   },
   {
-    name: "Strategy & Content",
-    description: "Builds frameworks, messaging, and educational content designed to help people think clearly and act boldly."
+    title: "Long-Term Thinking",
+    description:
+      "We optimize for outcomes that matter in five years, not five weeks. Every decision is made with durability and scale in mind.",
   },
   {
-    name: "Community & Experiences",
-    description: "Creates environments, workshops, and conversations where people practice using their voice in real-world situations."
+    title: "Intentional Execution",
+    description:
+      "We move with purpose. Every platform, every partnership, every experience is designed with a clear objective and a focus on real results.",
   },
   {
-    name: "Creative & Brand",
-    description: "Brings the Loud Legacy identity to life through design, storytelling, and experience-driven execution."
-  }
-];
-
-const timeline = [
-  {
-    phase: "The Spark",
-    description: "An idea formed through lived experience and repeated conversations about confidence and communication."
+    title: "Real Outcomes",
+    description:
+      "We measure success by what actually happens — partnerships formed, deals closed, businesses built. Not impressions, not followers, not vanity metrics.",
   },
-  {
-    phase: "The Foundation",
-    description: "Core beliefs and the Loud Legacy framework were defined, setting the tone for everything that followed."
-  },
-  {
-    phase: "The Build",
-    description: "Content, coaching, and tools began rolling out as the brand found its voice and audience."
-  },
-  {
-    phase: "The Expansion",
-    description: "Loud Legacy grew into a platform with programs, partnerships, and community-driven experiences."
-  },
-  {
-    phase: "The Legacy Phase",
-    description: "An ongoing evolution into an enduring ecosystem focused on long-term impact, leadership, and generational influence."
-  },
-];
-
-const values = [
-  {
-    title: "Clarity",
-    description: "We value clear thinking, honest communication, and intentional action."
-  },
-  {
-    title: "Courage",
-    description: "Growth requires speaking before comfort arrives. We choose action over hesitation."
-  },
-  {
-    title: "Authenticity",
-    description: "We do not teach performance. We help people show up as themselves with confidence."
-  },
-  {
-    title: "Consistency",
-    description: "Legacy is built through daily choices, not single moments."
-  },
-  {
-    title: "Impact",
-    description: "Everything we create should leave people stronger, more confident, and more capable."
-  },
-  {
-    title: "Responsibility",
-    description: "Using your voice carries weight. Influence should be used to build, uplift, and lead with integrity."
-  }
 ];
 
 export default function AboutPage() {
@@ -82,135 +35,83 @@ export default function AboutPage() {
       <Header />
 
       {/* Hero */}
-      <section className="about-hero">
-        <div className="container">
-          <h1>Live loud. Create impact. Build a legacy.</h1>
-          <p className="hero-subtitle">
-            Loud Legacy exists to help people show up with confidence, clarity, and presence.
-            We believe impact is created when people stop shrinking and start using their voice with intention.
-          </p>
-        </div>
-      </section>
-
-      {/* Who We Are */}
-      <section className="about-story">
-        <div className="container">
-          <div className="story-content">
-            <h2>Who we are</h2>
-            <p>
-              This is not about being louder than everyone else.
+      <section className="pt-40 pb-20 bg-off-white">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-6">
+              About
             </p>
-            <p>
-              It is about being clear, grounded, and impossible to ignore.
-            </p>
-            <p>
-              We build tools and experiences that help operators, founders, and leaders
-              communicate with confidence and run their businesses with intention. Legacy RE,
-              Sportify, Business Now, and Legacy CRM are how we put this philosophy into action—software
-              built for people who refuse to shrink.
-            </p>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-charcoal leading-[1.1]">
+              We build platforms that create lasting impact.
+            </h1>
+            <div className="mt-1 h-px w-12 bg-accent opacity-40" />
           </div>
         </div>
       </section>
 
-      {/* Founder Story */}
-      <section className="about-founder">
-        <div className="container">
-          <h2>Founder story</h2>
-          <div className="founder-content">
-            <p>
-              Loud Legacy was born from a repeated pattern seen across leadership rooms,
-              creative spaces, and everyday conversations.
+      {/* Overview */}
+      <Section>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-4">
+              Who We Are
             </p>
-            <p className="founder-highlight">
-              Capable people staying quiet when their voice mattered most.
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-charcoal leading-tight">
+              Loud Legacy is a platform development company.
+            </h2>
+          </div>
+          <div className="space-y-6 text-base md:text-lg leading-relaxed text-warm-gray">
+            <p>
+              We build platforms at the intersection of business, relationships,
+              and long-term impact. Each initiative under Loud Legacy is designed
+              to connect the right people, create real opportunity, and deliver
+              outcomes that compound over time.
             </p>
             <p>
-              Not because they lacked talent or ideas. Because they doubted themselves.
+              Our first platform — The Collective — is live and active in
+              Chicago, bringing together a curated network of business leaders,
+              brands, and decision-makers through intentional experiences and
+              strategic introductions.
             </p>
             <p>
-              The founder watched confidence outperform competence again and again.
-              The loudest voice was rarely the strongest. The clearest voice was.
-            </p>
-            <p>
-              Loud Legacy was created to close that gap. It exists to help people develop
-              confidence through action, sharpen their communication, and build something
-              meaningful that lasts. A legacy shaped by intention, not volume.
+              This is the beginning. Loud Legacy is building a series of
+              platforms across business, sports, technology, and community —
+              each one designed with the same principles of quality, intention,
+              and execution.
             </p>
           </div>
         </div>
-      </section>
+      </Section>
 
-      {/* Team */}
-      <section className="about-team">
-        <div className="container">
-          <h2>Our team</h2>
-          <p className="team-intro">
-            Loud Legacy is powered by a focused group of builders, strategists, and creatives
-            who believe communication changes outcomes.
-          </p>
-          <div className="team-grid">
-            {team.map((member) => (
-              <div key={member.name} className="team-card">
-                <h3>{member.name}</h3>
-                <p>{member.description}</p>
-              </div>
-            ))}
-          </div>
-          <p className="hiring-note">
-            The team grows intentionally. Every contributor is here for one reason: to help others show up fully.
-          </p>
-        </div>
-      </section>
+      {/* Vision */}
+      <Section className="bg-stone-50">
+        <SectionHeader
+          label="Vision"
+          title="Scale opportunity through intentional platforms."
+          description="The world doesn't need more tools, more apps, or more noise. It needs better infrastructure for connection and opportunity. That's what Loud Legacy is building."
+        />
+      </Section>
 
-      {/* Timeline */}
-      <section className="about-timeline">
-        <div className="container">
-          <h2>Our journey</h2>
-          <div className="timeline">
-            {timeline.map((item, index) => (
-              <div key={item.phase} className="timeline-item">
-                <span className="timeline-number">{index + 1}</span>
-                <div className="timeline-content">
-                  <span className="timeline-phase">{item.phase}</span>
-                  <p className="timeline-description">{item.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Values */}
-      <section className="about-values">
-        <div className="container">
-          <h2>What we believe</h2>
-          <div className="values-grid">
-            {values.map((value) => (
-              <div key={value.title} className="value-card">
-                <h3>{value.title}</h3>
-                <p>{value.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Philosophy */}
+      <Section>
+        <SectionHeader
+          label="Philosophy"
+          title="How we think about building."
+        />
+        <FeatureGrid features={principles} columns={2} />
+      </Section>
 
       {/* CTA */}
-      <section className="about-cta">
-        <div className="container">
-          <h2>Ready to show up fully?</h2>
-          <p>Join operators who've stopped shrinking and started building their legacy.</p>
-          <div className="cta-actions">
-            <Link href="/contact" className="button button--primary">
-              Get Started
-            </Link>
-            <Link href="/pricing" className="button button--secondary">
-              View Pricing
-            </Link>
-          </div>
-        </div>
-      </section>
+      <Section dark>
+        <CTABlock
+          headline="See what we're building."
+          primaryLabel="Explore The Collective"
+          primaryHref="/the-collective"
+          secondaryLabel="Get In Touch"
+          secondaryHref="/contact"
+          dark
+        />
+      </Section>
 
       <Footer />
     </main>

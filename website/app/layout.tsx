@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
-import "./loud-legacy.css";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Loud Legacy | Building Platforms That Create Opportunity",

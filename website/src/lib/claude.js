@@ -31,3 +31,28 @@ export async function updateBenchmarks(property_id) {
 export async function submitContactForm({ name, email, message, property_name }) {
   return invokeEdgeFunction('contact-form', { name, email, message, property_name })
 }
+
+// Contract AI functions
+export async function generateContract({ deal_id, property_id, assets, terms }) {
+  return invokeEdgeFunction('contract-ai', { action: 'generate_contract', deal_id, property_id, assets, terms })
+}
+
+export async function editContractText({ contract_text, instructions }) {
+  return invokeEdgeFunction('contract-ai', { action: 'edit_contract', contract_text, instructions })
+}
+
+export async function parsePdfText(pdf_text) {
+  return invokeEdgeFunction('contract-ai', { action: 'parse_pdf_text', pdf_text })
+}
+
+export async function summarizeContract(contract_text) {
+  return invokeEdgeFunction('contract-ai', { action: 'summarize_contract', contract_text })
+}
+
+export async function extractBenefits({ contract_id, contract_text, property_id }) {
+  return invokeEdgeFunction('contract-ai', { action: 'extract_benefits', contract_id, contract_text, property_id })
+}
+
+export async function generateFulfillment({ contract_id, deal_id, start_date, end_date }) {
+  return invokeEdgeFunction('contract-ai', { action: 'generate_fulfillment', contract_id, deal_id, start_date, end_date })
+}

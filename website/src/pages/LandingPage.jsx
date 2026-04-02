@@ -446,7 +446,7 @@ function CTA() {
           Ready to modernize your sports business?
         </motion.h2>
         <motion.p variants={fadeUp} className="text-text-secondary mt-4 leading-relaxed">
-          Loud Legacy is built for college athletic departments and minor league sports teams
+          Loud Legacy is built for college athletic departments, professional sports teams, and minor league sports teams
           who are ready to move beyond spreadsheets and disconnected tools.
         </motion.p>
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
@@ -481,7 +481,7 @@ function Footer() {
           <div className="md:col-span-2">
             <span className="font-mono font-bold text-accent text-sm tracking-widest">LOUD LEGACY</span>
             <p className="text-text-secondary text-sm mt-3 max-w-md leading-relaxed">
-              The sports business operating suite for college athletic departments and minor league sports partnership sales teams.
+              The sports business operating suite for college athletic departments, professional sports teams, and minor league sports partnership sales teams.
             </p>
           </div>
           <div>

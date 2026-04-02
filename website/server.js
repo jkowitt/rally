@@ -21,7 +21,7 @@ app.get('/health', (_req, res) => {
 })
 
 // SPA fallback - serve index.html for all non-file routes
-app.get('*', (_req, res) => {
+app.use((_req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'))
 })
 

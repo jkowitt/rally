@@ -377,7 +377,8 @@ function AISection() {
         >
           <p className="text-sm text-text-secondary max-w-2xl mx-auto leading-relaxed">
             <span className="text-text-primary font-medium">Privacy first.</span>{' '}
-            Your data is processed through Supabase Edge Functions with row-level security.
+            Your data is processed through Supabase Edge Functions with row-level security,
+            hosted on Railway's cloud infrastructure.
             AI interactions are scoped to your property and are never used for model training.
           </p>
         </motion.div>
@@ -394,7 +395,7 @@ function WhyLoudLegacy() {
     { title: 'Modular by design', desc: 'Feature flags control which modules are active. Start with CRM, unlock Sportify, VALORA, and Business Now as you grow.' },
     { title: 'AI that adds value', desc: 'Claude AI handles valuations and intelligence—tasks that would take hours of manual research and analysis.' },
     { title: 'Legal compliance', desc: 'Versioned terms of service and privacy policy with audit-logged acceptances. Built-in compliance from day one.' },
-    { title: 'Modern stack', desc: 'React, Vite, Supabase, Tailwind. Fast, reliable, and built to scale with your organization.' },
+    { title: 'Modern stack', desc: 'React, Vite, Supabase, Railway, Tailwind. Cloud-native infrastructure built to scale with your organization.' },
   ]
 
   return (

@@ -1,4 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
+import * as pdfjsLib from 'pdfjs-dist'
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -502,19 +505,35 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
       return
     }
 
-    // For PDF files, we read as text (basic extraction)
-    // In production you'd use a PDF parsing library or service
-    try {
-      const text = await file.text()
-      if (text && text.length > 50) {
-        setPdfText(text)
-        setStatus('File loaded. Click "Parse with AI" to extract contract data.')
-      } else {
-        setStatus('Could not extract text from PDF. Try copy-pasting the contract text instead.')
+    // Extract text from PDF using pdf.js
+    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      setLoading(true)
+      setStatus('Extracting text from PDF...')
+      try {
+        const arrayBuffer = await file.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        let fullText = ''
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          const pageText = content.items.map((item) => item.str).join(' ')
+          fullText += pageText + '\n\n'
+        }
+        if (fullText.trim().length > 20) {
+          setPdfText(fullText.trim())
+          setStatus('PDF text extracted (' + pdf.numPages + ' pages). Click "Parse with AI" to extract contract data.')
+        } else {
+          setStatus('PDF appears to be scanned/image-based. Try copy-pasting the contract text instead.')
+        }
+      } catch (err) {
+        setStatus('Error reading PDF: ' + (err.message || 'Unknown error'))
+      } finally {
+        setLoading(false)
       }
-    } catch {
-      setStatus('Error reading file. Try pasting the contract text manually.')
+      return
     }
+
+    setStatus('Unsupported file type. Use .pdf or .txt files, or paste text directly.')
   }
 
   async function handleParse() {

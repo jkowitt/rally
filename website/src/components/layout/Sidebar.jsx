@@ -51,7 +51,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* Logo */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-border">
         {!collapsed && (
-          <span className="font-mono font-bold text-accent text-sm tracking-wider">LOUD LEGACY</span>
+          <span className="font-mono font-bold text-accent text-sm tracking-wide">LOUD LEGACY</span>
         )}
         <button
           onClick={onToggle}

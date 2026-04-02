@@ -75,7 +75,7 @@ function Hero() {
         </motion.h1>
 
         <motion.p variants={fadeUp} className="text-lg md:text-xl text-text-secondary mt-6 max-w-2xl mx-auto leading-relaxed">
-          Loud Legacy unifies CRM, event management, AI-powered valuations, and business intelligence into one platform built for college athletic departments and minor league sports teams.
+          Loud Legacy unifies CRM, event management, AI-powered valuations, and business intelligence into one platform built for college athletic departments, professional sports teams, and minor league sports teams.
         </motion.p>
 
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-10">

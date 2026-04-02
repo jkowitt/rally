@@ -216,21 +216,29 @@ function DealForm({ deal, onSave, onCancel, saving }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-text-muted">Fiscal Year Start</label>
-              <input
-                type="date"
+              <select
                 value={form.start_date}
                 onChange={(e) => setForm({ ...form, start_date: e.target.value })}
                 className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
-              />
+              >
+                <option value="">Select Year</option>
+                {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 2 + i).map((yr) => (
+                  <option key={yr} value={yr}>{yr}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-xs text-text-muted">Fiscal Year End</label>
-              <input
-                type="date"
+              <select
                 value={form.end_date}
                 onChange={(e) => setForm({ ...form, end_date: e.target.value })}
                 className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
-              />
+              >
+                <option value="">Select Year</option>
+                {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 2 + i).map((yr) => (
+                  <option key={yr} value={yr}>{yr}</option>
+                ))}
+              </select>
             </div>
           </div>
           <label className="flex items-center gap-2 text-sm text-text-secondary">

@@ -1,8 +1,7 @@
 import { useState, useRef } from 'react'
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
 
-// Disable worker to avoid bundling issues - fine for contract-sized PDFs
-GlobalWorkerOptions.workerSrc = ''
+GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.6.205/build/pdf.worker.min.mjs'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'

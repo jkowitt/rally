@@ -1,23 +1,23 @@
 import { supabase } from './supabase'
 
 async function invokeEdgeFunction(functionName, payload) {
-  const { data, error } = await supabase.functions.invoke(functionName, {
-    body: payload,
+  // Call Edge Function directly via fetch for better error visibility
+  const url = `${import.meta.env.VITE_SUPABASE_URL || 'https://juaqategmrghsfkbaiap.supabase.co'}/functions/v1/${functionName}`
+  const session = (await supabase.auth.getSession()).data.session
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session?.access_token || ''}`,
+      'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_yBmy9yYrchSL94IWrth3kA_qCCIGgWz',
+    },
+    body: JSON.stringify(payload),
   })
-  if (error) {
-    // Try to get the actual error message from the response
-    if (error.context?.body) {
-      try {
-        const text = await new Response(error.context.body).text()
-        const parsed = JSON.parse(text)
-        if (parsed.error) throw new Error(parsed.error)
-      } catch (e) {
-        if (e.message && e.message !== 'Unexpected end of JSON input') throw e
-      }
-    }
-    throw new Error(error.message || 'Edge Function error')
-  }
-  if (data?.error) throw new Error(data.error)
+  const text = await resp.text()
+  let data
+  try { data = JSON.parse(text) } catch { data = { error: text } }
+  if (!resp.ok) throw new Error(data.error || data.message || 'Edge Function error: ' + resp.status + ' ' + text.slice(0, 200))
+  if (data.error) throw new Error(data.error)
   return data
 }
 

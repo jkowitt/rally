@@ -215,7 +215,7 @@ function DealForm({ deal, onSave, onCancel, saving }) {
           </select>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-text-muted">Start Date</label>
+              <label className="text-xs text-text-muted">Fiscal Year Start</label>
               <input
                 type="date"
                 value={form.start_date}
@@ -224,7 +224,7 @@ function DealForm({ deal, onSave, onCancel, saving }) {
               />
             </div>
             <div>
-              <label className="text-xs text-text-muted">End Date</label>
+              <label className="text-xs text-text-muted">Fiscal Year End</label>
               <input
                 type="date"
                 value={form.end_date}

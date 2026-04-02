@@ -55,8 +55,8 @@ export default function BrandReport() {
           </div>
         </div>
         <div className="flex gap-6 mt-4 text-xs text-text-muted font-mono">
-          <span>Start: {deal.start_date || 'TBD'}</span>
-          <span>End: {deal.end_date || 'TBD'}</span>
+          <span>FY Start: {deal.start_date || 'TBD'}</span>
+          <span>FY End: {deal.end_date || 'TBD'}</span>
           {deal.renewal_flag && <span className="text-warning">RENEWAL</span>}
         </div>
       </div>

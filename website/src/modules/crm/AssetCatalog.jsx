@@ -29,12 +29,16 @@ export default function AssetCatalog() {
 
   const saveMutation = useMutation({
     mutationFn: async (asset) => {
-      if (asset.id) {
-        const { data, error } = await supabase.from('assets').update(asset).eq('id', asset.id).select().single()
+      const payload = { ...asset }
+      if (!payload.base_price) delete payload.base_price
+      if (!payload.impressions_per_game) delete payload.impressions_per_game
+      if (payload.id) {
+        const { data, error } = await supabase.from('assets').update(payload).eq('id', payload.id).select().single()
         if (error) throw error
         return data
       }
-      const { data, error } = await supabase.from('assets').insert({ ...asset, property_id: propertyId }).select().single()
+      delete payload.id
+      const { data, error } = await supabase.from('assets').insert({ ...payload, property_id: propertyId }).select().single()
       if (error) throw error
       return data
     },

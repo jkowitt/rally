@@ -4,7 +4,20 @@ async function invokeEdgeFunction(functionName, payload) {
   const { data, error } = await supabase.functions.invoke(functionName, {
     body: payload,
   })
-  if (error) throw error
+  if (error) {
+    // Try to get the actual error message from the response
+    if (error.context?.body) {
+      try {
+        const text = await new Response(error.context.body).text()
+        const parsed = JSON.parse(text)
+        if (parsed.error) throw new Error(parsed.error)
+      } catch (e) {
+        if (e.message && e.message !== 'Unexpected end of JSON input') throw e
+      }
+    }
+    throw new Error(error.message || 'Edge Function error')
+  }
+  if (data?.error) throw new Error(data.error)
   return data
 }
 

@@ -1,25 +1,26 @@
 import { supabase } from './supabase'
 
 async function invokeEdgeFunction(functionName, payload) {
-  // Call Edge Function directly via fetch for better error visibility
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_yBmy9yYrchSL94IWrth3kA_qCCIGgWz'
-  const url = `${import.meta.env.VITE_SUPABASE_URL || 'https://juaqategmrghsfkbaiap.supabase.co'}/functions/v1/${functionName}`
-  const { data: { session } } = await supabase.auth.getSession()
-  const token = session?.access_token || anonKey
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      'apikey': anonKey,
-    },
-    body: JSON.stringify(payload),
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body: payload,
   })
-  const text = await resp.text()
-  let data
-  try { data = JSON.parse(text) } catch { data = { error: text } }
-  if (!resp.ok) throw new Error(data.error || data.message || 'Edge Function error: ' + resp.status + ' ' + text.slice(0, 200))
-  if (data.error) throw new Error(data.error)
+  if (error) {
+    // Extract real error from response body
+    let msg = error.message || 'Edge Function error'
+    try {
+      if (error.context?.body) {
+        const reader = error.context.body.getReader()
+        const { value } = await reader.read()
+        const text = new TextDecoder().decode(value)
+        const parsed = JSON.parse(text)
+        if (parsed.error) msg = parsed.error
+      }
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(msg)
+  }
+  if (data?.error) throw new Error(data.error)
   return data
 }
 

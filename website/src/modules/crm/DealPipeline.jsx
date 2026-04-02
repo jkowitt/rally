@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
+const ALL_STAGES = [...STAGES, 'Declined']
 const SOURCES = ['Referral', 'Cold Outreach', 'Inbound', 'Event', 'Renewal', 'Other']
 const PRIORITIES = ['High', 'Medium', 'Low']
 
@@ -80,6 +81,14 @@ export default function DealPipeline() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deals', propertyId] }),
   })
 
+  const declineMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('deals').update({ stage: 'Declined' }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deals', propertyId] }),
+  })
+
   function handleDragEnd(result) {
     if (!result.destination) return
     const dealId = result.draggableId
@@ -87,12 +96,16 @@ export default function DealPipeline() {
     updateStageMutation.mutate({ id: dealId, stage: newStage })
   }
 
+  // Filter out Declined deals from the active pipeline
+  const activeDeals = deals?.filter((d) => d.stage !== 'Declined') || []
+
   const dealsByStage = STAGES.reduce((acc, stage) => {
-    acc[stage] = deals?.filter((d) => d.stage === stage) || []
+    acc[stage] = activeDeals.filter((d) => d.stage === stage)
     return acc
   }, {})
 
-  const totalValue = deals?.reduce((sum, d) => sum + (Number(d.value) || 0), 0) || 0
+  const totalValue = activeDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0)
+  const declinedCount = deals?.filter((d) => d.stage === 'Declined').length || 0
   const priorityColor = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
 
   return (
@@ -101,7 +114,8 @@ export default function DealPipeline() {
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Deal Pipeline</h1>
           <p className="text-text-secondary text-sm mt-1">
-            {deals?.length || 0} deals &middot; ${(totalValue / 1000).toFixed(0)}K total pipeline
+            {activeDeals.length} active deals &middot; ${(totalValue / 1000).toFixed(0)}K pipeline
+            {declinedCount > 0 && <span className="text-text-muted"> &middot; {declinedCount} declined</span>}
           </p>
         </div>
         <div className="flex gap-2">
@@ -172,6 +186,20 @@ export default function DealPipeline() {
                                   <span className="text-[10px] font-mono text-text-muted bg-bg-surface px-1.5 py-0.5 rounded">{deal.source}</span>
                                 )}
                               </div>
+                              <div className="flex gap-2 mt-2 pt-1 border-t border-border">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); declineMutation.mutate(deal.id) }}
+                                  className="text-[10px] text-text-muted hover:text-warning font-mono"
+                                >
+                                  Decline
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); if (confirm('Permanently delete this deal?')) deleteMutation.mutate(deal.id) }}
+                                  className="text-[10px] text-text-muted hover:text-danger font-mono"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
                           )}
                         </Draggable>
@@ -203,7 +231,7 @@ export default function DealPipeline() {
               </tr>
             </thead>
             <tbody>
-              {deals?.map((deal) => (
+              {activeDeals.map((deal) => (
                 <tr key={deal.id} className="border-b border-border last:border-0 hover:bg-bg-card/50">
                   <td className="px-4 py-3 text-text-primary font-medium">{deal.brand_name}</td>
                   <td className="px-4 py-3 text-text-secondary">{deal.contact_name || '—'}</td>
@@ -214,14 +242,17 @@ export default function DealPipeline() {
                   <td className="px-4 py-3"><span className={`text-xs font-mono ${priorityColor[deal.priority] || 'text-text-muted'}`}>{deal.priority || '—'}</span></td>
                   <td className="px-4 py-3 text-text-muted text-xs">{deal.source || '—'}</td>
                   <td className="px-4 py-3 text-text-muted text-xs font-mono">{deal.date_added || '—'}</td>
-                  <td className="px-4 py-3 flex gap-2">
-                    <button onClick={() => { setEditingDeal(deal); setShowForm(true) }} className="text-xs text-text-muted hover:text-accent">Edit</button>
-                    <button onClick={() => { if (confirm('Delete this deal?')) deleteMutation.mutate(deal.id) }} className="text-xs text-text-muted hover:text-danger">Delete</button>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      <button onClick={() => { setEditingDeal(deal); setShowForm(true) }} className="text-xs text-text-muted hover:text-accent">Edit</button>
+                      <button onClick={() => declineMutation.mutate(deal.id)} className="text-xs text-text-muted hover:text-warning">Decline</button>
+                      <button onClick={() => { if (confirm('Permanently delete this deal?')) deleteMutation.mutate(deal.id) }} className="text-xs text-text-muted hover:text-danger">Delete</button>
+                    </div>
                   </td>
                 </tr>
               ))}
-              {(!deals || deals.length === 0) && (
-                <tr><td colSpan={10} className="px-4 py-8 text-center text-text-muted">No deals yet.</td></tr>
+              {activeDeals.length === 0 && (
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-text-muted">No active deals yet.</td></tr>
               )}
             </tbody>
           </table>
@@ -390,7 +421,7 @@ function DealForm({ deal, onSave, onCancel, saving }) {
                     onChange={(e) => setForm({ ...form, stage: e.target.value })}
                     className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
                   >
-                    {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    {ALL_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>

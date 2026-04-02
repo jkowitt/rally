@@ -94,6 +94,30 @@ export default function Sidebar({ collapsed, onToggle }) {
           )
         })}
 
+        {/* Declined - separate from main pipeline */}
+        {flags.crm && (
+          <div className="mb-4">
+            {!collapsed && (
+              <div className="px-4 mb-1 text-[10px] uppercase tracking-widest text-text-muted font-mono">
+                Archive
+              </div>
+            )}
+            <NavLink
+              to="/app/crm/declined"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
+                  isActive
+                    ? 'text-accent bg-accent/5 border-r-2 border-accent'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
+                } ${collapsed ? 'justify-center' : ''}`
+              }
+            >
+              <span className="text-base">✗</span>
+              {!collapsed && <span>Declined</span>}
+            </NavLink>
+          </div>
+        )}
+
         {/* Developer section */}
         {isDeveloper && (
           <div className="mb-4">

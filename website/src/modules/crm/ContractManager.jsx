@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback } from 'react'
-import * as pdfjsLib from 'pdfjs-dist'
+import { useState, useRef } from 'react'
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href
+// Disable worker to avoid bundling issues - fine for contract-sized PDFs
+GlobalWorkerOptions.workerSrc = ''
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -511,7 +512,7 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
       setStatus('Extracting text from PDF...')
       try {
         const arrayBuffer = await file.arrayBuffer()
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        const pdf = await getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
         let fullText = ''
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i)

@@ -37,11 +37,24 @@ export default function DealPipeline() {
 
   const saveMutation = useMutation({
     mutationFn: async (deal) => {
-      if (deal.id) {
-        const { error } = await supabase.from('deals').update(deal).eq('id', deal.id)
+      // Convert year values to dates for database
+      const payload = { ...deal }
+      if (payload.start_date && !payload.start_date.includes('-')) {
+        payload.start_date = `${payload.start_date}-01-01`
+      }
+      if (payload.end_date && !payload.end_date.includes('-')) {
+        payload.end_date = `${payload.end_date}-12-31`
+      }
+      if (!payload.start_date) delete payload.start_date
+      if (!payload.end_date) delete payload.end_date
+      if (!payload.value) delete payload.value
+
+      if (payload.id) {
+        const { error } = await supabase.from('deals').update(payload).eq('id', payload.id)
         if (error) throw error
       } else {
-        const { error } = await supabase.from('deals').insert({ ...deal, property_id: propertyId })
+        delete payload.id
+        const { error } = await supabase.from('deals').insert({ ...payload, property_id: propertyId })
         if (error) throw error
       }
     },

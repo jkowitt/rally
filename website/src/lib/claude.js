@@ -2,14 +2,16 @@ import { supabase } from './supabase'
 
 async function invokeEdgeFunction(functionName, payload) {
   // Call Edge Function directly via fetch for better error visibility
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_yBmy9yYrchSL94IWrth3kA_qCCIGgWz'
   const url = `${import.meta.env.VITE_SUPABASE_URL || 'https://juaqategmrghsfkbaiap.supabase.co'}/functions/v1/${functionName}`
-  const session = (await supabase.auth.getSession()).data.session
+  const { data: { session } } = await supabase.auth.getSession()
+  const token = session?.access_token || anonKey
   const resp = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session?.access_token || ''}`,
-      'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_yBmy9yYrchSL94IWrth3kA_qCCIGgWz',
+      'Authorization': `Bearer ${token}`,
+      'apikey': anonKey,
     },
     body: JSON.stringify(payload),
   })

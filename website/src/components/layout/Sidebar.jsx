@@ -6,38 +6,38 @@ const navSections = [
   {
     label: 'Overview',
     items: [
-      { to: '/', label: 'Dashboard', icon: '◉' },
+      { to: '/app', label: 'Dashboard', icon: '◉' },
     ],
   },
   {
     label: 'Legacy CRM',
     flag: 'crm',
     items: [
-      { to: '/crm/assets', label: 'Assets', icon: '▣' },
-      { to: '/crm/pipeline', label: 'Pipeline', icon: '▤' },
-      { to: '/crm/contracts', label: 'Contracts', icon: '▥' },
-      { to: '/crm/fulfillment', label: 'Fulfillment', icon: '▦' },
+      { to: '/app/crm/assets', label: 'Assets', icon: '▣' },
+      { to: '/app/crm/pipeline', label: 'Pipeline', icon: '▤' },
+      { to: '/app/crm/contracts', label: 'Contracts', icon: '▥' },
+      { to: '/app/crm/fulfillment', label: 'Fulfillment', icon: '▦' },
     ],
   },
   {
     label: 'Sportify',
     flag: 'sportify',
     items: [
-      { to: '/sportify/events', label: 'Events', icon: '◈' },
+      { to: '/app/sportify/events', label: 'Events', icon: '◈' },
     ],
   },
   {
     label: 'VALORA',
     flag: 'valora',
     items: [
-      { to: '/valora', label: 'Valuations', icon: '◇' },
+      { to: '/app/valora', label: 'Valuations', icon: '◇' },
     ],
   },
   {
     label: 'Business Now',
     flag: 'businessnow',
     items: [
-      { to: '/businessnow', label: 'Intelligence', icon: '◆' },
+      { to: '/app/businessnow', label: 'Intelligence', icon: '◆' },
     ],
   },
 ]
@@ -77,7 +77,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end={item.to === '/'}
+                  end={item.to === '/app'}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
                       isActive
@@ -103,7 +103,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               </div>
             )}
             <NavLink
-              to="/developer"
+              to="/app/developer"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
                   isActive

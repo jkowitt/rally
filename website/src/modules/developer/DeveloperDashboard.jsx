@@ -8,7 +8,7 @@ export default function DeveloperDashboard() {
   const { isDeveloper } = useAuth()
   const { flags, toggleFlag } = useFeatureFlags()
 
-  if (!isDeveloper) return <Navigate to="/" replace />
+  if (!isDeveloper) return <Navigate to="/app" replace />
 
   const { data: properties } = useQuery({
     queryKey: ['dev-properties'],

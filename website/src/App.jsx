@@ -4,6 +4,7 @@ import { FeatureFlagProvider } from './hooks/useFeatureFlags'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import LegalGate from './components/layout/LegalGate'
 import AppShell from './components/layout/AppShell'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './modules/legal/LoginPage'
 import Dashboard from './modules/dashboard/Dashboard'
 import AssetCatalog from './modules/crm/AssetCatalog'
@@ -22,9 +23,13 @@ export default function App() {
     <AuthProvider>
       <FeatureFlagProvider>
         <Routes>
+          {/* Public */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+
+          {/* Authenticated app */}
           <Route
-            path="/*"
+            path="/app/*"
             element={
               <ProtectedRoute>
                 <LegalGate>
@@ -46,13 +51,16 @@ export default function App() {
                       <Route path="/businessnow" element={<BusinessNow />} />
                       {/* Developer */}
                       <Route path="/developer" element={<DeveloperDashboard />} />
-                      <Route path="*" element={<Navigate to="/" replace />} />
+                      <Route path="*" element={<Navigate to="/app" replace />} />
                     </Routes>
                   </AppShell>
                 </LegalGate>
               </ProtectedRoute>
             }
           />
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </FeatureFlagProvider>
     </AuthProvider>

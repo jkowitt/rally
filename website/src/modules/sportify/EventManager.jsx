@@ -64,7 +64,7 @@ export default function EventManager() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {events?.map((event) => (
-            <Link key={event.id} to={`/sportify/events/${event.id}`} className="bg-bg-surface border border-border rounded-lg p-4 hover:border-accent/30 transition-colors block">
+            <Link key={event.id} to={`/app/sportify/events/${event.id}`} className="bg-bg-surface border border-border rounded-lg p-4 hover:border-accent/30 transition-colors block">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-sm font-medium text-text-primary">{event.name}</h3>

@@ -57,7 +57,7 @@ export default function EventDetail() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-text-muted text-sm">
-        <Link to="/sportify/events" className="hover:text-text-secondary">Events</Link>
+        <Link to="/app/sportify/events" className="hover:text-text-secondary">Events</Link>
         <span>/</span>
         <span className="text-text-primary">{event.name}</span>
       </div>

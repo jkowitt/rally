@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   if (session) {
-    navigate('/', { replace: true })
+    navigate('/app', { replace: true })
     return null
   }
 
@@ -27,7 +27,7 @@ export default function LoginPage() {
       } else {
         await signIn(email, password)
       }
-      navigate('/', { replace: true })
+      navigate('/app', { replace: true })
     } catch (err) {
       setError(err.message)
     }

@@ -2,12 +2,16 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-ENV VITE_SUPABASE_URL=https://juaqategmrghsfkbaiap.supabase.co
-ENV VITE_SUPABASE_ANON_KEY=sb_publishable_yBmy9yYrchSL94IWrth3kA_qCCIGgWz
-
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+
+# Supabase config - must be set before vite build
+ENV VITE_SUPABASE_URL=https://juaqategmrghsfkbaiap.supabase.co
+ENV VITE_SUPABASE_ANON_KEY=sb_publishable_yBmy9yYrchSL94IWrth3kA_qCCIGgWz
+
+# Cache bust to force fresh build
+ARG CACHEBUST=1
 RUN npm run build
 
 FROM node:20-alpine AS runner

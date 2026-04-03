@@ -215,29 +215,42 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Upcoming Tasks */}
+        {/* Scheduled Activities */}
         {flags.crm && (
           <div className="bg-bg-surface border border-border rounded-lg p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-text-primary">Upcoming Tasks</h3>
+              <h3 className="text-sm font-medium text-text-primary">Scheduled Activities</h3>
               <button onClick={() => navigate('/app/crm/tasks')} className="text-xs text-accent hover:underline">View all</button>
             </div>
             {tasks?.length ? (
               <div className="space-y-2">
-                {tasks.slice(0, 6).map((t) => (
-                  <div key={t.id} className={`flex items-center justify-between py-1.5 border-b border-border last:border-0 ${t.due_date && t.due_date < today ? 'opacity-100' : ''}`}>
+                {tasks.slice(0, 8).map((t) => {
+                  const typeIcons = { Call: '📞', Email: '✉️', Text: '💬', Meeting: '🤝', 'Follow Up': '🔔', 'LinkedIn Message': '💼', Proposal: '📋', Contract: '📄', Presentation: '📊', Research: '🔍' }
+                  const isOverdue = t.due_date && t.due_date < today
+                  const isToday = t.due_date === today
+                  return (
+                  <div key={t.id} className={`flex items-center gap-2 py-1.5 border-b border-border last:border-0`}>
+                    <span className="text-sm shrink-0">{typeIcons[t.task_type] || '📌'}</span>
                     <div className="min-w-0 flex-1">
                       <div className="text-xs text-text-primary truncate">{t.title}</div>
-                      <div className="text-[10px] text-text-muted">{t.due_date || 'No date'}</div>
+                      <div className="text-[10px] text-text-muted flex items-center gap-1.5">
+                        {t.deals?.brand_name && <span className="text-accent">{t.deals.brand_name}</span>}
+                        <span>{t.due_date || 'No date'}</span>
+                        {t.scheduled_time && <span>{t.scheduled_time}</span>}
+                        {t.reminder_time && <span className="text-accent">🔔</span>}
+                      </div>
                     </div>
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${t.due_date && t.due_date < today ? 'bg-danger/10 text-danger' : t.priority === 'High' ? 'text-danger' : 'text-text-muted'}`}>
-                      {t.due_date && t.due_date < today ? 'OVERDUE' : t.priority}
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                      isOverdue ? 'bg-danger/10 text-danger' : isToday ? 'bg-warning/10 text-warning' : t.priority === 'High' ? 'text-danger' : 'text-text-muted'
+                    }`}>
+                      {isOverdue ? 'OVERDUE' : isToday ? 'TODAY' : t.priority}
                     </span>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
-              <p className="text-xs text-text-muted py-4 text-center">No pending tasks</p>
+              <p className="text-xs text-text-muted py-4 text-center">No scheduled activities</p>
             )}
           </div>
         )}

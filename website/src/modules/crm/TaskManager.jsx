@@ -44,43 +44,105 @@ function toDateString(date) {
 }
 
 // ── Push Notification Support ──────────────────────────────────
+let swRegistration = null
+
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return null
+  try {
+    swRegistration = await navigator.serviceWorker.register('/sw-notifications.js')
+    return swRegistration
+  } catch { return null }
+}
+
 async function requestNotificationPermission() {
   if (!('Notification' in window)) return 'unsupported'
   if (Notification.permission === 'granted') return 'granted'
   if (Notification.permission === 'denied') return 'denied'
   const result = await Notification.requestPermission()
+  if (result === 'granted') await registerServiceWorker()
   return result
 }
 
 function sendNotification(title, body, tag) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return
   try {
-    const notification = new Notification(title, {
-      body,
-      icon: '/logo.svg',
-      tag: tag || 'loud-legacy-reminder',
-      requireInteraction: true,
-    })
-    notification.onclick = () => {
-      window.focus()
-      notification.close()
+    // Prefer service worker notification (works in background)
+    if (swRegistration) {
+      swRegistration.showNotification(title, {
+        body,
+        icon: '/favicon.svg',
+        tag: tag || 'loud-legacy-reminder',
+        requireInteraction: true,
+      })
+    } else {
+      const notification = new Notification(title, {
+        body,
+        icon: '/favicon.svg',
+        tag: tag || 'loud-legacy-reminder',
+        requireInteraction: true,
+      })
+      notification.onclick = () => { window.focus(); notification.close() }
     }
-  } catch { /* SW not available, skip */ }
+  } catch { /* skip */ }
 }
 
-// Check for due reminders every 60s
+// Sync reminders to service worker for background firing
+function syncRemindersToSW(tasks) {
+  if (!swRegistration?.active || !tasks?.length) return
+  const reminders = tasks
+    .filter(t => t.status !== 'Done' && t.due_date && t.reminder_time)
+    .map(t => ({
+      id: t.id,
+      date: t.due_date,
+      time: t.reminder_time,
+      title: `${TYPE_ICON[t.task_type] || '📌'} ${t.task_type || 'Task'}: ${t.title}`,
+      body: t.deals?.brand_name ? `Deal: ${t.deals.brand_name}` : t.description || 'Reminder',
+    }))
+  swRegistration.active.postMessage({ type: 'SCHEDULE_NOTIFICATIONS', reminders })
+}
+
+// Track fired notifications in localStorage
+function getNotifiedIds() {
+  try { return JSON.parse(localStorage.getItem('ll_notified') || '[]') } catch { return [] }
+}
+function markNotified(id) {
+  const ids = getNotifiedIds()
+  if (!ids.includes(id)) {
+    ids.push(id)
+    // Keep only last 200
+    if (ids.length > 200) ids.splice(0, ids.length - 200)
+    localStorage.setItem('ll_notified', JSON.stringify(ids))
+  }
+}
+
+// Check for due reminders every 30s — also catches missed ones within 10 min window
 function useReminderChecker(tasks) {
   useEffect(() => {
     if (!tasks?.length) return
+
+    // Register SW on mount
+    registerServiceWorker().then(() => syncRemindersToSW(tasks))
+
+    const notified = getNotifiedIds()
+
     function check() {
       const now = new Date()
       const todayStr = toDateString(now)
-      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
       for (const task of tasks) {
         if (task.status === 'Done') continue
         if (!task.due_date || !task.reminder_time) continue
-        if (task.due_date === todayStr && task.reminder_time === currentTime) {
+        if (task.due_date !== todayStr) continue
+        if (notified.includes(task.id)) continue
+
+        const [h, m] = task.reminder_time.split(':').map(Number)
+        if (isNaN(h) || isNaN(m)) continue
+        const reminderMinutes = h * 60 + m
+
+        // Fire if within 10-minute catch-up window
+        if (currentMinutes >= reminderMinutes && currentMinutes <= reminderMinutes + 10) {
+          markNotified(task.id)
           sendNotification(
             `${TYPE_ICON[task.task_type] || '📌'} ${task.task_type || 'Task'}: ${task.title}`,
             task.deals?.brand_name ? `Deal: ${task.deals.brand_name}` : task.description || 'Reminder',
@@ -89,8 +151,8 @@ function useReminderChecker(tasks) {
         }
       }
     }
-    const interval = setInterval(check, 60000)
-    check() // run immediately
+    const interval = setInterval(check, 30000)
+    check()
     return () => clearInterval(interval)
   }, [tasks])
 }
@@ -183,15 +245,38 @@ export default function TaskManager() {
 
   const markDoneMutation = useMutation({
     mutationFn: async (id) => {
+      // Mark task done
       const { error } = await supabase
         .from('tasks')
         .update({ status: 'Done', completed_at: new Date().toISOString() })
         .eq('id', id)
       if (error) throw error
+
+      // Auto-log as activity on the deal
+      const task = tasks?.find(t => t.id === id)
+      if (task?.deal_id) {
+        try {
+          await supabase.from('activities').insert({
+            property_id: propertyId,
+            created_by: userId,
+            deal_id: task.deal_id,
+            activity_type: task.task_type === 'Email' ? 'Email'
+              : task.task_type === 'Call' ? 'Call'
+              : task.task_type === 'Meeting' ? 'Meeting'
+              : task.task_type === 'Contract' ? 'Contract Sent'
+              : task.task_type === 'Follow Up' ? 'Follow Up'
+              : 'Task Completed',
+            subject: `${task.task_type || 'Task'}: ${task.title}`,
+            description: task.description || null,
+            occurred_at: new Date().toISOString(),
+          })
+        } catch { /* activities table may not exist */ }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', propertyId] })
-      toast({ title: 'Task completed!', type: 'success' })
+      queryClient.invalidateQueries({ queryKey: ['activities', propertyId] })
+      toast({ title: 'Task completed — logged to activities', type: 'success' })
     },
   })
 

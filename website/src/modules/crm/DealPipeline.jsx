@@ -12,6 +12,69 @@ const SOURCES = ['Referral', 'Cold Outreach', 'Inbound', 'Event', 'Renewal', 'Ot
 const PRIORITIES = ['High', 'Medium', 'Low']
 const STAGE_PROBABILITY = { 'Prospect': 10, 'Proposal Sent': 25, 'Negotiation': 50, 'Contracted': 90, 'In Fulfillment': 95, 'Renewed': 100, 'Declined': 0 }
 
+const INDUSTRY_CATEGORIES = [
+  'Automotive',
+  'Banking & Financial Services',
+  'Beverage & Alcohol',
+  'Consumer Packaged Goods',
+  'Education',
+  'Energy & Utilities',
+  'Entertainment & Media',
+  'Fashion & Apparel',
+  'Food & Quick Serve Restaurants',
+  'Gaming & Esports',
+  'Government & Public Sector',
+  'Healthcare',
+  'Hospitality & Travel',
+  'Insurance',
+  'Legal Services',
+  'Manufacturing',
+  'Non-Hospital Healthcare',
+  'Nonprofit & Charity',
+  'Real Estate & Construction',
+  'Retail',
+  'Sports & Fitness',
+  'Technology & Software',
+  'Telecommunications',
+  'Transportation & Logistics',
+  'Misc',
+]
+
+// Auto-categorize a company by name/industry keywords
+function guessCategory(brandName, subIndustry) {
+  const text = `${brandName} ${subIndustry || ''}`.toLowerCase()
+  const rules = [
+    [/auto|car|motor|vehicle|tire|ford|chevy|toyota|honda|bmw|mercedes|kia|hyundai|tesla|dealer/i, 'Automotive'],
+    [/bank|financ|capital|invest|wealth|credit union|fidelity|chase|wells fargo/i, 'Banking & Financial Services'],
+    [/beer|wine|liquor|spirit|bourbon|vodka|brew|bud|coors|miller|seltzer|beverage/i, 'Beverage & Alcohol'],
+    [/cpg|consumer.*good|procter|unilever|colgate|deterg/i, 'Consumer Packaged Goods'],
+    [/school|university|college|edu|academ|campus/i, 'Education'],
+    [/energy|utilit|power|electric|solar|oil|gas|petrol/i, 'Energy & Utilities'],
+    [/entertain|media|movie|film|studio|music|stream|netflix|disney|spotify|podcast|broadcast/i, 'Entertainment & Media'],
+    [/fashion|apparel|cloth|shoe|nike|adidas|puma|under armour|new balance|reebok|lululemon/i, 'Fashion & Apparel'],
+    [/food|restaurant|pizza|burger|chicken|taco|sandwich|cafe|dine|mcdonald|wendy|chick-fil|chipotle|subway|starbuck|coffee|donut|bakery/i, 'Food & Quick Serve Restaurants'],
+    [/gaming|esport|game|twitch|xbox|playstation|riot|ea sport|activision/i, 'Gaming & Esports'],
+    [/government|public sector|municipal|city of|state of|county|federal/i, 'Government & Public Sector'],
+    [/hospital|health system|medical center|clinic.*health|pharma|drug|biotech/i, 'Healthcare'],
+    [/hotel|resort|travel|airlin|cruise|marriott|hilton|hyatt/i, 'Hospitality & Travel'],
+    [/insurance|insur|allstate|geico|state farm|progressive|liberty mutual/i, 'Insurance'],
+    [/law firm|legal|attorney|lawyer/i, 'Legal Services'],
+    [/manufactur|industrial|factory|steel|metal/i, 'Manufacturing'],
+    [/dental|chiro|optom|urgent care|physical therapy|vet|dermat|wellness|medspa|non.?hospital/i, 'Non-Hospital Healthcare'],
+    [/nonprofit|non.?profit|charit|foundation|united way|ymca|ywca|salvation|red cross/i, 'Nonprofit & Charity'],
+    [/real estate|realt|construct|build|home|property|mortgage/i, 'Real Estate & Construction'],
+    [/retail|store|shop|mall|walmart|target|costco|amazon|ecommerce|e-commerce/i, 'Retail'],
+    [/sport|fitness|gym|athlet|team|league|arena|stadium/i, 'Sports & Fitness'],
+    [/tech|software|saas|app|platform|cloud|cyber|data|ai |microsoft|google|apple|meta|salesforce/i, 'Technology & Software'],
+    [/telecom|wireless|mobile|phone|verizon|at&t|t-mobile|sprint|comcast|spectrum/i, 'Telecommunications'],
+    [/transport|logistic|ship|freight|trucking|fedex|ups|delivery/i, 'Transportation & Logistics'],
+  ]
+  for (const [pattern, category] of rules) {
+    if (pattern.test(text)) return category
+  }
+  return 'Misc'
+}
+
 function getDealScore(deal) {
   let score = 0
   if (deal.value) score += 15
@@ -49,6 +112,9 @@ export default function DealPipeline() {
   const [editingDeal, setEditingDeal] = useState(null)
   const [viewMode, setViewMode] = useState('kanban')
   const [showBulkImport, setShowBulkImport] = useState(false)
+  const [sortField, setSortField] = useState(null) // null | field name
+  const [sortDir, setSortDir] = useState('asc') // 'asc' | 'desc'
+  const [filterCategory, setFilterCategory] = useState('')
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals', propertyId],
@@ -251,7 +317,48 @@ export default function DealPipeline() {
   }
 
   // Filter out Declined deals from the active pipeline
-  const activeDeals = deals?.filter((d) => d.stage !== 'Declined') || []
+  const activeDealsRaw = deals?.filter((d) => d.stage !== 'Declined') || []
+
+  // Category filter
+  const activeDealsFiltered = filterCategory
+    ? activeDealsRaw.filter(d => guessCategory(d.brand_name, d.sub_industry) === filterCategory)
+    : activeDealsRaw
+
+  // Sorting
+  function toggleSort(field) {
+    if (sortField === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDir('asc')
+    }
+  }
+
+  const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 }
+
+  const activeDeals = [...activeDealsFiltered].sort((a, b) => {
+    if (!sortField) return 0
+    let aVal, bVal
+    if (sortField === 'value') {
+      aVal = Number(a.value) || 0; bVal = Number(b.value) || 0
+    } else if (sortField === 'priority') {
+      aVal = PRIORITY_ORDER[a.priority] ?? 3; bVal = PRIORITY_ORDER[b.priority] ?? 3
+    } else if (sortField === 'stage') {
+      aVal = ALL_STAGES.indexOf(a.stage); bVal = ALL_STAGES.indexOf(b.stage)
+    } else if (sortField === 'category') {
+      aVal = guessCategory(a.brand_name, a.sub_industry); bVal = guessCategory(b.brand_name, b.sub_industry)
+    } else if (sortField === 'date_added') {
+      aVal = a.date_added || ''; bVal = b.date_added || ''
+    } else if (sortField === 'score') {
+      aVal = getDealScore(a); bVal = getDealScore(b)
+    } else {
+      aVal = (a[sortField] || '').toString().toLowerCase()
+      bVal = (b[sortField] || '').toString().toLowerCase()
+    }
+    if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
+    if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
+    return 0
+  })
 
   const dealsByStage = STAGES.reduce((acc, stage) => {
     acc[stage] = activeDeals.filter((d) => d.stage === stage)
@@ -261,6 +368,9 @@ export default function DealPipeline() {
   const totalValue = activeDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0)
   const declinedCount = deals?.filter((d) => d.stage === 'Declined').length || 0
   const priorityColor = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
+
+  // Get unique categories in current deals for the filter
+  const dealCategories = [...new Set(activeDealsRaw.map(d => guessCategory(d.brand_name, d.sub_industry)))].sort()
 
   return (
     <div className="space-y-6">
@@ -272,11 +382,22 @@ export default function DealPipeline() {
             {declinedCount > 0 && <span className="text-text-muted"> &middot; {declinedCount} declined</span>}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <div className="flex bg-bg-card rounded overflow-hidden border border-border">
             <button onClick={() => setViewMode('kanban')} className={`px-3 py-1.5 text-xs font-mono ${viewMode === 'kanban' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Board</button>
             <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 text-xs font-mono ${viewMode === 'table' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Table</button>
           </div>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="bg-bg-surface border border-border rounded px-3 py-1.5 text-xs text-text-secondary focus:outline-none focus:border-accent"
+          >
+            <option value="">All Categories</option>
+            {dealCategories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {filterCategory && (
+            <button onClick={() => setFilterCategory('')} className="text-xs text-text-muted hover:text-accent">Clear</button>
+          )}
           <button
             onClick={() => setShowBulkImport(true)}
             className="bg-bg-surface border border-border text-text-secondary px-4 py-2 rounded text-sm font-medium hover:text-text-primary hover:border-accent/50 transition-colors"
@@ -427,23 +548,42 @@ export default function DealPipeline() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">
-                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Brand</th>
-                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Contact</th>
-                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Email</th>
-                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Phone</th>
-                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Value</th>
-                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Stage</th>
-                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Priority</th>
-                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Source</th>
-                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Added</th>
+                {[
+                  { key: 'brand_name', label: 'Brand' },
+                  { key: 'category', label: 'Category' },
+                  { key: 'contact_name', label: 'Contact' },
+                  { key: 'contact_email', label: 'Email' },
+                  { key: 'value', label: 'Value' },
+                  { key: 'stage', label: 'Stage' },
+                  { key: 'priority', label: 'Priority' },
+                  { key: 'source', label: 'Source' },
+                  { key: 'date_added', label: 'Added' },
+                  { key: 'score', label: 'Score' },
+                ].map(col => (
+                  <th
+                    key={col.key}
+                    onClick={() => toggleSort(col.key)}
+                    className="px-4 py-3 text-xs text-text-muted font-mono uppercase cursor-pointer hover:text-accent select-none whitespace-nowrap"
+                  >
+                    {col.label}
+                    {sortField === col.key && (
+                      <span className="ml-1 text-accent">{sortDir === 'asc' ? '▲' : '▼'}</span>
+                    )}
+                  </th>
+                ))}
                 <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {activeDeals.map((deal) => (
+              {activeDeals.map((deal) => {
+                const category = guessCategory(deal.brand_name, deal.sub_industry)
+                return (
                 <tr key={deal.id} className="border-b border-border last:border-0 hover:bg-bg-card/50">
                   <td className="px-4 py-3 text-text-primary font-medium">
                     <EditableCell value={deal.brand_name} dealId={deal.id} field="brand_name" onSave={(v) => inlineUpdateMutation.mutate(v)} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <EditableCell value={deal.sub_industry || category} dealId={deal.id} field="sub_industry" onSave={(v) => inlineUpdateMutation.mutate(v)} options={INDUSTRY_CATEGORIES} className="text-[11px] font-mono text-text-muted" />
                   </td>
                   <td className="px-4 py-3 text-text-secondary">
                     <EditableCell value={deal.contact_name} dealId={deal.id} field="contact_first_name" onSave={(v) => inlineUpdateMutation.mutate(v)} />
@@ -453,9 +593,6 @@ export default function DealPipeline() {
                   </td>
                   <td className="px-4 py-3 text-text-secondary text-xs">
                     <EditableCell value={deal.contact_email} dealId={deal.id} field="contact_email" onSave={(v) => inlineUpdateMutation.mutate(v)} />
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary text-xs font-mono">
-                    <EditableCell value={deal.contact_phone} dealId={deal.id} field="contact_phone" onSave={(v) => inlineUpdateMutation.mutate(v)} />
                   </td>
                   <td className="px-4 py-3 font-mono">
                     <EditableCell value={deal.value} dealId={deal.id} field="value" type="number" onSave={(v) => inlineUpdateMutation.mutate(v)} className="text-accent" format={(v) => v ? `$${Number(v).toLocaleString()}` : '—'} />
@@ -473,6 +610,12 @@ export default function DealPipeline() {
                     <EditableCell value={deal.date_added} dealId={deal.id} field="date_added" type="date" onSave={(v) => inlineUpdateMutation.mutate(v)} />
                   </td>
                   <td className="px-4 py-3">
+                    <div className="w-full bg-bg-surface rounded-full h-1.5" title={`Score: ${getDealScore(deal)}/100`}>
+                      <div className="bg-accent rounded-full h-1.5 transition-all" style={{ width: `${getDealScore(deal)}%` }} />
+                    </div>
+                    <div className="text-[10px] text-text-muted font-mono text-center mt-0.5">{getDealScore(deal)}</div>
+                  </td>
+                  <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button onClick={() => { setEditingDeal(deal); setShowForm(true) }} className="text-xs text-text-muted hover:text-accent">Edit</button>
                       <button onClick={() => { const reason = prompt('Reason for declining?'); if (reason !== null) declineMutation.mutate({ id: deal.id, lost_reason: reason }) }} className="text-xs text-text-muted hover:text-warning">Decline</button>
@@ -480,9 +623,10 @@ export default function DealPipeline() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
               {activeDeals.length === 0 && (
-                <tr><td colSpan={10} className="px-4 py-8 text-center text-text-muted">No active deals yet.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-8 text-center text-text-muted">No active deals yet.</td></tr>
               )}
             </tbody>
           </table>
@@ -1379,7 +1523,8 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
       let dealCount = 0
 
       for (const group of grouped) {
-        // Build deal row
+        // Build deal row — auto-assign category if not provided
+        const autoCategory = group.companyData.sub_industry || guessCategory(group.company, '')
         const dealRow = {
           property_id: propertyId,
           brand_name: group.company,
@@ -1416,7 +1561,7 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
         if (group.companyData.founded) companyExtras.founded = group.companyData.founded
         if (group.companyData.revenue_thousands) companyExtras.revenue_thousands = Number(String(group.companyData.revenue_thousands).replace(/[$,\s]/g, '')) || null
         if (group.companyData.employees) companyExtras.employees = Number(String(group.companyData.employees).replace(/[,\s]/g, '')) || null
-        if (group.companyData.sub_industry) companyExtras.sub_industry = group.companyData.sub_industry
+        companyExtras.sub_industry = autoCategory
         if (group.companyData.outreach_status) companyExtras.outreach_status = group.companyData.outreach_status
 
         // Insert deal

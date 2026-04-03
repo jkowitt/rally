@@ -459,6 +459,8 @@ export default function DealPipeline() {
         <DealForm
           deal={editingDeal}
           dealContacts={editingDeal ? (contactsByDeal[editingDeal.id] || []) : []}
+          propertyId={propertyId}
+          profileId={profile?.id}
           onSave={(data) => saveMutation.mutate(data)}
           onCancel={() => { setShowForm(false); setEditingDeal(null) }}
           saving={saveMutation.isPending}
@@ -480,7 +482,8 @@ export default function DealPipeline() {
   )
 }
 
-function DealForm({ deal, dealContacts, onSave, onCancel, saving }) {
+function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel, saving }) {
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('contacts')
   const [enriching, setEnriching] = useState(null) // index of contact being enriched
   const [enrichResult, setEnrichResult] = useState(null)
@@ -554,10 +557,55 @@ function DealForm({ deal, dealContacts, onSave, onCancel, saving }) {
     setContacts(prev => prev.map((c, i) => ({ ...c, is_primary: i === index })))
   }
 
+  // Activity log for this deal
+  const ACTIVITY_TYPES = ['Call', 'Email', 'Meeting', 'Note', 'Follow Up', 'Contract Sent', 'Stage Change']
+  const ACTIVITY_ICONS = { Call: '📞', Email: '✉️', Meeting: '🤝', Note: '📝', 'Follow Up': '🔔', 'Contract Sent': '📄', 'Stage Change': '📊' }
+
+  const [activityForm, setActivityForm] = useState({ activity_type: 'Note', subject: '', description: '' })
+  const [showActivityForm, setShowActivityForm] = useState(false)
+  const [savingActivity, setSavingActivity] = useState(false)
+
+  const { data: dealActivities } = useQuery({
+    queryKey: ['deal-activities', deal?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('activities')
+        .select('*')
+        .eq('deal_id', deal.id)
+        .order('occurred_at', { ascending: false })
+      if (error) return []
+      return data
+    },
+    enabled: !!deal?.id,
+  })
+
+  async function logActivity() {
+    if (!activityForm.subject.trim() || !deal?.id) return
+    setSavingActivity(true)
+    try {
+      await supabase.from('activities').insert({
+        property_id: propertyId,
+        created_by: profileId,
+        deal_id: deal.id,
+        activity_type: activityForm.activity_type,
+        subject: activityForm.subject.trim(),
+        description: activityForm.description.trim() || null,
+        occurred_at: new Date().toISOString(),
+      })
+      queryClient.invalidateQueries({ queryKey: ['deal-activities', deal.id] })
+      queryClient.invalidateQueries({ queryKey: ['activities', propertyId] })
+      setActivityForm({ activity_type: 'Note', subject: '', description: '' })
+      setShowActivityForm(false)
+    } catch { /* activities table may not exist */ }
+    setSavingActivity(false)
+  }
+
+  const activityCount = dealActivities?.length || 0
+
   const tabs = [
     { id: 'contacts', label: `Contacts (${contacts.length})` },
     { id: 'deal', label: 'Deal Details' },
-    { id: 'activity', label: 'Activity' },
+    { id: 'activity', label: `Activity${activityCount ? ` (${activityCount})` : ''}` },
   ]
 
   function handleSave() {
@@ -934,6 +982,7 @@ function DealForm({ deal, dealContacts, onSave, onCancel, saving }) {
           {/* Activity Tab */}
           {activeTab === 'activity' && (
             <>
+              {/* Date tracking */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-text-muted">Last Contacted</label>
@@ -954,13 +1003,102 @@ function DealForm({ deal, dealContacts, onSave, onCancel, saving }) {
                   />
                 </div>
               </div>
+
+              {/* Notes */}
               <textarea
-                placeholder="Notes"
+                placeholder="Deal notes..."
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                rows={4}
+                rows={2}
                 className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent resize-none"
               />
+
+              {/* Activity Log */}
+              <div className="pt-3 border-t border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-text-muted font-mono uppercase tracking-wider">Activity Log</span>
+                  {deal?.id && (
+                    <button
+                      type="button"
+                      onClick={() => setShowActivityForm(!showActivityForm)}
+                      className="text-xs text-accent hover:text-accent/80 font-medium"
+                    >
+                      {showActivityForm ? 'Cancel' : '+ Log Activity'}
+                    </button>
+                  )}
+                </div>
+
+                {!deal?.id && (
+                  <div className="text-xs text-text-muted bg-bg-card rounded p-3 text-center">
+                    Save the deal first to start logging activities
+                  </div>
+                )}
+
+                {/* Inline add activity form */}
+                {showActivityForm && deal?.id && (
+                  <div className="bg-bg-card border border-accent/20 rounded-lg p-3 space-y-2 mb-3">
+                    <div className="flex gap-2">
+                      <select
+                        value={activityForm.activity_type}
+                        onChange={(e) => setActivityForm(prev => ({ ...prev, activity_type: e.target.value }))}
+                        className="bg-bg-surface border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+                      >
+                        {ACTIVITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <input
+                        placeholder="Subject (e.g. 'Intro call with VP Marketing')"
+                        value={activityForm.subject}
+                        onChange={(e) => setActivityForm(prev => ({ ...prev, subject: e.target.value }))}
+                        className="flex-1 bg-bg-surface border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                        autoFocus
+                      />
+                    </div>
+                    <textarea
+                      placeholder="Details (optional)"
+                      value={activityForm.description}
+                      onChange={(e) => setActivityForm(prev => ({ ...prev, description: e.target.value }))}
+                      rows={2}
+                      className="w-full bg-bg-surface border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent resize-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={logActivity}
+                      disabled={savingActivity || !activityForm.subject.trim()}
+                      className="w-full bg-accent text-bg-primary py-1.5 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50"
+                    >
+                      {savingActivity ? 'Saving...' : 'Log Activity'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Activity timeline */}
+                {deal?.id && (
+                  <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                    {dealActivities?.length === 0 && (
+                      <div className="text-xs text-text-muted text-center py-4">No activity logged yet</div>
+                    )}
+                    {dealActivities?.map((a) => (
+                      <div key={a.id} className="flex items-start gap-2 py-1.5 border-b border-border/50 last:border-0">
+                        <span className="text-sm shrink-0">{ACTIVITY_ICONS[a.activity_type] || '📋'}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-text-primary font-medium truncate">{a.subject}</span>
+                            <span className="text-[10px] text-text-muted font-mono shrink-0">
+                              {new Date(a.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                          {a.description && (
+                            <div className="text-[11px] text-text-muted truncate">{a.description}</div>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-mono text-text-muted bg-bg-surface px-1.5 py-0.5 rounded shrink-0">
+                          {a.activity_type}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>

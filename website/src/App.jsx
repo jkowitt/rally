@@ -13,6 +13,8 @@ import ContractManager from './modules/crm/ContractManager'
 import FulfillmentTracker from './modules/crm/FulfillmentTracker'
 import BrandReport from './modules/crm/BrandReport'
 import DeclinedDeals from './modules/crm/DeclinedDeals'
+import ActivityTimeline from './modules/crm/ActivityTimeline'
+import TaskManager from './modules/crm/TaskManager'
 import EventManager from './modules/sportify/EventManager'
 import EventDetail from './modules/sportify/EventDetail'
 import ValuationEngine from './modules/valora/ValuationEngine'
@@ -44,6 +46,8 @@ export default function App() {
                       <Route path="/crm/fulfillment" element={<FulfillmentTracker />} />
                       <Route path="/crm/report/:dealId" element={<BrandReport />} />
                       <Route path="/crm/declined" element={<DeclinedDeals />} />
+                      <Route path="/crm/activities" element={<ActivityTimeline />} />
+                      <Route path="/crm/tasks" element={<TaskManager />} />
                       {/* Sportify */}
                       <Route path="/sportify/events" element={<EventManager />} />
                       <Route path="/sportify/events/:eventId" element={<EventDetail />} />

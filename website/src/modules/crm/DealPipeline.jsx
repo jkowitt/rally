@@ -8,6 +8,35 @@ const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fu
 const ALL_STAGES = [...STAGES, 'Declined']
 const SOURCES = ['Referral', 'Cold Outreach', 'Inbound', 'Event', 'Renewal', 'Other']
 const PRIORITIES = ['High', 'Medium', 'Low']
+const STAGE_PROBABILITY = { 'Prospect': 10, 'Proposal Sent': 25, 'Negotiation': 50, 'Contracted': 90, 'In Fulfillment': 95, 'Renewed': 100, 'Declined': 0 }
+
+function getDealScore(deal) {
+  let score = 0
+  if (deal.value) score += 15
+  if (deal.contact_email) score += 10
+  if (deal.contact_phone) score += 5
+  if (deal.contact_first_name) score += 5
+  if (deal.contact_position) score += 5
+  if (deal.source) score += 5
+  if (deal.notes) score += 5
+  score += (STAGE_PROBABILITY[deal.stage] || 0) / 2
+  if (deal.win_probability > 0) score += 10
+  if (deal.expected_close_date) score += 10
+  return Math.min(100, score)
+}
+
+function getDealAge(deal) {
+  if (!deal.date_added && !deal.created_at) return 0
+  const added = new Date(deal.date_added || deal.created_at)
+  return Math.floor((Date.now() - added.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function isStale(deal) {
+  if (['Contracted', 'In Fulfillment', 'Renewed', 'Declined'].includes(deal.stage)) return false
+  const lastActivity = deal.last_contacted ? new Date(deal.last_contacted) : new Date(deal.date_added || deal.created_at)
+  const daysSince = Math.floor((Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24))
+  return daysSince > 14
+}
 
 export default function DealPipeline() {
   const { profile } = useAuth()
@@ -50,7 +79,15 @@ export default function DealPipeline() {
         payload.end_date = `${payload.end_date}-12-31`
       }
       // Clean empty optional fields
-      const optionalFields = ['start_date', 'end_date', 'value', 'contact_phone', 'contact_position', 'contact_company', 'contact_email', 'last_contacted', 'next_follow_up', 'source']
+      // Convert tags string to array
+      if (typeof payload.tags === 'string') {
+        payload.tags = payload.tags ? payload.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+      }
+      // Convert win_probability to int
+      if (payload.win_probability) payload.win_probability = parseInt(payload.win_probability) || 0
+      else delete payload.win_probability
+
+      const optionalFields = ['start_date', 'end_date', 'value', 'contact_phone', 'contact_position', 'contact_company', 'contact_email', 'last_contacted', 'next_follow_up', 'source', 'expected_close_date']
       optionalFields.forEach((f) => { if (!payload[f]) delete payload[f] })
       // Build contact_name from first/last
       if (payload.contact_first_name || payload.contact_last_name) {
@@ -132,6 +169,42 @@ export default function DealPipeline() {
         </div>
       </div>
 
+      {/* Pipeline Health Metrics */}
+      {activeDeals.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="bg-bg-surface border border-border rounded-lg p-3">
+            <div className="text-xs text-text-muted font-mono">Weighted Pipeline</div>
+            <div className="text-lg font-semibold text-accent font-mono">
+              ${(activeDeals.reduce((s, d) => s + (Number(d.value) || 0) * ((d.win_probability || STAGE_PROBABILITY[d.stage] || 0) / 100), 0) / 1000).toFixed(0)}K
+            </div>
+          </div>
+          <div className="bg-bg-surface border border-border rounded-lg p-3">
+            <div className="text-xs text-text-muted font-mono">Avg Deal Size</div>
+            <div className="text-lg font-semibold text-text-primary font-mono">
+              ${(totalValue / (activeDeals.length || 1) / 1000).toFixed(0)}K
+            </div>
+          </div>
+          <div className="bg-bg-surface border border-border rounded-lg p-3">
+            <div className="text-xs text-text-muted font-mono">Win Rate</div>
+            <div className="text-lg font-semibold text-success font-mono">
+              {deals ? Math.round((deals.filter(d => ['Contracted','In Fulfillment','Renewed'].includes(d.stage)).length / (deals.length || 1)) * 100) : 0}%
+            </div>
+          </div>
+          <div className="bg-bg-surface border border-border rounded-lg p-3">
+            <div className="text-xs text-text-muted font-mono">Avg Deal Age</div>
+            <div className="text-lg font-semibold text-text-primary font-mono">
+              {Math.round(activeDeals.reduce((s, d) => s + getDealAge(d), 0) / (activeDeals.length || 1))}d
+            </div>
+          </div>
+          <div className="bg-bg-surface border border-border rounded-lg p-3">
+            <div className="text-xs text-text-muted font-mono">Stale Deals</div>
+            <div className={`text-lg font-semibold font-mono ${activeDeals.filter(isStale).length > 0 ? 'text-warning' : 'text-success'}`}>
+              {activeDeals.filter(isStale).length}
+            </div>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="skeleton h-16" />)}</div>
       ) : viewMode === 'kanban' ? (
@@ -166,10 +239,16 @@ export default function DealPipeline() {
                                 snapshot.isDragging ? 'shadow-lg border-accent/50' : ''
                               }`}
                             >
-                              <div className="text-sm text-text-primary font-medium truncate">{deal.brand_name}</div>
-                              {deal.value && (
-                                <div className="text-xs text-accent font-mono mt-1">${Number(deal.value).toLocaleString()}</div>
-                              )}
+                              <div className="flex items-center justify-between">
+                                <div className="text-sm text-text-primary font-medium truncate">{deal.brand_name}</div>
+                                {isStale(deal) && <span className="text-[10px] font-mono text-warning bg-warning/10 px-1 rounded" title="No activity in 14+ days">STALE</span>}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                {deal.value && (
+                                  <span className="text-xs text-accent font-mono">${Number(deal.value).toLocaleString()}</span>
+                                )}
+                                <span className="text-[10px] font-mono text-text-muted" title="Win probability">{deal.win_probability || STAGE_PROBABILITY[deal.stage] || 0}%</span>
+                              </div>
                               <div className="flex items-center gap-2 mt-1">
                                 {deal.contact_name && (
                                   <span className="text-xs text-text-muted truncate">{deal.contact_name}</span>
@@ -177,6 +256,10 @@ export default function DealPipeline() {
                                 {deal.priority && (
                                   <span className={`text-[10px] font-mono ${priorityColor[deal.priority]}`}>{deal.priority}</span>
                                 )}
+                              </div>
+                              {/* Score bar */}
+                              <div className="mt-1.5 w-full bg-bg-surface rounded-full h-1" title={`Deal score: ${getDealScore(deal)}/100`}>
+                                <div className="bg-accent rounded-full h-1 transition-all" style={{ width: `${getDealScore(deal)}%` }} />
                               </div>
                               <div className="flex gap-1 mt-1">
                                 {deal.renewal_flag && (
@@ -289,6 +372,9 @@ function DealForm({ deal, onSave, onCancel, saving }) {
     source: deal?.source || '',
     priority: deal?.priority || 'Medium',
     renewal_flag: deal?.renewal_flag || false,
+    win_probability: deal?.win_probability || '',
+    expected_close_date: deal?.expected_close_date || '',
+    tags: deal?.tags?.join(', ') || '',
     date_added: deal?.date_added || new Date().toISOString().split('T')[0],
     last_contacted: deal?.last_contacted || '',
     next_follow_up: deal?.next_follow_up || '',
@@ -462,6 +548,37 @@ function DealForm({ deal, onSave, onCancel, saving }) {
                     ))}
                   </select>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-text-muted">Win Probability %</label>
+                  <input
+                    type="number"
+                    min="0" max="100"
+                    placeholder="0-100"
+                    value={form.win_probability}
+                    onChange={(e) => setForm({ ...form, win_probability: e.target.value })}
+                    className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted">Expected Close</label>
+                  <input
+                    type="date"
+                    value={form.expected_close_date}
+                    onChange={(e) => setForm({ ...form, expected_close_date: e.target.value })}
+                    className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-text-muted">Tags (comma-separated)</label>
+                <input
+                  placeholder="e.g. VIP, Renewal, Q4 Target"
+                  value={form.tags}
+                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                  className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                />
               </div>
               <label className="flex items-center gap-2 text-sm text-text-secondary">
                 <input

@@ -17,6 +17,8 @@ const navSections = [
       { to: '/app/crm/pipeline', label: 'Pipeline', icon: '▤' },
       { to: '/app/crm/contracts', label: 'Contracts', icon: '▥' },
       { to: '/app/crm/fulfillment', label: 'Fulfillment', icon: '▦' },
+      { to: '/app/crm/activities', label: 'Activities', icon: '◎' },
+      { to: '/app/crm/tasks', label: 'Tasks', icon: '☐' },
     ],
   },
   {

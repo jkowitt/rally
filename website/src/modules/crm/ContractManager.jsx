@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
 
 GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.6.205/build/pdf.worker.min.mjs'
@@ -29,9 +29,10 @@ export default function ContractManager() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const propertyId = profile?.property_id
-  const [view, setView] = useState('list') // list | editor | import
+  const [view, setView] = useState('list')
   const [selectedContract, setSelectedContract] = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [showPdfViewer, setShowPdfViewer] = useState(null)
 
   const { data: contracts, isLoading } = useQuery({
     queryKey: ['contracts', propertyId],
@@ -65,6 +66,21 @@ export default function ContractManager() {
     enabled: !!propertyId,
   })
 
+  // Fetch templates
+  const { data: templates } = useQuery({
+    queryKey: ['contract-templates', propertyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('contracts')
+        .select('id, template_name, brand_name, contract_text, pdf_file_data, pdf_file_name, contract_benefits(*)')
+        .eq('property_id', propertyId)
+        .eq('is_template', true)
+        .order('created_at', { ascending: false })
+      return data || []
+    },
+    enabled: !!propertyId,
+  })
+
   const saveMutation = useMutation({
     mutationFn: async (contract) => {
       const payload = { ...contract }
@@ -81,6 +97,7 @@ export default function ContractManager() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
+      queryClient.invalidateQueries({ queryKey: ['contract-templates', propertyId] })
       toast({ title: 'Contract saved', type: 'success' })
       setShowForm(false)
       if (data) setSelectedContract(data)
@@ -95,41 +112,44 @@ export default function ContractManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
+      queryClient.invalidateQueries({ queryKey: ['contract-templates', propertyId] })
       toast({ title: 'Contract deleted', type: 'success' })
       setSelectedContract(null)
     },
     onError: (err) => toast({ title: 'Error deleting contract', description: err.message, type: 'error' }),
   })
 
-  function exportPDF(contract) {
-    const doc = new jsPDF()
-    doc.setFontSize(20)
-    doc.text('Contract Summary', 20, 20)
-    doc.setFontSize(12)
-    doc.text(`Contract #: ${contract.contract_number || 'N/A'}`, 20, 35)
-    doc.text(`Brand: ${contract.brand_name || contract.deals?.brand_name || 'N/A'}`, 20, 45)
-    doc.text(`Total Value: $${Number(contract.total_value || 0).toLocaleString()}`, 20, 55)
-    doc.text(`Effective: ${contract.effective_date || 'N/A'}`, 20, 65)
-    doc.text(`Expires: ${contract.expiration_date || 'N/A'}`, 20, 75)
-    doc.text(`Status: ${contract.status || 'Draft'}`, 20, 85)
-
-    if (contract.contract_text) {
-      doc.setFontSize(10)
-      const lines = doc.splitTextToSize(contract.contract_text, 170)
-      doc.text(lines, 20, 100)
+  function handleViewPdf(contract) {
+    if (contract.pdf_file_data) {
+      setShowPdfViewer(contract)
+    } else {
+      // Fallback: generate summary PDF
+      const doc = new jsPDF()
+      doc.setFontSize(20)
+      doc.text('Contract Summary', 20, 20)
+      doc.setFontSize(12)
+      doc.text(`Contract #: ${contract.contract_number || 'N/A'}`, 20, 35)
+      doc.text(`Brand: ${contract.brand_name || contract.deals?.brand_name || 'N/A'}`, 20, 45)
+      doc.text(`Total Value: $${Number(contract.total_value || 0).toLocaleString()}`, 20, 55)
+      doc.text(`Effective: ${contract.effective_date || 'N/A'}`, 20, 65)
+      doc.text(`Expires: ${contract.expiration_date || 'N/A'}`, 20, 75)
+      doc.text(`Status: ${contract.status || 'Draft'}`, 20, 85)
+      if (contract.contract_text) {
+        doc.setFontSize(10)
+        const lines = doc.splitTextToSize(contract.contract_text, 170)
+        doc.text(lines, 20, 100)
+      }
+      if (contract.contract_benefits?.length > 0) {
+        const y = contract.contract_text ? 100 + Math.min(doc.splitTextToSize(contract.contract_text, 170).length * 5, 100) : 100
+        doc.setFontSize(14)
+        doc.text('Benefits', 20, y)
+        doc.setFontSize(10)
+        contract.contract_benefits.forEach((b, i) => {
+          doc.text(`${i + 1}. ${b.benefit_description || 'Benefit'} - Qty: ${b.quantity || 0} - $${Number(b.value || 0).toLocaleString()}`, 25, y + 10 + i * 8)
+        })
+      }
+      doc.save(`contract-${contract.contract_number || contract.id?.slice(0, 8) || 'draft'}.pdf`)
     }
-
-    if (contract.contract_benefits?.length > 0) {
-      const y = contract.contract_text ? 100 + Math.min(doc.splitTextToSize(contract.contract_text, 170).length * 5, 100) : 100
-      doc.setFontSize(14)
-      doc.text('Benefits', 20, y)
-      doc.setFontSize(10)
-      contract.contract_benefits.forEach((b, i) => {
-        doc.text(`${i + 1}. ${b.benefit_description || 'Benefit'} - Qty: ${b.quantity || 0} - $${Number(b.value || 0).toLocaleString()}`, 25, y + 10 + i * 8)
-      })
-    }
-
-    doc.save(`contract-${contract.contract_number || contract.id?.slice(0, 8) || 'draft'}.pdf`)
   }
 
   return (
@@ -137,7 +157,7 @@ export default function ContractManager() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Contract Manager</h1>
-          <p className="text-text-secondary text-sm mt-1">{contracts?.length || 0} contracts &middot; AI-powered editing</p>
+          <p className="text-text-secondary text-sm mt-1">{contracts?.length || 0} contracts &middot; {templates?.length || 0} templates</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -154,7 +174,7 @@ export default function ContractManager() {
         {[
           { key: 'list', label: 'Contracts' },
           { key: 'editor', label: 'AI Editor' },
-          { key: 'import', label: 'PDF Import' },
+          { key: 'upload', label: 'Upload Template' },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -171,19 +191,9 @@ export default function ContractManager() {
           contracts={contracts}
           isLoading={isLoading}
           onEdit={(c) => { setSelectedContract(c); setShowForm(true) }}
-          onExport={exportPDF}
+          onViewPdf={handleViewPdf}
           onDelete={(id) => { if (confirm('Delete this contract and all its benefits?')) deleteMutation.mutate(id) }}
           onOpenEditor={(c) => { setSelectedContract(c); setView('editor') }}
-          onExtractBenefits={async (c) => {
-            if (!c.contract_text) return alert('No contract text to extract from. Use the AI Editor first.')
-            try {
-              await extractBenefits({ contract_id: c.id, contract_text: c.contract_text, property_id: propertyId })
-              queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
-              alert('Benefits extracted successfully!')
-            } catch (e) {
-              alert('Error extracting benefits: ' + e.message)
-            }
-          }}
           onGenerateFulfillment={async (c) => {
             try {
               const result = await generateFulfillment({
@@ -206,7 +216,9 @@ export default function ContractManager() {
           contract={selectedContract}
           deals={deals || []}
           assets={assets || []}
+          templates={templates || []}
           propertyId={propertyId}
+          profileId={profile?.id}
           onSave={async (data) => {
             saveMutation.mutate(data)
           }}
@@ -214,13 +226,14 @@ export default function ContractManager() {
         />
       )}
 
-      {view === 'import' && (
-        <PDFImport
+      {view === 'upload' && (
+        <UploadTemplate
           deals={deals || []}
           propertyId={propertyId}
           profileId={profile?.id}
           onImported={() => {
             queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
+            queryClient.invalidateQueries({ queryKey: ['contract-templates', propertyId] })
             queryClient.invalidateQueries({ queryKey: ['deals-list', propertyId] })
             setView('list')
           }}
@@ -236,12 +249,78 @@ export default function ContractManager() {
           saving={saveMutation.isPending}
         />
       )}
+
+      {showPdfViewer && (
+        <PDFViewerModal
+          contract={showPdfViewer}
+          onClose={() => setShowPdfViewer(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ============ PDF Viewer Modal ============ */
+function PDFViewerModal({ contract, onClose }) {
+  const dataUrl = `data:${contract.pdf_content_type || 'application/pdf'};base64,${contract.pdf_file_data}`
+
+  function handleDownload() {
+    const byteCharacters = atob(contract.pdf_file_data)
+    const byteNumbers = new Array(byteCharacters.length)
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i)
+    }
+    const byteArray = new Uint8Array(byteNumbers)
+    const blob = new Blob([byteArray], { type: contract.pdf_content_type || 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = contract.pdf_file_name || `contract-${contract.contract_number || 'download'}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex flex-col z-50">
+      <div className="flex items-center justify-between px-6 py-3 bg-bg-surface border-b border-border">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-medium text-text-primary">
+            {contract.pdf_file_name || contract.brand_name || 'Contract PDF'}
+          </h3>
+          <span className={`text-xs font-mono px-2 py-0.5 rounded ${STATUS_COLORS[contract.status] || STATUS_COLORS.Draft}`}>
+            {contract.status || 'Draft'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownload}
+            className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium hover:opacity-90"
+          >
+            Download
+          </button>
+          <button
+            onClick={onClose}
+            className="text-text-muted hover:text-text-primary text-lg px-2"
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 bg-bg-card">
+        <iframe
+          src={dataUrl}
+          className="w-full h-full border-0"
+          title="Contract PDF"
+        />
+      </div>
     </div>
   )
 }
 
 /* ============ Contract List ============ */
-function ContractList({ contracts, isLoading, onEdit, onExport, onDelete, onOpenEditor, onExtractBenefits, onGenerateFulfillment }) {
+function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpenEditor, onGenerateFulfillment }) {
   if (isLoading) {
     return <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="skeleton h-20" />)}</div>
   }
@@ -262,10 +341,16 @@ function ContractList({ contracts, isLoading, onEdit, onExport, onDelete, onOpen
                 <span className={`text-xs font-mono px-2 py-0.5 rounded ${STATUS_COLORS[contract.status] || STATUS_COLORS.Draft}`}>
                   {contract.status || 'Draft'}
                 </span>
+                {contract.is_template && (
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-accent/10 text-accent">Template</span>
+                )}
+                {contract.pdf_file_data && (
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-success/10 text-success">PDF Stored</span>
+                )}
               </div>
               <div className="flex gap-4 mt-1 text-xs text-text-secondary font-mono flex-wrap">
                 <span>${Number(contract.total_value || 0).toLocaleString()}</span>
-                <span>{contract.effective_date || '—'} &rarr; {contract.expiration_date || '—'}</span>
+                <span>{contract.effective_date || '\u2014'} &rarr; {contract.expiration_date || '\u2014'}</span>
               </div>
               {contract.ai_summary && (
                 <p className="text-xs text-text-muted mt-2 line-clamp-2">{contract.ai_summary}</p>
@@ -279,9 +364,8 @@ function ContractList({ contracts, isLoading, onEdit, onExport, onDelete, onOpen
             </div>
             <div className="flex flex-col gap-1.5 shrink-0">
               <button onClick={() => onOpenEditor(contract)} className="text-xs text-text-muted hover:text-accent px-2 py-1 bg-bg-card rounded">AI Edit</button>
-              <button onClick={() => onExport(contract)} className="text-xs text-text-muted hover:text-accent px-2 py-1 bg-bg-card rounded">PDF</button>
+              <button onClick={() => onViewPdf(contract)} className="text-xs text-text-muted hover:text-accent px-2 py-1 bg-bg-card rounded">PDF</button>
               <button onClick={() => onEdit(contract)} className="text-xs text-text-muted hover:text-accent px-2 py-1 bg-bg-card rounded">Edit</button>
-              <button onClick={() => onExtractBenefits(contract)} className="text-xs text-text-muted hover:text-accent px-2 py-1 bg-bg-card rounded">Extract</button>
               <button onClick={() => onGenerateFulfillment(contract)} className="text-xs text-text-muted hover:text-accent px-2 py-1 bg-bg-card rounded">Fulfill</button>
               <button onClick={() => onDelete(contract.id)} className="text-xs text-text-muted hover:text-danger px-2 py-1 bg-bg-card rounded">Delete</button>
             </div>
@@ -290,7 +374,7 @@ function ContractList({ contracts, isLoading, onEdit, onExport, onDelete, onOpen
       ))}
       {contracts?.length === 0 && (
         <div className="text-center text-text-muted text-sm py-12">
-          No contracts yet. Create one manually or use the AI Editor.
+          No contracts yet. Create one manually, use the AI Editor, or upload a template.
         </div>
       )}
     </div>
@@ -298,7 +382,7 @@ function ContractList({ contracts, isLoading, onEdit, onExport, onDelete, onOpen
 }
 
 /* ============ AI Contract Editor ============ */
-function AIContractEditor({ contract, deals, assets, propertyId, onSave, saving }) {
+function AIContractEditor({ contract, deals, assets, templates, propertyId, profileId, onSave, saving }) {
   const [selectedDeal, setSelectedDeal] = useState(contract?.deal_id || '')
   const [selectedAssets, setSelectedAssets] = useState([])
   const [terms, setTerms] = useState('')
@@ -307,6 +391,80 @@ function AIContractEditor({ contract, deals, assets, propertyId, onSave, saving 
   const [aiLoading, setAiLoading] = useState(false)
   const [aiStatus, setAiStatus] = useState('')
   const [summary, setSummary] = useState(contract?.ai_summary || '')
+  const [selectedTemplate, setSelectedTemplate] = useState('')
+  const [loadedFromTemplate, setLoadedFromTemplate] = useState(false)
+
+  // Company detail fields (editable when loaded from template/PDF)
+  const [companyDetails, setCompanyDetails] = useState({
+    company_name: contract?.company_name || '',
+    company_address: contract?.company_address || '',
+    company_signee: contract?.company_signee || '',
+    company_email: contract?.company_email || '',
+    notice_address: contract?.notice_address || '',
+    notice_email: contract?.notice_email || '',
+  })
+
+  // Benefits editor
+  const [benefits, setBenefits] = useState(
+    contract?.contract_benefits?.map(b => ({
+      benefit_description: b.benefit_description || '',
+      quantity: b.quantity || 1,
+      frequency: b.frequency || 'Per Season',
+      value: b.value || '',
+    })) || []
+  )
+
+  // Load template
+  async function handleLoadTemplate(templateId) {
+    if (!templateId) return
+    const template = templates.find(t => t.id === templateId)
+    if (!template) return
+
+    setSelectedTemplate(templateId)
+    setLoadedFromTemplate(true)
+
+    // If template has PDF, extract text from it
+    if (template.pdf_file_data) {
+      setAiLoading(true)
+      setAiStatus('Extracting text from template PDF...')
+      try {
+        const byteCharacters = atob(template.pdf_file_data)
+        const byteNumbers = new Array(byteCharacters.length)
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i)
+        }
+        const uint8Array = new Uint8Array(byteNumbers)
+        const pdf = await getDocument({ data: uint8Array, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+        let fullText = ''
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          const pageText = content.items.map((item) => item.str).join(' ')
+          fullText += pageText + '\n\n'
+        }
+        setContractText(fullText.trim() || template.contract_text || '')
+        setAiStatus('Template loaded! Edit the company details and benefits below, then generate your updated contract.')
+      } catch (err) {
+        setContractText(template.contract_text || '')
+        setAiStatus('Template loaded (could not extract PDF text: ' + err.message + ')')
+      } finally {
+        setAiLoading(false)
+      }
+    } else {
+      setContractText(template.contract_text || '')
+      setAiStatus('Template loaded! Edit the company details and benefits below.')
+    }
+
+    // Load template benefits
+    if (template.contract_benefits?.length > 0) {
+      setBenefits(template.contract_benefits.map(b => ({
+        benefit_description: b.benefit_description || '',
+        quantity: b.quantity || 1,
+        frequency: b.frequency || 'Per Season',
+        value: b.value || '',
+      })))
+    }
+  }
 
   async function handleGenerate() {
     if (!selectedDeal) return alert('Select a deal first')
@@ -321,6 +479,37 @@ function AIContractEditor({ contract, deals, assets, propertyId, onSave, saving 
       })
       setContractText(result.contract_text)
       setAiStatus('Contract generated!')
+    } catch (e) {
+      setAiStatus('Error: ' + e.message)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  async function handleApplyCompanyEdits() {
+    if (!contractText) return alert('No contract text to edit')
+    setAiLoading(true)
+    setAiStatus('Claude is applying your company detail changes...')
+    try {
+      const instructions = []
+      if (companyDetails.company_name) instructions.push(`Change the company/brand name to "${companyDetails.company_name}"`)
+      if (companyDetails.company_address) instructions.push(`Change the company address to "${companyDetails.company_address}"`)
+      if (companyDetails.company_signee) instructions.push(`Change the signee/authorized representative name to "${companyDetails.company_signee}"`)
+      if (companyDetails.company_email) instructions.push(`Change the company email to "${companyDetails.company_email}"`)
+      if (companyDetails.notice_address) instructions.push(`Change the notice address to "${companyDetails.notice_address}"`)
+      if (companyDetails.notice_email) instructions.push(`Change the notice email to "${companyDetails.notice_email}"`)
+      if (benefits.length > 0) {
+        const benefitList = benefits.map((b, i) => `${i + 1}. ${b.benefit_description} (qty: ${b.quantity}, frequency: ${b.frequency}, value: $${b.value || 0})`).join('\n')
+        instructions.push(`Replace the benefits/deliverables section with these benefits:\n${benefitList}`)
+      }
+      if (instructions.length === 0) return alert('Enter at least one field to change')
+
+      const result = await editContractText({
+        contract_text: contractText,
+        instructions: instructions.join('\n\nAlso: '),
+      })
+      setContractText(result.contract_text)
+      setAiStatus('Contract updated with your changes!')
     } catch (e) {
       setAiStatus('Error: ' + e.message)
     } finally {
@@ -362,46 +551,96 @@ function AIContractEditor({ contract, deals, assets, propertyId, onSave, saving 
 
   function handleSave() {
     const deal = deals.find((d) => d.id === selectedDeal)
+    const template = templates?.find(t => t.id === selectedTemplate)
     onSave({
       ...(contract?.id ? { id: contract.id } : {}),
       deal_id: selectedDeal || undefined,
-      brand_name: deal?.brand_name || contract?.brand_name || '',
+      brand_name: companyDetails.company_name || deal?.brand_name || contract?.brand_name || '',
       contract_text: contractText,
       ai_summary: summary || undefined,
       effective_date: deal?.start_date || contract?.effective_date,
       expiration_date: deal?.end_date || contract?.expiration_date,
       total_value: deal?.value || contract?.total_value,
       status: contract?.status || 'Draft',
+      company_name: companyDetails.company_name || undefined,
+      company_address: companyDetails.company_address || undefined,
+      company_signee: companyDetails.company_signee || undefined,
+      company_email: companyDetails.company_email || undefined,
+      notice_address: companyDetails.notice_address || undefined,
+      notice_email: companyDetails.notice_email || undefined,
+      // Preserve template PDF if loaded from one
+      ...(template?.pdf_file_data && !contract?.pdf_file_data ? {
+        pdf_file_data: template.pdf_file_data,
+        pdf_file_name: template.pdf_file_name,
+        pdf_content_type: template.pdf_content_type || 'application/pdf',
+      } : {}),
     })
+  }
+
+  function addBenefit() {
+    setBenefits(prev => [...prev, { benefit_description: '', quantity: 1, frequency: 'Per Season', value: '' }])
+  }
+
+  function removeBenefit(index) {
+    setBenefits(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function updateBenefit(index, field, value) {
+    setBenefits(prev => prev.map((b, i) => i === index ? { ...b, [field]: value } : b))
   }
 
   return (
     <div className="space-y-4">
-      {/* Generation Controls */}
+      {/* Template + Deal Selection */}
       <div className="bg-bg-surface border border-border rounded-lg p-4 space-y-3">
-        <h3 className="text-sm font-medium text-text-primary">Generate Contract with AI</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <select
-            value={selectedDeal}
-            onChange={(e) => setSelectedDeal(e.target.value)}
-            className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
-          >
-            <option value="">Select Deal</option>
-            {deals.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.brand_name} (${Number(d.value || 0).toLocaleString()})
-              </option>
-            ))}
-          </select>
-          <input
-            placeholder="Additional terms (optional)"
-            value={terms}
-            onChange={(e) => setTerms(e.target.value)}
-            className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
-          />
+        <h3 className="text-sm font-medium text-text-primary">Generate or Load Contract</h3>
+
+        {/* Load from template */}
+        {templates?.length > 0 && (
+          <div>
+            <label className="text-xs text-text-muted block mb-1">Load from Template</label>
+            <div className="flex gap-2">
+              <select
+                value={selectedTemplate}
+                onChange={(e) => handleLoadTemplate(e.target.value)}
+                className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+              >
+                <option value="">Select a template...</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.template_name || t.brand_name || 'Untitled Template'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-border pt-3">
+          <label className="text-xs text-text-muted block mb-1">Or generate from deal</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <select
+              value={selectedDeal}
+              onChange={(e) => setSelectedDeal(e.target.value)}
+              className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+            >
+              <option value="">Select Deal</option>
+              {deals.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.brand_name} (${Number(d.value || 0).toLocaleString()})
+                </option>
+              ))}
+            </select>
+            <input
+              placeholder="Additional terms (optional)"
+              value={terms}
+              onChange={(e) => setTerms(e.target.value)}
+              className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+            />
+          </div>
         </div>
 
-        {/* Asset selection */}
+        {/* Asset selection for generation */}
         <div>
           <label className="text-xs text-text-muted block mb-1">Include Assets (optional)</label>
           <div className="flex gap-2 flex-wrap">
@@ -427,6 +666,128 @@ function AIContractEditor({ contract, deals, assets, propertyId, onSave, saving 
           {aiLoading ? 'Generating...' : 'Generate Contract'}
         </button>
       </div>
+
+      {/* Company Details Editor (shown when template loaded or contract has text) */}
+      {(loadedFromTemplate || contract?.pdf_file_data || contractText) && (
+        <div className="bg-bg-surface border border-accent/30 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-accent">Company Details & Benefits</h3>
+            <span className="text-xs text-text-muted">Edit these fields and click "Apply Changes" to update the contract</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-text-muted">Company Name</label>
+              <input
+                value={companyDetails.company_name}
+                onChange={(e) => setCompanyDetails(prev => ({ ...prev, company_name: e.target.value }))}
+                placeholder="Company name in contract"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Signee Name</label>
+              <input
+                value={companyDetails.company_signee}
+                onChange={(e) => setCompanyDetails(prev => ({ ...prev, company_signee: e.target.value }))}
+                placeholder="Authorized signee"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Company Address</label>
+              <input
+                value={companyDetails.company_address}
+                onChange={(e) => setCompanyDetails(prev => ({ ...prev, company_address: e.target.value }))}
+                placeholder="Company street address"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Company Email</label>
+              <input
+                value={companyDetails.company_email}
+                onChange={(e) => setCompanyDetails(prev => ({ ...prev, company_email: e.target.value }))}
+                placeholder="company@email.com"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Notice Address</label>
+              <input
+                value={companyDetails.notice_address}
+                onChange={(e) => setCompanyDetails(prev => ({ ...prev, notice_address: e.target.value }))}
+                placeholder="Address for legal notices"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Notice Email</label>
+              <input
+                value={companyDetails.notice_email}
+                onChange={(e) => setCompanyDetails(prev => ({ ...prev, notice_email: e.target.value }))}
+                placeholder="Email for legal notices"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+
+          {/* Benefits Editor */}
+          <div className="border-t border-border pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs text-text-muted font-mono uppercase">Benefits / Deliverables</label>
+              <button onClick={addBenefit} className="text-xs text-accent hover:text-accent/80">+ Add Benefit</button>
+            </div>
+            <div className="space-y-2">
+              {benefits.map((b, i) => (
+                <div key={i} className="flex gap-2 items-start bg-bg-card border border-border rounded p-2">
+                  <div className="flex-1 grid grid-cols-4 gap-2">
+                    <input
+                      placeholder="Description"
+                      value={b.benefit_description}
+                      onChange={(e) => updateBenefit(i, 'benefit_description', e.target.value)}
+                      className="col-span-2 bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Qty"
+                      value={b.quantity}
+                      onChange={(e) => updateBenefit(i, 'quantity', parseInt(e.target.value) || 1)}
+                      className="bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Value $"
+                      value={b.value}
+                      onChange={(e) => updateBenefit(i, 'value', e.target.value)}
+                      className="bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <select
+                    value={b.frequency}
+                    onChange={(e) => updateBenefit(i, 'frequency', e.target.value)}
+                    className="bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent"
+                  >
+                    {['Per Game', 'Per Month', 'Per Season', 'One Time'].map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                  <button onClick={() => removeBenefit(i)} className="text-text-muted hover:text-danger text-sm px-1">&times;</button>
+                </div>
+              ))}
+              {benefits.length === 0 && (
+                <div className="text-xs text-text-muted text-center py-3 bg-bg-card rounded">No benefits added yet</div>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={handleApplyCompanyEdits}
+            disabled={aiLoading}
+            className="w-full bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
+          >
+            {aiLoading ? 'Applying Changes...' : 'Apply Changes to Contract'}
+          </button>
+        </div>
+      )}
 
       {/* Contract Text Editor */}
       <div className="bg-bg-surface border border-border rounded-lg p-4 space-y-3">
@@ -491,18 +852,32 @@ function AIContractEditor({ contract, deals, assets, propertyId, onSave, saving 
   )
 }
 
-/* ============ PDF Import ============ */
-function PDFImport({ deals, propertyId, profileId, onImported }) {
+/* ============ Upload Template (replaces PDF Import) ============ */
+function UploadTemplate({ deals, propertyId, profileId, onImported }) {
   const [pdfText, setPdfText] = useState('')
+  const [pdfBase64, setPdfBase64] = useState(null)
+  const [pdfFileName, setPdfFileName] = useState('')
   const [parsed, setParsed] = useState(null)
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState('')
   const [selectedDeal, setSelectedDeal] = useState('')
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
   const fileRef = useRef(null)
 
   async function handleFileUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
+
+    setPdfFileName(file.name)
+
+    // Read as base64 for storage
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1] // Remove data:...;base64, prefix
+      setPdfBase64(base64)
+    }
+    reader.readAsDataURL(file)
 
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       const text = await file.text()
@@ -527,9 +902,9 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
         }
         if (fullText.trim().length > 20) {
           setPdfText(fullText.trim())
-          setStatus('PDF text extracted (' + pdf.numPages + ' pages). Click "Parse with AI" to extract contract data.')
+          setStatus(`PDF uploaded (${pdf.numPages} pages). The original PDF will be stored exactly as uploaded. Click "Parse with AI" to extract data.`)
         } else {
-          setStatus('PDF appears to be scanned/image-based. Try copy-pasting the contract text instead.')
+          setStatus('PDF appears to be scanned/image-based. The PDF will still be stored as-is. Try copy-pasting the contract text for AI parsing.')
         }
       } catch (err) {
         setStatus('Error reading PDF: ' + (err.message || 'Unknown error'))
@@ -539,17 +914,17 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
       return
     }
 
-    setStatus('Unsupported file type. Use .pdf or .txt files, or paste text directly.')
+    setStatus('Unsupported file type. Use .pdf or .txt files.')
   }
 
   async function handleParse() {
-    if (!pdfText.trim()) return alert('Paste or upload contract text first')
+    if (!pdfText.trim()) return alert('Upload a file or paste contract text first')
     setLoading(true)
     setStatus('Claude AI is reading the contract...')
     try {
       const result = await parsePdfText(pdfText)
       setParsed(result.parsed)
-      setStatus('Contract parsed successfully! Review the extracted data below.')
+      setStatus('Contract parsed! Benefits auto-extracted. Review the data below and import.')
     } catch (e) {
       setStatus('Error parsing: ' + e.message)
     } finally {
@@ -558,13 +933,13 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
   }
 
   async function handleImport() {
-    if (!parsed) return
+    if (!parsed && !pdfBase64) return
     setLoading(true)
     setStatus('Importing into CRM...')
     try {
       // Create or link to deal
       let dealId = selectedDeal
-      if (!dealId && parsed.brand_name) {
+      if (!dealId && parsed?.brand_name) {
         const { data: newDeal, error: dealErr } = await supabase.from('deals').insert({
           property_id: propertyId,
           brand_name: parsed.brand_name,
@@ -586,26 +961,35 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
         dealId = newDeal.id
       }
 
-      // Create contract
+      // Create contract with stored PDF
       const { data: contract, error: contractErr } = await supabase.from('contracts').insert({
         property_id: propertyId,
-        deal_id: dealId,
-        brand_name: parsed.brand_name,
-        contract_number: parsed.contract_number || null,
-        effective_date: parsed.effective_date || null,
-        expiration_date: parsed.expiration_date || null,
-        total_value: parsed.total_value || null,
-        contract_text: pdfText,
-        ai_summary: parsed.summary || null,
-        ai_extracted_benefits: parsed.benefits || null,
+        deal_id: dealId || undefined,
+        brand_name: parsed?.brand_name || templateName || pdfFileName,
+        contract_number: parsed?.contract_number || null,
+        effective_date: parsed?.effective_date || null,
+        expiration_date: parsed?.expiration_date || null,
+        total_value: parsed?.total_value || null,
+        contract_text: pdfText || null,
+        ai_summary: parsed?.summary || null,
+        ai_extracted_benefits: parsed?.benefits || null,
         status: 'In Review',
         signed: false,
         created_by: profileId,
+        // Store the original PDF exactly as uploaded
+        pdf_file_data: pdfBase64 || null,
+        pdf_file_name: pdfFileName || null,
+        pdf_content_type: 'application/pdf',
+        // Template fields
+        is_template: saveAsTemplate,
+        template_name: saveAsTemplate ? (templateName || pdfFileName) : null,
+        // Company details
+        company_name: parsed?.brand_name || null,
       }).select().single()
       if (contractErr) throw contractErr
 
-      // Insert benefits if extracted
-      if (parsed.benefits?.length > 0) {
+      // Auto-insert benefits if extracted (no separate Extract step needed)
+      if (parsed?.benefits?.length > 0) {
         const benefitRows = parsed.benefits.map((b) => ({
           contract_id: contract.id,
           benefit_description: b.description,
@@ -617,7 +1001,10 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
         await supabase.from('contract_benefits').insert(benefitRows)
       }
 
-      setStatus('Imported! Contract, deal, and benefits created.')
+      setStatus(saveAsTemplate
+        ? 'Template saved! You can now use it in the AI Editor to create new contracts.'
+        : 'Imported! Contract, deal, and benefits created automatically.'
+      )
       setTimeout(() => onImported(), 1500)
     } catch (e) {
       setStatus('Error importing: ' + e.message)
@@ -629,27 +1016,70 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
   return (
     <div className="space-y-4">
       <div className="bg-bg-surface border border-border rounded-lg p-4 space-y-3">
-        <h3 className="text-sm font-medium text-text-primary">Import Contract from PDF / Text</h3>
-        <p className="text-xs text-text-muted">Upload a contract file or paste the text. Claude AI will extract deal info, benefits, and contact details.</p>
+        <h3 className="text-sm font-medium text-text-primary">Upload Contract PDF</h3>
+        <p className="text-xs text-text-muted">
+          Upload a contract PDF to store it exactly as-is. Claude AI will extract deal info and benefits automatically.
+          Optionally save as a template for creating future contracts.
+        </p>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <button
             onClick={() => fileRef.current?.click()}
             className="bg-bg-card border border-border text-text-secondary px-4 py-2 rounded text-sm hover:text-text-primary hover:border-accent"
           >
-            Upload File
+            Choose PDF File
           </button>
-          <input ref={fileRef} type="file" accept=".pdf,.txt,.doc,.docx" onChange={handleFileUpload} className="hidden" />
-          <span className="text-xs text-text-muted self-center">or paste text below</span>
+          <input ref={fileRef} type="file" accept=".pdf,.txt" onChange={handleFileUpload} className="hidden" />
+          {pdfFileName && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-accent font-mono">{pdfFileName}</span>
+              {pdfBase64 && <span className="text-xs text-success font-mono">PDF stored</span>}
+            </div>
+          )}
         </div>
 
-        <textarea
-          value={pdfText}
-          onChange={(e) => setPdfText(e.target.value)}
-          rows={10}
-          placeholder="Paste contract text here..."
-          className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent resize-y font-mono"
-        />
+        {/* PDF Preview if uploaded */}
+        {pdfBase64 && (
+          <div className="border border-border rounded-lg overflow-hidden" style={{ height: '300px' }}>
+            <iframe
+              src={`data:application/pdf;base64,${pdfBase64}`}
+              className="w-full h-full border-0"
+              title="Uploaded PDF Preview"
+            />
+          </div>
+        )}
+
+        {/* Text area for paste or extracted text */}
+        {(!pdfBase64 || pdfText) && (
+          <textarea
+            value={pdfText}
+            onChange={(e) => setPdfText(e.target.value)}
+            rows={pdfBase64 ? 4 : 10}
+            placeholder="Or paste contract text here..."
+            className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent resize-y font-mono"
+          />
+        )}
+
+        {/* Template option */}
+        <div className="flex items-center gap-4 bg-bg-card border border-border rounded-lg p-3">
+          <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+            <input
+              type="checkbox"
+              checked={saveAsTemplate}
+              onChange={(e) => setSaveAsTemplate(e.target.checked)}
+              className="accent-accent"
+            />
+            Save as Template
+          </label>
+          {saveAsTemplate && (
+            <input
+              placeholder="Template name"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              className="flex-1 bg-bg-surface border border-border rounded px-3 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+            />
+          )}
+        </div>
 
         <div className="flex gap-2">
           <button
@@ -659,6 +1089,15 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
           >
             {loading ? 'Parsing...' : 'Parse with AI'}
           </button>
+          {pdfBase64 && (
+            <button
+              onClick={handleImport}
+              disabled={loading}
+              className="bg-bg-card border border-accent text-accent px-4 py-2 rounded text-sm font-medium hover:bg-accent/10 disabled:opacity-50"
+            >
+              {saveAsTemplate ? 'Save Template (Skip AI Parse)' : 'Import Without AI Parse'}
+            </button>
+          )}
         </div>
 
         {status && (
@@ -674,19 +1113,19 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
             <div>
               <span className="text-xs text-text-muted block">Brand</span>
-              <span className="text-text-primary">{parsed.brand_name || '—'}</span>
+              <span className="text-text-primary">{parsed.brand_name || '\u2014'}</span>
             </div>
             <div>
               <span className="text-xs text-text-muted block">Contact</span>
-              <span className="text-text-primary">{parsed.contact_name || '—'}</span>
+              <span className="text-text-primary">{parsed.contact_name || '\u2014'}</span>
             </div>
             <div>
               <span className="text-xs text-text-muted block">Company</span>
-              <span className="text-text-primary">{parsed.contact_company || '—'}</span>
+              <span className="text-text-primary">{parsed.contact_company || '\u2014'}</span>
             </div>
             <div>
               <span className="text-xs text-text-muted block">Contract #</span>
-              <span className="text-text-primary font-mono">{parsed.contract_number || '—'}</span>
+              <span className="text-text-primary font-mono">{parsed.contract_number || '\u2014'}</span>
             </div>
             <div>
               <span className="text-xs text-text-muted block">Total Value</span>
@@ -707,7 +1146,7 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
 
           {parsed.benefits?.length > 0 && (
             <div>
-              <span className="text-xs text-text-muted block mb-2">Extracted Benefits ({parsed.benefits.length})</span>
+              <span className="text-xs text-text-muted block mb-2">Auto-Extracted Benefits ({parsed.benefits.length})</span>
               <div className="space-y-1">
                 {parsed.benefits.map((b, i) => (
                   <div key={i} className="flex items-center gap-3 text-xs bg-bg-card rounded px-3 py-2">
@@ -740,7 +1179,7 @@ function PDFImport({ deals, propertyId, profileId, onImported }) {
             disabled={loading}
             className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50 w-full"
           >
-            {loading ? 'Importing...' : 'Import into CRM'}
+            {loading ? 'Importing...' : saveAsTemplate ? 'Save as Template & Import' : 'Import into CRM'}
           </button>
         </div>
       )}
@@ -760,12 +1199,18 @@ function ContractForm({ contract, deals, onSave, onCancel, saving }) {
     signed: contract?.signed || false,
     signed_date: contract?.signed_date || '',
     status: contract?.status || 'Draft',
+    company_name: contract?.company_name || '',
+    company_address: contract?.company_address || '',
+    company_signee: contract?.company_signee || '',
+    company_email: contract?.company_email || '',
+    notice_address: contract?.notice_address || '',
+    notice_email: contract?.notice_email || '',
     ...(contract?.id ? { id: contract.id } : {}),
   })
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-bg-surface border border-border rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-bg-surface border border-border rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold text-text-primary mb-4">{contract ? 'Edit Contract' : 'New Contract'}</h2>
         <div className="space-y-3">
           <select
@@ -790,6 +1235,24 @@ function ContractForm({ contract, deals, onSave, onCancel, saving }) {
           >
             {['Draft', 'In Review', 'Final', 'Signed', 'Expired'].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
+
+          {/* Company Details Section */}
+          <div className="border-t border-border pt-3">
+            <div className="text-xs text-text-muted font-mono uppercase tracking-wider mb-2">Company Details</div>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <input placeholder="Company Name" value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+                <input placeholder="Signee Name" value={form.company_signee} onChange={(e) => setForm({ ...form, company_signee: e.target.value })} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+              </div>
+              <input placeholder="Company Address" value={form.company_address} onChange={(e) => setForm({ ...form, company_address: e.target.value })} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+              <input placeholder="Company Email" value={form.company_email} onChange={(e) => setForm({ ...form, company_email: e.target.value })} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+              <div className="grid grid-cols-2 gap-2">
+                <input placeholder="Notice Address" value={form.notice_address} onChange={(e) => setForm({ ...form, notice_address: e.target.value })} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+                <input placeholder="Notice Email" value={form.notice_email} onChange={(e) => setForm({ ...form, notice_email: e.target.value })} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+              </div>
+            </div>
+          </div>
+
           <label className="flex items-center gap-2 text-sm text-text-secondary">
             <input type="checkbox" checked={form.signed} onChange={(e) => setForm({ ...form, signed: e.target.checked })} className="accent-accent" />
             Signed

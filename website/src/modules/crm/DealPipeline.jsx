@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -166,7 +166,7 @@ export default function DealPipeline() {
   })
 
   const saveMutation = useMutation({
-    mutationFn: async ({ contacts: formContacts, ...deal }) => {
+    mutationFn: async ({ contacts: formContacts, proposedAssets: formProposedAssets, ...deal }) => {
       const payload = { ...deal }
       // Convert year values to dates
       if (payload.start_date && !String(payload.start_date).includes('-')) {
@@ -254,10 +254,30 @@ export default function DealPipeline() {
           // contacts table may not exist yet — silently skip
         }
       }
+
+      // Save proposed assets
+      if (formProposedAssets?.length > 0 && dealId) {
+        try {
+          await supabase.from('deal_assets').delete().eq('deal_id', dealId)
+          const assetRows = formProposedAssets.map(pa => ({
+            deal_id: dealId,
+            asset_id: pa.asset_id,
+            quantity: pa.quantity || 1,
+            custom_price: pa.custom_price || null,
+            is_proposed: true,
+            proposed_at: new Date().toISOString(),
+            notes: pa.notes || null,
+          }))
+          await supabase.from('deal_assets').insert(assetRows)
+        } catch {
+          // deal_assets columns may not exist yet
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
       queryClient.invalidateQueries({ queryKey: ['contacts', propertyId] })
+      queryClient.invalidateQueries({ queryKey: ['deal-assets'] })
       toast({ title: 'Deal saved', type: 'success' })
       setShowForm(false)
       setEditingDeal(null)
@@ -723,9 +743,84 @@ function EditableCell({ value, dealId, field, onSave, className, format, type = 
 
 function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel, saving }) {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('contacts')
   const [enriching, setEnriching] = useState(null) // index of contact being enriched
   const [enrichResult, setEnrichResult] = useState(null)
+
+  // Fetch available assets for proposal
+  const { data: availableAssets } = useQuery({
+    queryKey: ['assets', propertyId],
+    queryFn: async () => {
+      const { data } = await supabase.from('assets').select('id, name, category, base_price, quantity').eq('property_id', propertyId).eq('active', true)
+      return data || []
+    },
+    enabled: !!propertyId,
+  })
+
+  // Fetch existing proposed assets for this deal
+  const { data: existingDealAssets } = useQuery({
+    queryKey: ['deal-assets', deal?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('deal_assets').select('*').eq('deal_id', deal.id)
+      return data || []
+    },
+    enabled: !!deal?.id,
+  })
+
+  const [proposedAssets, setProposedAssets] = useState([])
+
+  // Initialize proposed assets from existing deal_assets
+  useEffect(() => {
+    if (existingDealAssets?.length > 0) {
+      setProposedAssets(existingDealAssets.map(da => ({
+        asset_id: da.asset_id,
+        quantity: da.quantity || 1,
+        custom_price: da.custom_price || '',
+        notes: da.notes || '',
+        is_proposed: da.is_proposed ?? true,
+      })))
+    }
+  }, [existingDealAssets])
+
+  function toggleProposedAsset(assetId) {
+    setProposedAssets(prev => {
+      const exists = prev.find(pa => pa.asset_id === assetId)
+      if (exists) return prev.filter(pa => pa.asset_id !== assetId)
+      return [...prev, { asset_id: assetId, quantity: 1, custom_price: '', notes: '', is_proposed: true }]
+    })
+  }
+
+  function updateProposedAsset(assetId, field, value) {
+    setProposedAssets(prev => prev.map(pa =>
+      pa.asset_id === assetId ? { ...pa, [field]: value } : pa
+    ))
+  }
+
+  async function saveProposedAssets() {
+    if (!deal?.id) return
+    try {
+      // Delete existing deal_assets for this deal
+      await supabase.from('deal_assets').delete().eq('deal_id', deal.id)
+      // Insert new ones
+      if (proposedAssets.length > 0) {
+        const rows = proposedAssets.map(pa => ({
+          deal_id: deal.id,
+          asset_id: pa.asset_id,
+          quantity: pa.quantity || 1,
+          custom_price: pa.custom_price || null,
+          notes: pa.notes || null,
+          is_proposed: true,
+          proposed_at: new Date().toISOString(),
+        }))
+        await supabase.from('deal_assets').insert(rows)
+      }
+      queryClient.invalidateQueries({ queryKey: ['deal-assets', deal.id] })
+      toast({ title: `${proposedAssets.length} proposed assets saved`, type: 'success' })
+    } catch {
+      // deal_assets table columns may not exist yet
+    }
+  }
 
   const EMPTY_CONTACT = { first_name: '', last_name: '', email: '', phone: '', position: '', company: '', city: '', state: '', linkedin: '', website: '', is_primary: false }
 
@@ -841,14 +936,16 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
 
   const activityCount = dealActivities?.length || 0
 
+  const proposedCount = proposedAssets.length
   const tabs = [
     { id: 'contacts', label: `Contacts (${contacts.length})` },
     { id: 'deal', label: 'Deal Details' },
+    { id: 'assets', label: `Proposed Assets${proposedCount ? ` (${proposedCount})` : ''}` },
     { id: 'activity', label: `Activity${activityCount ? ` (${activityCount})` : ''}` },
   ]
 
   function handleSave() {
-    onSave({ ...form, contacts })
+    onSave({ ...form, contacts, proposedAssets })
   }
 
   return (
@@ -1215,6 +1312,112 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                   <option value="Not Interested">Not Interested</option>
                 </select>
               </div>
+            </>
+          )}
+
+          {/* Proposed Assets Tab */}
+          {activeTab === 'assets' && (
+            <>
+              <div className="text-xs text-text-muted mb-3">
+                Select assets to include in this proposal. These will be tracked as proposed assets in the Asset Catalog.
+              </div>
+
+              {/* Asset Selection Grid */}
+              {availableAssets?.length > 0 ? (
+                <div className="space-y-2">
+                  {availableAssets.map(asset => {
+                    const isSelected = proposedAssets.some(pa => pa.asset_id === asset.id)
+                    const proposed = proposedAssets.find(pa => pa.asset_id === asset.id)
+                    return (
+                      <div key={asset.id} className={`border rounded-lg p-3 transition-colors ${isSelected ? 'border-accent bg-accent/5' : 'border-border bg-bg-card hover:border-accent/30'}`}>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => toggleProposedAsset(asset.id)}
+                            className={`w-5 h-5 rounded border flex items-center justify-center text-xs shrink-0 ${isSelected ? 'bg-accent border-accent text-bg-primary' : 'border-border text-transparent hover:border-accent/50'}`}
+                          >
+                            {isSelected ? '✓' : ''}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-text-primary font-medium">{asset.name}</div>
+                            <div className="flex gap-3 text-xs font-mono text-text-muted">
+                              <span>{asset.category}</span>
+                              {asset.base_price && <span>${Number(asset.base_price).toLocaleString()}</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Editable details when selected */}
+                        {isSelected && proposed && (
+                          <div className="grid grid-cols-3 gap-2 mt-3 pl-8">
+                            <div>
+                              <label className="text-[10px] text-text-muted">Qty</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={proposed.quantity}
+                                onChange={(e) => updateProposedAsset(asset.id, 'quantity', parseInt(e.target.value) || 1)}
+                                className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-text-muted">Custom Price</label>
+                              <input
+                                type="number"
+                                placeholder={asset.base_price ? `$${Number(asset.base_price).toLocaleString()}` : '$'}
+                                value={proposed.custom_price}
+                                onChange={(e) => updateProposedAsset(asset.id, 'custom_price', e.target.value)}
+                                className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-text-muted">Notes</label>
+                              <input
+                                placeholder="Optional"
+                                value={proposed.notes}
+                                onChange={(e) => updateProposedAsset(asset.id, 'notes', e.target.value)}
+                                className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center text-text-muted text-xs py-8 bg-bg-card rounded-lg">
+                  No assets available. Add assets in the Asset Catalog first.
+                </div>
+              )}
+
+              {/* Proposal Summary */}
+              {proposedAssets.length > 0 && (
+                <div className="bg-bg-card border border-border rounded-lg p-3 mt-3">
+                  <div className="text-xs text-text-muted font-mono uppercase tracking-wider mb-2">Proposal Summary</div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-secondary">{proposedAssets.length} asset{proposedAssets.length !== 1 ? 's' : ''} selected</span>
+                    <span className="text-accent font-mono font-medium">
+                      ${proposedAssets.reduce((sum, pa) => {
+                        const asset = availableAssets?.find(a => a.id === pa.asset_id)
+                        const price = pa.custom_price || asset?.base_price || 0
+                        return sum + (Number(price) * (pa.quantity || 1))
+                      }, 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Save proposed assets button */}
+              {deal?.id && (
+                <button
+                  type="button"
+                  onClick={saveProposedAssets}
+                  className="w-full bg-accent/10 text-accent border border-accent/30 rounded px-3 py-2 text-xs font-medium hover:bg-accent/20 transition-colors mt-2"
+                >
+                  Save Proposed Assets
+                </button>
+              )}
             </>
           )}
 

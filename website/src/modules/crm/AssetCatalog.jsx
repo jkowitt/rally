@@ -43,6 +43,20 @@ export default function AssetCatalog() {
     enabled: !!propertyId,
   })
 
+  // Fetch proposed assets (from deal_assets where is_proposed = true)
+  const { data: proposedAssets } = useQuery({
+    queryKey: ['proposed-assets', propertyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deal_assets')
+        .select('*, deals!inner(brand_name, stage, property_id), assets!inner(name, category, base_price)')
+        .eq('deals.property_id', propertyId)
+      if (error) return []
+      return data
+    },
+    enabled: !!propertyId,
+  })
+
   // Fetch contract benefits to sync
   const { data: contractBenefits } = useQuery({
     queryKey: ['all-contract-benefits', propertyId],
@@ -191,6 +205,56 @@ export default function AssetCatalog() {
 
       {syncStatus && (
         <p className="text-xs font-mono text-accent">{syncStatus}</p>
+      )}
+
+      {/* Proposed Assets Section */}
+      {proposedAssets?.length > 0 && (
+        <div className="bg-bg-surface border border-accent/30 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-accent">Proposed Assets</span>
+              <span className="text-xs font-mono bg-accent/10 text-accent px-2 py-0.5 rounded">{proposedAssets.length}</span>
+            </div>
+            <span className="text-xs text-text-muted font-mono">Assets currently in proposals/pitches</span>
+          </div>
+          <div className="space-y-2">
+            {proposedAssets.map((pa) => (
+              <div key={pa.id} className="flex items-center justify-between bg-bg-card border border-border rounded-lg px-4 py-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-lg">{CATEGORY_ICONS[pa.assets?.category] || '📦'}</span>
+                  <div className="min-w-0">
+                    <div className="text-sm text-text-primary font-medium truncate">{pa.assets?.name || 'Asset'}</div>
+                    <div className="flex gap-2 text-xs text-text-muted font-mono">
+                      <span>{pa.assets?.category}</span>
+                      <span>x{pa.quantity || 1}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-sm font-mono text-accent">
+                    ${Number(pa.custom_price || pa.assets?.base_price || 0).toLocaleString()}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-text-muted">
+                    <span className="font-medium text-text-secondary">{pa.deals?.brand_name}</span>
+                    <span className={`font-mono px-1.5 py-0.5 rounded text-[10px] ${
+                      pa.deals?.stage === 'Contracted' ? 'bg-success/10 text-success' :
+                      pa.deals?.stage === 'Proposal Sent' ? 'bg-warning/10 text-warning' :
+                      'bg-bg-surface text-text-muted'
+                    }`}>
+                      {pa.deals?.stage}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between items-center mt-3 pt-3 border-t border-border">
+            <span className="text-xs text-text-muted">Total proposed value</span>
+            <span className="text-sm font-mono font-medium text-accent">
+              ${proposedAssets.reduce((sum, pa) => sum + (Number(pa.custom_price || pa.assets?.base_price || 0) * (pa.quantity || 1)), 0).toLocaleString()}
+            </span>
+          </div>
+        </div>
       )}
 
       {/* Category Summary Cards */}

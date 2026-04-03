@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -225,6 +225,24 @@ export default function DealPipeline() {
     onError: (err) => toast({ title: 'Error declining deal', description: err.message, type: 'error' }),
   })
 
+  // Inline field update (for double-click editing in table)
+  const inlineUpdateMutation = useMutation({
+    mutationFn: async ({ id, field, value }) => {
+      const update = { [field]: value === '' ? null : value }
+      // Build contact_name when updating first/last
+      if (field === 'contact_first_name' || field === 'contact_last_name') {
+        const deal = deals?.find(d => d.id === id)
+        const first = field === 'contact_first_name' ? value : (deal?.contact_first_name || '')
+        const last = field === 'contact_last_name' ? value : (deal?.contact_last_name || '')
+        update.contact_name = [first, last].filter(Boolean).join(' ')
+      }
+      const { error } = await supabase.from('deals').update(update).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deals', propertyId] }),
+    onError: (err) => toast({ title: 'Error updating field', description: err.message, type: 'error' }),
+  })
+
   function handleDragEnd(result) {
     if (!result.destination) return
     const dealId = result.draggableId
@@ -424,20 +442,36 @@ export default function DealPipeline() {
             <tbody>
               {activeDeals.map((deal) => (
                 <tr key={deal.id} className="border-b border-border last:border-0 hover:bg-bg-card/50">
-                  <td className="px-4 py-3 text-text-primary font-medium">{deal.brand_name}</td>
+                  <td className="px-4 py-3 text-text-primary font-medium">
+                    <EditableCell value={deal.brand_name} dealId={deal.id} field="brand_name" onSave={(v) => inlineUpdateMutation.mutate(v)} />
+                  </td>
                   <td className="px-4 py-3 text-text-secondary">
-                    {deal.contact_name || '—'}
+                    <EditableCell value={deal.contact_name} dealId={deal.id} field="contact_first_name" onSave={(v) => inlineUpdateMutation.mutate(v)} />
                     {(contactsByDeal[deal.id]?.length || 0) > 1 && (
                       <span className="ml-1 text-[10px] font-mono text-accent bg-accent/10 px-1 rounded">+{contactsByDeal[deal.id].length - 1}</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-text-secondary text-xs">{deal.contact_email || '—'}</td>
-                  <td className="px-4 py-3 text-text-secondary text-xs font-mono">{deal.contact_phone || '—'}</td>
-                  <td className="px-4 py-3 text-accent font-mono">{deal.value ? `$${Number(deal.value).toLocaleString()}` : '—'}</td>
-                  <td className="px-4 py-3"><span className="text-xs font-mono bg-bg-card px-2 py-0.5 rounded text-text-secondary">{deal.stage}</span></td>
-                  <td className="px-4 py-3"><span className={`text-xs font-mono ${priorityColor[deal.priority] || 'text-text-muted'}`}>{deal.priority || '—'}</span></td>
-                  <td className="px-4 py-3 text-text-muted text-xs">{deal.source || '—'}</td>
-                  <td className="px-4 py-3 text-text-muted text-xs font-mono">{deal.date_added || '—'}</td>
+                  <td className="px-4 py-3 text-text-secondary text-xs">
+                    <EditableCell value={deal.contact_email} dealId={deal.id} field="contact_email" onSave={(v) => inlineUpdateMutation.mutate(v)} />
+                  </td>
+                  <td className="px-4 py-3 text-text-secondary text-xs font-mono">
+                    <EditableCell value={deal.contact_phone} dealId={deal.id} field="contact_phone" onSave={(v) => inlineUpdateMutation.mutate(v)} />
+                  </td>
+                  <td className="px-4 py-3 font-mono">
+                    <EditableCell value={deal.value} dealId={deal.id} field="value" type="number" onSave={(v) => inlineUpdateMutation.mutate(v)} className="text-accent" format={(v) => v ? `$${Number(v).toLocaleString()}` : '—'} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <EditableCell value={deal.stage} dealId={deal.id} field="stage" onSave={(v) => inlineUpdateMutation.mutate(v)} options={ALL_STAGES} className="text-xs font-mono bg-bg-card px-2 py-0.5 rounded text-text-secondary" />
+                  </td>
+                  <td className="px-4 py-3">
+                    <EditableCell value={deal.priority} dealId={deal.id} field="priority" onSave={(v) => inlineUpdateMutation.mutate(v)} options={PRIORITIES} className={`text-xs font-mono ${priorityColor[deal.priority] || 'text-text-muted'}`} />
+                  </td>
+                  <td className="px-4 py-3 text-text-muted text-xs">
+                    <EditableCell value={deal.source} dealId={deal.id} field="source" onSave={(v) => inlineUpdateMutation.mutate(v)} options={SOURCES} />
+                  </td>
+                  <td className="px-4 py-3 text-text-muted text-xs font-mono">
+                    <EditableCell value={deal.date_added} dealId={deal.id} field="date_added" type="date" onSave={(v) => inlineUpdateMutation.mutate(v)} />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button onClick={() => { setEditingDeal(deal); setShowForm(true) }} className="text-xs text-text-muted hover:text-accent">Edit</button>
@@ -479,6 +513,67 @@ export default function DealPipeline() {
         />
       )}
     </div>
+  )
+}
+
+// Inline editable cell — double-click to edit, Enter/blur to save
+function EditableCell({ value, dealId, field, onSave, className, format, type = 'text', options }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value || '')
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [editing])
+
+  function save() {
+    setEditing(false)
+    const trimmed = String(draft).trim()
+    if (trimmed !== (value || '')) {
+      onSave({ id: dealId, field, value: type === 'number' ? (trimmed ? Number(trimmed.replace(/[$,]/g, '')) : '') : trimmed })
+    }
+  }
+
+  if (editing) {
+    if (options) {
+      return (
+        <select
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => { setDraft(e.target.value); }}
+          onBlur={save}
+          onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
+          className="bg-bg-card border border-accent rounded px-1 py-0.5 text-xs text-text-primary focus:outline-none w-full"
+        >
+          {options.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      )
+    }
+    return (
+      <input
+        ref={inputRef}
+        type={type === 'number' ? 'text' : type}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
+        className="bg-bg-card border border-accent rounded px-1 py-0.5 text-xs text-text-primary focus:outline-none w-full"
+      />
+    )
+  }
+
+  const display = format ? format(value) : (value || '—')
+  return (
+    <span
+      onDoubleClick={() => { setDraft(value || ''); setEditing(true) }}
+      className={`cursor-text hover:bg-accent/5 rounded px-0.5 -mx-0.5 ${className || ''}`}
+      title="Double-click to edit"
+    >
+      {display}
+    </span>
   )
 }
 

@@ -97,3 +97,16 @@ export async function enrichContact({ name, company, position }) {
 export async function generateMeetingNotes({ deal, attendees, agenda, raw_notes }) {
   return invokeEdgeFunction('contract-ai', { action: 'meeting_notes', deal, attendees, agenda, raw_notes })
 }
+
+// Prospect Search & Discovery
+export async function searchProspects({ query, category, property_id }) {
+  return invokeEdgeFunction('contract-ai', { action: 'search_prospects', query, category, property_id })
+}
+
+export async function suggestProspects({ property_id }) {
+  return invokeEdgeFunction('contract-ai', { action: 'suggest_prospects', property_id })
+}
+
+export async function researchContacts({ company_name, category, website }) {
+  return invokeEdgeFunction('contract-ai', { action: 'research_contacts', company_name, category, website })
+}

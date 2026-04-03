@@ -45,6 +45,12 @@ Deno.serve(async (req: Request) => {
       result = await enrichContact(body);
     } else if (action === "meeting_notes") {
       result = await meetingNotes(body);
+    } else if (action === "search_prospects") {
+      result = await searchProspects(supabaseClient, body);
+    } else if (action === "suggest_prospects") {
+      result = await suggestProspects(supabaseClient, body);
+    } else if (action === "research_contacts") {
+      result = await researchContacts(body);
     } else {
       throw new Error("Unknown action: " + action);
     }
@@ -265,4 +271,156 @@ async function meetingNotes(body: any) {
   const prompt = "You are a meeting notes assistant for sports sponsorship sales. Create structured meeting notes.\n\nDeal: " + (d.brand_name || "Unknown") + "\nAttendees: " + (body.attendees || "Not specified") + "\nAgenda: " + (body.agenda || "General discussion") + "\nRaw Notes: " + (body.raw_notes || "No notes provided") + "\n\nReturn JSON:\n{\"summary\": \"2-3 sentence summary\",\n\"key_decisions\": [\"decision1\"],\n\"action_items\": [{\"task\": \"string\", \"owner\": \"string\", \"due\": \"string\"}],\n\"follow_up_email_draft\": \"string\",\n\"next_meeting_agenda\": [\"item1\", \"item2\"],\n\"deal_stage_recommendation\": \"string or null\",\n\"sentiment\": \"Positive/Neutral/Negative\"}\n\nReturn ONLY valid JSON.";
   const text = await callClaude(prompt, 1024);
   return { notes: extractJSON(text) };
+}
+
+// ============ PROSPECT SEARCH & DISCOVERY ============
+
+async function searchProspects(supabase: any, body: any) {
+  const query = body.query || "";
+  const category = body.category || "";
+  const propertyId = body.property_id;
+
+  // Fetch existing deals to avoid duplicates
+  let existingBrands: string[] = [];
+  if (propertyId) {
+    const { data: deals } = await supabase
+      .from("deals")
+      .select("brand_name")
+      .eq("property_id", propertyId);
+    existingBrands = (deals || []).map((d: any) => (d.brand_name || "").toLowerCase());
+  }
+
+  const prompt = `You are a sports sponsorship sales intelligence expert. A sales rep is searching for potential sponsor prospects.
+
+Search Query: "${query}"
+${category ? `Category Filter: ${category}` : ""}
+
+Generate 10-15 real, well-known companies that match this search and would be strong candidates for sports sponsorship deals. Focus on companies that are known to invest in sports marketing, local community partnerships, or brand activations.
+
+${existingBrands.length > 0 ? `IMPORTANT: Exclude these companies that are already in their pipeline: ${existingBrands.slice(0, 50).join(", ")}` : ""}
+
+For each prospect, provide:
+- company_name: Official company name
+- category: One of [Automotive, Banking & Financial Services, Beverage & Alcohol, Consumer Packaged Goods, Education, Energy & Utilities, Entertainment & Media, Fashion & Apparel, Food & Quick Serve Restaurants, Gaming & Esports, Healthcare, Hospitality & Travel, Insurance, Real Estate & Construction, Retail, Sports & Fitness, Technology & Software, Telecommunications, Transportation & Logistics, Misc]
+- sub_industry: More specific industry
+- estimated_sponsorship_budget: Rough annual sports sponsorship budget range (e.g. "$50K-$200K")
+- sponsorship_track_record: Brief note on their sports sponsorship history
+- why_good_fit: 1 sentence on why they'd be a good sponsorship prospect
+- headquarters_city: City name
+- headquarters_state: State abbreviation
+- website: Company website URL
+- linkedin_url: Company LinkedIn page URL (use format https://linkedin.com/company/company-name)
+- estimated_revenue: Revenue range
+- estimated_employees: Employee count range
+
+Return JSON array. Return ONLY valid JSON.`;
+
+  const text = await callClaude(prompt, 4096);
+  return { prospects: extractJSON(text) };
+}
+
+async function suggestProspects(supabase: any, body: any) {
+  const propertyId = body.property_id;
+
+  // Fetch existing deals to analyze patterns
+  let dealContext = "No existing deals.";
+  if (propertyId) {
+    const { data: deals } = await supabase
+      .from("deals")
+      .select("brand_name, value, stage, sub_industry, source, contact_company")
+      .eq("property_id", propertyId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (deals && deals.length > 0) {
+      const wonDeals = deals.filter((d: any) => ["Contracted", "In Fulfillment", "Renewed"].includes(d.stage));
+      const industries = deals.map((d: any) => d.sub_industry).filter(Boolean);
+      const avgValue = deals.reduce((s: number, d: any) => s + (Number(d.value) || 0), 0) / (deals.length || 1);
+
+      dealContext = `Existing pipeline (${deals.length} deals):
+Won deals: ${wonDeals.map((d: any) => `${d.brand_name} ($${d.value || 0})`).join(", ") || "None yet"}
+Industries represented: ${[...new Set(industries)].join(", ") || "Various"}
+Average deal value: $${Math.round(avgValue).toLocaleString()}
+All brands: ${deals.map((d: any) => d.brand_name).join(", ")}`;
+    }
+  }
+
+  const prompt = `You are a sports sponsorship sales strategist. Analyze this sales team's existing pipeline and suggest NEW prospect companies they should target.
+
+${dealContext}
+
+Based on:
+1. Which industries and company types have been successful (won deals)
+2. Market trends in sports sponsorship (2024-2025)
+3. Companies actively increasing sports marketing spend
+4. Gaps in their current pipeline (underrepresented high-value categories)
+
+Suggest 12 specific, real companies they should pursue. Mix between:
+- "Similar to winners" — companies in the same industries as their won deals
+- "Trending" — companies currently ramping up sports sponsorship spend
+- "High potential" — companies in growing categories they haven't tapped yet
+
+For each:
+- company_name: Official name
+- category: Industry category
+- sub_industry: Specific industry
+- reason: Why suggested (1 of: "Similar to your winners", "Trending in sports sponsorship", "Untapped high-potential category")
+- rationale: 1-2 sentence explanation
+- estimated_sponsorship_budget: Budget range
+- headquarters_city: City
+- headquarters_state: State
+- website: URL
+- linkedin_url: Company LinkedIn URL (https://linkedin.com/company/slug)
+- priority: "High", "Medium", or "Low"
+- estimated_revenue: Revenue range
+- estimated_employees: Employee range
+
+Return JSON array. Return ONLY valid JSON.`;
+
+  const text = await callClaude(prompt, 4096);
+  return { suggestions: extractJSON(text) };
+}
+
+async function researchContacts(body: any) {
+  const companyName = body.company_name || "";
+  const category = body.category || "";
+  const website = body.website || "";
+
+  const prompt = `You are a B2B sales research assistant specializing in sports sponsorship. Research the top 3 decision-makers at this company who would be involved in sponsorship decisions.
+
+Company: ${companyName}
+Industry: ${category}
+${website ? `Website: ${website}` : ""}
+
+Find the 3 most relevant contacts for a sports sponsorship sales outreach. Prioritize:
+1. VP/Director of Marketing, Brand Marketing, or Sponsorships
+2. CMO or Head of Marketing
+3. VP of Partnerships, Community Relations, or Corporate Affairs
+
+For each contact provide:
+- first_name: First name
+- last_name: Last name
+- position: Their title/role
+- email_pattern: Most likely email format (e.g. "first.last@company.com" or "flast@company.com")
+- linkedin_url: Their LinkedIn profile URL (use format https://linkedin.com/in/firstname-lastname)
+- why_target: 1 sentence on why they're the right person to contact
+- outreach_tip: 1 sentence suggestion for how to approach them
+
+Also provide:
+- company_linkedin: Company LinkedIn URL
+- company_phone: Main company phone (general number)
+- company_address: Headquarters address
+
+Return JSON:
+{
+  "contacts": [{ first_name, last_name, position, email_pattern, linkedin_url, why_target, outreach_tip }],
+  "company_linkedin": "string",
+  "company_phone": "string",
+  "company_address": "string"
+}
+
+Return ONLY valid JSON.`;
+
+  const text = await callClaude(prompt, 2048);
+  return { research: extractJSON(text) };
 }

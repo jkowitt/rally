@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { enrichContact } from '@/lib/claude'
+import { enrichContact, searchProspects, suggestProspects, researchContacts } from '@/lib/claude'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
@@ -112,6 +112,7 @@ export default function DealPipeline() {
   const [editingDeal, setEditingDeal] = useState(null)
   const [viewMode, setViewMode] = useState('kanban')
   const [showBulkImport, setShowBulkImport] = useState(false)
+  const [showProspectFinder, setShowProspectFinder] = useState(false)
   const [sortField, setSortField] = useState(null) // null | field name
   const [sortDir, setSortDir] = useState('asc') // 'asc' | 'desc'
   const [filterCategory, setFilterCategory] = useState('')
@@ -419,6 +420,12 @@ export default function DealPipeline() {
             <button onClick={() => setFilterCategory('')} className="text-xs text-text-muted hover:text-accent">Clear</button>
           )}
           <button
+            onClick={() => setShowProspectFinder(true)}
+            className="bg-accent/10 border border-accent/30 text-accent px-4 py-2 rounded text-sm font-medium hover:bg-accent/20 transition-colors"
+          >
+            Find Prospects
+          </button>
+          <button
             onClick={() => setShowBulkImport(true)}
             className="bg-bg-surface border border-border text-text-secondary px-4 py-2 rounded text-sm font-medium hover:text-text-primary hover:border-accent/50 transition-colors"
           >
@@ -673,6 +680,18 @@ export default function DealPipeline() {
             queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
             toast({ title: `${count} prospects imported`, type: 'success' })
             setShowBulkImport(false)
+          }}
+        />
+      )}
+
+      {showProspectFinder && (
+        <ProspectFinder
+          propertyId={propertyId}
+          onClose={() => setShowProspectFinder(false)}
+          onAdded={(count) => {
+            queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+            queryClient.invalidateQueries({ queryKey: ['contacts', propertyId] })
+            toast({ title: `${count} prospect${count !== 1 ? 's' : ''} added to pipeline`, type: 'success' })
           }}
         />
       )}
@@ -1994,6 +2013,472 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+/* ============ Prospect Finder - AI-Powered Prospect Search & Discovery ============ */
+function ProspectFinder({ propertyId, onClose, onAdded }) {
+  const [tab, setTab] = useState('search') // search | suggestions
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchCategory, setSearchCategory] = useState('')
+  const [results, setResults] = useState([]) // search or suggestion results
+  const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState('')
+  const [researchingIdx, setResearchingIdx] = useState(null)
+  const [researchedContacts, setResearchedContacts] = useState({}) // { idx: { contacts, company_linkedin, ... } }
+  const [addingIdx, setAddingIdx] = useState(null)
+  const [addedIdxs, setAddedIdxs] = useState(new Set())
+
+  async function handleSearch() {
+    if (!searchQuery.trim() && !searchCategory) return
+    setLoading(true)
+    setStatus('Searching for prospects...')
+    setResults([])
+    setResearchedContacts({})
+    setAddedIdxs(new Set())
+    try {
+      const data = await searchProspects({
+        query: searchQuery,
+        category: searchCategory,
+        property_id: propertyId,
+      })
+      setResults(data.prospects || [])
+      setStatus(data.prospects?.length ? `Found ${data.prospects.length} prospects` : 'No results found. Try a broader search.')
+    } catch (e) {
+      setStatus('Error: ' + e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSuggest() {
+    setLoading(true)
+    setStatus('Analyzing your pipeline and finding suggestions...')
+    setResults([])
+    setResearchedContacts({})
+    setAddedIdxs(new Set())
+    try {
+      const data = await suggestProspects({ property_id: propertyId })
+      setResults(data.suggestions || [])
+      setStatus(data.suggestions?.length ? `${data.suggestions.length} AI-suggested prospects based on your pipeline` : 'No suggestions available.')
+    } catch (e) {
+      setStatus('Error: ' + e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleResearchContacts(idx) {
+    const prospect = results[idx]
+    if (!prospect) return
+    setResearchingIdx(idx)
+    try {
+      const data = await researchContacts({
+        company_name: prospect.company_name,
+        category: prospect.category || prospect.sub_industry,
+        website: prospect.website,
+      })
+      setResearchedContacts(prev => ({ ...prev, [idx]: data.research }))
+    } catch (e) {
+      setResearchedContacts(prev => ({ ...prev, [idx]: { error: e.message, contacts: [] } }))
+    } finally {
+      setResearchingIdx(null)
+    }
+  }
+
+  async function handleAddProspect(idx) {
+    const prospect = results[idx]
+    if (!prospect) return
+    setAddingIdx(idx)
+    try {
+      const research = researchedContacts[idx]
+      const primaryContact = research?.contacts?.[0]
+
+      // Create the deal
+      const dealRow = {
+        property_id: propertyId,
+        brand_name: prospect.company_name,
+        stage: 'Prospect',
+        priority: prospect.priority || 'Medium',
+        date_added: new Date().toISOString().split('T')[0],
+        source: 'Cold Outreach',
+        notes: [
+          prospect.why_good_fit || prospect.rationale || '',
+          prospect.sponsorship_track_record ? `Track record: ${prospect.sponsorship_track_record}` : '',
+          prospect.estimated_sponsorship_budget ? `Est. budget: ${prospect.estimated_sponsorship_budget}` : '',
+        ].filter(Boolean).join('\n'),
+      }
+
+      // Set primary contact on deal
+      if (primaryContact) {
+        dealRow.contact_first_name = primaryContact.first_name || null
+        dealRow.contact_last_name = primaryContact.last_name || null
+        dealRow.contact_name = [primaryContact.first_name, primaryContact.last_name].filter(Boolean).join(' ') || null
+        dealRow.contact_email = primaryContact.email_pattern || null
+        dealRow.contact_position = primaryContact.position || null
+        dealRow.contact_company = prospect.company_name
+      }
+
+      // Company enrichment fields
+      const extras = {}
+      if (prospect.headquarters_city) extras.city = prospect.headquarters_city
+      if (prospect.headquarters_state) extras.state = prospect.headquarters_state
+      if (prospect.website) extras.website = prospect.website
+      if (prospect.linkedin_url || research?.company_linkedin) extras.linkedin = prospect.linkedin_url || research?.company_linkedin
+      if (prospect.sub_industry) extras.sub_industry = prospect.sub_industry
+      extras.outreach_status = 'Researching'
+
+      const { data: dealData, error: dealErr } = await supabase
+        .from('deals')
+        .insert({ ...dealRow, ...extras })
+        .select('id')
+        .single()
+
+      if (dealErr) {
+        // Retry without extras
+        const { data: fallback, error: fallbackErr } = await supabase
+          .from('deals')
+          .insert(dealRow)
+          .select('id')
+          .single()
+        if (fallbackErr) throw fallbackErr
+        if (fallback?.id && research?.contacts?.length > 0) {
+          await insertContacts(fallback.id, prospect, research)
+        }
+      } else if (dealData?.id && research?.contacts?.length > 0) {
+        await insertContacts(dealData.id, prospect, research)
+      }
+
+      setAddedIdxs(prev => new Set([...prev, idx]))
+      onAdded(1)
+    } catch (e) {
+      alert('Error adding prospect: ' + e.message)
+    } finally {
+      setAddingIdx(null)
+    }
+  }
+
+  async function insertContacts(dealId, prospect, research) {
+    try {
+      const contactRows = research.contacts.slice(0, 3).map((c, i) => ({
+        property_id: propertyId,
+        deal_id: dealId,
+        first_name: c.first_name || '',
+        last_name: c.last_name || null,
+        email: c.email_pattern || null,
+        phone: research.company_phone || null,
+        position: c.position || null,
+        company: prospect.company_name,
+        city: prospect.headquarters_city || null,
+        state: prospect.headquarters_state || null,
+        linkedin: c.linkedin_url || null,
+        website: prospect.website || null,
+        is_primary: i === 0,
+        notes: c.why_target || null,
+      }))
+      await supabase.from('contacts').insert(contactRows)
+    } catch {
+      // contacts table may not exist
+    }
+  }
+
+  const SEARCH_CATEGORIES = [
+    'Automotive', 'Banking & Financial Services', 'Beverage & Alcohol',
+    'Consumer Packaged Goods', 'Energy & Utilities', 'Entertainment & Media',
+    'Fashion & Apparel', 'Food & Quick Serve Restaurants', 'Gaming & Esports',
+    'Healthcare', 'Hospitality & Travel', 'Insurance',
+    'Real Estate & Construction', 'Retail', 'Sports & Fitness',
+    'Technology & Software', 'Telecommunications',
+  ]
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-bg-surface border border-border rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="p-5 border-b border-border">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-lg font-semibold text-text-primary">Find Prospects</h2>
+              <p className="text-xs text-text-muted mt-0.5">
+                Search for prospects by category or brand, or get AI suggestions based on your pipeline
+              </p>
+            </div>
+            <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg">&times;</button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 bg-bg-card rounded-lg p-1 w-fit">
+            <button
+              onClick={() => setTab('search')}
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'search' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              Search
+            </button>
+            <button
+              onClick={() => { setTab('suggestions'); if (results.length === 0) handleSuggest() }}
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'suggestions' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              AI Suggestions
+            </button>
+          </div>
+        </div>
+
+        {/* Search Controls */}
+        {tab === 'search' && (
+          <div className="p-4 border-b border-border space-y-3">
+            <div className="flex gap-2">
+              <input
+                placeholder="Search brands, companies, or keywords... (e.g. 'local car dealerships', 'Nike', 'fast food')"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                autoFocus
+              />
+              <button
+                onClick={handleSearch}
+                disabled={loading || (!searchQuery.trim() && !searchCategory)}
+                className="bg-accent text-bg-primary px-5 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
+              >
+                {loading ? 'Searching...' : 'Search'}
+              </button>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <span className="text-xs text-text-muted self-center">Filter by:</span>
+              <button
+                onClick={() => { setSearchCategory(''); }}
+                className={`px-2.5 py-1 rounded text-xs font-mono border ${!searchCategory ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-card border-border text-text-muted hover:text-text-primary'}`}
+              >
+                All
+              </button>
+              {SEARCH_CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => { setSearchCategory(searchCategory === cat ? '' : cat) }}
+                  className={`px-2.5 py-1 rounded text-xs font-mono border ${searchCategory === cat ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-card border-border text-text-muted hover:text-text-primary'}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Suggestions info */}
+        {tab === 'suggestions' && !loading && results.length > 0 && (
+          <div className="px-4 pt-3">
+            <div className="bg-accent/5 border border-accent/20 rounded-lg p-3 text-xs text-text-secondary">
+              These suggestions are based on your existing pipeline patterns, won deals, and current sports sponsorship market trends.
+            </div>
+          </div>
+        )}
+
+        {/* Status */}
+        {status && (
+          <div className="px-4 pt-3">
+            <p className={`text-xs font-mono ${status.startsWith('Error') ? 'text-danger' : 'text-accent'}`}>{status}</p>
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="flex-1 flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-3"></div>
+              <p className="text-sm text-text-muted">{tab === 'search' ? 'Searching for prospects...' : 'Analyzing pipeline and finding suggestions...'}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Results */}
+        {!loading && results.length > 0 && (
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {results.map((prospect, idx) => {
+              const isAdded = addedIdxs.has(idx)
+              const research = researchedContacts[idx]
+              const isResearching = researchingIdx === idx
+              const isAdding = addingIdx === idx
+              
+              return (
+                <div key={idx} className={`bg-bg-card border rounded-lg overflow-hidden transition-colors ${isAdded ? 'border-success/40 bg-success/5' : 'border-border'}`}>
+                  {/* Prospect Header */}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-text-primary">{prospect.company_name}</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-bg-surface text-text-muted">
+                            {prospect.category || prospect.sub_industry}
+                          </span>
+                          {prospect.priority && (
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                              prospect.priority === 'High' ? 'bg-danger/10 text-danger' :
+                              prospect.priority === 'Medium' ? 'bg-warning/10 text-warning' :
+                              'bg-bg-surface text-text-muted'
+                            }`}>{prospect.priority}</span>
+                          )}
+                          {prospect.reason && (
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                              prospect.reason.includes('winner') ? 'bg-success/10 text-success' :
+                              prospect.reason.includes('Trending') ? 'bg-accent/10 text-accent' :
+                              'bg-warning/10 text-warning'
+                            }`}>{prospect.reason}</span>
+                          )}
+                          {isAdded && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-success/10 text-success">Added</span>
+                          )}
+                        </div>
+                        <div className="flex gap-4 mt-1 text-xs text-text-muted font-mono flex-wrap">
+                          {prospect.headquarters_city && (
+                            <span>{prospect.headquarters_city}{prospect.headquarters_state ? `, ${prospect.headquarters_state}` : ''}</span>
+                          )}
+                          {prospect.estimated_sponsorship_budget && (
+                            <span className="text-accent">Budget: {prospect.estimated_sponsorship_budget}</span>
+                          )}
+                          {prospect.estimated_revenue && <span>Rev: {prospect.estimated_revenue}</span>}
+                          {prospect.estimated_employees && <span>{prospect.estimated_employees} emp</span>}
+                        </div>
+                        <p className="text-xs text-text-secondary mt-1.5">
+                          {prospect.why_good_fit || prospect.rationale || prospect.sponsorship_track_record}
+                        </p>
+                        {/* Links */}
+                        <div className="flex gap-3 mt-2">
+                          {prospect.website && (
+                            <a href={prospect.website.startsWith('http') ? prospect.website : `https://${prospect.website}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-accent hover:underline">
+                              Website
+                            </a>
+                          )}
+                          {prospect.linkedin_url && (
+                            <a href={prospect.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-accent hover:underline">
+                              LinkedIn
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 shrink-0">
+                        {!research && !isAdded && (
+                          <button
+                            onClick={() => handleResearchContacts(idx)}
+                            disabled={isResearching}
+                            className="text-xs bg-accent/10 text-accent border border-accent/30 px-3 py-1.5 rounded font-medium hover:bg-accent/20 disabled:opacity-50 whitespace-nowrap"
+                          >
+                            {isResearching ? 'Researching...' : 'Research Contacts'}
+                          </button>
+                        )}
+                        {!isAdded && (
+                          <button
+                            onClick={() => handleAddProspect(idx)}
+                            disabled={isAdding}
+                            className="text-xs bg-accent text-bg-primary px-3 py-1.5 rounded font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
+                          >
+                            {isAdding ? 'Adding...' : research ? 'Add with Contacts' : 'Add to Pipeline'}
+                          </button>
+                        )}
+                        {isAdded && (
+                          <span className="text-xs text-success font-medium px-3 py-1.5">Added</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Researched Contacts */}
+                  {research && !research.error && research.contacts?.length > 0 && (
+                    <div className="border-t border-border bg-bg-surface/50 p-4">
+                      <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">
+                        Top {research.contacts.length} Contacts
+                      </div>
+                      <div className="space-y-2">
+                        {research.contacts.map((contact, ci) => (
+                          <div key={ci} className="flex items-start gap-3 bg-bg-card border border-border rounded p-3">
+                            <div className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-mono shrink-0">
+                              {ci + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium text-text-primary">
+                                  {contact.first_name} {contact.last_name}
+                                </span>
+                                <span className="text-[10px] font-mono text-text-muted bg-bg-surface px-1.5 py-0.5 rounded">
+                                  {contact.position}
+                                </span>
+                              </div>
+                              <div className="flex gap-3 mt-1 text-xs text-text-muted font-mono flex-wrap">
+                                {contact.email_pattern && <span>{contact.email_pattern}</span>}
+                                {contact.linkedin_url && (
+                                  <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                                    LinkedIn Profile
+                                  </a>
+                                )}
+                              </div>
+                              {contact.why_target && (
+                                <p className="text-[11px] text-text-secondary mt-1">{contact.why_target}</p>
+                              )}
+                              {contact.outreach_tip && (
+                                <p className="text-[11px] text-accent/80 mt-0.5 italic">{contact.outreach_tip}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {research.company_phone && (
+                        <div className="flex gap-4 mt-2 text-xs text-text-muted font-mono">
+                          <span>Phone: {research.company_phone}</span>
+                          {research.company_address && <span>HQ: {research.company_address}</span>}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Research error */}
+                  {research?.error && (
+                    <div className="border-t border-border p-3">
+                      <p className="text-xs text-danger">{research.error}</p>
+                    </div>
+                  )}
+
+                  {/* Researching spinner */}
+                  {isResearching && (
+                    <div className="border-t border-border p-4 flex items-center gap-2">
+                      <div className="animate-spin w-4 h-4 border-2 border-accent border-t-transparent rounded-full"></div>
+                      <span className="text-xs text-text-muted">Researching top contacts at {prospect.company_name}...</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && results.length === 0 && !status && (
+          <div className="flex-1 flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="text-4xl mb-3">🔍</div>
+              <p className="text-sm text-text-muted">
+                {tab === 'search'
+                  ? 'Search for prospects by company name, category, or keyword'
+                  : 'Get AI-powered prospect suggestions based on your pipeline'
+                }
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="p-4 border-t border-border flex items-center justify-between">
+          <div className="text-xs text-text-muted font-mono">
+            {addedIdxs.size > 0 && `${addedIdxs.size} prospect${addedIdxs.size !== 1 ? 's' : ''} added`}
+          </div>
+          <button
+            onClick={onClose}
+            className="px-6 bg-bg-card text-text-secondary py-2 rounded text-sm hover:text-text-primary"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   )

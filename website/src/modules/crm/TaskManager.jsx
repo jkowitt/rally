@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -9,14 +9,90 @@ const STATUSES = ['Pending', 'In Progress', 'Done']
 const PRIORITY_COLOR = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
 const PRIORITY_BG = { High: 'bg-danger/10', Medium: 'bg-warning/10', Low: 'bg-bg-card' }
 
+const TASK_TYPES = [
+  { value: 'Call', icon: '📞', label: 'Call' },
+  { value: 'Email', icon: '✉️', label: 'Email' },
+  { value: 'Text', icon: '💬', label: 'Text Message' },
+  { value: 'Meeting', icon: '🤝', label: 'Meeting' },
+  { value: 'Follow Up', icon: '🔔', label: 'Follow Up' },
+  { value: 'LinkedIn Message', icon: '💼', label: 'LinkedIn Message' },
+  { value: 'Proposal', icon: '📋', label: 'Proposal Creation' },
+  { value: 'Contract', icon: '📄', label: 'Contract Sent' },
+  { value: 'Presentation', icon: '📊', label: 'Presentation' },
+  { value: 'Research', icon: '🔍', label: 'Research' },
+  { value: 'Other', icon: '📌', label: 'Other' },
+]
+
+const TYPE_ICON = Object.fromEntries(TASK_TYPES.map(t => [t.value, t.icon]))
+
 function formatDate(dateStr) {
   if (!dateStr) return '—'
   const d = new Date(dateStr + 'T00:00:00')
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function formatTime(timeStr) {
+  if (!timeStr) return ''
+  const [h, m] = timeStr.split(':')
+  const hour = parseInt(h)
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  return `${hour % 12 || 12}:${m} ${ampm}`
+}
+
 function toDateString(date) {
   return date.toISOString().split('T')[0]
+}
+
+// ── Push Notification Support ──────────────────────────────────
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return 'unsupported'
+  if (Notification.permission === 'granted') return 'granted'
+  if (Notification.permission === 'denied') return 'denied'
+  const result = await Notification.requestPermission()
+  return result
+}
+
+function sendNotification(title, body, tag) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return
+  try {
+    const notification = new Notification(title, {
+      body,
+      icon: '/logo.svg',
+      tag: tag || 'loud-legacy-reminder',
+      requireInteraction: true,
+    })
+    notification.onclick = () => {
+      window.focus()
+      notification.close()
+    }
+  } catch { /* SW not available, skip */ }
+}
+
+// Check for due reminders every 60s
+function useReminderChecker(tasks) {
+  useEffect(() => {
+    if (!tasks?.length) return
+    function check() {
+      const now = new Date()
+      const todayStr = toDateString(now)
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+      for (const task of tasks) {
+        if (task.status === 'Done') continue
+        if (!task.due_date || !task.reminder_time) continue
+        if (task.due_date === todayStr && task.reminder_time === currentTime) {
+          sendNotification(
+            `${TYPE_ICON[task.task_type] || '📌'} ${task.task_type || 'Task'}: ${task.title}`,
+            task.deals?.brand_name ? `Deal: ${task.deals.brand_name}` : task.description || 'Reminder',
+            `task-${task.id}`
+          )
+        }
+      }
+    }
+    const interval = setInterval(check, 60000)
+    check() // run immediately
+    return () => clearInterval(interval)
+  }, [tasks])
 }
 
 export default function TaskManager() {
@@ -29,6 +105,10 @@ export default function TaskManager() {
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
   const [showCompleted, setShowCompleted] = useState(false)
+  const [filterType, setFilterType] = useState('')
+  const [notifPermission, setNotifPermission] = useState(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
+  )
 
   const today = toDateString(new Date())
 
@@ -62,14 +142,21 @@ export default function TaskManager() {
     enabled: !!propertyId,
   })
 
+  // Push notification reminder checker
+  useReminderChecker(tasks)
+
   // Mutations
   const saveMutation = useMutation({
     mutationFn: async (task) => {
       const payload = { ...task }
-      // Clean empty optional fields
       if (!payload.deal_id) delete payload.deal_id
       if (!payload.description) delete payload.description
       if (!payload.assigned_to) delete payload.assigned_to
+      // New fields gracefully handled
+      if (!payload.task_type) delete payload.task_type
+      if (!payload.scheduled_time) delete payload.scheduled_time
+      if (!payload.reminder_time) delete payload.reminder_time
+      if (payload.notify === undefined) delete payload.notify
 
       if (payload.id) {
         const { id, ...updates } = payload
@@ -123,10 +210,11 @@ export default function TaskManager() {
   // Categorize tasks
   const { overdue, upcoming, completed } = useMemo(() => {
     if (!tasks) return { overdue: [], upcoming: [], completed: [] }
+    const filtered = filterType ? tasks.filter(t => t.task_type === filterType) : tasks
     const o = []
     const u = []
     const c = []
-    for (const task of tasks) {
+    for (const task of filtered) {
       if (task.status === 'Done') {
         c.push(task)
       } else if (task.due_date && task.due_date < today) {
@@ -135,12 +223,22 @@ export default function TaskManager() {
         u.push(task)
       }
     }
-    // Sort completed by completed_at descending
     c.sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''))
     return { overdue: o, upcoming: u, completed: c }
-  }, [tasks, today])
+  }, [tasks, today, filterType])
 
   const totalActive = (tasks?.filter((t) => t.status !== 'Done') || []).length
+
+  async function enableNotifications() {
+    const result = await requestNotificationPermission()
+    setNotifPermission(result)
+    if (result === 'granted') {
+      toast({ title: 'Push notifications enabled', type: 'success' })
+      sendNotification('Loud Legacy', 'You will now receive task reminders', 'test')
+    } else if (result === 'denied') {
+      toast({ title: 'Notifications blocked', description: 'Enable in browser settings', type: 'warning' })
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -158,12 +256,46 @@ export default function TaskManager() {
             )}
           </p>
         </div>
+        <div className="flex gap-2">
+          {/* Notification toggle */}
+          {notifPermission !== 'unsupported' && (
+            <button
+              onClick={enableNotifications}
+              className={`px-3 py-2 rounded text-xs font-mono border transition-colors ${
+                notifPermission === 'granted'
+                  ? 'bg-success/10 border-success/30 text-success'
+                  : 'bg-bg-surface border-border text-text-muted hover:text-accent hover:border-accent/50'
+              }`}
+            >
+              {notifPermission === 'granted' ? 'Notifications On' : 'Enable Notifications'}
+            </button>
+          )}
+          <button
+            onClick={() => { setEditingTask(null); setShowForm(true) }}
+            className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90"
+          >
+            + Schedule Activity
+          </button>
+        </div>
+      </div>
+
+      {/* Activity type filter */}
+      <div className="flex gap-2 flex-wrap">
         <button
-          onClick={() => { setEditingTask(null); setShowForm(true) }}
-          className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90"
+          onClick={() => setFilterType('')}
+          className={`px-3 py-1.5 rounded text-xs font-mono border transition-colors ${!filterType ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-surface border-border text-text-muted hover:text-accent'}`}
         >
-          + New Task
+          All
         </button>
+        {TASK_TYPES.filter(t => t.value !== 'Other').map(t => (
+          <button
+            key={t.value}
+            onClick={() => setFilterType(filterType === t.value ? '' : t.value)}
+            className={`px-3 py-1.5 rounded text-xs font-mono border transition-colors ${filterType === t.value ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-surface border-border text-text-muted hover:text-accent'}`}
+          >
+            {t.icon} {t.label}
+          </button>
+        ))}
       </div>
 
       {/* Overdue alert banner */}
@@ -184,7 +316,6 @@ export default function TaskManager() {
         </div>
       ) : (
         <>
-          {/* Overdue Section */}
           {overdue.length > 0 && (
             <TaskSection
               title="Overdue"
@@ -196,7 +327,6 @@ export default function TaskManager() {
             />
           )}
 
-          {/* Due Today / Upcoming Section */}
           <TaskSection
             title="Due Today & Upcoming"
             tasks={upcoming}
@@ -207,7 +337,6 @@ export default function TaskManager() {
             onDelete={(id) => { if (confirm('Delete this task?')) deleteMutation.mutate(id) }}
           />
 
-          {/* Completed Section (collapsed by default) */}
           {completed.length > 0 && (
             <div>
               <button
@@ -228,16 +357,14 @@ export default function TaskManager() {
             </div>
           )}
 
-          {/* Empty state */}
           {tasks?.length === 0 && (
             <div className="bg-bg-surface border border-border rounded-lg px-4 py-12 text-center">
-              <p className="text-text-muted text-sm">No tasks yet. Create one to start tracking follow-ups.</p>
+              <p className="text-text-muted text-sm">No scheduled activities yet. Create one to start tracking.</p>
             </div>
           )}
         </>
       )}
 
-      {/* Task Form Modal */}
       {showForm && (
         <TaskForm
           task={editingTask}
@@ -282,6 +409,9 @@ function TaskSection({ title, tasks, variant, today, onMarkDone, onEdit, onDelet
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
+                    {task.task_type && (
+                      <span className="text-sm" title={task.task_type}>{TYPE_ICON[task.task_type] || '📌'}</span>
+                    )}
                     <span className={`text-sm font-medium ${isCompleted ? 'text-text-muted line-through' : 'text-text-primary'}`}>
                       {task.title}
                     </span>
@@ -290,8 +420,13 @@ function TaskSection({ title, tasks, variant, today, onMarkDone, onEdit, onDelet
                         {task.priority}
                       </span>
                     )}
-                    {task.status && task.status !== 'Done' && (
+                    {task.task_type && (
                       <span className="text-[10px] font-mono text-text-muted bg-bg-card px-1.5 py-0.5 rounded">
+                        {task.task_type}
+                      </span>
+                    )}
+                    {task.status && task.status !== 'Done' && task.status !== 'Pending' && (
+                      <span className="text-[10px] font-mono text-accent bg-accent/10 px-1.5 py-0.5 rounded">
                         {task.status}
                       </span>
                     )}
@@ -305,6 +440,11 @@ function TaskSection({ title, tasks, variant, today, onMarkDone, onEdit, onDelet
                         OVERDUE
                       </span>
                     )}
+                    {task.reminder_time && !isCompleted && (
+                      <span className="text-[10px] font-mono text-accent bg-accent/10 px-1 py-0.5 rounded" title="Reminder set">
+                        🔔 {formatTime(task.reminder_time)}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 mt-1">
                     {task.deals?.brand_name && (
@@ -313,6 +453,7 @@ function TaskSection({ title, tasks, variant, today, onMarkDone, onEdit, onDelet
                     {task.due_date && (
                       <span className={`text-xs font-mono ${isOverdue ? 'text-danger' : 'text-text-muted'}`}>
                         Due {formatDate(task.due_date)}
+                        {task.scheduled_time && ` at ${formatTime(task.scheduled_time)}`}
                       </span>
                     )}
                     {isCompleted && task.completed_at && (
@@ -326,7 +467,6 @@ function TaskSection({ title, tasks, variant, today, onMarkDone, onEdit, onDelet
                   )}
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
                   {!isCompleted && onMarkDone && (
                     <button
@@ -356,7 +496,7 @@ function TaskSection({ title, tasks, variant, today, onMarkDone, onEdit, onDelet
         {tasks.length === 0 && title && (
           <div className="bg-bg-surface border border-border rounded-lg px-4 py-6 text-center">
             <p className="text-text-muted text-sm">
-              {variant === 'overdue' ? 'No overdue tasks.' : 'No upcoming tasks.'}
+              {variant === 'overdue' ? 'No overdue tasks.' : 'No upcoming activities.'}
             </p>
           </div>
         )}
@@ -369,13 +509,29 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
   const [form, setForm] = useState({
     title: task?.title || '',
     description: task?.description || '',
+    task_type: task?.task_type || 'Call',
     due_date: task?.due_date || toDateString(new Date()),
+    scheduled_time: task?.scheduled_time || '',
+    reminder_time: task?.reminder_time || '',
     priority: task?.priority || 'Medium',
     status: task?.status || 'Pending',
     deal_id: task?.deal_id || '',
     assigned_to: task?.assigned_to || '',
     ...(task?.id ? { id: task.id } : {}),
   })
+
+  // Auto-set reminder 15 min before scheduled time
+  function setScheduledTime(time) {
+    const newForm = { ...form, scheduled_time: time }
+    if (time && !form.reminder_time) {
+      const [h, m] = time.split(':').map(Number)
+      const reminderMin = h * 60 + m - 15
+      if (reminderMin >= 0) {
+        newForm.reminder_time = `${String(Math.floor(reminderMin / 60)).padStart(2, '0')}:${String(reminderMin % 60).padStart(2, '0')}`
+      }
+    }
+    setForm(newForm)
+  }
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -392,13 +548,35 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
         className="bg-bg-surface border border-border rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
       >
         <h2 className="text-lg font-semibold text-text-primary mb-4">
-          {task ? 'Edit Task' : 'New Task'}
+          {task ? 'Edit Activity' : 'Schedule Activity'}
         </h2>
 
         <div className="space-y-3">
+          {/* Activity Type */}
+          <div>
+            <label className="text-xs text-text-muted">Activity Type</label>
+            <div className="grid grid-cols-4 gap-1.5 mt-1">
+              {TASK_TYPES.map(t => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setForm({ ...form, task_type: t.value })}
+                  className={`px-2 py-2 rounded text-[11px] font-mono border transition-colors text-center ${
+                    form.task_type === t.value
+                      ? 'bg-accent text-bg-primary border-accent'
+                      : 'bg-bg-card border-border text-text-muted hover:text-accent hover:border-accent/50'
+                  }`}
+                >
+                  <div className="text-base mb-0.5">{t.icon}</div>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Title */}
           <input
-            placeholder="Task title"
+            placeholder={`e.g. "${form.task_type === 'Call' ? 'Intro call with VP Marketing' : form.task_type === 'Email' ? 'Send proposal follow-up' : form.task_type === 'Meeting' ? 'Partnership presentation' : 'Activity title'}"`}
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             className={inputClass}
@@ -408,23 +586,85 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
 
           {/* Description */}
           <textarea
-            placeholder="Description (optional)"
+            placeholder="Notes / details (optional)"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            rows={3}
+            rows={2}
             className={`${inputClass} resize-none`}
           />
 
-          {/* Due Date */}
-          <div>
-            <label className="text-xs text-text-muted">Due Date</label>
+          {/* Date & Time */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-text-muted">Date</label>
+              <input
+                type="date"
+                value={form.due_date}
+                onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                className={inputClass}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Time</label>
+              <input
+                type="time"
+                value={form.scheduled_time}
+                onChange={(e) => setScheduledTime(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          {/* Reminder */}
+          <div className="bg-bg-card border border-border rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-text-muted font-mono uppercase tracking-wider">Reminder</label>
+              {form.reminder_time && (
+                <span className="text-[10px] text-accent font-mono">🔔 {formatTime(form.reminder_time)}</span>
+              )}
+            </div>
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              {[
+                { label: 'At time', offset: 0 },
+                { label: '15 min', offset: 15 },
+                { label: '30 min', offset: 30 },
+                { label: '1 hour', offset: 60 },
+              ].map(opt => {
+                function calcReminder() {
+                  const time = form.scheduled_time || form.due_date ? '09:00' : ''
+                  if (!time) return
+                  const [h, m] = time.split(':').map(Number)
+                  const mins = h * 60 + m - opt.offset
+                  if (mins >= 0) {
+                    setForm(prev => ({
+                      ...prev,
+                      reminder_time: `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`,
+                    }))
+                  }
+                }
+                return (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={calcReminder}
+                    className="text-[11px] font-mono bg-bg-surface border border-border rounded px-2 py-1.5 text-text-muted hover:text-accent hover:border-accent/50 transition-colors"
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
             <input
-              type="date"
-              value={form.due_date}
-              onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-              className={inputClass}
-              required
+              type="time"
+              value={form.reminder_time}
+              onChange={(e) => setForm({ ...form, reminder_time: e.target.value })}
+              className={`${inputClass} mt-2`}
+              placeholder="Custom reminder time"
             />
+            <p className="text-[10px] text-text-muted mt-1">
+              Push notification will fire at this time if notifications are enabled
+            </p>
           </div>
 
           {/* Priority & Status */}
@@ -459,7 +699,7 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
 
           {/* Deal dropdown */}
           <div>
-            <label className="text-xs text-text-muted">Deal (optional)</label>
+            <label className="text-xs text-text-muted">Linked Deal</label>
             <select
               value={form.deal_id}
               onChange={(e) => setForm({ ...form, deal_id: e.target.value })}
@@ -471,14 +711,6 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
               ))}
             </select>
           </div>
-
-          {/* Assigned to */}
-          <input
-            placeholder="Assigned to (optional)"
-            value={form.assigned_to}
-            onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-            className={inputClass}
-          />
         </div>
 
         <div className="flex gap-3 mt-5">
@@ -487,7 +719,7 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
             disabled={saving || !form.title}
             className="flex-1 bg-accent text-bg-primary py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save Task'}
+            {saving ? 'Saving...' : task ? 'Update Activity' : 'Schedule Activity'}
           </button>
           <button
             type="button"

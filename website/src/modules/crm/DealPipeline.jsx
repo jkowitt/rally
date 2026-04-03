@@ -48,6 +48,7 @@ export default function DealPipeline() {
   const [showForm, setShowForm] = useState(false)
   const [editingDeal, setEditingDeal] = useState(null)
   const [viewMode, setViewMode] = useState('kanban')
+  const [showBulkImport, setShowBulkImport] = useState(false)
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals', propertyId],
@@ -178,6 +179,12 @@ export default function DealPipeline() {
             <button onClick={() => setViewMode('kanban')} className={`px-3 py-1.5 text-xs font-mono ${viewMode === 'kanban' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Board</button>
             <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 text-xs font-mono ${viewMode === 'table' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Table</button>
           </div>
+          <button
+            onClick={() => setShowBulkImport(true)}
+            className="bg-bg-surface border border-border text-text-secondary px-4 py-2 rounded text-sm font-medium hover:text-text-primary hover:border-accent/50 transition-colors"
+          >
+            Paste List
+          </button>
           <button
             onClick={() => { setEditingDeal(null); setShowForm(true) }}
             className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90"
@@ -366,6 +373,18 @@ export default function DealPipeline() {
           onSave={(data) => saveMutation.mutate(data)}
           onCancel={() => { setShowForm(false); setEditingDeal(null) }}
           saving={saveMutation.isPending}
+        />
+      )}
+
+      {showBulkImport && (
+        <BulkImportModal
+          propertyId={propertyId}
+          onClose={() => setShowBulkImport(false)}
+          onImported={(count) => {
+            queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+            toast({ title: `${count} prospects imported`, type: 'success' })
+            setShowBulkImport(false)
+          }}
         />
       )}
     </div>
@@ -692,6 +711,232 @@ function DealForm({ deal, onSave, onCancel, saving }) {
             Cancel
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function BulkImportModal({ propertyId, onClose, onImported }) {
+  const [rawText, setRawText] = useState('')
+  const [parsed, setParsed] = useState([])
+  const [importing, setImporting] = useState(false)
+  const [step, setStep] = useState('paste') // paste | review
+
+  function parseProspects(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+    const prospects = []
+
+    for (const line of lines) {
+      // Skip header-like lines
+      if (/^(brand|company|name|#|\d+\.|---)/i.test(line)) continue
+
+      // Try to parse structured formats:
+      // "Company Name, Contact Name, email@example.com, $50000"
+      // "Company Name | Contact Name | email@example.com"
+      // "Company Name - Contact Name - email@example.com"
+      // Or tab-separated (spreadsheet paste)
+      let parts
+      if (line.includes('\t')) {
+        parts = line.split('\t').map(p => p.trim()).filter(Boolean)
+      } else if (line.includes('|')) {
+        parts = line.split('|').map(p => p.trim()).filter(Boolean)
+      } else if (line.includes(',')) {
+        parts = line.split(',').map(p => p.trim()).filter(Boolean)
+      } else {
+        // Single value per line = brand name only
+        prospects.push({ brand_name: line, contact_name: '', contact_email: '', value: '' })
+        continue
+      }
+
+      const prospect = { brand_name: '', contact_name: '', contact_email: '', value: '' }
+
+      for (const part of parts) {
+        if (!part) continue
+        // Detect email
+        if (/@/.test(part) && !prospect.contact_email) {
+          prospect.contact_email = part
+        }
+        // Detect dollar value
+        else if (/^\$?[\d,]+\.?\d*$/.test(part.replace(/\s/g, ''))) {
+          prospect.value = part.replace(/[$,\s]/g, '')
+        }
+        // Detect phone (10+ digits)
+        else if (/^[\d\s().+-]{10,}$/.test(part)) {
+          prospect.contact_phone = part
+        }
+        // First text field = brand name, second = contact name
+        else if (!prospect.brand_name) {
+          prospect.brand_name = part
+        } else if (!prospect.contact_name) {
+          prospect.contact_name = part
+        }
+      }
+
+      if (prospect.brand_name) prospects.push(prospect)
+    }
+
+    return prospects
+  }
+
+  function handleParse() {
+    const results = parseProspects(rawText)
+    setParsed(results)
+    setStep('review')
+  }
+
+  async function handleImport() {
+    if (parsed.length === 0) return
+    setImporting(true)
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const rows = parsed.filter(p => p.include !== false).map(p => ({
+        property_id: propertyId,
+        brand_name: p.brand_name,
+        contact_name: p.contact_name || null,
+        contact_email: p.contact_email || null,
+        contact_phone: p.contact_phone || null,
+        value: p.value ? Number(p.value) : null,
+        stage: 'Prospect',
+        priority: 'Medium',
+        date_added: today,
+        source: 'Inbound',
+      }))
+
+      const { error } = await supabase.from('deals').insert(rows)
+      if (error) throw error
+      onImported(rows.length)
+    } catch (err) {
+      alert('Import failed: ' + err.message)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  function removeRow(index) {
+    setParsed(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function updateRow(index, field, value) {
+    setParsed(prev => prev.map((p, i) => i === index ? { ...p, [field]: value } : p))
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-bg-surface border border-border rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="p-5 border-b border-border flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-text-primary">Bulk Import Prospects</h2>
+            <p className="text-xs text-text-muted mt-0.5">
+              {step === 'paste' ? 'Paste a list of prospects — one per line' : `${parsed.length} prospects parsed — review and import`}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg">&times;</button>
+        </div>
+
+        {step === 'paste' && (
+          <div className="p-5 flex-1 flex flex-col gap-4">
+            <div className="bg-bg-card border border-border rounded-lg p-3">
+              <div className="text-xs text-text-muted font-mono mb-2">Supported formats:</div>
+              <div className="text-xs text-text-secondary space-y-1 font-mono">
+                <div>Company Name</div>
+                <div>Company, Contact Name, email@ex.com, $50000</div>
+                <div>Company | Contact | email@ex.com | 50000</div>
+                <div>Tab-separated (paste from spreadsheet)</div>
+              </div>
+            </div>
+            <textarea
+              value={rawText}
+              onChange={(e) => setRawText(e.target.value)}
+              placeholder={"Nike, John Smith, john@nike.com, $250000\nAdidas, Sarah Lee, sarah@adidas.com\nPuma\nRed Bull, Mike Chen, mike@redbull.com, $100000"}
+              rows={12}
+              className="w-full bg-bg-card border border-border rounded-lg px-4 py-3 text-sm text-text-primary placeholder-text-muted/50 focus:outline-none focus:border-accent resize-none font-mono"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleParse}
+                disabled={!rawText.trim()}
+                className="flex-1 bg-accent text-bg-primary py-2.5 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                Parse {rawText.trim().split('\n').filter(l => l.trim()).length || 0} Lines
+              </button>
+              <button onClick={onClose} className="px-6 bg-bg-card text-text-secondary py-2.5 rounded text-sm hover:text-text-primary">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'review' && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-5">
+              {parsed.length === 0 ? (
+                <div className="text-center text-text-muted text-sm py-12">
+                  No prospects could be parsed. Try a different format.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {parsed.map((p, i) => (
+                    <div key={i} className="bg-bg-card border border-border rounded-lg p-3 flex items-start gap-3 group">
+                      <div className="text-xs text-text-muted font-mono w-6 pt-1 text-right shrink-0">{i + 1}</div>
+                      <div className="flex-1 grid grid-cols-2 gap-2">
+                        <input
+                          value={p.brand_name}
+                          onChange={(e) => updateRow(i, 'brand_name', e.target.value)}
+                          placeholder="Brand Name"
+                          className="bg-bg-surface border border-border rounded px-2 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                        />
+                        <input
+                          value={p.contact_name}
+                          onChange={(e) => updateRow(i, 'contact_name', e.target.value)}
+                          placeholder="Contact Name"
+                          className="bg-bg-surface border border-border rounded px-2 py-1.5 text-sm text-text-secondary placeholder-text-muted focus:outline-none focus:border-accent"
+                        />
+                        <input
+                          value={p.contact_email}
+                          onChange={(e) => updateRow(i, 'contact_email', e.target.value)}
+                          placeholder="Email"
+                          className="bg-bg-surface border border-border rounded px-2 py-1.5 text-sm text-text-secondary placeholder-text-muted focus:outline-none focus:border-accent"
+                        />
+                        <input
+                          value={p.value}
+                          onChange={(e) => updateRow(i, 'value', e.target.value)}
+                          placeholder="Value ($)"
+                          className="bg-bg-surface border border-border rounded px-2 py-1.5 text-sm text-text-secondary placeholder-text-muted focus:outline-none focus:border-accent font-mono"
+                        />
+                      </div>
+                      <button
+                        onClick={() => removeRow(i)}
+                        className="text-text-muted hover:text-danger text-xs opacity-0 group-hover:opacity-100 transition-opacity pt-1"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-border flex gap-3">
+              <button
+                onClick={() => setStep('paste')}
+                className="px-4 bg-bg-card text-text-secondary py-2.5 rounded text-sm hover:text-text-primary"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={importing || parsed.length === 0}
+                className="flex-1 bg-accent text-bg-primary py-2.5 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {importing ? 'Importing...' : `Import ${parsed.length} Prospects`}
+              </button>
+              <button onClick={onClose} className="px-4 bg-bg-card text-text-secondary py-2.5 rounded text-sm hover:text-text-primary">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

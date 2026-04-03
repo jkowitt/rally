@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useToast } from '@/components/Toast'
 import { generateWeeklyNewsletter, generateAfternoonUpdate } from '@/lib/claude'
 
 function getMonday(date = new Date()) {
@@ -28,6 +27,14 @@ function formatTime(dateStr) {
   })
 }
 
+// Get current ET hour (accounting for EDT/EST roughly)
+function getETHour() {
+  const now = new Date()
+  const etOffset = -5 // EST; EDT would be -4
+  const utcHour = now.getUTCHours()
+  return (utcHour + etOffset + 24) % 24
+}
+
 const CATEGORY_COLORS = {
   Deals: 'bg-success/10 text-success',
   Trends: 'bg-accent/10 text-accent',
@@ -44,81 +51,82 @@ const CATEGORY_COLORS = {
 export default function Newsletter() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
-  const { toast } = useToast()
   const propertyId = profile?.property_id
-  const [view, setView] = useState('latest') // latest | archive | weekly | afternoon
+  const [view, setView] = useState('latest')
   const [selectedNewsletter, setSelectedNewsletter] = useState(null)
+  const autoGenTriggered = useRef({ weekly: false, afternoon: false })
 
-  // Fetch all newsletters
-  const { data: newsletters, isLoading } = useQuery({
-    queryKey: ['newsletters', propertyId],
+  // Fetch ALL newsletters globally (no property filter — shared across all users)
+  const { data: newsletters, isLoading, isFetched } = useQuery({
+    queryKey: ['newsletters-global'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('newsletters')
         .select('*')
-        .eq('property_id', propertyId)
         .order('published_at', { ascending: false })
+        .limit(200)
       if (error) throw error
       return data
     },
-    enabled: !!propertyId,
   })
 
-  // Separate weekly and afternoon
   const weeklyDigests = newsletters?.filter(n => n.type === 'weekly_digest') || []
   const afternoonUpdates = newsletters?.filter(n => n.type === 'afternoon_update') || []
-
-  // Latest of each type
   const latestWeekly = weeklyDigests[0]
   const latestAfternoon = afternoonUpdates[0]
 
-  // Check if weekly needs refresh (6am ET Monday)
+  // Determine what's current
   const now = new Date()
   const monday = getMonday()
   const weekOf = monday.toISOString().split('T')[0]
-  const needsWeeklyRefresh = !latestWeekly || latestWeekly.week_of !== weekOf
-
-  // Check if afternoon needs refresh (1pm ET daily)
   const todayStr = now.toISOString().split('T')[0]
-  const latestAfternoonDate = latestAfternoon?.published_at ? new Date(latestAfternoon.published_at).toISOString().split('T')[0] : null
-  const needsAfternoonRefresh = latestAfternoonDate !== todayStr
+  const etHour = getETHour()
+  const isMonday = now.getDay() === 1
 
-  // Auto-generate on load if stale
+  // Check staleness
+  const weeklyIsCurrent = latestWeekly?.week_of === weekOf
+  const afternoonIsCurrent = latestAfternoon?.published_at
+    ? new Date(latestAfternoon.published_at).toISOString().split('T')[0] === todayStr
+    : false
+
+  // Weekly should exist if it's Monday 6am+ ET or any day after Monday of this week
+  const weeklyNeeded = !weeklyIsCurrent && (isMonday ? etHour >= 6 : true)
+  // Afternoon should exist if it's 1pm+ ET today
+  const afternoonNeeded = !afternoonIsCurrent && etHour >= 13
+
+  // Auto-generate mutations (silent — no toast, no manual trigger needed)
   const weeklyMutation = useMutation({
     mutationFn: () => generateWeeklyNewsletter({ property_id: propertyId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['newsletters', propertyId] })
-      toast({ title: 'Weekly newsletter generated', type: 'success' })
-    },
-    onError: (err) => toast({ title: 'Error generating newsletter', description: err.message, type: 'error' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['newsletters-global'] }),
   })
 
   const afternoonMutation = useMutation({
     mutationFn: () => generateAfternoonUpdate({ property_id: propertyId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['newsletters', propertyId] })
-      toast({ title: 'Afternoon update generated', type: 'success' })
-    },
-    onError: (err) => toast({ title: 'Error generating update', description: err.message, type: 'error' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['newsletters-global'] }),
   })
 
-  // Auto-generate weekly if needed (simulates 6am Monday refresh)
+  // Auto-generate weekly on load if stale (runs once)
   useEffect(() => {
-    if (propertyId && needsWeeklyRefresh && !weeklyMutation.isPending && newsletters !== undefined && !weeklyMutation.isSuccess) {
+    if (isFetched && weeklyNeeded && !autoGenTriggered.current.weekly && !weeklyMutation.isPending) {
+      autoGenTriggered.current.weekly = true
       weeklyMutation.mutate()
     }
-  }, [propertyId, needsWeeklyRefresh, newsletters])
+  }, [isFetched, weeklyNeeded])
 
-  // Auto-generate afternoon if needed (simulates 1pm daily refresh)
+  // Auto-generate afternoon on load if stale (runs once)
   useEffect(() => {
-    if (propertyId && needsAfternoonRefresh && !afternoonMutation.isPending && newsletters !== undefined && !afternoonMutation.isSuccess) {
-      // Only auto-generate afternoon after noon ET (approximation)
-      const etHour = now.getUTCHours() - 4 // rough ET offset
-      if (etHour >= 12) {
-        afternoonMutation.mutate()
-      }
+    if (isFetched && afternoonNeeded && !autoGenTriggered.current.afternoon && !afternoonMutation.isPending) {
+      autoGenTriggered.current.afternoon = true
+      afternoonMutation.mutate()
     }
-  }, [propertyId, needsAfternoonRefresh, newsletters])
+  }, [isFetched, afternoonNeeded])
+
+  // Generating state
+  const isGenerating = weeklyMutation.isPending || afternoonMutation.isPending
+
+  // On latest view, auto-show the latest weekly by default
+  const displayNewsletter = selectedNewsletter ||
+    (view === 'latest' && latestWeekly && !isGenerating ? latestWeekly : null)
 
   return (
     <div className="space-y-6">
@@ -127,172 +135,172 @@ export default function Newsletter() {
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Newsletter</h1>
           <p className="text-text-secondary text-sm mt-1">
-            Sports business intelligence, delivered fresh
+            Sports business intelligence &mdash; auto-updated weekly & daily
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => weeklyMutation.mutate()}
-            disabled={weeklyMutation.isPending}
-            className="bg-bg-surface border border-border text-text-secondary px-3 py-2 rounded text-sm hover:text-accent hover:border-accent disabled:opacity-50"
-          >
-            {weeklyMutation.isPending ? 'Generating...' : 'Refresh Weekly'}
-          </button>
-          <button
-            onClick={() => afternoonMutation.mutate()}
-            disabled={afternoonMutation.isPending}
-            className="bg-bg-surface border border-border text-text-secondary px-3 py-2 rounded text-sm hover:text-accent hover:border-accent disabled:opacity-50"
-          >
-            {afternoonMutation.isPending ? 'Generating...' : 'Refresh Afternoon'}
-          </button>
+        <div className="flex gap-3 text-xs font-mono text-text-muted items-center">
+          <div className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${weeklyIsCurrent ? 'bg-success' : 'bg-warning animate-pulse'}`}></span>
+            <span>Weekly {weeklyIsCurrent ? 'current' : weeklyMutation.isPending ? 'generating...' : 'updating'}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${afternoonIsCurrent ? 'bg-success' : etHour < 13 ? 'bg-text-muted' : 'bg-warning animate-pulse'}`}></span>
+            <span>Afternoon {afternoonIsCurrent ? 'current' : etHour < 13 ? 'arrives 1pm ET' : afternoonMutation.isPending ? 'generating...' : 'updating'}</span>
+          </div>
         </div>
       </div>
 
-      {/* Schedule info */}
-      <div className="bg-bg-surface border border-border rounded-lg p-4 flex items-center justify-between">
-        <div className="flex gap-6 text-xs font-mono text-text-muted">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-accent"></span>
-            <span>Weekly Digest: Mondays @ 6:00 AM ET</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-warning"></span>
-            <span>Afternoon Access: Daily @ 1:00 PM ET</span>
-          </div>
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1 bg-bg-card rounded-lg p-1">
+          {[
+            { key: 'latest', label: 'This Week' },
+            { key: 'afternoon', label: 'Afternoon Access' },
+            { key: 'archive', label: `Archive (${newsletters?.length || 0})` },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => { setView(key); setSelectedNewsletter(null) }}
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+                view === key ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
         <div className="text-xs text-text-muted font-mono">
-          {weeklyDigests.length} weekly &middot; {afternoonUpdates.length} daily in archive
+          Mondays 6am ET &middot; Daily 1pm ET
         </div>
       </div>
 
-      {/* View tabs */}
-      <div className="flex gap-1 bg-bg-card rounded-lg p-1 w-fit">
-        {[
-          { key: 'latest', label: 'Latest' },
-          { key: 'weekly', label: 'Weekly Digests' },
-          { key: 'afternoon', label: 'Afternoon Access' },
-          { key: 'archive', label: 'Archive' },
-        ].map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => { setView(key); setSelectedNewsletter(null) }}
-            className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
-              view === key ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Loading */}
-      {(isLoading || weeklyMutation.isPending || afternoonMutation.isPending) && !selectedNewsletter && (
+      {/* Generation spinner */}
+      {isGenerating && !displayNewsletter && (
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
             <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-3"></div>
             <p className="text-sm text-text-muted">
-              {weeklyMutation.isPending ? 'Composing your weekly digest...' :
-               afternoonMutation.isPending ? 'Preparing afternoon highlights...' :
-               'Loading newsletters...'}
+              {weeklyMutation.isPending ? 'Composing this week\'s digest...' : 'Preparing today\'s afternoon access...'}
             </p>
+            <p className="text-xs text-text-muted mt-1">This will be ready in a moment</p>
           </div>
         </div>
       )}
 
-      {/* Selected newsletter (full view) */}
-      {selectedNewsletter && (
-        <div>
-          <button
-            onClick={() => setSelectedNewsletter(null)}
-            className="text-xs text-text-muted hover:text-accent mb-3 flex items-center gap-1"
-          >
-            &larr; Back to list
-          </button>
-          <NewsletterReader newsletter={selectedNewsletter} />
+      {/* Loading initial data */}
+      {isLoading && (
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => <div key={i} className="skeleton h-24 rounded-lg" />)}
         </div>
       )}
 
-      {/* Latest view — show both latest weekly and afternoon side by side */}
-      {view === 'latest' && !selectedNewsletter && !isLoading && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Weekly */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-mono text-text-muted uppercase tracking-wider">Weekly Digest</h2>
-            {latestWeekly ? (
-              <NewsletterCard
-                newsletter={latestWeekly}
-                onClick={() => setSelectedNewsletter(latestWeekly)}
-                featured
-              />
-            ) : (
-              <div className="bg-bg-surface border border-border rounded-lg p-8 text-center">
-                <p className="text-sm text-text-muted mb-3">No weekly digest yet</p>
+      {/* ===== THIS WEEK VIEW ===== */}
+      {view === 'latest' && !isLoading && (
+        <>
+          {/* If we have a selected or default newsletter, show it full-screen */}
+          {displayNewsletter ? (
+            <div>
+              {selectedNewsletter && (
                 <button
-                  onClick={() => weeklyMutation.mutate()}
-                  disabled={weeklyMutation.isPending}
-                  className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                  onClick={() => setSelectedNewsletter(null)}
+                  className="text-xs text-text-muted hover:text-accent mb-3 flex items-center gap-1"
                 >
-                  {weeklyMutation.isPending ? 'Generating...' : 'Generate Now'}
+                  &larr; Back
                 </button>
-              </div>
-            )}
-          </div>
+              )}
 
-          {/* Afternoon */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-mono text-text-muted uppercase tracking-wider">Afternoon Access</h2>
-            {latestAfternoon ? (
-              <NewsletterCard
-                newsletter={latestAfternoon}
-                onClick={() => setSelectedNewsletter(latestAfternoon)}
-                featured
-              />
-            ) : (
-              <div className="bg-bg-surface border border-border rounded-lg p-8 text-center">
-                <p className="text-sm text-text-muted mb-3">No afternoon update yet</p>
-                <button
-                  onClick={() => afternoonMutation.mutate()}
-                  disabled={afternoonMutation.isPending}
-                  className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
-                >
-                  {afternoonMutation.isPending ? 'Generating...' : 'Generate Now'}
-                </button>
-              </div>
-            )}
-          </div>
+              {/* Quick switch between weekly and afternoon */}
+              {!selectedNewsletter && (latestWeekly || latestAfternoon) && (
+                <div className="flex gap-2 mb-4">
+                  {latestWeekly && (
+                    <button
+                      onClick={() => setSelectedNewsletter(latestWeekly)}
+                      className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+                        (displayNewsletter?.id === latestWeekly?.id) ? 'bg-accent text-bg-primary border-accent' : 'border-border text-text-secondary hover:border-accent/50'
+                      }`}
+                    >
+                      Weekly Digest &mdash; {latestWeekly.week_of}
+                    </button>
+                  )}
+                  {latestAfternoon && (
+                    <button
+                      onClick={() => setSelectedNewsletter(latestAfternoon)}
+                      className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+                        (displayNewsletter?.id === latestAfternoon?.id) ? 'bg-warning/80 text-bg-primary border-warning' : 'border-border text-text-secondary hover:border-warning/50'
+                      }`}
+                    >
+                      Afternoon Access &mdash; {new Date(latestAfternoon.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <NewsletterReader newsletter={displayNewsletter} />
+            </div>
+          ) : !isGenerating && (
+            <div className="bg-bg-surface border border-border rounded-lg p-12 text-center">
+              <p className="text-text-muted text-sm">
+                {etHour < 6 && isMonday ? 'This week\'s digest will be ready at 6:00 AM ET.' :
+                 'Newsletter will be generated momentarily...'}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ===== AFTERNOON ACCESS LIST ===== */}
+      {view === 'afternoon' && !isLoading && (
+        <div className="space-y-3">
+          {selectedNewsletter ? (
+            <div>
+              <button
+                onClick={() => setSelectedNewsletter(null)}
+                className="text-xs text-text-muted hover:text-accent mb-3 flex items-center gap-1"
+              >
+                &larr; Back to list
+              </button>
+              <NewsletterReader newsletter={selectedNewsletter} />
+            </div>
+          ) : (
+            <>
+              {afternoonUpdates.length === 0 && !isGenerating ? (
+                <div className="text-center text-text-muted text-sm py-12">
+                  {etHour < 13 ? 'Today\'s Afternoon Access arrives at 1:00 PM ET.' : 'No afternoon updates yet.'}
+                </div>
+              ) : afternoonUpdates.map(n => (
+                <NewsletterCard key={n.id} newsletter={n} onClick={() => setSelectedNewsletter(n)} />
+              ))}
+            </>
+          )}
         </div>
       )}
 
-      {/* Weekly list */}
-      {view === 'weekly' && !selectedNewsletter && !isLoading && (
+      {/* ===== FULL ARCHIVE ===== */}
+      {view === 'archive' && !isLoading && (
         <div className="space-y-3">
-          {weeklyDigests.length === 0 ? (
-            <div className="text-center text-text-muted text-sm py-12">No weekly digests yet.</div>
-          ) : weeklyDigests.map(n => (
-            <NewsletterCard key={n.id} newsletter={n} onClick={() => setSelectedNewsletter(n)} />
-          ))}
-        </div>
-      )}
-
-      {/* Afternoon list */}
-      {view === 'afternoon' && !selectedNewsletter && !isLoading && (
-        <div className="space-y-3">
-          {afternoonUpdates.length === 0 ? (
-            <div className="text-center text-text-muted text-sm py-12">No afternoon updates yet.</div>
-          ) : afternoonUpdates.map(n => (
-            <NewsletterCard key={n.id} newsletter={n} onClick={() => setSelectedNewsletter(n)} />
-          ))}
-        </div>
-      )}
-
-      {/* Full archive */}
-      {view === 'archive' && !selectedNewsletter && !isLoading && (
-        <div className="space-y-3">
-          {(!newsletters || newsletters.length === 0) ? (
-            <div className="text-center text-text-muted text-sm py-12">No archived newsletters yet.</div>
-          ) : newsletters.map(n => (
-            <NewsletterCard key={n.id} newsletter={n} onClick={() => setSelectedNewsletter(n)} />
-          ))}
+          {selectedNewsletter ? (
+            <div>
+              <button
+                onClick={() => setSelectedNewsletter(null)}
+                className="text-xs text-text-muted hover:text-accent mb-3 flex items-center gap-1"
+              >
+                &larr; Back to archive
+              </button>
+              <NewsletterReader newsletter={selectedNewsletter} />
+            </div>
+          ) : (
+            <>
+              {(!newsletters || newsletters.length === 0) ? (
+                <div className="text-center text-text-muted text-sm py-12">No archived newsletters.</div>
+              ) : (
+                <div className="space-y-2">
+                  {newsletters.map(n => (
+                    <NewsletterCard key={n.id} newsletter={n} onClick={() => setSelectedNewsletter(n)} compact />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -300,9 +308,28 @@ export default function Newsletter() {
 }
 
 /* Newsletter card for list views */
-function NewsletterCard({ newsletter, onClick, featured }) {
+function NewsletterCard({ newsletter, onClick, featured, compact }) {
   const isWeekly = newsletter.type === 'weekly_digest'
   const topics = newsletter.topics || []
+
+  if (compact) {
+    return (
+      <div
+        onClick={onClick}
+        className="bg-bg-surface border border-border rounded-lg px-4 py-3 cursor-pointer hover:border-accent/30 transition-colors flex items-center justify-between gap-3"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+            isWeekly ? 'bg-accent/10 text-accent' : 'bg-warning/10 text-warning'
+          }`}>
+            {isWeekly ? 'Weekly' : 'Daily'}
+          </span>
+          <span className="text-sm text-text-primary truncate">{newsletter.title}</span>
+        </div>
+        <span className="text-xs text-text-muted font-mono shrink-0">{formatDate(newsletter.published_at)}</span>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -317,7 +344,7 @@ function NewsletterCard({ newsletter, onClick, featured }) {
             <span className={`text-xs font-mono px-2 py-0.5 rounded ${
               isWeekly ? 'bg-accent/10 text-accent' : 'bg-warning/10 text-warning'
             }`}>
-              {isWeekly ? 'Weekly' : 'Daily'}
+              {isWeekly ? 'Weekly' : 'Afternoon'}
             </span>
             <span className="text-xs text-text-muted font-mono">
               {formatDate(newsletter.published_at)} {formatTime(newsletter.published_at)}
@@ -406,8 +433,8 @@ function NewsletterReader({ newsletter }) {
       {/* Footer */}
       <div className="text-center mt-4">
         <p className="text-xs text-text-muted font-mono">
-          Generated {formatDate(newsletter.published_at)} at {formatTime(newsletter.published_at)}
-          {newsletter.week_of && ` for week of ${newsletter.week_of}`}
+          Published {formatDate(newsletter.published_at)} at {formatTime(newsletter.published_at)}
+          {newsletter.week_of && ` \u00b7 Week of ${newsletter.week_of}`}
         </p>
       </div>
     </div>

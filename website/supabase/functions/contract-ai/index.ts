@@ -434,31 +434,24 @@ Return ONLY valid JSON.`;
 async function generateWeeklyNewsletter(supabase: any, body: any) {
   const propertyId = body.property_id;
 
-  // Fetch pipeline context for personalized insights
-  let pipelineContext = "";
-  if (propertyId) {
-    const { data: deals } = await supabase
-      .from("deals")
-      .select("brand_name, value, stage, sub_industry")
-      .eq("property_id", propertyId)
-      .limit(30);
-    if (deals?.length > 0) {
-      const industries = [...new Set(deals.map((d: any) => d.sub_industry).filter(Boolean))];
-      const totalPipeline = deals.reduce((s: number, d: any) => s + (Number(d.value) || 0), 0);
-      pipelineContext = `\n\nThis user's pipeline context for personalization:
-- ${deals.length} active deals, $${Math.round(totalPipeline).toLocaleString()} total pipeline
-- Industries: ${industries.join(", ") || "Various"}
-- Top brands: ${deals.slice(0, 10).map((d: any) => d.brand_name).join(", ")}`;
-    }
-  }
-
   const today = new Date();
   const monday = new Date(today);
   monday.setDate(today.getDate() - today.getDay() + 1);
   const weekOf = monday.toISOString().split("T")[0];
 
+  // Check if this week's newsletter already exists globally
+  const { data: existing } = await supabase
+    .from("newsletters")
+    .select("*")
+    .eq("type", "weekly_digest")
+    .eq("week_of", weekOf)
+    .limit(1);
+
+  if (existing?.length > 0) {
+    return { newsletter: existing[0] };
+  }
+
   const prompt = `You are the editor of "The Sports Business Weekly," a premium newsletter for sports sponsorship and partnership professionals. Write the weekly edition for the week of ${weekOf}.
-${pipelineContext}
 
 Write a comprehensive, well-structured newsletter covering:
 
@@ -471,26 +464,33 @@ Write a comprehensive, well-structured newsletter covering:
 7. **LOOKING AHEAD** — What to watch for next week (upcoming events, earnings, announcements)
 8. **ACTIONABLE TAKEAWAY** — One specific thing a sponsorship sales professional should do this week
 
-Write in a professional but engaging tone. Use real market knowledge up to your training data. Include specific company names, dollar figures, and concrete examples where possible. Make it feel like a premium industry newsletter worth reading every Monday morning.
+CRITICAL SOURCING RULES:
+- Cite specific, real sources for every factual claim, data point, deal, or stat.
+- Inline each citation as a parenthetical at the end of the sentence, e.g. "(Source: SportBusiness Journal, March 2025)" or "(Source: Forbes Sports Money, Feb 2025)"
+- Use real publications: SportBusiness Journal, Sports Business Daily, Front Office Sports, Forbes, Bloomberg, ESPN, The Athletic, Yahoo Sports, CNBC, Marketing Week, Ad Age, Sportico, GlobalData Sport, IEG/Sponsorship.com, Nielsen Sports
+- At the end of the newsletter, include a "Sources" section listing all referenced publications with brief descriptions
+- If a fact is based on general industry knowledge, say "(Source: Industry analysis)" — do NOT present opinions as sourced facts
 
-Format as clean HTML with these rules:
+Format as clean HTML:
 - Use <h2> for section headers
 - Use <p> for paragraphs
 - Use <ul>/<li> for lists
 - Use <strong> for emphasis
 - Use <blockquote> for key quotes or callouts
+- End with <h2>Sources</h2> followed by source list
 - Keep total length around 1500-2000 words
-- Do NOT include <html>, <head>, <body> tags — just the content
-
-Also return a JSON summary with extracted topics.
+- Do NOT include <html>, <head>, <body> tags
 
 Return JSON:
 {
   "title": "The Sports Business Weekly — Week of ${weekOf}",
-  "content": "<h2>...</h2><p>...</p>...",
+  "content": "<h2>...</h2><p>...</p>...<h2>Sources</h2><ul>...</ul>",
   "summary": "One paragraph summary of this week's key themes",
   "topics": [
-    {"title": "topic headline", "category": "Deals|Trends|Technology|Brands|Data", "snippet": "one sentence"}
+    {"title": "topic headline", "category": "Deals|Trends|Technology|Brands|Data", "snippet": "one sentence", "source": "publication name"}
+  ],
+  "sources": [
+    {"name": "Publication Name", "description": "Brief description of what was referenced"}
   ]
 }
 
@@ -499,43 +499,39 @@ Return ONLY valid JSON.`;
   const text = await callClaude(prompt, 8192);
   const parsed = extractJSON(text);
 
-  // Store in database
-  if (propertyId) {
-    await supabase.from("newsletters").insert({
-      property_id: propertyId,
-      type: "weekly_digest",
-      title: parsed.title || `The Sports Business Weekly — ${weekOf}`,
-      content: parsed.content || "",
-      summary: parsed.summary || "",
-      topics: parsed.topics || [],
-      week_of: weekOf,
-      published_at: new Date().toISOString(),
-    });
-  }
+  // Store globally (no property_id filter — same for everyone)
+  await supabase.from("newsletters").insert({
+    property_id: propertyId || null,
+    type: "weekly_digest",
+    title: parsed.title || `The Sports Business Weekly — ${weekOf}`,
+    content: parsed.content || "",
+    summary: parsed.summary || "",
+    topics: parsed.topics || [],
+    sources: parsed.sources || [],
+    week_of: weekOf,
+    published_at: new Date().toISOString(),
+  });
 
   return { newsletter: parsed };
 }
 
 async function generateAfternoonUpdate(supabase: any, body: any) {
   const propertyId = body.property_id;
-
-  let pipelineContext = "";
-  if (propertyId) {
-    const { data: deals } = await supabase
-      .from("deals")
-      .select("brand_name, sub_industry, stage")
-      .eq("property_id", propertyId)
-      .limit(20);
-    if (deals?.length > 0) {
-      const industries = [...new Set(deals.map((d: any) => d.sub_industry).filter(Boolean))];
-      pipelineContext = `\nUser's focus industries: ${industries.join(", ") || "Various"}\nBrands in pipeline: ${deals.map((d: any) => d.brand_name).slice(0, 10).join(", ")}`;
-    }
-  }
-
   const today = new Date().toISOString().split("T")[0];
 
+  // Check if today's afternoon update already exists globally
+  const { data: existing } = await supabase
+    .from("newsletters")
+    .select("*")
+    .eq("type", "afternoon_update")
+    .gte("published_at", today + "T00:00:00Z")
+    .limit(1);
+
+  if (existing?.length > 0) {
+    return { update: existing[0] };
+  }
+
   const prompt = `You are the editor of "Afternoon Access," a daily afternoon briefing for sports business professionals. Write today's edition for ${today}.
-${pipelineContext}
 
 This is NOT breaking news. It's a curated afternoon digest of developments, insights, and things to consider. Think "smart context" not "alerts."
 
@@ -547,21 +543,31 @@ Write 4-5 concise items covering:
 4. **Conversation starter** — Something that would make for good discussion with a prospect or colleague
 5. **Quick thought** — A brief observation or contrarian take on a current sports business topic
 
-Tone: Sharp, informed, conversational. Like a knowledgeable colleague sharing what caught their eye today. Each item should be 2-4 sentences max.
+CRITICAL SOURCING RULES:
+- Cite a specific source for each item's factual claims inline, e.g. "(via SportBusiness Journal)" or "(per Front Office Sports)"
+- Use real publications: SportBusiness Journal, Front Office Sports, Forbes, Sportico, The Athletic, ESPN, Ad Age, CNBC, Sports Business Daily, Marketing Week
+- If it's your own analysis/opinion, label it as such: "(Analysis)" or "(Industry observation)"
+- At the end, include a brief "Sources" section
+
+Tone: Sharp, informed, conversational. Each item should be 2-4 sentences max.
 
 Format as clean HTML:
 - Use <h3> for item headers (include an emoji prefix)
 - Use <p> for body text
 - Use <strong> for key terms
+- End with <h3>Sources</h3> and a brief source list
 - Do NOT include <html>, <head>, <body> tags
 
 Return JSON:
 {
   "title": "Afternoon Access — ${today}",
-  "content": "<h3>...</h3><p>...</p>...",
+  "content": "<h3>...</h3><p>...</p>...<h3>Sources</h3><p>...</p>",
   "summary": "One sentence teaser",
   "topics": [
-    {"title": "item headline", "category": "Development|Intel|Brand|Conversation|Thought", "snippet": "one sentence"}
+    {"title": "item headline", "category": "Development|Intel|Brand|Conversation|Thought", "snippet": "one sentence", "source": "publication name"}
+  ],
+  "sources": [
+    {"name": "Publication Name", "description": "What was referenced"}
   ]
 }
 
@@ -570,18 +576,17 @@ Return ONLY valid JSON.`;
   const text = await callClaude(prompt, 4096);
   const parsed = extractJSON(text);
 
-  // Store in database
-  if (propertyId) {
-    await supabase.from("newsletters").insert({
-      property_id: propertyId,
-      type: "afternoon_update",
-      title: parsed.title || `Afternoon Access — ${today}`,
-      content: parsed.content || "",
-      summary: parsed.summary || "",
-      topics: parsed.topics || [],
-      published_at: new Date().toISOString(),
-    });
-  }
+  // Store globally
+  await supabase.from("newsletters").insert({
+    property_id: propertyId || null,
+    type: "afternoon_update",
+    title: parsed.title || `Afternoon Access — ${today}`,
+    content: parsed.content || "",
+    summary: parsed.summary || "",
+    topics: parsed.topics || [],
+    sources: parsed.sources || [],
+    published_at: new Date().toISOString(),
+  });
 
   return { update: parsed };
 }

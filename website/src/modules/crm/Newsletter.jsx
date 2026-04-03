@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/components/Toast'
 import { generateWeeklyNewsletter, generateAfternoonUpdate } from '@/lib/claude'
 
 function getMonday(date = new Date()) {
@@ -27,12 +28,10 @@ function formatTime(dateStr) {
   })
 }
 
-// Get current ET hour (accounting for EDT/EST roughly)
 function getETHour() {
   const now = new Date()
-  const etOffset = -5 // EST; EDT would be -4
-  const utcHour = now.getUTCHours()
-  return (utcHour + etOffset + 24) % 24
+  const etString = now.toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false })
+  return parseInt(etString) || 0
 }
 
 const CATEGORY_COLORS = {
@@ -48,16 +47,63 @@ const CATEGORY_COLORS = {
   Thought: 'bg-blue-500/10 text-blue-400',
 }
 
+const GEN_STEPS = {
+  weekly: [
+    'Scanning sports business headlines...',
+    'Analyzing sponsorship deals and partnerships...',
+    'Reviewing market trends and data...',
+    'Spotlighting brand strategies...',
+    'Compiling key stats and numbers...',
+    'Drafting actionable insights...',
+    'Verifying sources and citations...',
+    'Formatting your weekly digest...',
+  ],
+  afternoon: [
+    'Scanning afternoon developments...',
+    'Gathering industry intel...',
+    'Finding notable brand moves...',
+    'Crafting conversation starters...',
+    'Verifying sources...',
+  ],
+}
+
 export default function Newsletter() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const propertyId = profile?.property_id
   const [view, setView] = useState('latest')
   const [selectedNewsletter, setSelectedNewsletter] = useState(null)
   const autoGenTriggered = useRef({ weekly: false, afternoon: false })
 
-  // Fetch ALL newsletters globally (no property filter — shared across all users)
-  const { data: newsletters, isLoading, isFetched } = useQuery({
+  // Progress tracking for generation
+  const [genProgress, setGenProgress] = useState({ type: null, step: 0, startedAt: null })
+  const progressInterval = useRef(null)
+
+  function startProgress(type) {
+    const steps = GEN_STEPS[type]
+    setGenProgress({ type, step: 0, startedAt: Date.now() })
+    let step = 0
+    clearInterval(progressInterval.current)
+    progressInterval.current = setInterval(() => {
+      step++
+      if (step < steps.length) {
+        setGenProgress(prev => ({ ...prev, step }))
+      }
+    }, 3500) // advance step every 3.5s
+  }
+
+  function stopProgress() {
+    clearInterval(progressInterval.current)
+    setGenProgress({ type: null, step: 0, startedAt: null })
+  }
+
+  useEffect(() => {
+    return () => clearInterval(progressInterval.current)
+  }, [])
+
+  // Fetch newsletters globally
+  const { data: newsletters, isLoading, isFetched, isError } = useQuery({
     queryKey: ['newsletters-global'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -65,17 +111,21 @@ export default function Newsletter() {
         .select('*')
         .order('published_at', { ascending: false })
         .limit(200)
-      if (error) throw error
-      return data
+      if (error) {
+        // Table may not exist yet — return empty
+        console.warn('Newsletter query error (table may not exist):', error.message)
+        return []
+      }
+      return data || []
     },
+    retry: false,
   })
 
-  const weeklyDigests = newsletters?.filter(n => n.type === 'weekly_digest') || []
-  const afternoonUpdates = newsletters?.filter(n => n.type === 'afternoon_update') || []
+  const weeklyDigests = (newsletters || []).filter(n => n.type === 'weekly_digest')
+  const afternoonUpdates = (newsletters || []).filter(n => n.type === 'afternoon_update')
   const latestWeekly = weeklyDigests[0]
   const latestAfternoon = afternoonUpdates[0]
 
-  // Determine what's current
   const now = new Date()
   const monday = getMonday()
   const weekOf = monday.toISOString().split('T')[0]
@@ -83,50 +133,73 @@ export default function Newsletter() {
   const etHour = getETHour()
   const isMonday = now.getDay() === 1
 
-  // Check staleness
   const weeklyIsCurrent = latestWeekly?.week_of === weekOf
   const afternoonIsCurrent = latestAfternoon?.published_at
     ? new Date(latestAfternoon.published_at).toISOString().split('T')[0] === todayStr
     : false
 
-  // Weekly should exist if it's Monday 6am+ ET or any day after Monday of this week
   const weeklyNeeded = !weeklyIsCurrent && (isMonday ? etHour >= 6 : true)
-  // Afternoon should exist if it's 1pm+ ET today
   const afternoonNeeded = !afternoonIsCurrent && etHour >= 13
 
-  // Auto-generate mutations (silent — no toast, no manual trigger needed)
+  // Mutations with progress tracking
   const weeklyMutation = useMutation({
-    mutationFn: () => generateWeeklyNewsletter({ property_id: propertyId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['newsletters-global'] }),
+    mutationFn: () => {
+      startProgress('weekly')
+      return generateWeeklyNewsletter({ property_id: propertyId })
+    },
+    onSuccess: () => {
+      stopProgress()
+      queryClient.invalidateQueries({ queryKey: ['newsletters-global'] })
+    },
+    onError: (err) => {
+      stopProgress()
+      toast({ title: 'Newsletter generation failed', description: err.message, type: 'error' })
+    },
   })
 
   const afternoonMutation = useMutation({
-    mutationFn: () => generateAfternoonUpdate({ property_id: propertyId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['newsletters-global'] }),
+    mutationFn: () => {
+      startProgress('afternoon')
+      return generateAfternoonUpdate({ property_id: propertyId })
+    },
+    onSuccess: () => {
+      stopProgress()
+      queryClient.invalidateQueries({ queryKey: ['newsletters-global'] })
+    },
+    onError: (err) => {
+      stopProgress()
+      toast({ title: 'Afternoon update failed', description: err.message, type: 'error' })
+    },
   })
 
-  // Auto-generate weekly on load if stale (runs once)
+  // Auto-generate on load (once per session)
   useEffect(() => {
-    if (isFetched && weeklyNeeded && !autoGenTriggered.current.weekly && !weeklyMutation.isPending) {
+    if ((isFetched || isError) && weeklyNeeded && !autoGenTriggered.current.weekly && !weeklyMutation.isPending) {
       autoGenTriggered.current.weekly = true
       weeklyMutation.mutate()
     }
-  }, [isFetched, weeklyNeeded])
+  }, [isFetched, isError, weeklyNeeded])
 
-  // Auto-generate afternoon on load if stale (runs once)
   useEffect(() => {
-    if (isFetched && afternoonNeeded && !autoGenTriggered.current.afternoon && !afternoonMutation.isPending) {
+    if ((isFetched || isError) && afternoonNeeded && !autoGenTriggered.current.afternoon && !afternoonMutation.isPending && !weeklyMutation.isPending) {
+      // Wait for weekly to finish if it's also generating
       autoGenTriggered.current.afternoon = true
       afternoonMutation.mutate()
     }
-  }, [isFetched, afternoonNeeded])
+  }, [isFetched, isError, afternoonNeeded, weeklyMutation.isPending])
 
-  // Generating state
   const isGenerating = weeklyMutation.isPending || afternoonMutation.isPending
 
-  // On latest view, auto-show the latest weekly by default
+  // Show old content while generating new
   const displayNewsletter = selectedNewsletter ||
-    (view === 'latest' && latestWeekly && !isGenerating ? latestWeekly : null)
+    (view === 'latest' && latestWeekly ? latestWeekly : null)
+
+  // Progress UI data
+  const progressSteps = genProgress.type ? GEN_STEPS[genProgress.type] : []
+  const progressPct = progressSteps.length > 0
+    ? Math.min(95, ((genProgress.step + 1) / progressSteps.length) * 100)
+    : 0
+  const elapsed = genProgress.startedAt ? Math.floor((Date.now() - genProgress.startedAt) / 1000) : 0
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -140,15 +213,74 @@ export default function Newsletter() {
         </div>
         <div className="flex gap-3 text-[10px] sm:text-xs font-mono text-text-muted items-center">
           <div className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${weeklyIsCurrent ? 'bg-success' : 'bg-warning animate-pulse'}`}></span>
-            <span>Weekly {weeklyIsCurrent ? 'current' : weeklyMutation.isPending ? 'generating...' : 'updating'}</span>
+            <span className={`w-2 h-2 rounded-full ${weeklyIsCurrent ? 'bg-success' : weeklyMutation.isPending ? 'bg-accent animate-pulse' : 'bg-warning'}`}></span>
+            <span>Weekly {weeklyIsCurrent ? 'current' : weeklyMutation.isPending ? 'generating...' : 'pending'}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${afternoonIsCurrent ? 'bg-success' : etHour < 13 ? 'bg-text-muted' : 'bg-warning animate-pulse'}`}></span>
-            <span>Afternoon {afternoonIsCurrent ? 'current' : etHour < 13 ? 'arrives 1pm ET' : afternoonMutation.isPending ? 'generating...' : 'updating'}</span>
+            <span className={`w-2 h-2 rounded-full ${afternoonIsCurrent ? 'bg-success' : etHour < 13 ? 'bg-text-muted' : afternoonMutation.isPending ? 'bg-accent animate-pulse' : 'bg-warning'}`}></span>
+            <span>Afternoon {afternoonIsCurrent ? 'current' : etHour < 13 ? '1pm ET' : afternoonMutation.isPending ? 'generating...' : 'pending'}</span>
           </div>
         </div>
       </div>
+
+      {/* ===== GENERATION PROGRESS BANNER ===== */}
+      {isGenerating && (
+        <div className="bg-bg-surface border border-accent/30 rounded-lg p-4 sm:p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="animate-spin w-5 h-5 border-2 border-accent border-t-transparent rounded-full shrink-0"></div>
+            <div>
+              <div className="text-sm font-medium text-text-primary">
+                {weeklyMutation.isPending ? 'Generating Weekly Digest' : 'Generating Afternoon Access'}
+              </div>
+              <div className="text-xs text-text-muted font-mono mt-0.5">
+                {elapsed}s elapsed
+              </div>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-bg-card rounded-full h-2 mb-3">
+            <div
+              className="bg-accent rounded-full h-2 transition-all duration-1000 ease-out"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+
+          {/* Step list */}
+          <div className="space-y-1.5">
+            {progressSteps.map((step, i) => {
+              const isDone = i < genProgress.step
+              const isActive = i === genProgress.step
+              const isPending = i > genProgress.step
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <span className={`text-xs w-4 text-center shrink-0 ${isDone ? 'text-success' : isActive ? 'text-accent' : 'text-text-muted/30'}`}>
+                    {isDone ? '✓' : isActive ? '●' : '○'}
+                  </span>
+                  <span className={`text-xs ${isDone ? 'text-text-secondary' : isActive ? 'text-text-primary font-medium' : 'text-text-muted/40'}`}>
+                    {step}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Error retry */}
+      {(weeklyMutation.isError || afternoonMutation.isError) && (
+        <div className="bg-danger/10 border border-danger/30 rounded-lg p-4 flex items-center justify-between">
+          <div className="text-sm text-danger">
+            Failed to generate newsletter. {weeklyMutation.error?.message || afternoonMutation.error?.message}
+          </div>
+          <button
+            onClick={() => weeklyMutation.isError ? weeklyMutation.mutate() : afternoonMutation.mutate()}
+            className="bg-danger text-white px-3 py-1.5 rounded text-xs font-medium hover:opacity-90 shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -156,12 +288,12 @@ export default function Newsletter() {
           {[
             { key: 'latest', label: 'This Week' },
             { key: 'afternoon', label: 'Afternoon Access' },
-            { key: 'archive', label: `Archive (${newsletters?.length || 0})` },
+            { key: 'archive', label: `Archive (${(newsletters || []).length})` },
           ].map(({ key, label }) => (
             <button
               key={key}
               onClick={() => { setView(key); setSelectedNewsletter(null) }}
-              className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-colors whitespace-nowrap ${
                 view === key ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'
               }`}
             >
@@ -174,19 +306,6 @@ export default function Newsletter() {
         </div>
       </div>
 
-      {/* Generation spinner */}
-      {isGenerating && !displayNewsletter && (
-        <div className="flex items-center justify-center py-16">
-          <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-3"></div>
-            <p className="text-sm text-text-muted">
-              {weeklyMutation.isPending ? 'Composing this week\'s digest...' : 'Preparing today\'s afternoon access...'}
-            </p>
-            <p className="text-xs text-text-muted mt-1">This will be ready in a moment</p>
-          </div>
-        </div>
-      )}
-
       {/* Loading initial data */}
       {isLoading && (
         <div className="space-y-3">
@@ -197,7 +316,6 @@ export default function Newsletter() {
       {/* ===== THIS WEEK VIEW ===== */}
       {view === 'latest' && !isLoading && (
         <>
-          {/* If we have a selected or default newsletter, show it full-screen */}
           {displayNewsletter ? (
             <div>
               {selectedNewsletter && (
@@ -209,9 +327,9 @@ export default function Newsletter() {
                 </button>
               )}
 
-              {/* Quick switch between weekly and afternoon */}
-              {!selectedNewsletter && (latestWeekly || latestAfternoon) && (
-                <div className="flex gap-2 mb-4">
+              {/* Quick switch */}
+              {(latestWeekly || latestAfternoon) && (
+                <div className="flex gap-2 mb-4 flex-wrap">
                   {latestWeekly && (
                     <button
                       onClick={() => setSelectedNewsletter(latestWeekly)}
@@ -238,10 +356,11 @@ export default function Newsletter() {
               <NewsletterReader newsletter={displayNewsletter} />
             </div>
           ) : !isGenerating && (
-            <div className="bg-bg-surface border border-border rounded-lg p-12 text-center">
-              <p className="text-text-muted text-sm">
-                {etHour < 6 && isMonday ? 'This week\'s digest will be ready at 6:00 AM ET.' :
-                 'Newsletter will be generated momentarily...'}
+            <div className="bg-bg-surface border border-border rounded-lg p-8 sm:p-12 text-center">
+              <div className="text-3xl mb-3">📰</div>
+              <p className="text-text-secondary text-sm mb-1">No newsletter yet for this week</p>
+              <p className="text-text-muted text-xs">
+                The weekly digest auto-generates every Monday at 6:00 AM ET
               </p>
             </div>
           )}
@@ -264,8 +383,12 @@ export default function Newsletter() {
           ) : (
             <>
               {afternoonUpdates.length === 0 && !isGenerating ? (
-                <div className="text-center text-text-muted text-sm py-12">
-                  {etHour < 13 ? 'Today\'s Afternoon Access arrives at 1:00 PM ET.' : 'No afternoon updates yet.'}
+                <div className="bg-bg-surface border border-border rounded-lg p-8 sm:p-12 text-center">
+                  <div className="text-3xl mb-3">☀️</div>
+                  <p className="text-text-secondary text-sm mb-1">
+                    {etHour < 13 ? 'Today\'s Afternoon Access arrives at 1:00 PM ET' : 'No afternoon updates yet'}
+                  </p>
+                  <p className="text-text-muted text-xs">Daily highlights auto-generate each afternoon</p>
                 </div>
               ) : afternoonUpdates.map(n => (
                 <NewsletterCard key={n.id} newsletter={n} onClick={() => setSelectedNewsletter(n)} />
@@ -291,7 +414,10 @@ export default function Newsletter() {
           ) : (
             <>
               {(!newsletters || newsletters.length === 0) ? (
-                <div className="text-center text-text-muted text-sm py-12">No archived newsletters.</div>
+                <div className="bg-bg-surface border border-border rounded-lg p-8 sm:p-12 text-center">
+                  <div className="text-3xl mb-3">📁</div>
+                  <p className="text-text-secondary text-sm">No archived newsletters yet</p>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {newsletters.map(n => (
@@ -340,7 +466,7 @@ function NewsletterCard({ newsletter, onClick, featured, compact }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className={`text-xs font-mono px-2 py-0.5 rounded ${
               isWeekly ? 'bg-accent/10 text-accent' : 'bg-warning/10 text-warning'
             }`}>
@@ -360,11 +486,11 @@ function NewsletterCard({ newsletter, onClick, featured, compact }) {
                 <span key={i} className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
                   CATEGORY_COLORS[topic.category] || 'bg-bg-card text-text-muted'
                 }`}>
-                  {topic.title?.length > 40 ? topic.title.slice(0, 40) + '...' : topic.title}
+                  {topic.title?.length > 35 ? topic.title.slice(0, 35) + '...' : topic.title}
                 </span>
               ))}
               {topics.length > 5 && (
-                <span className="text-[10px] font-mono text-text-muted">+{topics.length - 5} more</span>
+                <span className="text-[10px] font-mono text-text-muted">+{topics.length - 5}</span>
               )}
             </div>
           )}
@@ -383,8 +509,8 @@ function NewsletterReader({ newsletter }) {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header */}
-      <div className="bg-bg-surface border border-border rounded-t-lg p-6 text-center">
-        <div className="flex items-center justify-center gap-2 mb-3">
+      <div className="bg-bg-surface border border-border rounded-t-lg p-4 sm:p-6 text-center">
+        <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
           <span className={`text-xs font-mono px-2 py-0.5 rounded ${
             isWeekly ? 'bg-accent/10 text-accent' : 'bg-warning/10 text-warning'
           }`}>
@@ -394,17 +520,17 @@ function NewsletterReader({ newsletter }) {
             {formatDate(newsletter.published_at)}
           </span>
         </div>
-        <h1 className="text-xl font-semibold text-text-primary mb-2">{newsletter.title}</h1>
+        <h1 className="text-lg sm:text-xl font-semibold text-text-primary mb-2">{newsletter.title}</h1>
         {newsletter.summary && (
-          <p className="text-sm text-text-secondary max-w-xl mx-auto">{newsletter.summary}</p>
+          <p className="text-xs sm:text-sm text-text-secondary max-w-xl mx-auto">{newsletter.summary}</p>
         )}
       </div>
 
       {/* Topic pills */}
       {topics.length > 0 && (
-        <div className="bg-bg-surface border-x border-border px-6 py-3 flex gap-2 flex-wrap">
+        <div className="bg-bg-surface border-x border-border px-4 sm:px-6 py-3 flex gap-2 flex-wrap">
           {topics.map((topic, i) => (
-            <span key={i} className={`text-xs font-mono px-2 py-1 rounded ${
+            <span key={i} className={`text-[10px] sm:text-xs font-mono px-2 py-1 rounded ${
               CATEGORY_COLORS[topic.category] || 'bg-bg-card text-text-muted'
             }`}>
               {topic.title}
@@ -414,17 +540,17 @@ function NewsletterReader({ newsletter }) {
       )}
 
       {/* Content */}
-      <div className="bg-bg-surface border border-border rounded-b-lg px-6 py-8">
+      <div className="bg-bg-surface border border-border rounded-b-lg px-4 sm:px-6 py-6 sm:py-8">
         <div
           className="newsletter-content prose prose-sm max-w-none text-text-primary
-            [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-text-primary [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:pb-2 [&_h2]:border-b [&_h2]:border-border
-            [&_h3]:text-base [&_h3]:font-medium [&_h3]:text-text-primary [&_h3]:mt-6 [&_h3]:mb-2
-            [&_p]:text-sm [&_p]:text-text-secondary [&_p]:leading-relaxed [&_p]:mb-3
-            [&_ul]:text-sm [&_ul]:text-text-secondary [&_ul]:ml-4 [&_ul]:mb-3
+            [&_h2]:text-base [&_h2]:sm:text-lg [&_h2]:font-semibold [&_h2]:text-text-primary [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:pb-2 [&_h2]:border-b [&_h2]:border-border
+            [&_h3]:text-sm [&_h3]:sm:text-base [&_h3]:font-medium [&_h3]:text-text-primary [&_h3]:mt-6 [&_h3]:mb-2
+            [&_p]:text-xs [&_p]:sm:text-sm [&_p]:text-text-secondary [&_p]:leading-relaxed [&_p]:mb-3
+            [&_ul]:text-xs [&_ul]:sm:text-sm [&_ul]:text-text-secondary [&_ul]:ml-4 [&_ul]:mb-3
             [&_li]:mb-1 [&_li]:leading-relaxed
             [&_strong]:text-text-primary [&_strong]:font-medium
             [&_blockquote]:border-l-2 [&_blockquote]:border-accent [&_blockquote]:pl-4 [&_blockquote]:py-2 [&_blockquote]:my-4 [&_blockquote]:bg-accent/5 [&_blockquote]:rounded-r
-            [&_blockquote_p]:text-accent/90 [&_blockquote_p]:text-sm [&_blockquote_p]:italic
+            [&_blockquote_p]:text-accent/90 [&_blockquote_p]:text-xs [&_blockquote_p]:sm:text-sm [&_blockquote_p]:italic
             [&_a]:text-accent [&_a]:underline [&_a]:underline-offset-2"
           dangerouslySetInnerHTML={{ __html: newsletter.content }}
         />
@@ -432,7 +558,7 @@ function NewsletterReader({ newsletter }) {
 
       {/* Footer */}
       <div className="text-center mt-4">
-        <p className="text-xs text-text-muted font-mono">
+        <p className="text-[10px] sm:text-xs text-text-muted font-mono">
           Published {formatDate(newsletter.published_at)} at {formatTime(newsletter.published_at)}
           {newsletter.week_of && ` \u00b7 Week of ${newsletter.week_of}`}
         </p>

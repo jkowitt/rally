@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import { FeatureFlagProvider } from './hooks/useFeatureFlags'
+import ToastProvider from './components/Toast'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import LegalGate from './components/layout/LegalGate'
 import AppShell from './components/layout/AppShell'
@@ -15,6 +16,7 @@ import BrandReport from './modules/crm/BrandReport'
 import DeclinedDeals from './modules/crm/DeclinedDeals'
 import ActivityTimeline from './modules/crm/ActivityTimeline'
 import TaskManager from './modules/crm/TaskManager'
+import DealInsights from './modules/crm/DealInsights'
 import EventManager from './modules/sportify/EventManager'
 import EventDetail from './modules/sportify/EventDetail'
 import ValuationEngine from './modules/valora/ValuationEngine'
@@ -25,6 +27,7 @@ export default function App() {
   return (
     <AuthProvider>
       <FeatureFlagProvider>
+        <ToastProvider>
         <Routes>
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
@@ -48,6 +51,7 @@ export default function App() {
                       <Route path="/crm/declined" element={<DeclinedDeals />} />
                       <Route path="/crm/activities" element={<ActivityTimeline />} />
                       <Route path="/crm/tasks" element={<TaskManager />} />
+                      <Route path="/crm/insights" element={<DealInsights />} />
                       {/* Sportify */}
                       <Route path="/sportify/events" element={<EventManager />} />
                       <Route path="/sportify/events/:eventId" element={<EventDetail />} />
@@ -68,6 +72,7 @@ export default function App() {
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ToastProvider>
       </FeatureFlagProvider>
     </AuthProvider>
   )

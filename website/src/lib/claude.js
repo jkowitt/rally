@@ -72,3 +72,28 @@ export async function extractBenefits({ contract_id, contract_text, property_id 
 export async function generateFulfillment({ contract_id, deal_id, start_date, end_date }) {
   return invokeEdgeFunction('contract-ai', { action: 'generate_fulfillment', contract_id, deal_id, start_date, end_date })
 }
+
+// CRM AI functions
+export async function getDealInsights({ deal, activities, tasks, contracts }) {
+  return invokeEdgeFunction('contract-ai', { action: 'deal_insights', deal, activities, tasks, contracts })
+}
+
+export async function getPipelineForecast({ deals, historical_win_rate }) {
+  return invokeEdgeFunction('contract-ai', { action: 'pipeline_forecast', deals, historical_win_rate })
+}
+
+export async function draftEmail({ deal, context, email_type }) {
+  return invokeEdgeFunction('contract-ai', { action: 'draft_email', deal, context, email_type })
+}
+
+export async function analyzeLostDeal({ deal, activities }) {
+  return invokeEdgeFunction('contract-ai', { action: 'analyze_lost_deal', deal, activities })
+}
+
+export async function enrichContact({ name, company, position }) {
+  return invokeEdgeFunction('contract-ai', { action: 'enrich_contact', name, company, position })
+}
+
+export async function generateMeetingNotes({ deal, attendees, agenda, raw_notes }) {
+  return invokeEdgeFunction('contract-ai', { action: 'meeting_notes', deal, attendees, agenda, raw_notes })
+}

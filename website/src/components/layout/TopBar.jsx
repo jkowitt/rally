@@ -3,6 +3,10 @@ import { useAuth } from '@/hooks/useAuth'
 export default function TopBar() {
   const { profile, signOut } = useAuth()
 
+  function openSearch() {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))
+  }
+
   return (
     <header className="h-14 border-b border-border bg-bg-surface flex items-center justify-between px-6">
       <div className="flex items-center gap-3">
@@ -19,6 +23,13 @@ export default function TopBar() {
       </div>
 
       <div className="flex items-center gap-4">
+        <button
+          onClick={openSearch}
+          className="flex items-center gap-2 bg-bg-card border border-border rounded-lg px-3 py-1.5 text-xs text-text-muted hover:text-text-secondary hover:border-accent/30 transition-colors"
+        >
+          <span>Search...</span>
+          <kbd className="text-[10px] font-mono bg-bg-surface px-1.5 py-0.5 rounded border border-border">Ctrl+K</kbd>
+        </button>
         <span className="text-sm text-text-secondary">
           {profile?.full_name || profile?.id?.slice(0, 8)}
         </span>

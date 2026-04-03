@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/components/Toast'
 
 export default function DeclinedDeals() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const propertyId = profile?.property_id
 
   const { data: deals, isLoading } = useQuery({
@@ -30,7 +32,9 @@ export default function DeclinedDeals() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['declined-deals', propertyId] })
       queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+      toast({ title: 'Deal restored to pipeline', type: 'success' })
     },
+    onError: (err) => toast({ title: 'Error restoring deal', description: err.message, type: 'error' }),
   })
 
   const deleteMutation = useMutation({
@@ -41,7 +45,9 @@ export default function DeclinedDeals() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['declined-deals', propertyId] })
       queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+      toast({ title: 'Deal permanently deleted', type: 'success' })
     },
+    onError: (err) => toast({ title: 'Error deleting deal', description: err.message, type: 'error' }),
   })
 
   const totalLostValue = deals?.reduce((sum, d) => sum + (Number(d.value) || 0), 0) || 0
@@ -72,7 +78,7 @@ export default function DeclinedDeals() {
                 <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Value</th>
                 <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Source</th>
                 <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Added</th>
-                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Notes</th>
+                <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Reason Lost</th>
                 <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Actions</th>
               </tr>
             </thead>
@@ -87,7 +93,7 @@ export default function DeclinedDeals() {
                   </td>
                   <td className="px-4 py-3 text-text-muted text-xs">{deal.source || '—'}</td>
                   <td className="px-4 py-3 text-text-muted text-xs font-mono">{deal.date_added || '—'}</td>
-                  <td className="px-4 py-3 text-text-muted text-xs max-w-[200px] truncate">{deal.notes || '—'}</td>
+                  <td className="px-4 py-3 text-text-muted text-xs max-w-[200px] truncate">{deal.lost_reason || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button

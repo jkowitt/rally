@@ -33,6 +33,18 @@ Deno.serve(async (req: Request) => {
       result = await extractBenefits(supabaseClient, body);
     } else if (action === "generate_fulfillment") {
       result = await generateFulfillment(supabaseClient, body);
+    } else if (action === "deal_insights") {
+      result = await dealInsights(body);
+    } else if (action === "pipeline_forecast") {
+      result = await pipelineForecast(body);
+    } else if (action === "draft_email") {
+      result = await draftEmailFn(body);
+    } else if (action === "analyze_lost_deal") {
+      result = await analyzeLostDeal(body);
+    } else if (action === "enrich_contact") {
+      result = await enrichContact(body);
+    } else if (action === "meeting_notes") {
+      result = await meetingNotes(body);
     } else {
       throw new Error("Unknown action: " + action);
     }
@@ -208,4 +220,49 @@ async function generateFulfillment(sb: any, body: any): Promise<any> {
   }
 
   return { records: [], count: 0 };
+}
+
+async function dealInsights(body: any) {
+  const d = body.deal || {};
+  const acts = (body.activities || []).slice(0, 10);
+  const tasks = (body.tasks || []).slice(0, 5);
+  const contracts = (body.contracts || []).slice(0, 3);
+  const prompt = "You are an elite sports sponsorship sales advisor. Analyze this deal and provide actionable insights.\n\nDeal: " + d.brand_name + ", Value: $" + (d.value || 0) + ", Stage: " + d.stage + ", Priority: " + (d.priority || "Medium") + ", Win Prob: " + (d.win_probability || 0) + "%, Contact: " + (d.contact_name || "Unknown") + " (" + (d.contact_position || "") + " at " + (d.contact_company || "") + "), Source: " + (d.source || "Unknown") + ", Added: " + (d.date_added || "Unknown") + ", Last Contacted: " + (d.last_contacted || "Never") + ", Notes: " + (d.notes || "None") + "\n\nRecent Activities: " + JSON.stringify(acts.map((a: any) => a.activity_type + ": " + (a.subject || "") + " (" + a.occurred_at + ")")) + "\n\nOpen Tasks: " + JSON.stringify(tasks.map((t: any) => t.title + " (due: " + t.due_date + ", " + t.priority + ")")) + "\n\nContracts: " + contracts.length + " total\n\nReturn a JSON object with:\n{\"health_score\": 1-10,\n\"next_best_actions\": [\"action1\", \"action2\", \"action3\"],\n\"risk_factors\": [\"risk1\"],\n\"opportunities\": [\"opp1\"],\n\"recommended_talking_points\": [\"point1\", \"point2\"],\n\"suggested_email_subject\": \"string\",\n\"days_to_close_estimate\": number,\n\"coaching_tip\": \"string\"}\n\nReturn ONLY valid JSON.";
+  const text = await callClaude(prompt, 1024);
+  return { insights: extractJSON(text) };
+}
+
+async function pipelineForecast(body: any) {
+  const deals = (body.deals || []).map((d: any) => ({ brand: d.brand_name, value: d.value, stage: d.stage, win_prob: d.win_probability, age: d.date_added }));
+  const prompt = "You are a revenue forecasting analyst for sports sponsorships. Analyze this pipeline and forecast.\n\nDeals: " + JSON.stringify(deals) + "\nHistorical Win Rate: " + (body.historical_win_rate || 30) + "%\n\nReturn JSON:\n{\"forecast_30_days\": number,\n\"forecast_60_days\": number,\n\"forecast_90_days\": number,\n\"best_case\": number,\n\"worst_case\": number,\n\"most_likely\": number,\n\"at_risk_deals\": [\"brand names\"],\n\"hot_deals\": [\"brand names\"],\n\"recommendations\": [\"rec1\", \"rec2\", \"rec3\"],\n\"pipeline_health\": \"Healthy\" or \"At Risk\" or \"Critical\",\n\"summary\": \"2 sentence summary\"}\n\nReturn ONLY valid JSON.";
+  const text = await callClaude(prompt, 1024);
+  return { forecast: extractJSON(text) };
+}
+
+async function draftEmailFn(body: any) {
+  const d = body.deal || {};
+  const prompt = "You are a professional sports sponsorship sales executive. Draft a " + (body.email_type || "follow-up") + " email.\n\nDeal: " + d.brand_name + ", Stage: " + d.stage + ", Contact: " + (d.contact_name || "") + " (" + (d.contact_position || "") + "), Value: $" + (d.value || 0) + "\nContext: " + (body.context || "Standard follow-up") + "\n\nReturn JSON:\n{\"subject\": \"email subject\",\n\"body\": \"email body text\",\n\"tone\": \"professional/casual/urgent\"}\n\nReturn ONLY valid JSON.";
+  const text = await callClaude(prompt, 1024);
+  return { email: extractJSON(text) };
+}
+
+async function analyzeLostDeal(body: any) {
+  const d = body.deal || {};
+  const acts = (body.activities || []).slice(0, 15);
+  const prompt = "You are a sales loss analyst for sports sponsorships. Analyze why this deal was lost and how to improve.\n\nDeal: " + d.brand_name + ", Value: $" + (d.value || 0) + ", Source: " + (d.source || "Unknown") + ", Stage when lost: " + d.stage + ", Lost Reason: " + (d.lost_reason || "Not specified") + ", Added: " + (d.date_added || "Unknown") + ", Notes: " + (d.notes || "None") + "\n\nActivities: " + JSON.stringify(acts.map((a: any) => a.activity_type + ": " + (a.subject || ""))) + "\n\nReturn JSON:\n{\"likely_reasons\": [\"reason1\", \"reason2\"],\n\"what_went_well\": [\"item1\"],\n\"what_to_improve\": [\"item1\", \"item2\"],\n\"reengagement_possible\": true/false,\n\"reengagement_strategy\": \"string or null\",\n\"lessons_learned\": \"string\",\n\"similar_deal_tips\": [\"tip1\", \"tip2\"]}\n\nReturn ONLY valid JSON.";
+  const text = await callClaude(prompt, 1024);
+  return { analysis: extractJSON(text) };
+}
+
+async function enrichContact(body: any) {
+  const prompt = "You are a business intelligence researcher for sports sponsorships. Based on the following contact info, provide enriched data and conversation starters.\n\nName: " + (body.name || "") + "\nCompany: " + (body.company || "") + "\nPosition: " + (body.position || "") + "\n\nReturn JSON:\n{\"industry\": \"string\",\n\"company_type\": \"string\",\n\"likely_budget_range\": \"string\",\n\"sponsorship_interests\": [\"interest1\", \"interest2\"],\n\"conversation_starters\": [\"starter1\", \"starter2\", \"starter3\"],\n\"key_decision_factors\": [\"factor1\", \"factor2\"],\n\"recommended_assets\": [\"LED Board\", \"Social Post\", etc],\n\"engagement_approach\": \"string\"}\n\nReturn ONLY valid JSON.";
+  const text = await callClaude(prompt, 1024);
+  return { enrichment: extractJSON(text) };
+}
+
+async function meetingNotes(body: any) {
+  const d = body.deal || {};
+  const prompt = "You are a meeting notes assistant for sports sponsorship sales. Create structured meeting notes.\n\nDeal: " + (d.brand_name || "Unknown") + "\nAttendees: " + (body.attendees || "Not specified") + "\nAgenda: " + (body.agenda || "General discussion") + "\nRaw Notes: " + (body.raw_notes || "No notes provided") + "\n\nReturn JSON:\n{\"summary\": \"2-3 sentence summary\",\n\"key_decisions\": [\"decision1\"],\n\"action_items\": [{\"task\": \"string\", \"owner\": \"string\", \"due\": \"string\"}],\n\"follow_up_email_draft\": \"string\",\n\"next_meeting_agenda\": [\"item1\", \"item2\"],\n\"deal_stage_recommendation\": \"string or null\",\n\"sentiment\": \"Positive/Neutral/Negative\"}\n\nReturn ONLY valid JSON.";
+  const text = await callClaude(prompt, 1024);
+  return { notes: extractJSON(text) };
 }

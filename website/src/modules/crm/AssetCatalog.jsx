@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/components/Toast'
 
 const CATEGORIES = ['LED Board', 'Jersey Patch', 'Radio Read', 'Social Post', 'Naming Right', 'Signage', 'Activation Space', 'Digital']
 
@@ -19,6 +20,7 @@ const CATEGORY_ICONS = {
 export default function AssetCatalog() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const propertyId = profile?.property_id
   const [showForm, setShowForm] = useState(false)
   const [editingAsset, setEditingAsset] = useState(null)
@@ -113,9 +115,11 @@ export default function AssetCatalog() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
+      toast({ title: 'Asset saved', type: 'success' })
       setShowForm(false)
       setEditingAsset(null)
     },
+    onError: (err) => toast({ title: 'Error saving asset', description: err.message, type: 'error' }),
   })
 
   const deleteMutation = useMutation({
@@ -123,7 +127,11 @@ export default function AssetCatalog() {
       const { error } = await supabase.from('assets').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['assets', propertyId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
+      toast({ title: 'Asset deleted', type: 'success' })
+    },
+    onError: (err) => toast({ title: 'Error deleting asset', description: err.message, type: 'error' }),
   })
 
   // Update inventory (total_available)
@@ -132,7 +140,10 @@ export default function AssetCatalog() {
       const { error } = await supabase.from('assets').update({ total_available }).eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['assets', propertyId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
+      toast({ title: 'Inventory updated', type: 'success' })
+    },
   })
 
   const filtered = assets?.filter((a) => !filter || a.category === filter) || []

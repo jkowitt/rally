@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/components/Toast'
 
 const PRIORITIES = ['High', 'Medium', 'Low']
 const STATUSES = ['Pending', 'In Progress', 'Done']
@@ -21,6 +22,7 @@ function toDateString(date) {
 export default function TaskManager() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const propertyId = profile?.property_id
   const userId = profile?.id
 
@@ -85,9 +87,11 @@ export default function TaskManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', propertyId] })
+      toast({ title: 'Task saved', type: 'success' })
       setShowForm(false)
       setEditingTask(null)
     },
+    onError: (err) => toast({ title: 'Error saving task', description: err.message, type: 'error' }),
   })
 
   const markDoneMutation = useMutation({
@@ -98,7 +102,10 @@ export default function TaskManager() {
         .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks', propertyId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', propertyId] })
+      toast({ title: 'Task completed!', type: 'success' })
+    },
   })
 
   const deleteMutation = useMutation({
@@ -106,7 +113,11 @@ export default function TaskManager() {
       const { error } = await supabase.from('tasks').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks', propertyId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', propertyId] })
+      toast({ title: 'Task deleted', type: 'success' })
+    },
+    onError: (err) => toast({ title: 'Error deleting task', description: err.message, type: 'error' }),
   })
 
   // Categorize tasks

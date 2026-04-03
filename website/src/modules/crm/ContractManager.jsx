@@ -5,6 +5,7 @@ GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.6.205/build/pdf.
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/components/Toast'
 import {
   generateContract,
   editContractText,
@@ -26,6 +27,7 @@ const STATUS_COLORS = {
 export default function ContractManager() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const propertyId = profile?.property_id
   const [view, setView] = useState('list') // list | editor | import
   const [selectedContract, setSelectedContract] = useState(null)
@@ -79,9 +81,11 @@ export default function ContractManager() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
+      toast({ title: 'Contract saved', type: 'success' })
       setShowForm(false)
       if (data) setSelectedContract(data)
     },
+    onError: (err) => toast({ title: 'Error saving contract', description: err.message, type: 'error' }),
   })
 
   const deleteMutation = useMutation({
@@ -91,8 +95,10 @@ export default function ContractManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
+      toast({ title: 'Contract deleted', type: 'success' })
       setSelectedContract(null)
     },
+    onError: (err) => toast({ title: 'Error deleting contract', description: err.message, type: 'error' }),
   })
 
   function exportPDF(contract) {

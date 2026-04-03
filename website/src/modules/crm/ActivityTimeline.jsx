@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/components/Toast'
 
 const ACTIVITY_TYPES = [
   'Call',
@@ -79,6 +80,7 @@ function toLocalDatetimeValue(date) {
 export default function ActivityTimeline() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const propertyId = profile?.property_id
 
   const [filterType, setFilterType] = useState('All')
@@ -247,13 +249,14 @@ export default function ActivityTimeline() {
           propertyId={propertyId}
           profileId={profile?.id}
           onClose={() => setShowModal(false)}
+          onCreated={() => toast({ title: 'Activity logged', type: 'success' })}
         />
       )}
     </div>
   )
 }
 
-function LogActivityModal({ deals, propertyId, profileId, onClose }) {
+function LogActivityModal({ deals, propertyId, profileId, onClose, onCreated }) {
   const queryClient = useQueryClient()
 
   const [form, setForm] = useState({
@@ -272,6 +275,7 @@ function LogActivityModal({ deals, propertyId, profileId, onClose }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activities', propertyId] })
+      onCreated?.()
       onClose()
     },
   })

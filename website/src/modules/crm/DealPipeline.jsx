@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { enrichContact } from '@/lib/claude'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
@@ -41,6 +43,7 @@ function isStale(deal) {
 export default function DealPipeline() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const propertyId = profile?.property_id
   const [showForm, setShowForm] = useState(false)
   const [editingDeal, setEditingDeal] = useState(null)
@@ -65,7 +68,10 @@ export default function DealPipeline() {
       const { error } = await supabase.from('deals').update({ stage }).eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deals', propertyId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+      toast({ title: 'Stage updated', type: 'success' })
+    },
   })
 
   const saveMutation = useMutation({
@@ -105,9 +111,11 @@ export default function DealPipeline() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+      toast({ title: 'Deal saved', type: 'success' })
       setShowForm(false)
       setEditingDeal(null)
     },
+    onError: (err) => toast({ title: 'Error saving deal', description: err.message, type: 'error' }),
   })
 
   const deleteMutation = useMutation({
@@ -115,15 +123,25 @@ export default function DealPipeline() {
       const { error } = await supabase.from('deals').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deals', propertyId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+      toast({ title: 'Deal deleted', type: 'success' })
+    },
+    onError: (err) => toast({ title: 'Error deleting deal', description: err.message, type: 'error' }),
   })
 
   const declineMutation = useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase.from('deals').update({ stage: 'Declined' }).eq('id', id)
+    mutationFn: async ({ id, lost_reason }) => {
+      const update = { stage: 'Declined' }
+      if (lost_reason) update.lost_reason = lost_reason
+      const { error } = await supabase.from('deals').update(update).eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deals', propertyId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+      toast({ title: 'Deal declined', type: 'warning' })
+    },
+    onError: (err) => toast({ title: 'Error declining deal', description: err.message, type: 'error' }),
   })
 
   function handleDragEnd(result) {
@@ -271,7 +289,7 @@ export default function DealPipeline() {
                               </div>
                               <div className="flex gap-2 mt-2 pt-1 border-t border-border">
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); declineMutation.mutate(deal.id) }}
+                                  onClick={(e) => { e.stopPropagation(); const reason = prompt('Reason for declining?'); if (reason !== null) declineMutation.mutate({ id: deal.id, lost_reason: reason }) }}
                                   className="text-[10px] text-text-muted hover:text-warning font-mono"
                                 >
                                   Decline
@@ -328,7 +346,7 @@ export default function DealPipeline() {
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button onClick={() => { setEditingDeal(deal); setShowForm(true) }} className="text-xs text-text-muted hover:text-accent">Edit</button>
-                      <button onClick={() => declineMutation.mutate(deal.id)} className="text-xs text-text-muted hover:text-warning">Decline</button>
+                      <button onClick={() => { const reason = prompt('Reason for declining?'); if (reason !== null) declineMutation.mutate({ id: deal.id, lost_reason: reason }) }} className="text-xs text-text-muted hover:text-warning">Decline</button>
                       <button onClick={() => { if (confirm('Permanently delete this deal?')) deleteMutation.mutate(deal.id) }} className="text-xs text-text-muted hover:text-danger">Delete</button>
                     </div>
                   </td>
@@ -356,6 +374,8 @@ export default function DealPipeline() {
 
 function DealForm({ deal, onSave, onCancel, saving }) {
   const [activeTab, setActiveTab] = useState('contact')
+  const [enriching, setEnriching] = useState(false)
+  const [enrichResult, setEnrichResult] = useState(null)
 
   const [form, setForm] = useState({
     brand_name: deal?.brand_name || '',
@@ -448,6 +468,40 @@ function DealForm({ deal, onSave, onCancel, saving }) {
                 onChange={(e) => setForm({ ...form, contact_company: e.target.value })}
                 className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
               />
+              {/* AI Contact Enrichment */}
+              <button
+                type="button"
+                disabled={enriching || (!form.contact_first_name && !form.brand_name)}
+                onClick={async () => {
+                  setEnriching(true)
+                  setEnrichResult(null)
+                  try {
+                    const result = await enrichContact({
+                      name: [form.contact_first_name, form.contact_last_name].filter(Boolean).join(' ') || form.brand_name,
+                      company: form.contact_company || form.brand_name,
+                      position: form.contact_position,
+                    })
+                    setEnrichResult(result)
+                  } catch (err) {
+                    setEnrichResult({ error: err.message })
+                  } finally {
+                    setEnriching(false)
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-accent/10 text-accent border border-accent/30 rounded px-3 py-2 text-xs font-medium hover:bg-accent/20 disabled:opacity-50 transition-colors"
+              >
+                <span>✦</span>
+                {enriching ? 'AI Enriching...' : 'AI Enrich Contact'}
+              </button>
+              {enrichResult && !enrichResult.error && (
+                <div className="bg-bg-card border border-accent/20 rounded p-3 text-xs text-text-secondary space-y-1">
+                  <div className="text-accent font-medium text-[10px] uppercase tracking-wider mb-1">AI Suggestions</div>
+                  <div className="whitespace-pre-wrap">{typeof enrichResult === 'string' ? enrichResult : enrichResult.enrichment || JSON.stringify(enrichResult, null, 2)}</div>
+                </div>
+              )}
+              {enrichResult?.error && (
+                <div className="text-xs text-danger bg-danger/10 rounded p-2">{enrichResult.error}</div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <input
                   type="email"

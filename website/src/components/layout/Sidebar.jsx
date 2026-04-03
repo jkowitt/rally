@@ -20,6 +20,7 @@ const navSections = [
       { to: '/app/crm/activities', label: 'Activities', icon: '◎' },
       { to: '/app/crm/tasks', label: 'Tasks', icon: '☐' },
       { to: '/app/crm/insights', label: 'AI Insights', icon: '✦' },
+      { to: '/app/crm/newsletter', label: 'Newsletter', icon: '▧' },
     ],
   },
   {

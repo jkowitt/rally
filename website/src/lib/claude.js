@@ -110,3 +110,12 @@ export async function suggestProspects({ property_id }) {
 export async function researchContacts({ company_name, category, website }) {
   return invokeEdgeFunction('contract-ai', { action: 'research_contacts', company_name, category, website })
 }
+
+// Newsletter
+export async function generateWeeklyNewsletter({ property_id }) {
+  return invokeEdgeFunction('contract-ai', { action: 'generate_weekly_newsletter', property_id })
+}
+
+export async function generateAfternoonUpdate({ property_id }) {
+  return invokeEdgeFunction('contract-ai', { action: 'generate_afternoon_update', property_id })
+}

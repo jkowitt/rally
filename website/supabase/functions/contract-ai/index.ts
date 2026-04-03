@@ -51,6 +51,10 @@ Deno.serve(async (req: Request) => {
       result = await suggestProspects(supabaseClient, body);
     } else if (action === "research_contacts") {
       result = await researchContacts(body);
+    } else if (action === "generate_weekly_newsletter") {
+      result = await generateWeeklyNewsletter(supabaseClient, body);
+    } else if (action === "generate_afternoon_update") {
+      result = await generateAfternoonUpdate(supabaseClient, body);
     } else {
       throw new Error("Unknown action: " + action);
     }
@@ -423,4 +427,161 @@ Return ONLY valid JSON.`;
 
   const text = await callClaude(prompt, 2048);
   return { research: extractJSON(text) };
+}
+
+// ============ NEWSLETTER ============
+
+async function generateWeeklyNewsletter(supabase: any, body: any) {
+  const propertyId = body.property_id;
+
+  // Fetch pipeline context for personalized insights
+  let pipelineContext = "";
+  if (propertyId) {
+    const { data: deals } = await supabase
+      .from("deals")
+      .select("brand_name, value, stage, sub_industry")
+      .eq("property_id", propertyId)
+      .limit(30);
+    if (deals?.length > 0) {
+      const industries = [...new Set(deals.map((d: any) => d.sub_industry).filter(Boolean))];
+      const totalPipeline = deals.reduce((s: number, d: any) => s + (Number(d.value) || 0), 0);
+      pipelineContext = `\n\nThis user's pipeline context for personalization:
+- ${deals.length} active deals, $${Math.round(totalPipeline).toLocaleString()} total pipeline
+- Industries: ${industries.join(", ") || "Various"}
+- Top brands: ${deals.slice(0, 10).map((d: any) => d.brand_name).join(", ")}`;
+    }
+  }
+
+  const today = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - today.getDay() + 1);
+  const weekOf = monday.toISOString().split("T")[0];
+
+  const prompt = `You are the editor of "The Sports Business Weekly," a premium newsletter for sports sponsorship and partnership professionals. Write the weekly edition for the week of ${weekOf}.
+${pipelineContext}
+
+Write a comprehensive, well-structured newsletter covering:
+
+1. **HEADLINE STORY** — The biggest sports business story this week (major deal, partnership, or market shift)
+2. **DEALS & PARTNERSHIPS** — 3-4 notable sponsorship deals or partnership announcements
+3. **MARKET TRENDS** — 2-3 emerging trends in sports sponsorship (data-driven insights, shifting budgets, new categories)
+4. **TECHNOLOGY & INNOVATION** — 1-2 tech developments impacting sports business (AI, streaming, fan engagement, measurement)
+5. **BRAND SPOTLIGHT** — Deep dive on one brand's sports marketing strategy and what others can learn
+6. **NUMBERS THAT MATTER** — 3-4 key stats or data points from the sports business world
+7. **LOOKING AHEAD** — What to watch for next week (upcoming events, earnings, announcements)
+8. **ACTIONABLE TAKEAWAY** — One specific thing a sponsorship sales professional should do this week
+
+Write in a professional but engaging tone. Use real market knowledge up to your training data. Include specific company names, dollar figures, and concrete examples where possible. Make it feel like a premium industry newsletter worth reading every Monday morning.
+
+Format as clean HTML with these rules:
+- Use <h2> for section headers
+- Use <p> for paragraphs
+- Use <ul>/<li> for lists
+- Use <strong> for emphasis
+- Use <blockquote> for key quotes or callouts
+- Keep total length around 1500-2000 words
+- Do NOT include <html>, <head>, <body> tags — just the content
+
+Also return a JSON summary with extracted topics.
+
+Return JSON:
+{
+  "title": "The Sports Business Weekly — Week of ${weekOf}",
+  "content": "<h2>...</h2><p>...</p>...",
+  "summary": "One paragraph summary of this week's key themes",
+  "topics": [
+    {"title": "topic headline", "category": "Deals|Trends|Technology|Brands|Data", "snippet": "one sentence"}
+  ]
+}
+
+Return ONLY valid JSON.`;
+
+  const text = await callClaude(prompt, 8192);
+  const parsed = extractJSON(text);
+
+  // Store in database
+  if (propertyId) {
+    await supabase.from("newsletters").insert({
+      property_id: propertyId,
+      type: "weekly_digest",
+      title: parsed.title || `The Sports Business Weekly — ${weekOf}`,
+      content: parsed.content || "",
+      summary: parsed.summary || "",
+      topics: parsed.topics || [],
+      week_of: weekOf,
+      published_at: new Date().toISOString(),
+    });
+  }
+
+  return { newsletter: parsed };
+}
+
+async function generateAfternoonUpdate(supabase: any, body: any) {
+  const propertyId = body.property_id;
+
+  let pipelineContext = "";
+  if (propertyId) {
+    const { data: deals } = await supabase
+      .from("deals")
+      .select("brand_name, sub_industry, stage")
+      .eq("property_id", propertyId)
+      .limit(20);
+    if (deals?.length > 0) {
+      const industries = [...new Set(deals.map((d: any) => d.sub_industry).filter(Boolean))];
+      pipelineContext = `\nUser's focus industries: ${industries.join(", ") || "Various"}\nBrands in pipeline: ${deals.map((d: any) => d.brand_name).slice(0, 10).join(", ")}`;
+    }
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const prompt = `You are the editor of "Afternoon Access," a daily afternoon briefing for sports business professionals. Write today's edition for ${today}.
+${pipelineContext}
+
+This is NOT breaking news. It's a curated afternoon digest of developments, insights, and things to consider. Think "smart context" not "alerts."
+
+Write 4-5 concise items covering:
+
+1. **A development worth watching** — Something evolving in sports business (not breaking, but a noteworthy update)
+2. **Industry intel** — An insight or data point about sponsor behavior, fan engagement, or market dynamics
+3. **Brand move** — A brand making an interesting sports marketing play (new activation, renewed deal, category shift)
+4. **Conversation starter** — Something that would make for good discussion with a prospect or colleague
+5. **Quick thought** — A brief observation or contrarian take on a current sports business topic
+
+Tone: Sharp, informed, conversational. Like a knowledgeable colleague sharing what caught their eye today. Each item should be 2-4 sentences max.
+
+Format as clean HTML:
+- Use <h3> for item headers (include an emoji prefix)
+- Use <p> for body text
+- Use <strong> for key terms
+- Do NOT include <html>, <head>, <body> tags
+
+Return JSON:
+{
+  "title": "Afternoon Access — ${today}",
+  "content": "<h3>...</h3><p>...</p>...",
+  "summary": "One sentence teaser",
+  "topics": [
+    {"title": "item headline", "category": "Development|Intel|Brand|Conversation|Thought", "snippet": "one sentence"}
+  ]
+}
+
+Return ONLY valid JSON.`;
+
+  const text = await callClaude(prompt, 4096);
+  const parsed = extractJSON(text);
+
+  // Store in database
+  if (propertyId) {
+    await supabase.from("newsletters").insert({
+      property_id: propertyId,
+      type: "afternoon_update",
+      title: parsed.title || `Afternoon Access — ${today}`,
+      content: parsed.content || "",
+      summary: parsed.summary || "",
+      topics: parsed.topics || [],
+      published_at: new Date().toISOString(),
+    });
+  }
+
+  return { update: parsed };
 }

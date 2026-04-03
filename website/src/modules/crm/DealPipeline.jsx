@@ -394,16 +394,16 @@ export default function DealPipeline() {
   const dealCategories = [...new Set(activeDealsRaw.map(d => guessCategory(d.brand_name, d.sub_industry)))].sort()
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Deal Pipeline</h1>
-          <p className="text-text-secondary text-sm mt-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Deal Pipeline</h1>
+          <p className="text-text-secondary text-xs sm:text-sm mt-1">
             {activeDeals.length} active deals &middot; ${(totalValue / 1000).toFixed(0)}K pipeline
             {declinedCount > 0 && <span className="text-text-muted"> &middot; {declinedCount} declined</span>}
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           <div className="flex bg-bg-card rounded overflow-hidden border border-border">
             <button onClick={() => setViewMode('kanban')} className={`px-3 py-1.5 text-xs font-mono ${viewMode === 'kanban' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Board</button>
             <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 text-xs font-mono ${viewMode === 'table' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Table</button>
@@ -442,7 +442,7 @@ export default function DealPipeline() {
 
       {/* Pipeline Health Metrics */}
       {activeDeals.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
           <div className="bg-bg-surface border border-border rounded-lg p-3">
             <div className="text-xs text-text-muted font-mono">Weighted Pipeline</div>
             <div className="text-lg font-semibold text-accent font-mono">
@@ -480,14 +480,14 @@ export default function DealPipeline() {
         <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="skeleton h-16" />)}</div>
       ) : viewMode === 'kanban' ? (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-3 overflow-x-auto pb-4">
+          <div className="flex gap-3 overflow-x-auto pb-4 -mx-3 px-3 sm:mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none">
             {STAGES.map((stage) => (
               <Droppable key={stage} droppableId={stage}>
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`min-w-[200px] flex-1 bg-bg-surface border rounded-lg p-3 transition-colors ${
+                    className={`min-w-[260px] sm:min-w-[200px] flex-1 bg-bg-surface border rounded-lg p-3 transition-colors snap-center ${
                       snapshot.isDraggingOver ? 'border-accent/40' : 'border-border'
                     }`}
                   >

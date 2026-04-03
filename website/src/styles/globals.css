@@ -56,6 +56,54 @@ body {
   .print-only { display: block !important; }
 }
 
+/* Mobile slide-in animation */
+.mobile-slide-in {
+  animation: slideInLeft 0.2s ease-out;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+/* Safe area for bottom nav (iPhone notch) */
+.safe-pb {
+  padding-bottom: calc(0.375rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Mobile touch improvements */
+@media (max-width: 767px) {
+  /* Larger touch targets */
+  button, a, select, input[type="checkbox"] {
+    min-height: 36px;
+  }
+
+  /* Full-width modals on mobile */
+  .fixed.inset-0 .max-w-md,
+  .fixed.inset-0 .max-w-lg,
+  .fixed.inset-0 .max-w-xl,
+  .fixed.inset-0 .max-w-3xl,
+  .fixed.inset-0 .max-w-4xl {
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 12px 12px 0 0 !important;
+    max-height: 92vh !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    top: auto !important;
+  }
+
+  /* Kanban scroll hint */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent zoom on input focus */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--color-bg-primary); }

@@ -103,9 +103,9 @@ export default function Dashboard() {
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary">Dashboard</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Dashboard</h1>
         <p className="text-text-secondary text-sm mt-1">
           Welcome back, {profile?.full_name || 'there'}
         </p>

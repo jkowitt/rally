@@ -129,16 +129,16 @@ export default function Newsletter() {
     (view === 'latest' && latestWeekly && !isGenerating ? latestWeekly : null)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Newsletter</h1>
-          <p className="text-text-secondary text-sm mt-1">
+          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Newsletter</h1>
+          <p className="text-text-secondary text-xs sm:text-sm mt-1">
             Sports business intelligence &mdash; auto-updated weekly & daily
           </p>
         </div>
-        <div className="flex gap-3 text-xs font-mono text-text-muted items-center">
+        <div className="flex gap-3 text-[10px] sm:text-xs font-mono text-text-muted items-center">
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${weeklyIsCurrent ? 'bg-success' : 'bg-warning animate-pulse'}`}></span>
             <span>Weekly {weeklyIsCurrent ? 'current' : weeklyMutation.isPending ? 'generating...' : 'updating'}</span>
@@ -151,8 +151,8 @@ export default function Newsletter() {
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1 bg-bg-card rounded-lg p-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex gap-1 bg-bg-card rounded-lg p-1 overflow-x-auto">
           {[
             { key: 'latest', label: 'This Week' },
             { key: 'afternoon', label: 'Afternoon Access' },
@@ -169,7 +169,7 @@ export default function Newsletter() {
             </button>
           ))}
         </div>
-        <div className="text-xs text-text-muted font-mono">
+        <div className="hidden sm:block text-xs text-text-muted font-mono">
           Mondays 6am ET &middot; Daily 1pm ET
         </div>
       </div>

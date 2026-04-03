@@ -46,23 +46,26 @@ const navSections = [
   },
 ]
 
-export default function Sidebar({ collapsed, onToggle }) {
+export default function Sidebar({ collapsed, onToggle, mobile }) {
   const { flags } = useFeatureFlags()
   const { isDeveloper } = useAuth()
 
+  const width = mobile ? 'w-[280px]' : collapsed ? 'w-16' : 'w-[220px]'
+  const showLabels = mobile || !collapsed
+
   return (
-    <aside className={`fixed top-0 left-0 h-screen bg-bg-surface border-r border-border flex flex-col transition-all duration-200 z-40 ${collapsed ? 'w-16' : 'w-[220px]'}`}>
+    <aside className={`fixed top-0 left-0 h-screen bg-bg-surface border-r border-border flex flex-col transition-all duration-200 z-40 ${width}`}>
       {/* Logo */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-border">
-        {!collapsed && (
+        {showLabels && (
           <span className="font-mono font-bold text-accent text-sm tracking-wide">LOUD LEGACY</span>
         )}
         <button
           onClick={onToggle}
           className="text-text-muted hover:text-text-primary text-lg"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={mobile ? 'Close menu' : collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? '▶' : '◀'}
+          {mobile ? '✕' : collapsed ? '▶' : '◀'}
         </button>
       </div>
 
@@ -72,7 +75,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           if (section.flag && !flags[section.flag]) return null
           return (
             <div key={section.label} className="mb-4">
-              {!collapsed && (
+              {showLabels && (
                 <div className="px-4 mb-1 text-[10px] uppercase tracking-widest text-text-muted font-mono">
                   {section.label}
                 </div>
@@ -87,11 +90,11 @@ export default function Sidebar({ collapsed, onToggle }) {
                       isActive
                         ? 'text-accent bg-accent/5 border-r-2 border-accent'
                         : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
-                    } ${collapsed ? 'justify-center' : ''}`
+                    } $${!showLabels ? 'justify-center' : ''}`
                   }
                 >
                   <span className="text-base">{item.icon}</span>
-                  {!collapsed && <span>{item.label}</span>}
+                  {showLabels && <span>{item.label}</span>}
                 </NavLink>
               ))}
             </div>
@@ -113,11 +116,11 @@ export default function Sidebar({ collapsed, onToggle }) {
                   isActive
                     ? 'text-accent bg-accent/5 border-r-2 border-accent'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
-                } ${collapsed ? 'justify-center' : ''}`
+                } $${!showLabels ? 'justify-center' : ''}`
               }
             >
               <span className="text-base">✗</span>
-              {!collapsed && <span>Declined</span>}
+              {showLabels && <span>Declined</span>}
             </NavLink>
           </div>
         )}
@@ -137,18 +140,18 @@ export default function Sidebar({ collapsed, onToggle }) {
                   isActive
                     ? 'text-accent bg-accent/5 border-r-2 border-accent'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
-                } ${collapsed ? 'justify-center' : ''}`
+                } $${!showLabels ? 'justify-center' : ''}`
               }
             >
               <span className="text-base">⚙</span>
-              {!collapsed && <span>Dev Tools</span>}
+              {showLabels && <span>Dev Tools</span>}
             </NavLink>
           </div>
         )}
       </nav>
 
       {/* User */}
-      {!collapsed && (
+      {showLabels && (
         <div className="border-t border-border px-4 py-3">
           <div className="text-xs text-text-muted font-mono">v0.1.0</div>
         </div>

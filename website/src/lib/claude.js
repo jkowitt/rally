@@ -260,7 +260,7 @@ export async function generateWeeklyNewsletter({ property_id }) {
   const data = await invokeEdgeFunction('contract-ai', {
     action: 'edit_contract',
     contract_text: template,
-    instructions: `This is The Sports Business Weekly newsletter template for the week of ${weekOf}. Replace ALL [PLACEHOLDER] content with real, substantive sports business information. Use real company names, real dollar figures, real industry data, and real publication sources. Every section must contain actual sports business content — no placeholder text should remain. Cite sources inline like (Source: SportBusiness Journal) or (via Front Office Sports). Write 1500-2000 words total. Return ONLY the HTML content.`,
+    instructions: `This is The Sports Business Weekly newsletter for the week of ${weekOf}. Replace ALL [PLACEHOLDER] content with REAL sports business news, deals, and developments from the LAST 7 DAYS ONLY (${new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]} through ${new Date().toISOString().split('T')[0]}). Every story, deal, stat, and trend MUST be from the past week. Use real company names, real dollar figures, real industry data. Cite sources inline like (Source: SportBusiness Journal, ${new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}) or (via Front Office Sports). No placeholder text should remain. Write 1500-2000 words total. Return ONLY the HTML content.`,
   })
 
   let htmlContent = (data.contract_text || '').trim()
@@ -278,17 +278,33 @@ export async function generateWeeklyNewsletter({ property_id }) {
     topics: [],
   }
 
+  // Update existing record for this week, or insert new
   try {
-    await supabase.from('newsletters').insert({
-      property_id: property_id || null,
-      type: 'weekly_digest',
-      title: newsletter.title,
-      content: newsletter.content,
-      summary: '',
-      topics: [],
-      week_of: weekOf,
-      published_at: new Date().toISOString(),
-    })
+    const { data: existing } = await supabase
+      .from('newsletters')
+      .select('id')
+      .eq('type', 'weekly_digest')
+      .eq('week_of', weekOf)
+      .limit(1)
+
+    if (existing?.length > 0) {
+      await supabase.from('newsletters').update({
+        title: newsletter.title,
+        content: newsletter.content,
+        published_at: new Date().toISOString(),
+      }).eq('id', existing[0].id)
+    } else {
+      await supabase.from('newsletters').insert({
+        property_id: property_id || null,
+        type: 'weekly_digest',
+        title: newsletter.title,
+        content: newsletter.content,
+        summary: '',
+        topics: [],
+        week_of: weekOf,
+        published_at: new Date().toISOString(),
+      })
+    }
   } catch { /* table may not exist */ }
 
   return { newsletter }
@@ -325,7 +341,7 @@ export async function generateAfternoonUpdate({ property_id }) {
   const data = await invokeEdgeFunction('contract-ai', {
     action: 'edit_contract',
     contract_text: template,
-    instructions: `This is the Afternoon Access daily briefing template for ${today}. Replace ALL [PLACEHOLDER] content with real, current sports business information. Use real company names, real deals, real data. Conversational tone — like a sharp colleague sharing what caught their eye. Cite sources inline (via SportBusiness Journal, per Front Office Sports, etc). No placeholder text should remain. Return ONLY the HTML.`,
+    instructions: `This is the Afternoon Access daily briefing for ${today}. Replace ALL [PLACEHOLDER] content with REAL sports business news and developments from TODAY (${today}) or the last 24 hours only. Every item must be current — today's news, today's developments, today's data. Use real company names, real deals. Conversational tone — like a sharp colleague sharing what caught their eye this afternoon. Cite sources inline (via SportBusiness Journal, per Front Office Sports, etc). No placeholder text should remain. Return ONLY the HTML.`,
   })
 
   let htmlContent = (data.contract_text || '').trim()
@@ -341,16 +357,32 @@ export async function generateAfternoonUpdate({ property_id }) {
     topics: [],
   }
 
+  // Update existing record for today, or insert new
   try {
-    await supabase.from('newsletters').insert({
-      property_id: property_id || null,
-      type: 'afternoon_update',
-      title: update.title,
-      content: update.content,
-      summary: '',
-      topics: [],
-      published_at: new Date().toISOString(),
-    })
+    const { data: existing } = await supabase
+      .from('newsletters')
+      .select('id')
+      .eq('type', 'afternoon_update')
+      .gte('published_at', today + 'T00:00:00Z')
+      .limit(1)
+
+    if (existing?.length > 0) {
+      await supabase.from('newsletters').update({
+        title: update.title,
+        content: update.content,
+        published_at: new Date().toISOString(),
+      }).eq('id', existing[0].id)
+    } else {
+      await supabase.from('newsletters').insert({
+        property_id: property_id || null,
+        type: 'afternoon_update',
+        title: update.title,
+        content: update.content,
+        summary: '',
+        topics: [],
+        published_at: new Date().toISOString(),
+      })
+    }
   } catch { /* table may not exist */ }
 
   return { update }

@@ -130,6 +130,13 @@ export default function Newsletter() {
   const monday = getMonday()
   const weekOf = monday.toISOString().split('T')[0]
   const todayStr = now.toISOString().split('T')[0]
+
+  // Archive excludes the current week's digest and today's afternoon
+  const archivedNewsletters = (newsletters || []).filter(n => {
+    if (n.type === 'weekly_digest' && n.week_of === weekOf) return false
+    if (n.type === 'afternoon_update' && n.published_at && new Date(n.published_at).toISOString().split('T')[0] === todayStr) return false
+    return true
+  })
   const etHour = getETHour()
   const isMonday = now.getDay() === 1
 
@@ -327,7 +334,7 @@ export default function Newsletter() {
           {[
             { key: 'latest', label: 'This Week' },
             { key: 'afternoon', label: 'Afternoon Access' },
-            { key: 'archive', label: `Archive (${(newsletters || []).length})` },
+            { key: 'archive', label: `Archive (${archivedNewsletters.length})` },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -473,14 +480,15 @@ export default function Newsletter() {
             </div>
           ) : (
             <>
-              {(!newsletters || newsletters.length === 0) && !localWeekly && !localAfternoon ? (
+              {archivedNewsletters.length === 0 ? (
                 <div className="bg-bg-surface border border-border rounded-lg p-8 sm:p-12 text-center">
                   <div className="text-3xl mb-3">📁</div>
                   <p className="text-text-secondary text-sm">No archived newsletters yet</p>
+                  <p className="text-text-muted text-xs mt-1">Past editions will appear here after this week</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {newsletters.map(n => (
+                  {archivedNewsletters.map(n => (
                     <NewsletterCard key={n.id} newsletter={n} onClick={() => setSelectedNewsletter(n)} compact />
                   ))}
                 </div>

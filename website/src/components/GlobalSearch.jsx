@@ -3,6 +3,56 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
+const RECENT_SEARCHES_KEY = 'rally_recent_searches'
+const MAX_RECENT_SEARCHES = 5
+
+function getRecentSearches() {
+  try {
+    const stored = localStorage.getItem(RECENT_SEARCHES_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+function saveRecentSearch(term) {
+  try {
+    const searches = getRecentSearches().filter((s) => s !== term)
+    searches.unshift(term)
+    localStorage.setItem(
+      RECENT_SEARCHES_KEY,
+      JSON.stringify(searches.slice(0, MAX_RECENT_SEARCHES))
+    )
+  } catch {
+    // localStorage unavailable
+  }
+}
+
+function clearRecentSearches() {
+  try {
+    localStorage.removeItem(RECENT_SEARCHES_KEY)
+  } catch {
+    // localStorage unavailable
+  }
+}
+
+function formatCurrency(value) {
+  if (value == null) return null
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function formatStage(stage) {
+  if (!stage) return null
+  return stage
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 const CATEGORIES = [
   {
     key: 'deals',
@@ -13,9 +63,36 @@ const CATEGORIES = [
       </svg>
     ),
     route: '/app/crm/pipeline',
-    columns: ['brand_name', 'contact_name', 'contact_email'],
+    columns: ['brand_name', 'contact_name', 'contact_email', 'value', 'stage'],
+    searchColumns: ['brand_name', 'contact_name', 'contact_email'],
     display: (r) => r.brand_name,
     subtitle: (r) => [r.contact_name, r.contact_email].filter(Boolean).join(' · '),
+    preview: (r) => {
+      const parts = []
+      if (r.value != null) parts.push(formatCurrency(r.value))
+      if (r.stage) parts.push(formatStage(r.stage))
+      return parts.join(' · ') || null
+    },
+  },
+  {
+    key: 'contacts',
+    label: 'Contacts',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    ),
+    route: '/app/crm/pipeline',
+    columns: ['first_name', 'last_name', 'email', 'phone', 'company', 'position'],
+    searchColumns: ['first_name', 'last_name', 'email', 'company'],
+    display: (r) => [r.first_name, r.last_name].filter(Boolean).join(' ') || r.email || 'Unknown',
+    subtitle: (r) => [r.position, r.company].filter(Boolean).join(' at ') || '',
+    preview: (r) => {
+      const parts = []
+      if (r.email) parts.push(r.email)
+      if (r.phone) parts.push(r.phone)
+      return parts.join(' · ') || null
+    },
   },
   {
     key: 'contracts',
@@ -26,9 +103,16 @@ const CATEGORIES = [
       </svg>
     ),
     route: '/app/crm/contracts',
-    columns: ['brand_name', 'contract_number'],
+    columns: ['brand_name', 'contract_number', 'status', 'total_value'],
+    searchColumns: ['brand_name', 'contract_number'],
     display: (r) => r.brand_name || r.contract_number,
     subtitle: (r) => r.contract_number || '',
+    preview: (r) => {
+      const parts = []
+      if (r.status) parts.push(r.status.charAt(0).toUpperCase() + r.status.slice(1))
+      if (r.total_value != null) parts.push(formatCurrency(r.total_value))
+      return parts.join(' · ') || null
+    },
   },
   {
     key: 'assets',
@@ -40,8 +124,10 @@ const CATEGORIES = [
     ),
     route: '/app/crm/assets',
     columns: ['name'],
+    searchColumns: ['name'],
     display: (r) => r.name,
     subtitle: () => '',
+    preview: () => null,
   },
   {
     key: 'activities',
@@ -52,9 +138,11 @@ const CATEGORIES = [
       </svg>
     ),
     route: '/app/crm/activities',
-    columns: ['subject'],
+    columns: ['subject', 'activity_type'],
+    searchColumns: ['subject'],
     display: (r) => r.subject,
-    subtitle: () => '',
+    subtitle: (r) => r.activity_type ? r.activity_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '',
+    preview: (r) => r.activity_type ? r.activity_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : null,
   },
   {
     key: 'tasks',
@@ -65,9 +153,20 @@ const CATEGORIES = [
       </svg>
     ),
     route: '/app/crm/tasks',
-    columns: ['title'],
+    columns: ['title', 'status', 'priority', 'due_date'],
+    searchColumns: ['title'],
     display: (r) => r.title,
     subtitle: () => '',
+    preview: (r) => {
+      const parts = []
+      if (r.priority) parts.push(r.priority.charAt(0).toUpperCase() + r.priority.slice(1))
+      if (r.status) parts.push(r.status)
+      if (r.due_date) {
+        const d = new Date(r.due_date)
+        parts.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
+      }
+      return parts.join(' · ') || null
+    },
   },
 ]
 
@@ -92,6 +191,7 @@ export default function GlobalSearch({ open, onClose }) {
   const [results, setResults] = useState({})
   const [loading, setLoading] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [recentSearches, setRecentSearches] = useState([])
   const inputRef = useRef(null)
   const listRef = useRef(null)
   const navigate = useNavigate()
@@ -102,18 +202,28 @@ export default function GlobalSearch({ open, onClose }) {
     (results[cat.key] || []).map((r) => ({ ...r, _category: cat }))
   )
 
-  // Focus input when opened
+  // Total result count
+  const totalCount = flatResults.length
+
+  // Count per category
+  const categoryCounts = {}
+  for (const cat of CATEGORIES) {
+    const count = (results[cat.key] || []).length
+    if (count > 0) categoryCounts[cat.key] = count
+  }
+
+  // Focus input when opened, load recent searches
   useEffect(() => {
     if (open) {
       setQuery('')
       setResults({})
       setActiveIndex(0)
-      // Small delay so the DOM is ready
+      setRecentSearches(getRecentSearches())
       requestAnimationFrame(() => inputRef.current?.focus())
     }
   }, [open])
 
-  // Debounced search
+  // Debounced search (300ms)
   useEffect(() => {
     if (!query.trim() || !profile?.property_id) {
       setResults({})
@@ -141,8 +251,8 @@ export default function GlobalSearch({ open, onClose }) {
           .eq('property_id', propertyId)
           .limit(5)
 
-        // Build OR filter across all searchable columns
-        const orFilter = cat.columns.map((col) => `${col}.ilike.${pattern}`).join(',')
+        // Build OR filter across searchable columns only
+        const orFilter = cat.searchColumns.map((col) => `${col}.ilike.${pattern}`).join(',')
         q = q.or(orFilter)
 
         return q.then(({ data, error }) => ({
@@ -158,6 +268,11 @@ export default function GlobalSearch({ open, onClose }) {
       }
 
       setResults(grouped)
+
+      // Save to recent searches if we got results
+      if (Object.keys(grouped).length > 0) {
+        saveRecentSearch(term)
+      }
     } catch {
       // Silently handle errors - results stay empty
     } finally {
@@ -167,11 +282,27 @@ export default function GlobalSearch({ open, onClose }) {
 
   const handleSelect = useCallback(
     (item) => {
+      // Save to recent searches on selection
+      if (query.trim()) {
+        saveRecentSearch(query.trim())
+      }
       onClose()
       navigate(item._category.route)
     },
-    [onClose, navigate]
+    [onClose, navigate, query]
   )
+
+  const handleRecentSearch = useCallback(
+    (term) => {
+      setQuery(term)
+    },
+    []
+  )
+
+  const handleClearRecent = useCallback(() => {
+    clearRecentSearches()
+    setRecentSearches([])
+  }, [])
 
   // Keyboard navigation
   useEffect(() => {
@@ -222,19 +353,19 @@ export default function GlobalSearch({ open, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] sm:pt-[15vh] px-3 sm:px-0"
       onClick={onClose}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-      {/* Modal */}
+      {/* Modal - full width on mobile, constrained on desktop */}
       <div
-        className="relative w-full max-w-xl bg-bg-surface border border-border rounded-xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-xl bg-bg-surface border border-border rounded-xl shadow-2xl overflow-hidden sm:max-h-[80vh] max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-3 px-4 py-3 sm:py-3 border-b border-border shrink-0">
           <svg
             className="w-5 h-5 text-text-muted shrink-0"
             fill="none"
@@ -253,8 +384,8 @@ export default function GlobalSearch({ open, onClose }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search deals, contracts, assets, activities, tasks..."
-            className="flex-1 bg-transparent text-text-primary placeholder:text-text-muted text-sm outline-none"
+            placeholder="Search deals, contacts, contracts, assets..."
+            className="flex-1 bg-transparent text-text-primary placeholder:text-text-muted text-sm sm:text-sm text-base outline-none min-h-[44px] sm:min-h-0"
           />
           {loading && (
             <svg
@@ -277,13 +408,29 @@ export default function GlobalSearch({ open, onClose }) {
               />
             </svg>
           )}
+          {!loading && totalCount > 0 && (
+            <span className="hidden sm:inline text-xs text-text-muted shrink-0">
+              {totalCount} result{totalCount !== 1 ? 's' : ''}
+            </span>
+          )}
           <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-text-muted bg-bg-primary border border-border rounded">
             ESC
           </kbd>
+          {/* Mobile close button */}
+          <button
+            className="sm:hidden p-1 text-text-muted hover:text-text-primary"
+            onClick={onClose}
+            aria-label="Close search"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Results */}
-        <div ref={listRef} className="max-h-[60vh] overflow-y-auto overscroll-contain">
+        <div ref={listRef} className="flex-1 overflow-y-auto overscroll-contain">
+          {/* No results state */}
           {query.trim() && !loading && flatResults.length === 0 && (
             <div className="px-4 py-10 text-center">
               <svg
@@ -302,24 +449,94 @@ export default function GlobalSearch({ open, onClose }) {
               <p className="text-sm text-text-secondary">
                 No results for "<span className="text-text-primary font-medium">{query}</span>"
               </p>
-              <p className="text-xs text-text-muted mt-1">Try a different search term</p>
+              <p className="text-xs text-text-muted mt-2">Suggestions:</p>
+              <ul className="text-xs text-text-muted mt-1 space-y-0.5">
+                <li>Check your spelling</li>
+                <li>Try broader keywords (e.g. brand name, contact email)</li>
+                <li>Search by deal name, contract number, or task title</li>
+              </ul>
             </div>
           )}
 
+          {/* Empty state with recent searches */}
           {!query.trim() && (
-            <div className="px-4 py-8 text-center">
-              <p className="text-sm text-text-muted">Start typing to search across Loud Legacy</p>
+            <div className="px-4 py-6">
+              {recentSearches.length > 0 ? (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+                      Recent Searches
+                    </span>
+                    <button
+                      onClick={handleClearRecent}
+                      className="text-xs text-text-muted hover:text-accent transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="space-y-0.5">
+                    {recentSearches.map((term) => (
+                      <button
+                        key={term}
+                        onClick={() => handleRecentSearch(term)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 sm:py-2 text-left rounded-lg hover:bg-bg-card transition-colors group min-h-[44px] sm:min-h-0"
+                      >
+                        <svg
+                          className="w-4 h-4 text-text-muted shrink-0"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <span className="text-sm text-text-secondary group-hover:text-text-primary truncate">
+                          {term}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-text-muted">
+                    Start typing to search across all your data
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2 mt-3">
+                    {CATEGORIES.map((cat) => (
+                      <span
+                        key={cat.key}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-text-muted bg-bg-card rounded-md border border-border"
+                      >
+                        {cat.icon}
+                        {cat.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
+          {/* Categorized results with preview cards */}
           {CATEGORIES.map((cat) => {
             const items = results[cat.key]
             if (!items || items.length === 0) return null
 
             return (
               <div key={cat.key}>
-                <div className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider bg-bg-primary/50 sticky top-0">
-                  {cat.label}
+                {/* Section header with count */}
+                <div className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider bg-bg-primary/50 sticky top-0 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    {cat.label}
+                  </span>
+                  <span className="text-[10px] font-normal text-text-muted bg-bg-card px-1.5 py-0.5 rounded-full border border-border">
+                    {items.length}
+                  </span>
                 </div>
                 {items.map((item, i) => {
                   itemIndex++
@@ -327,6 +544,7 @@ export default function GlobalSearch({ open, onClose }) {
                   const isActive = currentIndex === activeIndex
                   const displayText = cat.display(item)
                   const subtitleText = cat.subtitle(item)
+                  const previewText = cat.preview(item)
 
                   return (
                     <button
@@ -336,7 +554,7 @@ export default function GlobalSearch({ open, onClose }) {
                         handleSelect({ ...item, _category: cat })
                       }
                       onMouseEnter={() => setActiveIndex(currentIndex)}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                      className={`w-full flex items-center gap-3 px-4 py-3 sm:py-2.5 text-left transition-colors min-h-[52px] sm:min-h-0 ${
                         isActive
                           ? 'bg-accent/10 text-accent'
                           : 'text-text-primary hover:bg-bg-card'
@@ -358,11 +576,29 @@ export default function GlobalSearch({ open, onClose }) {
                             {highlightMatch(subtitleText, query)}
                           </div>
                         )}
+                        {/* Preview card info */}
+                        {previewText && (
+                          <div className={`text-xs mt-0.5 truncate ${isActive ? 'text-accent/70' : 'text-text-muted/70'}`}>
+                            {previewText}
+                          </div>
+                        )}
                       </div>
                       {isActive && (
                         <kbd className="hidden sm:inline-flex shrink-0 items-center px-1.5 py-0.5 text-[10px] font-medium text-text-muted bg-bg-primary border border-border rounded">
                           Enter
                         </kbd>
+                      )}
+                      {/* Mobile arrow indicator */}
+                      {!isActive && (
+                        <svg
+                          className="w-4 h-4 text-text-muted/40 shrink-0 sm:hidden"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
                       )}
                     </button>
                   )
@@ -374,7 +610,7 @@ export default function GlobalSearch({ open, onClose }) {
 
         {/* Footer */}
         {flatResults.length > 0 && (
-          <div className="flex items-center gap-4 px-4 py-2 border-t border-border text-[11px] text-text-muted">
+          <div className="hidden sm:flex items-center gap-4 px-4 py-2 border-t border-border text-[11px] text-text-muted shrink-0">
             <span className="inline-flex items-center gap-1">
               <kbd className="px-1 py-0.5 bg-bg-primary border border-border rounded text-[10px]">↑</kbd>
               <kbd className="px-1 py-0.5 bg-bg-primary border border-border rounded text-[10px]">↓</kbd>
@@ -388,6 +624,16 @@ export default function GlobalSearch({ open, onClose }) {
               <kbd className="px-1 py-0.5 bg-bg-primary border border-border rounded text-[10px]">esc</kbd>
               close
             </span>
+            <span className="ml-auto text-text-muted">
+              {totalCount} result{totalCount !== 1 ? 's' : ''} across {Object.keys(categoryCounts).length} categor{Object.keys(categoryCounts).length !== 1 ? 'ies' : 'y'}
+            </span>
+          </div>
+        )}
+
+        {/* Mobile footer - simplified */}
+        {flatResults.length > 0 && (
+          <div className="sm:hidden flex items-center justify-center px-4 py-2 border-t border-border text-xs text-text-muted shrink-0">
+            {totalCount} result{totalCount !== 1 ? 's' : ''} found
           </div>
         )}
       </div>

@@ -61,6 +61,36 @@ export default function DeclinedDeals() {
         </p>
       </div>
 
+      {/* Analytics */}
+      {deals?.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-bg-surface border border-border rounded-lg p-3">
+            <div className="text-xs text-text-muted font-mono">Total Lost</div>
+            <div className="text-lg font-semibold text-danger font-mono">{deals.length}</div>
+          </div>
+          <div className="bg-bg-surface border border-border rounded-lg p-3">
+            <div className="text-xs text-text-muted font-mono">Lost Revenue</div>
+            <div className="text-lg font-semibold text-danger font-mono">${(totalLostValue / 1000).toFixed(0)}K</div>
+          </div>
+          <div className="bg-bg-surface border border-border rounded-lg p-3">
+            <div className="text-xs text-text-muted font-mono">Avg Deal Size</div>
+            <div className="text-lg font-semibold text-text-primary font-mono">${(totalLostValue / (deals.length || 1) / 1000).toFixed(0)}K</div>
+          </div>
+          <div className="bg-bg-surface border border-border rounded-lg p-3">
+            <div className="text-xs text-text-muted font-mono">Top Reason</div>
+            <div className="text-sm font-medium text-text-primary truncate">
+              {(() => {
+                const reasons = deals.filter(d => d.lost_reason).map(d => d.lost_reason)
+                if (reasons.length === 0) return 'Not specified'
+                const counts = {}
+                reasons.forEach(r => { counts[r] = (counts[r] || 0) + 1 })
+                return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Not specified'
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="skeleton h-16" />)}</div>
       ) : deals?.length === 0 ? (

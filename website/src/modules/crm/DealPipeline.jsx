@@ -2913,16 +2913,34 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
         )}
 
         {/* Footer */}
-        <div className="p-4 border-t border-border flex items-center justify-between">
+        <div className="p-3 sm:p-4 border-t border-border flex items-center justify-between gap-2">
           <div className="text-xs text-text-muted font-mono">
-            {addedIdxs.size > 0 && `${addedIdxs.size} prospect${addedIdxs.size !== 1 ? 's' : ''} added`}
+            {addedIdxs.size > 0 && `${addedIdxs.size} of ${results.length} added`}
+            {addedIdxs.size === 0 && results.length > 0 && `${results.length} prospects found`}
           </div>
-          <button
-            onClick={onClose}
-            className="px-6 bg-bg-card text-text-secondary py-2 rounded text-sm hover:text-text-primary"
-          >
-            Close
-          </button>
+          <div className="flex gap-2">
+            {results.length > 0 && addedIdxs.size < results.length && (
+              <button
+                onClick={async () => {
+                  for (let i = 0; i < results.length; i++) {
+                    if (!addedIdxs.has(i) && addingIdx === null) {
+                      await handleAddProspect(i)
+                    }
+                  }
+                }}
+                disabled={addingIdx !== null || researchingIdx !== null}
+                className="px-4 bg-accent text-bg-primary py-2 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                Add All ({results.length - addedIdxs.size})
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="px-4 sm:px-6 bg-bg-card text-text-secondary py-2 rounded text-sm hover:text-text-primary"
+            >
+              {addedIdxs.size > 0 ? 'Done' : 'Close'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

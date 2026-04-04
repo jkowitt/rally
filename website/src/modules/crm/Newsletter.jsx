@@ -576,6 +576,18 @@ function NewsletterReader({ newsletter }) {
   const isWeekly = newsletter.type === 'weekly_digest'
   const topics = newsletter.topics || []
 
+  // Reading time estimate
+  const wordCount = (newsletter.content || '').replace(/<[^>]*>/g, '').split(/\s+/).length
+  const readingMinutes = Math.max(1, Math.ceil(wordCount / 200))
+
+  // Extract section headers for table of contents
+  const sections = []
+  const headerRegex = /<h[23][^>]*>(.*?)<\/h[23]>/gi
+  let match
+  while ((match = headerRegex.exec(newsletter.content || '')) !== null) {
+    sections.push(match[1].replace(/<[^>]*>/g, ''))
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header */}
@@ -589,12 +601,27 @@ function NewsletterReader({ newsletter }) {
           <span className="text-xs text-text-muted font-mono">
             {formatDate(newsletter.published_at)}
           </span>
+          <span className="text-xs text-text-muted font-mono">
+            {readingMinutes} min read
+          </span>
         </div>
         <h1 className="text-lg sm:text-xl font-semibold text-text-primary mb-2">{newsletter.title}</h1>
         {newsletter.summary && (
           <p className="text-xs sm:text-sm text-text-secondary max-w-xl mx-auto">{newsletter.summary}</p>
         )}
       </div>
+
+      {/* Table of Contents (weekly only, if sections exist) */}
+      {isWeekly && sections.length > 2 && (
+        <div className="bg-bg-surface border-x border-border px-4 sm:px-6 py-3">
+          <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1.5">In This Issue</div>
+          <div className="flex gap-2 flex-wrap">
+            {sections.filter(s => !s.includes('Source')).map((s, i) => (
+              <span key={i} className="text-[10px] sm:text-xs text-text-secondary bg-bg-card px-2 py-0.5 rounded">{s}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Topic pills */}
       {topics.length > 0 && (

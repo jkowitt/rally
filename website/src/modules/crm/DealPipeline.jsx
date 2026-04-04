@@ -1089,24 +1089,104 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
         } catch {}
       }
 
+      // Try to parse contract text with AI to extract benefits
+      let parsed = null
+      if (contractText) {
+        try {
+          const { parsePdfText } = await import('@/lib/claude')
+          const result = await parsePdfText(contractText)
+          parsed = result.parsed
+        } catch { /* parsing failed, continue without benefits */ }
+      }
+
       // Create contract record
-      await supabase.from('contracts').insert({
+      const { data: newContract } = await supabase.from('contracts').insert({
         property_id: propertyId,
         deal_id: deal.id,
         brand_name: form.brand_name,
         status: 'In Review',
         contract_text: contractText || null,
+        ai_summary: parsed?.summary || null,
+        ai_extracted_benefits: parsed?.benefits || null,
         pdf_file_data: base64,
         pdf_file_name: file.name,
         pdf_content_type: file.type || 'application/pdf',
-        total_value: form.value || null,
-        effective_date: form.start_date ? `${form.start_date}-01-01` : null,
-        expiration_date: form.end_date ? `${form.end_date}-12-31` : null,
+        total_value: parsed?.total_value || form.value || null,
+        effective_date: parsed?.effective_date || (form.start_date ? `${form.start_date}-01-01` : null),
+        expiration_date: parsed?.expiration_date || (form.end_date ? `${form.end_date}-12-31` : null),
         created_by: profileId,
-      })
+      }).select().single()
+
+      // Auto-insert benefits + sync to assets and fulfillment
+      let benefitCount = 0
+      if (newContract && parsed?.benefits?.length > 0) {
+        const benefitRows = parsed.benefits.map(b => ({
+          contract_id: newContract.id,
+          benefit_description: b.description,
+          quantity: b.quantity || 1,
+          frequency: b.frequency || 'Per Season',
+          value: b.value || null,
+          fulfillment_auto_generated: false,
+        }))
+        const { data: insertedBenefits } = await supabase.from('contract_benefits').insert(benefitRows).select()
+        benefitCount = insertedBenefits?.length || 0
+
+        // Create fulfillment records
+        if (insertedBenefits?.length > 0) {
+          try {
+            await supabase.from('fulfillment_records').insert(insertedBenefits.map(b => ({
+              deal_id: deal.id,
+              contract_id: newContract.id,
+              benefit_id: b.id,
+              scheduled_date: parsed.effective_date || null,
+              delivered: false,
+              auto_generated: true,
+            })))
+          } catch {}
+        }
+
+        // Sync to asset catalog
+        if (insertedBenefits?.length > 0) {
+          try {
+            const guessCategory = (desc) => {
+              const d = (desc || '').toLowerCase()
+              if (d.includes('led') || d.includes('board')) return 'LED Board'
+              if (d.includes('jersey') || d.includes('patch')) return 'Jersey Patch'
+              if (d.includes('radio') || d.includes('announce')) return 'Radio Read'
+              if (d.includes('social')) return 'Social Post'
+              if (d.includes('naming') || d.includes('title')) return 'Title Sponsorship'
+              if (d.includes('sign') || d.includes('banner')) return 'Signage'
+              if (d.includes('hospitality') || d.includes('suite')) return 'Hospitality'
+              if (d.includes('email') || d.includes('newsletter')) return 'Email/Newsletter'
+              if (d.includes('print') || d.includes('program')) return 'Print Ad'
+              return 'Digital'
+            }
+            for (const b of insertedBenefits) {
+              await supabase.from('assets').insert({
+                property_id: propertyId,
+                name: b.benefit_description || 'Contract Benefit',
+                category: guessCategory(b.benefit_description),
+                quantity: b.quantity || 1,
+                base_price: b.value || null,
+                active: true,
+                from_contract: true,
+                source_contract_id: newContract.id,
+                sold_count: b.quantity || 1,
+                total_available: 0,
+              })
+            }
+          } catch {}
+        }
+      }
 
       queryClient.invalidateQueries({ queryKey: ['deal-contracts', deal.id] })
-      toast({ title: 'Contract uploaded', type: 'success' })
+      queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
+      queryClient.invalidateQueries({ queryKey: ['fulfillment-records'] })
+      toast({
+        title: 'Contract uploaded',
+        description: benefitCount > 0 ? `${benefitCount} benefits synced to Assets & Fulfillment` : undefined,
+        type: 'success'
+      })
     } catch (err) {
       toast({ title: 'Upload failed', description: err.message, type: 'error' })
     } finally {

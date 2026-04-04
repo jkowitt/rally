@@ -138,22 +138,83 @@ export default function ContractManager() {
 
   const saveMutation = useMutation({
     mutationFn: async (contract) => {
-      const payload = { ...contract }
+      const { _benefits, ...payload } = contract
       if (!payload.total_value) delete payload.total_value
+      let savedContract
       if (payload.id) {
         const { data, error } = await supabase.from('contracts').update(payload).eq('id', payload.id).select().single()
         if (error) throw error
-        return data
+        savedContract = data
+      } else {
+        delete payload.id
+        const { data, error } = await supabase.from('contracts').insert({ ...payload, property_id: propertyId, created_by: profile.id }).select().single()
+        if (error) throw error
+        savedContract = data
       }
-      delete payload.id
-      const { data, error } = await supabase.from('contracts').insert({ ...payload, property_id: propertyId, created_by: profile.id }).select().single()
-      if (error) throw error
-      return data
+
+      // Save benefits and auto-sync to assets + fulfillment
+      if (_benefits && _benefits.length > 0 && savedContract) {
+        // Remove existing benefits for this contract and re-insert
+        await supabase.from('contract_benefits').delete().eq('contract_id', savedContract.id)
+        const benefitRows = _benefits.map(b => ({
+          contract_id: savedContract.id,
+          benefit_description: b.benefit_description,
+          quantity: parseInt(b.quantity) || 1,
+          frequency: b.frequency || 'Per Season',
+          value: b.value ? Number(b.value) : null,
+          fulfillment_auto_generated: false,
+        }))
+        const { data: insertedBenefits } = await supabase.from('contract_benefits').insert(benefitRows).select()
+
+        // Auto-create fulfillment records
+        if (insertedBenefits?.length > 0 && savedContract.deal_id) {
+          try {
+            // Clear existing auto-generated fulfillment for this contract
+            await supabase.from('fulfillment_records').delete().eq('contract_id', savedContract.id).eq('auto_generated', true)
+            const fulfillmentRows = insertedBenefits.map(b => ({
+              deal_id: savedContract.deal_id,
+              contract_id: savedContract.id,
+              benefit_id: b.id,
+              scheduled_date: savedContract.effective_date || null,
+              delivered: false,
+              auto_generated: true,
+            }))
+            await supabase.from('fulfillment_records').insert(fulfillmentRows)
+          } catch { /* table may not exist */ }
+        }
+
+        // Auto-sync to asset catalog
+        if (insertedBenefits?.length > 0) {
+          try {
+            // Remove existing assets from this contract
+            await supabase.from('assets').delete().eq('source_contract_id', savedContract.id).eq('from_contract', true)
+            for (const b of insertedBenefits) {
+              const category = guessAssetCategory(b.benefit_description || '')
+              await supabase.from('assets').insert({
+                property_id: propertyId,
+                name: b.benefit_description || 'Contract Benefit',
+                category,
+                quantity: b.quantity || 1,
+                base_price: b.value || null,
+                active: true,
+                from_contract: true,
+                source_contract_id: savedContract.id,
+                sold_count: b.quantity || 1,
+                total_available: 0,
+              })
+            }
+          } catch { /* columns may not exist */ }
+        }
+      }
+
+      return savedContract
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
       queryClient.invalidateQueries({ queryKey: ['contract-templates', propertyId] })
-      toast({ title: 'Contract saved', type: 'success' })
+      queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
+      queryClient.invalidateQueries({ queryKey: ['fulfillment-records'] })
+      toast({ title: 'Contract saved — benefits synced to Assets & Fulfillment', type: 'success' })
       setShowForm(false)
       if (data) setSelectedContract(data)
     },
@@ -616,6 +677,8 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
       company_email: companyDetails.company_email || undefined,
       notice_address: companyDetails.notice_address || undefined,
       notice_email: companyDetails.notice_email || undefined,
+      // Pass benefits to save handler for auto-sync
+      _benefits: benefits.filter(b => b.benefit_description),
       // Preserve template PDF if loaded from one
       ...(template?.pdf_file_data && !contract?.pdf_file_data ? {
         pdf_file_data: template.pdf_file_data,

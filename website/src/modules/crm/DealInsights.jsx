@@ -226,7 +226,7 @@ export default function DealInsights() {
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">Deal Insights</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Deal Insights</h1>
         <p className="text-text-secondary mt-1">AI-powered pipeline forecasting and deal intelligence</p>
       </div>
 

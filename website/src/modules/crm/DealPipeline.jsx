@@ -1040,11 +1040,78 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
 
   const activityCount = dealActivities?.length || 0
 
+  // Fetch contracts for this deal
+  const { data: dealContracts } = useQuery({
+    queryKey: ['deal-contracts', deal?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('contracts').select('id, brand_name, contract_number, status, total_value, pdf_file_data, pdf_file_name, effective_date, expiration_date').eq('deal_id', deal.id).order('created_at', { ascending: false })
+      return data || []
+    },
+    enabled: !!deal?.id,
+  })
+
+  const [uploadingContract, setUploadingContract] = useState(false)
+  const contractFileRef = useRef(null)
+
+  async function handleUploadContractToDeal(e) {
+    const file = e.target.files?.[0]
+    if (!file || !deal?.id) return
+    setUploadingContract(true)
+    try {
+      // Read as base64
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result.split(',')[1])
+        reader.readAsDataURL(file)
+      })
+
+      // Extract text if PDF
+      let contractText = ''
+      if (file.type === 'application/pdf') {
+        try {
+          const { getDocument: getPdf } = await import('pdfjs-dist')
+          const arrayBuffer = await file.arrayBuffer()
+          const pdf = await getPdf({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i)
+            const content = await page.getTextContent()
+            contractText += content.items.map(item => item.str).join(' ') + '\n\n'
+          }
+        } catch {}
+      }
+
+      // Create contract record
+      await supabase.from('contracts').insert({
+        property_id: propertyId,
+        deal_id: deal.id,
+        brand_name: form.brand_name,
+        status: 'In Review',
+        contract_text: contractText || null,
+        pdf_file_data: base64,
+        pdf_file_name: file.name,
+        pdf_content_type: file.type || 'application/pdf',
+        total_value: form.value || null,
+        effective_date: form.start_date ? `${form.start_date}-01-01` : null,
+        expiration_date: form.end_date ? `${form.end_date}-12-31` : null,
+        created_by: profileId,
+      })
+
+      queryClient.invalidateQueries({ queryKey: ['deal-contracts', deal.id] })
+      toast({ title: 'Contract uploaded', type: 'success' })
+    } catch (err) {
+      toast({ title: 'Upload failed', description: err.message, type: 'error' })
+    } finally {
+      setUploadingContract(false)
+    }
+  }
+
   const proposedCount = proposedAssets.length
+  const contractCount = dealContracts?.length || 0
   const tabs = [
     { id: 'contacts', label: `Contacts (${contacts.length})` },
     { id: 'deal', label: 'Deal Details' },
-    { id: 'assets', label: `Proposed Assets${proposedCount ? ` (${proposedCount})` : ''}` },
+    { id: 'assets', label: `Assets${proposedCount ? ` (${proposedCount})` : ''}` },
+    { id: 'contract', label: `Contract${contractCount ? ` (${contractCount})` : ''}` },
     { id: 'activity', label: `Activity${activityCount ? ` (${activityCount})` : ''}` },
   ]
 
@@ -1679,6 +1746,86 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                 >
                   Save Proposed Assets
                 </button>
+              )}
+            </>
+          )}
+
+          {/* Contract Tab */}
+          {activeTab === 'contract' && (
+            <>
+              <div className="text-xs text-text-muted mb-3">
+                Upload contracts directly to this deal. PDFs are stored as-is and analyzed for benefits/assets.
+              </div>
+
+              {/* Upload button */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => contractFileRef.current?.click()}
+                  disabled={uploadingContract || !deal?.id}
+                  className="flex-1 flex items-center justify-center gap-2 bg-accent/10 text-accent border border-accent/30 rounded-lg py-2.5 text-xs font-medium hover:bg-accent/20 disabled:opacity-50 transition-colors"
+                >
+                  {uploadingContract ? (
+                    <>
+                      <span className="animate-spin w-3 h-3 border-2 border-accent border-t-transparent rounded-full"></span>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>Upload Contract PDF</>
+                  )}
+                </button>
+                <input ref={contractFileRef} type="file" accept=".pdf,.doc,.docx" onChange={handleUploadContractToDeal} className="hidden" />
+                <a
+                  href="/app/crm/contracts"
+                  className="flex items-center justify-center gap-1 bg-bg-card border border-border rounded-lg px-4 py-2.5 text-xs text-text-secondary hover:text-accent transition-colors"
+                >
+                  Open Contract Manager
+                </a>
+              </div>
+
+              {!deal?.id && (
+                <div className="text-xs text-text-muted bg-bg-card rounded p-3 text-center mt-2">
+                  Save the deal first to upload contracts
+                </div>
+              )}
+
+              {/* Existing contracts for this deal */}
+              {dealContracts?.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider">Contracts on File</div>
+                  {dealContracts.map(c => (
+                    <div key={c.id} className="bg-bg-card border border-border rounded-lg p-3 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-medium text-text-primary">{c.pdf_file_name || c.contract_number || 'Contract'}</span>
+                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                            c.status === 'Signed' ? 'bg-success/10 text-success' :
+                            c.status === 'Final' ? 'bg-accent/10 text-accent' :
+                            c.status === 'In Review' ? 'bg-warning/10 text-warning' :
+                            'bg-bg-surface text-text-muted'
+                          }`}>{c.status}</span>
+                          {c.pdf_file_data && <span className="text-[10px] text-success font-mono">PDF</span>}
+                        </div>
+                        <div className="flex gap-3 text-[10px] text-text-muted font-mono mt-0.5">
+                          {c.total_value && <span>${Number(c.total_value).toLocaleString()}</span>}
+                          {c.effective_date && <span>{c.effective_date} &rarr; {c.expiration_date || '?'}</span>}
+                        </div>
+                      </div>
+                      <a
+                        href="/app/crm/contracts"
+                        className="text-[10px] text-accent hover:underline shrink-0"
+                      >
+                        View &rarr;
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {deal?.id && (!dealContracts || dealContracts.length === 0) && !uploadingContract && (
+                <div className="text-center text-text-muted text-xs py-6 bg-bg-card rounded-lg mt-2">
+                  No contracts attached yet. Upload a PDF or create one in the Contract Manager.
+                </div>
               )}
             </>
           )}

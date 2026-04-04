@@ -18,6 +18,7 @@ import ActivityTimeline from './modules/crm/ActivityTimeline'
 import TaskManager from './modules/crm/TaskManager'
 import DealInsights from './modules/crm/DealInsights'
 import Newsletter from './modules/crm/Newsletter'
+import TeamManager from './modules/crm/TeamManager'
 import EventManager from './modules/sportify/EventManager'
 import EventDetail from './modules/sportify/EventDetail'
 import ValuationEngine from './modules/valora/ValuationEngine'
@@ -54,6 +55,7 @@ export default function App() {
                       <Route path="/crm/tasks" element={<TaskManager />} />
                       <Route path="/crm/insights" element={<DealInsights />} />
                       <Route path="/crm/newsletter" element={<Newsletter />} />
+                      <Route path="/crm/team" element={<TeamManager />} />
                       {/* Sportify */}
                       <Route path="/sportify/events" element={<EventManager />} />
                       <Route path="/sportify/events/:eventId" element={<EventDetail />} />

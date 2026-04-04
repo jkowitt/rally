@@ -21,6 +21,7 @@ const navSections = [
       { to: '/app/crm/tasks', label: 'Tasks', icon: '☐' },
       { to: '/app/crm/insights', label: 'AI Insights', icon: '✦' },
       { to: '/app/crm/newsletter', label: 'Newsletter', icon: '▧' },
+      { to: '/app/crm/team', label: 'Team', icon: '◐' },
     ],
   },
   {

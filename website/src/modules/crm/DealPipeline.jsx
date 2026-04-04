@@ -1072,12 +1072,12 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
           if (!window.pdfjsLib) {
             await new Promise((resolve, reject) => {
               const script = document.createElement('script')
-              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+              script.src = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'
               script.onload = resolve
               script.onerror = reject
               document.head.appendChild(script)
             })
-            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
           }
           const arrayBuffer = await file.arrayBuffer()
           const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise

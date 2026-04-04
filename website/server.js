@@ -31,6 +31,7 @@ app.use((_req, res, next) => {
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com",
+    "worker-src 'self' blob: https://unpkg.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",

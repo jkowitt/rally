@@ -7,10 +7,10 @@ async function loadPdfjsFromCDN() {
 
   return new Promise((resolve, reject) => {
     const script = document.createElement('script')
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+    script.src = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'
     script.onload = () => {
       if (window.pdfjsLib) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
         pdfjsLoaded = window.pdfjsLib
         resolve(pdfjsLoaded)
       } else {

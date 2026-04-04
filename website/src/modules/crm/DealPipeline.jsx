@@ -1188,9 +1188,9 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                           href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-accent hover:underline"
+                          className="text-accent hover:underline font-medium"
                         >
-                          LinkedIn Profile &rarr;
+                          {contact.linkedin.includes('google.com/search') ? 'Find on LinkedIn' : 'LinkedIn Profile'} &rarr;
                         </a>
                       )}
                       {contact.email && (
@@ -2542,8 +2542,8 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                             </a>
                           )}
                           {prospect.linkedin_url && (
-                            <a href={prospect.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-accent hover:underline">
-                              LinkedIn
+                            <a href={prospect.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-accent hover:underline font-medium">
+                              {prospect.linkedin_url.includes('google.com') ? 'Find on LinkedIn' : 'LinkedIn'} &rarr;
                             </a>
                           )}
                         </div>
@@ -2592,8 +2592,8 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                               <div className="flex gap-2 mt-1 text-[11px] text-text-muted font-mono flex-wrap">
                                 {contact.email_pattern && <span className="break-all">{contact.email_pattern}</span>}
                                 {contact.linkedin_url && (
-                                  <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-                                    LinkedIn
+                                  <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-medium">
+                                    {contact.linkedin_url.includes('google.com') ? 'Find on LinkedIn' : 'LinkedIn Profile'} &rarr;
                                   </a>
                                 )}
                               </div>

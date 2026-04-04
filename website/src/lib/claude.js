@@ -242,24 +242,24 @@ export async function researchContacts({ company_name, category, website }) {
 
 Based on ${company_name}'s organizational structure${category ? ` in the ${category} industry` : ''}, the following are the key roles and likely contacts for sports sponsorship outreach:
 
-1. [CMO/VP Marketing Name] | [Their exact title at ${company_name}] | [email]@${domain} | https://linkedin.com/in/[name-slug] | This person leads brand strategy and would approve major sponsorship investments
-2. [Head of Partnerships/Sponsorships Name] | [Their exact title at ${company_name}] | [email]@${domain} | https://linkedin.com/in/[name-slug] | This person manages partnership deals and sponsorship activations
-3. [Director BD/Community Name] | [Their exact title at ${company_name}] | [email]@${domain} | https://linkedin.com/in/[name-slug] | This person handles community engagement and local business development
+1. [CMO/VP Marketing Name] | [Their exact title at ${company_name}] | [email]@${domain} | https://www.linkedin.com/in/[their-actual-linkedin-slug] | This person leads brand strategy and would approve major sponsorship investments
+2. [Head of Partnerships/Sponsorships Name] | [Their exact title at ${company_name}] | [email]@${domain} | https://www.linkedin.com/in/[their-actual-linkedin-slug] | This person manages partnership deals and sponsorship activations
+3. [Director BD/Community Name] | [Their exact title at ${company_name}] | [email]@${domain} | https://www.linkedin.com/in/[their-actual-linkedin-slug] | This person handles community engagement and local business development
 
-Company LinkedIn: https://linkedin.com/company/${slug}`
+Company LinkedIn: https://www.linkedin.com/company/${slug}`
 
   const data = await invokeEdgeFunction('contract-ai', {
     action: 'edit_contract',
     contract_text: contactDoc,
     instructions: `You are a B2B sales intelligence researcher with deep knowledge of corporate leadership. Fill in this outreach document for ${company_name}${website ? ` (${website})` : ''}.
 
-CRITICAL: Use the ACTUAL, REAL executives who work at ${company_name}. You know who leads marketing, partnerships, and business development at major companies from public sources — press releases, LinkedIn, news articles, conference speakers, and SEC filings. Use that knowledge. If ${company_name} is a well-known company, you likely know their CMO, VP Marketing, or Head of Partnerships by name. Use their REAL name and REAL title.
+CRITICAL: Use the ACTUAL, REAL executives who work at ${company_name}. You know who leads marketing, partnerships, and business development at major companies from public sources — press releases, LinkedIn, news articles, conference speakers, and SEC filings. Use that knowledge.
 
 For each of the 3 roles:
-- The person's REAL full name (the actual human who holds this role at ${company_name})
+- The person's REAL full name (the actual human who holds or recently held this role at ${company_name})
 - Their REAL title at ${company_name}
 - Email in the format most commonly used at @${domain}
-- LinkedIn URL: https://linkedin.com/in/firstname-lastname
+- Their ACTUAL LinkedIn profile URL — use the format https://www.linkedin.com/in/[their-real-slug]. LinkedIn slugs are typically the person's name like "john-smith" or "johnsmith" or a custom slug like "john-smith-marketing". Use the REAL slug you know from their public LinkedIn profile. If you know the person's name but not their exact slug, use firstname-lastname format.
 - One sentence on why they're the right sponsorship contact
 
 Do NOT leave brackets [ ] or placeholders. Do NOT use generic names. Keep the pipe-delimited numbered format.`,
@@ -281,7 +281,7 @@ Do NOT leave brackets [ ] or placeholders. Do NOT use generic names. Keep the pi
           last_name: nameParts.slice(1).join(' ') || '',
           position: parts[1] || '',
           email_pattern: parts[2] || '',
-          linkedin_url: (parts[3] && parts[3].includes('linkedin.com')) ? parts[3] : `https://linkedin.com/in/${nameParts.join('-').toLowerCase()}`,
+          linkedin_url: (parts[3] && parts[3].includes('linkedin.com')) ? parts[3].replace('linkedin.com', 'www.linkedin.com').replace('www.www.', 'www.') : `https://www.google.com/search?q=${encodeURIComponent(parts[0] + ' ' + company_name + ' LinkedIn')}`,
           why_target: parts[4] || '',
           outreach_tip: '',
         })
@@ -290,8 +290,8 @@ Do NOT leave brackets [ ] or placeholders. Do NOT use generic names. Keep the pi
   }
 
   // Extract company linkedin
-  const companyLiMatch = text.match(/Company LinkedIn:\s*(https:\/\/linkedin\.com\/company\/[^\s]+)/)
-  const companyLinkedin = companyLiMatch?.[1] || `https://linkedin.com/company/${slug}`
+  const companyLiMatch = text.match(/Company LinkedIn:\s*(https:\/\/(?:www\.)?linkedin\.com\/company\/[^\s]+)/)
+  const companyLinkedin = companyLiMatch?.[1]?.replace('linkedin.com', 'www.linkedin.com').replace('www.www.', 'www.') || `https://www.linkedin.com/company/${slug}`
 
   if (contacts.length > 0) {
     return {
@@ -315,16 +315,16 @@ export async function researchMoreContacts({ company_name, category, website, ex
 
 The following are secondary contacts at ${company_name} for sponsorship outreach, targeting different departments than the primary contacts:
 
-4. [Name] | [Title — try Regional Marketing, Event Marketing, or Community Relations] | [email]@${domain} | https://linkedin.com/in/[name-slug] | Handles regional or event-level sponsorship execution
-5. [Name] | [Title — try PR/Communications, Brand Management, or Public Affairs] | [email]@${domain} | https://linkedin.com/in/[name-slug] | Manages public-facing brand partnerships and communications
-6. [Name] | [Title — try Finance/CFO, Operations, or Sales leadership] | [email]@${domain} | https://linkedin.com/in/[name-slug] | Approves budgets or oversees commercial operations
+4. [Name] | [Title — try Regional Marketing, Event Marketing, or Community Relations] | [email]@${domain} | https://www.linkedin.com/in/[their-actual-linkedin-slug] | Handles regional or event-level sponsorship execution
+5. [Name] | [Title — try PR/Communications, Brand Management, or Public Affairs] | [email]@${domain} | https://www.linkedin.com/in/[their-actual-linkedin-slug] | Manages public-facing brand partnerships and communications
+6. [Name] | [Title — try Finance/CFO, Operations, or Sales leadership] | [email]@${domain} | https://www.linkedin.com/in/[their-actual-linkedin-slug] | Approves budgets or oversees commercial operations
 
 ALREADY KNOWN (do not repeat): ${existingNames || 'None'}`
 
   const data = await invokeEdgeFunction('contract-ai', {
     action: 'edit_contract',
     contract_text: contactDoc,
-    instructions: `Fill in this secondary contact research for ${company_name}${category ? ` (${category})` : ''}. Use the REAL people who work at ${company_name} in these roles — you know executives at major companies from public sources, press releases, conference appearances, and news. Use their ACTUAL names and titles. Generate email @${domain} and LinkedIn URLs. Do NOT repeat: ${existingNames || 'none'}. No brackets or placeholders. Keep pipe-delimited numbered format.`,
+    instructions: `Fill in this secondary contact research for ${company_name}${category ? ` (${category})` : ''}. Use the REAL people who work at ${company_name} — use names from public sources, press releases, conference appearances, and news. Use their ACTUAL names and REAL titles. Generate email @${domain}. For LinkedIn URLs, use https://www.linkedin.com/in/ followed by the person's real LinkedIn slug (typically firstname-lastname or a custom slug). Do NOT repeat: ${existingNames || 'none'}. No brackets or placeholders. Keep pipe-delimited numbered format.`,
   })
 
   const text = (data.contract_text || '').trim()
@@ -341,7 +341,7 @@ ALREADY KNOWN (do not repeat): ${existingNames || 'None'}`
           last_name: nameParts.slice(1).join(' ') || '',
           position: parts[1] || '',
           email_pattern: parts[2] || '',
-          linkedin_url: (parts[3] && parts[3].includes('linkedin.com')) ? parts[3] : `https://linkedin.com/in/${nameParts.join('-').toLowerCase()}`,
+          linkedin_url: (parts[3] && parts[3].includes('linkedin.com')) ? parts[3].replace('linkedin.com', 'www.linkedin.com').replace('www.www.', 'www.') : `https://www.google.com/search?q=${encodeURIComponent(parts[0] + ' ' + company_name + ' LinkedIn')}`,
           why_target: parts[4] || '',
           outreach_tip: '',
         })

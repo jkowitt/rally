@@ -281,7 +281,7 @@ Do NOT leave brackets [ ] or placeholders. Do NOT use generic names. Keep the pi
           last_name: nameParts.slice(1).join(' ') || '',
           position: parts[1] || '',
           email_pattern: parts[2] || '',
-          linkedin_url: (parts[3] && parts[3].includes('linkedin.com')) ? parts[3].replace('linkedin.com', 'www.linkedin.com').replace('www.www.', 'www.') : `https://www.google.com/search?q=${encodeURIComponent(parts[0] + ' ' + company_name + ' LinkedIn')}`,
+          linkedin_url: `https://www.google.com/search?q=${encodeURIComponent(parts[0] + ' ' + company_name + ' LinkedIn')}`,
           why_target: parts[4] || '',
           outreach_tip: '',
         })
@@ -289,9 +289,7 @@ Do NOT leave brackets [ ] or placeholders. Do NOT use generic names. Keep the pi
     }
   }
 
-  // Extract company linkedin
-  const companyLiMatch = text.match(/Company LinkedIn:\s*(https:\/\/(?:www\.)?linkedin\.com\/company\/[^\s]+)/)
-  const companyLinkedin = companyLiMatch?.[1]?.replace('linkedin.com', 'www.linkedin.com').replace('www.www.', 'www.') || `https://www.linkedin.com/company/${slug}`
+  const companyLinkedin = `https://www.google.com/search?q=${encodeURIComponent(company_name + ' LinkedIn company page')}`
 
   if (contacts.length > 0) {
     return {
@@ -341,7 +339,7 @@ ALREADY KNOWN (do not repeat): ${existingNames || 'None'}`
           last_name: nameParts.slice(1).join(' ') || '',
           position: parts[1] || '',
           email_pattern: parts[2] || '',
-          linkedin_url: (parts[3] && parts[3].includes('linkedin.com')) ? parts[3].replace('linkedin.com', 'www.linkedin.com').replace('www.www.', 'www.') : `https://www.google.com/search?q=${encodeURIComponent(parts[0] + ' ' + company_name + ' LinkedIn')}`,
+          linkedin_url: `https://www.google.com/search?q=${encodeURIComponent(parts[0] + ' ' + company_name + ' LinkedIn')}`,
           why_target: parts[4] || '',
           outreach_tip: '',
         })

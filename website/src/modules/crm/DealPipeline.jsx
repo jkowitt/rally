@@ -1190,7 +1190,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                           rel="noopener noreferrer"
                           className="text-accent hover:underline font-medium"
                         >
-                          {contact.linkedin.includes('google.com/search') ? 'Find on LinkedIn' : 'LinkedIn Profile'} &rarr;
+                          Find on LinkedIn &rarr;
                         </a>
                       )}
                       {contact.email && (
@@ -2543,7 +2543,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                           )}
                           {prospect.linkedin_url && (
                             <a href={prospect.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-accent hover:underline font-medium">
-                              {prospect.linkedin_url.includes('google.com') ? 'Find on LinkedIn' : 'LinkedIn'} &rarr;
+                              Find on LinkedIn &rarr;
                             </a>
                           )}
                         </div>
@@ -2593,7 +2593,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                                 {contact.email_pattern && <span className="break-all">{contact.email_pattern}</span>}
                                 {contact.linkedin_url && (
                                   <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-medium">
-                                    {contact.linkedin_url.includes('google.com') ? 'Find on LinkedIn' : 'LinkedIn Profile'} &rarr;
+                                    Find on LinkedIn &rarr;
                                   </a>
                                 )}
                               </div>

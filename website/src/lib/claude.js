@@ -184,6 +184,22 @@ export async function researchContacts({ company_name, category, website }) {
   return { research: { contacts: [], company_linkedin: '', company_phone: '', company_address: '' } }
 }
 
+export async function researchMoreContacts({ company_name, category, website, existing_contacts }) {
+  const existingNames = (existing_contacts || []).map(c => `${c.first_name} ${c.last_name} (${c.position})`).join(', ')
+
+  const data = await invokeEdgeFunction('contract-ai', {
+    action: 'edit_contract',
+    contract_text: `{"contacts":[{"first_name":"Jane","last_name":"Doe","position":"Director of Operations","email_pattern":"jane.doe@company.com","linkedin_url":"https://linkedin.com/in/jane-doe","why_target":"Key operational decision maker","outreach_tip":"Reference their recent initiative"}],"company_linkedin":"https://linkedin.com/company/example","company_phone":"(555) 123-4567","company_address":"123 Main St, City, ST"}`,
+    instructions: `Replace with NEW contacts at ${company_name}${category ? ` (${category})` : ''}${website ? `, website: ${website}` : ''}. IMPORTANT: Do NOT include these people who are already known: ${existingNames || 'none'}. Find 3 DIFFERENT decision-makers at this company who could influence sponsorship decisions. Look for: Regional Marketing Managers, Directors of Community Relations, Event Marketing leads, Brand Managers, VP of Sales, Directors of Business Development, CFO/Finance leads who approve budgets, PR/Communications Directors. Each contact needs: first_name, last_name, position, email_pattern, linkedin_url (https://linkedin.com/in/firstname-lastname), why_target, outreach_tip. Return ONLY valid JSON.`,
+  })
+
+  const parsed = tryParseJSON(data.contract_text)
+  if (parsed && parsed.contacts) {
+    return { research: parsed }
+  }
+  return { research: { contacts: [] } }
+}
+
 // Newsletter — tries dedicated action first, falls back to edit_contract
 // as a Claude prompt passthrough if the edge function isn't deployed with newsletter actions
 

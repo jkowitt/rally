@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { enrichContact, searchProspects, suggestProspects, researchContacts } from '@/lib/claude'
+import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts } from '@/lib/claude'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
@@ -2088,6 +2088,37 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     }
   }
 
+  const [searchingMoreIdx, setSearchingMoreIdx] = useState(null)
+
+  async function handleFindMoreContacts(idx) {
+    const prospect = results[idx]
+    const existing = researchedContacts[idx]?.contacts || []
+    if (!prospect) return
+    setSearchingMoreIdx(idx)
+    try {
+      const data = await researchMoreContacts({
+        company_name: prospect.company_name,
+        category: prospect.category || prospect.sub_industry,
+        website: prospect.website,
+        existing_contacts: existing,
+      })
+      if (data.research?.contacts?.length > 0) {
+        // Merge new contacts with existing
+        setResearchedContacts(prev => ({
+          ...prev,
+          [idx]: {
+            ...prev[idx],
+            contacts: [...(prev[idx]?.contacts || []), ...data.research.contacts],
+          }
+        }))
+      }
+    } catch (e) {
+      alert('Error finding more contacts: ' + e.message)
+    } finally {
+      setSearchingMoreIdx(null)
+    }
+  }
+
   async function handleAddProspect(idx) {
     const prospect = results[idx]
     if (!prospect) return
@@ -2432,8 +2463,24 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                           </div>
                         ))}
                       </div>
+                      {/* Find More Contacts button */}
+                      <button
+                        onClick={() => handleFindMoreContacts(idx)}
+                        disabled={searchingMoreIdx === idx}
+                        className="w-full mt-3 flex items-center justify-center gap-2 bg-bg-card border border-dashed border-border rounded-lg py-2.5 text-xs text-text-muted hover:text-accent hover:border-accent/40 disabled:opacity-50 transition-colors"
+                      >
+                        {searchingMoreIdx === idx ? (
+                          <>
+                            <span className="animate-spin w-3 h-3 border-2 border-accent border-t-transparent rounded-full"></span>
+                            Finding more decision-makers...
+                          </>
+                        ) : (
+                          <>+ Find More Contacts at {prospect.company_name}</>
+                        )}
+                      </button>
+
                       {research.company_phone && (
-                        <div className="flex gap-4 mt-2 text-xs text-text-muted font-mono">
+                        <div className="flex gap-4 mt-2 text-xs text-text-muted font-mono flex-wrap">
                           <span>Phone: {research.company_phone}</span>
                           {research.company_address && <span>HQ: {research.company_address}</span>}
                         </div>

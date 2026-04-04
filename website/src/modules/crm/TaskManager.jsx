@@ -168,6 +168,7 @@ export default function TaskManager() {
   const [editingTask, setEditingTask] = useState(null)
   const [showCompleted, setShowCompleted] = useState(false)
   const [filterType, setFilterType] = useState('')
+  const [quickTask, setQuickTask] = useState('')
   const [notifPermission, setNotifPermission] = useState(
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
   )
@@ -362,6 +363,50 @@ export default function TaskManager() {
             + Schedule Activity
           </button>
         </div>
+      </div>
+
+      {/* Task status counts */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="bg-bg-surface border border-border rounded-lg p-3 text-center">
+          <div className={`text-lg font-semibold font-mono ${overdue.length > 0 ? 'text-danger' : 'text-text-muted'}`}>{overdue.length}</div>
+          <div className="text-[10px] text-text-muted font-mono">Overdue</div>
+        </div>
+        <div className="bg-bg-surface border border-border rounded-lg p-3 text-center">
+          <div className="text-lg font-semibold text-accent font-mono">{upcoming.length}</div>
+          <div className="text-[10px] text-text-muted font-mono">Upcoming</div>
+        </div>
+        <div className="bg-bg-surface border border-border rounded-lg p-3 text-center">
+          <div className="text-lg font-semibold text-success font-mono">{completed.length}</div>
+          <div className="text-[10px] text-text-muted font-mono">Done</div>
+        </div>
+      </div>
+
+      {/* Quick-add task */}
+      <div className="flex gap-2">
+        <input
+          placeholder="Quick add a task... press Enter"
+          value={quickTask}
+          onChange={(e) => setQuickTask(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && quickTask.trim()) {
+              saveMutation.mutate({ title: quickTask.trim(), due_date: toDateString(new Date()), priority: 'Medium', status: 'Pending' })
+              setQuickTask('')
+            }
+          }}
+          className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+        />
+        <button
+          onClick={() => {
+            if (quickTask.trim()) {
+              saveMutation.mutate({ title: quickTask.trim(), due_date: toDateString(new Date()), priority: 'Medium', status: 'Pending' })
+              setQuickTask('')
+            }
+          }}
+          disabled={!quickTask.trim() || saveMutation.isPending}
+          className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50 shrink-0"
+        >
+          Add
+        </button>
       </div>
 
       {/* Activity type filter */}

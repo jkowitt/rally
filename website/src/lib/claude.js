@@ -132,7 +132,7 @@ export async function searchProspects({ query, category, property_id }) {
   const data = await invokeEdgeFunction('contract-ai', {
     action: 'edit_contract',
     contract_text: prospectDoc,
-    instructions: `Replace ALL entries with 8-10 REAL companies that match: "${query || 'sports sponsorship prospects'}". ${category ? `Industry filter: ${category}.` : ''} Use REAL company names, REAL websites, REAL LinkedIn company page URLs. Each line: "Number. Company Name | Category | Sub-industry | Sponsorship Budget Range | Why good fit (1 sentence) | City, State | https://website.com | https://linkedin.com/company/real-slug | Revenue range | Employee range | Priority (High/Medium/Low)". Replace Acme, Beta, Gamma with actual companies.`,
+    instructions: `Replace ALL entries with 8-10 REAL, well-known companies matching: "${query || 'sports sponsorship prospects'}". ${category ? `Industry: ${category}.` : ''} Include both major national brands AND strong regional companies. Use companies that ACTUALLY exist — real names, real websites (e.g. https://nike.com, https://coca-cola.com), real LinkedIn company pages (https://linkedin.com/company/nike). Include companies known for sports sponsorships AND companies that should be doing sports sponsorships based on their brand/market. Each line: "Number. Company Name | Category | Sub-industry | Budget Range | Why good fit (1 sentence) | City, State | https://real-website.com | https://linkedin.com/company/real-slug | Revenue range | Employee count | Priority". Do NOT use made-up companies.`,
   })
 
   const text = (data.contract_text || '').trim()
@@ -192,7 +192,7 @@ export async function suggestProspects({ property_id }) {
   const data = await invokeEdgeFunction('contract-ai', {
     action: 'edit_contract',
     contract_text: prospectDoc,
-    instructions: `Replace ALL entries with 8-10 REAL companies you'd recommend as sports sponsorship prospects. ${dealContext} Mix of: companies similar to won deals, companies trending in sports sponsorship, and untapped high-potential categories. Each line: "Number. Company | Category | Sub-industry | Reason (Similar to winners/Trending/Untapped) | Rationale (1-2 sentences) | Budget range | City, State | https://website | https://linkedin.com/company/slug | Priority | Revenue | Employees". Use REAL companies only.`,
+    instructions: `Replace ALL entries with 8-10 REAL, well-known companies as sports sponsorship prospects. ${dealContext} Include major national brands, Fortune 500 companies, and strong regional businesses. Mix: companies that already invest in sports sponsorships (Nike, Anheuser-Busch, State Farm, etc level) AND companies that SHOULD be in sports (growing brands, companies entering new markets). Each line: "Number. Company | Category | Sub-industry | Reason | Rationale (1-2 sentences) | Budget range | City, State | https://real-website.com | https://linkedin.com/company/real-slug | Priority | Revenue | Employees". Every company must be REAL and verifiable.`,
   })
 
   const text = (data.contract_text || '').trim()
@@ -238,18 +238,31 @@ export async function researchContacts({ company_name, category, website }) {
   const domain = website ? (website.startsWith('http') ? new URL(website).hostname.replace('www.', '') : website.replace(/^www\./, '')) : company_name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com'
   const slug = company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')
 
-  const contactDoc = `CONTACT DIRECTORY — ${company_name.toUpperCase()}
+  const contactDoc = `SPONSORSHIP OUTREACH TARGETS — ${company_name.toUpperCase()}
 
-1. Sarah Johnson | Chief Marketing Officer | sarah.johnson@${domain} | https://linkedin.com/in/sarah-johnson-cmo | Oversees all brand partnerships and sponsorship strategy
-2. Michael Chen | VP of Partnerships | michael.chen@${domain} | https://linkedin.com/in/michael-chen-partnerships | Manages sponsorship deal negotiations and activation planning
-3. Rachel Williams | Director of Business Development | rachel.williams@${domain} | https://linkedin.com/in/rachel-williams-bizdev | Leads new business initiatives and community sponsorship programs
+Based on ${company_name}'s organizational structure${category ? ` in the ${category} industry` : ''}, the following are the key roles and likely contacts for sports sponsorship outreach:
+
+1. [CMO/VP Marketing Name] | [Their exact title at ${company_name}] | [email]@${domain} | https://linkedin.com/in/[name-slug] | This person leads brand strategy and would approve major sponsorship investments
+2. [Head of Partnerships/Sponsorships Name] | [Their exact title at ${company_name}] | [email]@${domain} | https://linkedin.com/in/[name-slug] | This person manages partnership deals and sponsorship activations
+3. [Director BD/Community Name] | [Their exact title at ${company_name}] | [email]@${domain} | https://linkedin.com/in/[name-slug] | This person handles community engagement and local business development
 
 Company LinkedIn: https://linkedin.com/company/${slug}`
 
   const data = await invokeEdgeFunction('contract-ai', {
     action: 'edit_contract',
     contract_text: contactDoc,
-    instructions: `Update this contact directory with the REAL people who currently work at ${company_name}${category ? ` (${category} industry)` : ''}. Replace Sarah Johnson, Michael Chen, and Rachel Williams with the ACTUAL names of real executives at ${company_name} in similar roles (CMO/VP Marketing, Head of Partnerships/Sponsorships, Director of Business Development/Community Relations). Use their real job titles. Generate realistic email addresses using @${domain}. Use realistic LinkedIn profile URLs based on their actual names. Keep the exact same pipe-delimited format. Do NOT use placeholder or made-up names — use the real people who work at ${company_name}.`,
+    instructions: `You are a B2B sales intelligence researcher with deep knowledge of corporate leadership. Fill in this outreach document for ${company_name}${website ? ` (${website})` : ''}.
+
+CRITICAL: Use the ACTUAL, REAL executives who work at ${company_name}. You know who leads marketing, partnerships, and business development at major companies from public sources — press releases, LinkedIn, news articles, conference speakers, and SEC filings. Use that knowledge. If ${company_name} is a well-known company, you likely know their CMO, VP Marketing, or Head of Partnerships by name. Use their REAL name and REAL title.
+
+For each of the 3 roles:
+- The person's REAL full name (the actual human who holds this role at ${company_name})
+- Their REAL title at ${company_name}
+- Email in the format most commonly used at @${domain}
+- LinkedIn URL: https://linkedin.com/in/firstname-lastname
+- One sentence on why they're the right sponsorship contact
+
+Do NOT leave brackets [ ] or placeholders. Do NOT use generic names. Keep the pipe-delimited numbered format.`,
   })
 
   const text = (data.contract_text || '').trim()
@@ -298,16 +311,20 @@ export async function researchMoreContacts({ company_name, category, website, ex
   const existingNames = (existing_contacts || []).map(c => `${c.first_name} ${c.last_name} (${c.position})`).join(', ')
   const domain = website ? (website.startsWith('http') ? new URL(website).hostname.replace('www.', '') : website.replace(/^www\./, '')) : company_name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com'
 
-  const contactDoc = `ADDITIONAL CONTACTS — ${company_name.toUpperCase()}
+  const contactDoc = `ADDITIONAL OUTREACH TARGETS — ${company_name.toUpperCase()}
 
-4. Amanda Torres | Regional Marketing Manager | amanda.torres@${domain} | https://linkedin.com/in/amanda-torres-marketing | Manages regional sponsorship activations
-5. David Park | Director of Communications | david.park@${domain} | https://linkedin.com/in/david-park-comms | Oversees PR and public-facing sponsorship announcements
-6. Jennifer Adams | Brand Partnerships Manager | jennifer.adams@${domain} | https://linkedin.com/in/jennifer-adams-brand | Coordinates day-to-day sponsorship fulfillment`
+The following are secondary contacts at ${company_name} for sponsorship outreach, targeting different departments than the primary contacts:
+
+4. [Name] | [Title — try Regional Marketing, Event Marketing, or Community Relations] | [email]@${domain} | https://linkedin.com/in/[name-slug] | Handles regional or event-level sponsorship execution
+5. [Name] | [Title — try PR/Communications, Brand Management, or Public Affairs] | [email]@${domain} | https://linkedin.com/in/[name-slug] | Manages public-facing brand partnerships and communications
+6. [Name] | [Title — try Finance/CFO, Operations, or Sales leadership] | [email]@${domain} | https://linkedin.com/in/[name-slug] | Approves budgets or oversees commercial operations
+
+ALREADY KNOWN (do not repeat): ${existingNames || 'None'}`
 
   const data = await invokeEdgeFunction('contract-ai', {
     action: 'edit_contract',
     contract_text: contactDoc,
-    instructions: `Update this contact list with REAL people who currently work at ${company_name}${category ? ` (${category})` : ''}. Replace Amanda Torres, David Park, and Jennifer Adams with ACTUAL employees at ${company_name}. IMPORTANT: Do NOT use any of these people who are already known: ${existingNames || 'none'}. Find people in different roles: Regional Marketing, Community Relations, Event Marketing, Brand Manager, PR/Communications, Finance, or Operations. Use their real names and real titles. Generate realistic emails @${domain} and LinkedIn URLs. Keep the exact numbered pipe-delimited format.`,
+    instructions: `Fill in this secondary contact research for ${company_name}${category ? ` (${category})` : ''}. Use the REAL people who work at ${company_name} in these roles — you know executives at major companies from public sources, press releases, conference appearances, and news. Use their ACTUAL names and titles. Generate email @${domain} and LinkedIn URLs. Do NOT repeat: ${existingNames || 'none'}. No brackets or placeholders. Keep pipe-delimited numbered format.`,
   })
 
   const text = (data.contract_text || '').trim()

@@ -190,7 +190,7 @@ export default function DealPipeline() {
       pro_fields.forEach((f) => { if (!payload[f] || (Array.isArray(payload[f]) && payload[f].length === 0)) delete payload[f] })
 
       // Remove new company fields if empty (column may not exist pre-migration)
-      const companyFields = ['city', 'state', 'website', 'linkedin', 'founded', 'revenue_thousands', 'employees', 'sub_industry', 'outreach_status']
+      const companyFields = ['city', 'state', 'website', 'linkedin', 'founded', 'revenue_thousands', 'employees', 'sub_industry', 'outreach_status', 'is_multi_year', 'deal_years', 'annual_values', 'renewal_date', 'logo_url']
       companyFields.forEach((f) => { if (!payload[f]) delete payload[f] })
       if (payload.revenue_thousands) payload.revenue_thousands = Number(payload.revenue_thousands) || null
       if (payload.employees) payload.employees = Number(payload.employees) || null
@@ -459,7 +459,10 @@ export default function DealPipeline() {
           <div className="bg-bg-surface border border-border rounded-lg p-3">
             <div className="text-xs text-text-muted font-mono">Win Rate</div>
             <div className="text-lg font-semibold text-success font-mono">
-              {deals ? Math.round((deals.filter(d => ['Contracted','In Fulfillment','Renewed'].includes(d.stage)).length / (deals.length || 1)) * 100) : 0}%
+              {deals ? Math.round((deals.filter(d => ['Contracted','In Fulfillment','Renewed'].includes(d.stage)).length / (deals.filter(d => d.stage !== 'Declined').length || 1)) * 100) : 0}%
+            </div>
+            <div className="text-[10px] text-text-muted font-mono mt-0.5">
+              {deals?.filter(d => ['Contracted','In Fulfillment','Renewed'].includes(d.stage)).length || 0}/{deals?.filter(d => d.stage !== 'Declined').length || 0} prospects
             </div>
           </div>
           <div className="bg-bg-surface border border-border rounded-lg p-3">
@@ -547,13 +550,13 @@ export default function DealPipeline() {
                               <div className="flex gap-2 mt-2 pt-1 border-t border-border">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); const reason = prompt('Reason for declining?'); if (reason !== null) declineMutation.mutate({ id: deal.id, lost_reason: reason }) }}
-                                  className="text-[10px] text-text-muted hover:text-warning font-mono"
+                                  className="text-[10px] sm:text-[10px] text-xs text-text-muted hover:text-warning font-mono px-1 py-0.5 sm:p-0"
                                 >
                                   Decline
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); if (confirm('Permanently delete this deal?')) deleteMutation.mutate(deal.id) }}
-                                  className="text-[10px] text-text-muted hover:text-danger font-mono"
+                                  className="text-[10px] sm:text-[10px] text-xs text-text-muted hover:text-danger font-mono px-1 py-0.5 sm:p-0"
                                 >
                                   Delete
                                 </button>
@@ -887,6 +890,11 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
     employees: deal?.employees || '',
     sub_industry: deal?.sub_industry || '',
     outreach_status: deal?.outreach_status || 'Not Started',
+    is_multi_year: deal?.is_multi_year || false,
+    deal_years: deal?.deal_years || 1,
+    annual_values: deal?.annual_values || {},
+    renewal_date: deal?.renewal_date || '',
+    logo_url: deal?.logo_url || '',
     ...(deal?.id ? { id: deal.id } : {}),
   })
 
@@ -1196,6 +1204,19 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                       {contact.email && (
                         <a href={`mailto:${contact.email}`} className="text-accent hover:underline">{contact.email}</a>
                       )}
+                      {contact.phone && (
+                        <a
+                          href={`tel:${contact.phone.replace(/[^+\d]/g, '')}`}
+                          onClick={(e) => {
+                            if (!confirm(`Call ${contact.first_name} ${contact.last_name} at ${contact.phone}?`)) {
+                              e.preventDefault()
+                            }
+                          }}
+                          className="text-accent hover:underline md:hidden"
+                        >
+                          Call {contact.phone}
+                        </a>
+                      )}
                     </div>
                   )}
                   {/* AI Enrich for this contact */}
@@ -1391,15 +1412,93 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                   className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                 />
               </div>
-              <label className="flex items-center gap-2 text-sm text-text-secondary">
-                <input
-                  type="checkbox"
-                  checked={form.renewal_flag}
-                  onChange={(e) => setForm({ ...form, renewal_flag: e.target.checked })}
-                  className="accent-accent"
-                />
-                Renewal Deal
-              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm text-text-secondary">
+                  <input
+                    type="checkbox"
+                    checked={form.renewal_flag}
+                    onChange={(e) => setForm({ ...form, renewal_flag: e.target.checked })}
+                    className="accent-accent"
+                  />
+                  Renewal Deal
+                </label>
+                <label className="flex items-center gap-2 text-sm text-text-secondary">
+                  <input
+                    type="checkbox"
+                    checked={form.is_multi_year}
+                    onChange={(e) => {
+                      const multi = e.target.checked
+                      setForm({ ...form, is_multi_year: multi, deal_years: multi ? Math.max(form.deal_years, 2) : 1 })
+                    }}
+                    className="accent-accent"
+                  />
+                  Multi-Year Deal
+                </label>
+              </div>
+
+              {/* Revenue by Year */}
+              {form.is_multi_year && (
+                <div className="bg-bg-card border border-border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-text-muted font-mono uppercase tracking-wider">Revenue by Year</div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-text-muted">Years:</label>
+                      <select
+                        value={form.deal_years}
+                        onChange={(e) => setForm({ ...form, deal_years: parseInt(e.target.value) })}
+                        className="bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent"
+                      >
+                        {[2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {Array.from({ length: form.deal_years }, (_, i) => {
+                      const startYear = form.start_date ? parseInt(form.start_date) : new Date().getFullYear()
+                      const year = startYear + i
+                      return (
+                        <div key={year}>
+                          <label className="text-[10px] text-text-muted font-mono">{year}</label>
+                          <input
+                            type="number"
+                            placeholder="$"
+                            value={form.annual_values[year] || ''}
+                            onChange={(e) => setForm({ ...form, annual_values: { ...form.annual_values, [year]: e.target.value ? Number(e.target.value) : '' } })}
+                            className="w-full bg-bg-surface border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {Object.values(form.annual_values).some(v => v) && (
+                    <div className="text-xs text-accent font-mono text-right">
+                      Total: ${Object.values(form.annual_values).reduce((s, v) => s + (Number(v) || 0), 0).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Renewal Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-text-muted">Renewal Date</label>
+                  <input
+                    type="date"
+                    value={form.renewal_date}
+                    onChange={(e) => setForm({ ...form, renewal_date: e.target.value })}
+                    className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted">Sponsor Logo URL</label>
+                  <input
+                    placeholder="https://..."
+                    value={form.logo_url}
+                    onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
+                    className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
 
               {/* Company Info */}
               <div className="pt-3 border-t border-border">

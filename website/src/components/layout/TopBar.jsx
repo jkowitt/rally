@@ -20,7 +20,7 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
         </button>
 
         {/* Mobile logo */}
-        <span className="md:hidden font-mono font-bold text-accent text-xs tracking-wide">LOUD LEGACY</span>
+        <span className="md:hidden font-mono font-bold text-accent text-xs" style={{letterSpacing:'0.08em',wordSpacing:'-0.15em'}}>LOUD LEGACY</span>
 
         {/* Desktop property info */}
         {profile?.properties?.name && (

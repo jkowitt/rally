@@ -38,7 +38,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-bg-primary flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="font-mono font-bold text-accent text-2xl tracking-wide">LOUD LEGACY</h1>
+          <h1 className="font-mono font-bold text-accent text-2xl" style={{letterSpacing:'0.08em',wordSpacing:'-0.15em'}}>LOUD LEGACY</h1>
           <p className="text-text-muted text-sm mt-1">Sports Business Operating Suite</p>
         </div>
 

@@ -58,7 +58,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
       {/* Logo */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-border">
         {showLabels && (
-          <span className="font-mono font-bold text-accent text-sm tracking-wide">LOUD LEGACY</span>
+          <span className="font-mono font-bold text-accent text-sm" style={{letterSpacing:'0.08em',wordSpacing:'-0.15em'}}>LOUD LEGACY</span>
         )}
         <button
           onClick={onToggle}

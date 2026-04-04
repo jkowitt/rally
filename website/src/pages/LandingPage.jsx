@@ -31,7 +31,7 @@ function Nav() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-bg-primary/80 backdrop-blur-lg border-b border-border/50">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <span className="font-mono font-bold text-accent text-base tracking-wide">LOUD LEGACY</span>
+        <span className="font-mono font-bold text-accent text-base " style={{letterSpacing:'0.08em',wordSpacing:'-0.15em'}}>LOUD LEGACY</span>
         <div className="hidden md:flex items-center gap-8 text-sm text-text-secondary">
           <a href="#ecosystem" className="hover:text-text-primary transition-colors">Ecosystem</a>
           <a href="#modules" className="hover:text-text-primary transition-colors">Modules</a>
@@ -133,7 +133,7 @@ function Ecosystem() {
           {/* Center hub */}
           <motion.div variants={fadeUp} className="flex justify-center mb-8">
             <div className="bg-accent/10 border-2 border-accent rounded-2xl px-8 py-5 text-center">
-              <div className="font-mono font-bold text-accent text-lg tracking-wide">LOUD LEGACY</div>
+              <div className="font-mono font-bold text-accent text-lg " style={{letterSpacing:'0.08em',wordSpacing:'-0.15em'}}>LOUD LEGACY</div>
               <div className="text-xs text-text-muted mt-1">Unified Data Layer + Claude AI</div>
             </div>
           </motion.div>
@@ -479,7 +479,7 @@ function Footer() {
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
           <div className="md:col-span-2">
-            <span className="font-mono font-bold text-accent text-sm tracking-wide">LOUD LEGACY</span>
+            <span className="font-mono font-bold text-accent text-sm " style={{letterSpacing:'0.08em',wordSpacing:'-0.15em'}}>LOUD LEGACY</span>
             <p className="text-text-secondary text-sm mt-3 max-w-md leading-relaxed">
               The sports business operating suite for college athletic departments, professional sports teams, and minor league sports partnership sales teams.
             </p>

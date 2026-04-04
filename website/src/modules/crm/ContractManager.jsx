@@ -16,6 +16,30 @@ import {
 } from '@/lib/claude'
 import jsPDF from 'jspdf'
 
+/* Guess asset category from benefit description */
+function guessAssetCategory(description) {
+  const d = description.toLowerCase()
+  if (d.includes('led') || d.includes('board') || d.includes('ribbon') || d.includes('video')) return 'LED Board'
+  if (d.includes('jersey') || d.includes('patch') || d.includes('uniform')) return 'Jersey Patch'
+  if (d.includes('radio') || d.includes('read') || d.includes('announce') || d.includes('pa ') || d.includes('p.a.')) return 'PA Announcement'
+  if (d.includes('social') || d.includes('instagram') || d.includes('twitter') || d.includes('tiktok') || d.includes('post')) return 'Social Post'
+  if (d.includes('naming') || d.includes('title')) return 'Title Sponsorship'
+  if (d.includes('sign') || d.includes('banner') || d.includes('billboard')) return 'Signage'
+  if (d.includes('activation') || d.includes('booth') || d.includes('tent') || d.includes('experience')) return 'Activation Space'
+  if (d.includes('digital') || d.includes('web') || d.includes('app') || d.includes('website')) return 'Website Banner'
+  if (d.includes('email') || d.includes('newsletter')) return 'Email/Newsletter'
+  if (d.includes('hospitality') || d.includes('suite') || d.includes('vip') || d.includes('lounge')) return 'VIP Experience'
+  if (d.includes('first pitch') || d.includes('puck drop') || d.includes('coin toss') || d.includes('ceremonial')) return 'First Pitch/Puck Drop'
+  if (d.includes('halftime') || d.includes('half-time') || d.includes('intermission')) return 'Halftime'
+  if (d.includes('sample') || d.includes('giveaway') || d.includes('promotion')) return 'Sampling/Giveaway'
+  if (d.includes('print') || d.includes('program') || d.includes('magazine')) return 'Print Ad'
+  if (d.includes('podcast') || d.includes('audio') || d.includes('stream')) return 'Podcast/Audio'
+  if (d.includes('branded') || d.includes('content') || d.includes('video content')) return 'Branded Content'
+  if (d.includes('press') || d.includes('media') || d.includes('conference')) return 'Press Conference'
+  if (d.includes('community') || d.includes('clinic') || d.includes('camp')) return 'Community Event'
+  return 'Digital'
+}
+
 const STATUS_COLORS = {
   Draft: 'bg-bg-card text-text-secondary',
   'In Review': 'bg-warning/10 text-warning',
@@ -886,6 +910,28 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       return
     }
 
+    // Extract text from Word documents
+    if (file.name.endsWith('.docx') || file.name.endsWith('.doc') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      setLoading(true)
+      setStatus('Extracting text from Word document...')
+      try {
+        const mammoth = await import('mammoth')
+        const arrayBuffer = await file.arrayBuffer()
+        const result = await mammoth.default.extractRawText({ arrayBuffer })
+        if (result.value?.trim().length > 20) {
+          setPdfText(result.value.trim())
+          setStatus(`Word document loaded (${result.value.length} characters). Click "Parse with AI" to extract data.`)
+        } else {
+          setStatus('Could not extract text from this document. Try a .docx format.')
+        }
+      } catch (err) {
+        setStatus('Error reading Word document: ' + (err.message || 'Unknown error'))
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
     // Extract text from PDF using pdf.js
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
       setLoading(true)
@@ -914,7 +960,7 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       return
     }
 
-    setStatus('Unsupported file type. Use .pdf or .txt files.')
+    setStatus('Unsupported file type. Use .pdf, .docx, or .txt files.')
   }
 
   async function handleParse() {
@@ -988,7 +1034,7 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       }).select().single()
       if (contractErr) throw contractErr
 
-      // Auto-insert benefits if extracted (no separate Extract step needed)
+      // Auto-insert benefits if extracted
       if (parsed?.benefits?.length > 0) {
         const benefitRows = parsed.benefits.map((b) => ({
           contract_id: contract.id,
@@ -998,12 +1044,70 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
           value: b.value || null,
           fulfillment_auto_generated: false,
         }))
-        await supabase.from('contract_benefits').insert(benefitRows)
+        const { data: insertedBenefits } = await supabase.from('contract_benefits').insert(benefitRows).select()
+
+        // Auto-create fulfillment records for each benefit
+        if (insertedBenefits?.length > 0 && dealId) {
+          try {
+            const fulfillmentRows = insertedBenefits.map((b) => ({
+              deal_id: dealId,
+              contract_id: contract.id,
+              benefit_id: b.id,
+              scheduled_date: parsed.effective_date || null,
+              delivered: false,
+              auto_generated: true,
+            }))
+            await supabase.from('fulfillment_records').insert(fulfillmentRows)
+          } catch { /* fulfillment table may not exist */ }
+        }
+
+        // Auto-sync benefits to asset catalog
+        if (insertedBenefits?.length > 0) {
+          try {
+            for (const b of insertedBenefits) {
+              const category = guessAssetCategory(b.benefit_description || '')
+              await supabase.from('assets').insert({
+                property_id: propertyId,
+                name: b.benefit_description || 'Contract Benefit',
+                category,
+                quantity: b.quantity || 1,
+                base_price: b.value || null,
+                active: true,
+                from_contract: true,
+                source_contract_id: contract.id,
+                sold_count: b.quantity || 1,
+                total_available: 0,
+              })
+            }
+          } catch { /* assets columns may not exist */ }
+        }
+      }
+
+      // Calculate multi-year revenue and update deal
+      if (dealId && parsed?.effective_date && parsed?.expiration_date) {
+        try {
+          const startYear = parseInt(parsed.effective_date.slice(0, 4))
+          const endYear = parseInt(parsed.expiration_date.slice(0, 4))
+          const years = endYear - startYear + 1
+          const isMultiYear = years > 1
+          const totalValue = Number(parsed.total_value) || 0
+          const annualValue = years > 0 ? Math.round(totalValue / years) : totalValue
+          const annualValues = {}
+          for (let y = startYear; y <= endYear; y++) {
+            annualValues[y] = annualValue
+          }
+          await supabase.from('deals').update({
+            is_multi_year: isMultiYear,
+            deal_years: years,
+            annual_values: annualValues,
+            renewal_date: parsed.expiration_date,
+          }).eq('id', dealId)
+        } catch { /* columns may not exist */ }
       }
 
       setStatus(saveAsTemplate
         ? 'Template saved! You can now use it in the AI Editor to create new contracts.'
-        : 'Imported! Contract, deal, and benefits created automatically.'
+        : 'Imported! Contract, deal, benefits, fulfillment records, and assets created automatically.'
       )
       setTimeout(() => onImported(), 1500)
     } catch (e) {
@@ -1016,10 +1120,10 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
   return (
     <div className="space-y-4">
       <div className="bg-bg-surface border border-border rounded-lg p-4 space-y-3">
-        <h3 className="text-sm font-medium text-text-primary">Upload Contract PDF</h3>
+        <h3 className="text-sm font-medium text-text-primary">Upload Contract</h3>
         <p className="text-xs text-text-muted">
-          Upload a contract PDF to store it exactly as-is. Claude AI will extract deal info and benefits automatically.
-          Optionally save as a template for creating future contracts.
+          Upload a PDF or Word document. AI extracts deal info, benefits, and revenue by year automatically.
+          Benefits sync to Assets and Fulfillment. Save as a template for future contracts.
         </p>
 
         <div className="flex gap-3 items-center">
@@ -1027,9 +1131,9 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
             onClick={() => fileRef.current?.click()}
             className="bg-bg-card border border-border text-text-secondary px-4 py-2 rounded text-sm hover:text-text-primary hover:border-accent"
           >
-            Choose PDF File
+            Choose File (PDF or Word)
           </button>
-          <input ref={fileRef} type="file" accept=".pdf,.txt" onChange={handleFileUpload} className="hidden" />
+          <input ref={fileRef} type="file" accept=".pdf,.txt,.doc,.docx" onChange={handleFileUpload} className="hidden" />
           {pdfFileName && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-accent font-mono">{pdfFileName}</span>

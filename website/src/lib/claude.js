@@ -98,17 +98,90 @@ export async function generateMeetingNotes({ deal, attendees, agenda, raw_notes 
   return invokeEdgeFunction('contract-ai', { action: 'meeting_notes', deal, attendees, agenda, raw_notes })
 }
 
-// Prospect Search & Discovery
+// Prospect Search & Discovery — with fallback for undeployed edge function actions
+
+function tryParseJSON(text) {
+  if (!text) return null
+  try {
+    const m = text.match(/\[[\s\S]*\]/)
+    if (m) return JSON.parse(m[0])
+  } catch {}
+  try {
+    const m = text.match(/\{[\s\S]*\}/)
+    if (m) return JSON.parse(m[0])
+  } catch {}
+  try { return JSON.parse(text) } catch {}
+  return null
+}
+
 export async function searchProspects({ query, category, property_id }) {
-  return invokeEdgeFunction('contract-ai', { action: 'search_prospects', query, category, property_id })
+  try {
+    const result = await invokeEdgeFunction('contract-ai', { action: 'search_prospects', query, category, property_id })
+    if (result?.prospects) return result
+  } catch (e) {
+    if (!e.message?.includes('Unknown action')) throw e
+  }
+
+  // Fallback: use edit_contract with a JSON template
+  const data = await invokeEdgeFunction('contract-ai', {
+    action: 'edit_contract',
+    contract_text: `[{"company_name":"EXAMPLE CORP","category":"Technology","sub_industry":"SaaS","estimated_sponsorship_budget":"$50K-$100K","sponsorship_track_record":"Example history","why_good_fit":"Example reason","headquarters_city":"New York","headquarters_state":"NY","website":"https://example.com","linkedin_url":"https://linkedin.com/company/example","estimated_revenue":"$10M-$50M","estimated_employees":"100-500","priority":"Medium"}]`,
+    instructions: `Replace this JSON array with 10-12 REAL companies matching this search. Query: "${query || 'sports sponsorship prospects'}". ${category ? `Category: ${category}.` : ''} Return ONLY a valid JSON array of real companies that would be strong sports sponsorship prospects. Each object must have: company_name, category (Automotive/Banking & Financial Services/Beverage & Alcohol/Food & Quick Serve Restaurants/Technology & Software/Healthcare/Retail/Entertainment & Media/Fashion & Apparel/Energy & Utilities/etc), sub_industry, estimated_sponsorship_budget, sponsorship_track_record, why_good_fit, headquarters_city, headquarters_state, website, linkedin_url (https://linkedin.com/company/slug), estimated_revenue, estimated_employees, priority (High/Medium/Low). Use REAL company names, REAL websites, REAL LinkedIn URLs.`,
+  })
+
+  const parsed = tryParseJSON(data.contract_text)
+  return { prospects: Array.isArray(parsed) ? parsed : [] }
 }
 
 export async function suggestProspects({ property_id }) {
-  return invokeEdgeFunction('contract-ai', { action: 'suggest_prospects', property_id })
+  try {
+    const result = await invokeEdgeFunction('contract-ai', { action: 'suggest_prospects', property_id })
+    if (result?.suggestions) return result
+  } catch (e) {
+    if (!e.message?.includes('Unknown action')) throw e
+  }
+
+  // Fetch deals for pipeline context
+  let dealContext = ''
+  if (property_id) {
+    try {
+      const { data: deals } = await supabase.from('deals').select('brand_name, value, stage, sub_industry').eq('property_id', property_id).limit(30)
+      if (deals?.length > 0) {
+        const won = deals.filter(d => ['Contracted','In Fulfillment','Renewed'].includes(d.stage))
+        dealContext = `Current pipeline: ${deals.map(d => d.brand_name).join(', ')}. Won deals: ${won.map(d => d.brand_name).join(', ') || 'None'}. Industries: ${[...new Set(deals.map(d => d.sub_industry).filter(Boolean))].join(', ')}.`
+      }
+    } catch {}
+  }
+
+  const data = await invokeEdgeFunction('contract-ai', {
+    action: 'edit_contract',
+    contract_text: `[{"company_name":"EXAMPLE CORP","category":"Technology","sub_industry":"SaaS","reason":"Similar to your winners","rationale":"Example rationale","estimated_sponsorship_budget":"$50K-$100K","headquarters_city":"New York","headquarters_state":"NY","website":"https://example.com","linkedin_url":"https://linkedin.com/company/example","priority":"High","estimated_revenue":"$10M-$50M","estimated_employees":"100-500"}]`,
+    instructions: `Replace with 12 REAL companies to suggest as sports sponsorship prospects. ${dealContext} Mix: 4 "Similar to your winners" (same industries as won deals), 4 "Trending in sports sponsorship" (companies increasing sports spend), 4 "Untapped high-potential category". Each must have: company_name, category, sub_industry, reason, rationale (1-2 sentences), estimated_sponsorship_budget, headquarters_city, headquarters_state, website, linkedin_url, priority, estimated_revenue, estimated_employees. Return ONLY valid JSON array.`,
+  })
+
+  const parsed = tryParseJSON(data.contract_text)
+  return { suggestions: Array.isArray(parsed) ? parsed : [] }
 }
 
 export async function researchContacts({ company_name, category, website }) {
-  return invokeEdgeFunction('contract-ai', { action: 'research_contacts', company_name, category, website })
+  try {
+    const result = await invokeEdgeFunction('contract-ai', { action: 'research_contacts', company_name, category, website })
+    if (result?.research) return result
+  } catch (e) {
+    if (!e.message?.includes('Unknown action')) throw e
+  }
+
+  const data = await invokeEdgeFunction('contract-ai', {
+    action: 'edit_contract',
+    contract_text: `{"contacts":[{"first_name":"Jane","last_name":"Smith","position":"VP Marketing","email_pattern":"jane.smith@company.com","linkedin_url":"https://linkedin.com/in/jane-smith","why_target":"Decision maker for sponsorships","outreach_tip":"Reference their recent campaign"}],"company_linkedin":"https://linkedin.com/company/example","company_phone":"(555) 123-4567","company_address":"123 Main St, City, ST"}`,
+    instructions: `Replace with REAL data for ${company_name}${category ? ` (${category})` : ''}${website ? `, website: ${website}` : ''}. Find the top 3 decision-makers for sports sponsorship outreach (VP/Director Marketing, CMO, Head of Partnerships, etc). Each contact needs: first_name, last_name, position, email_pattern (likely format like first.last@domain.com), linkedin_url (https://linkedin.com/in/firstname-lastname format), why_target (1 sentence), outreach_tip (1 sentence). Also include company_linkedin, company_phone, company_address. Return ONLY valid JSON object.`,
+  })
+
+  const parsed = tryParseJSON(data.contract_text)
+  if (parsed && parsed.contacts) {
+    return { research: parsed }
+  }
+  return { research: { contacts: [], company_linkedin: '', company_phone: '', company_address: '' } }
 }
 
 // Newsletter — tries dedicated action first, falls back to edit_contract

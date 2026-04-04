@@ -2194,31 +2194,31 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   ]
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-bg-surface border border-border rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="p-5 border-b border-border">
+        <div className="p-4 sm:p-5 border-b border-border">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-lg font-semibold text-text-primary">Find Prospects</h2>
-              <p className="text-xs text-text-muted mt-0.5">
-                Search for prospects by category or brand, or get AI suggestions based on your pipeline
+              <h2 className="text-base sm:text-lg font-semibold text-text-primary">Find Prospects</h2>
+              <p className="text-[10px] sm:text-xs text-text-muted mt-0.5">
+                AI-powered search and suggestions
               </p>
             </div>
-            <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg">&times;</button>
+            <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg p-1">&times;</button>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 bg-bg-card rounded-lg p-1 w-fit">
+          <div className="flex gap-1 bg-bg-card rounded-lg p-1">
             <button
               onClick={() => setTab('search')}
-              className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'search' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`flex-1 sm:flex-none px-4 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'search' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
             >
               Search
             </button>
             <button
               onClick={() => { setTab('suggestions'); if (results.length === 0) handleSuggest() }}
-              className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'suggestions' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`flex-1 sm:flex-none px-4 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'suggestions' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
             >
               AI Suggestions
             </button>
@@ -2227,10 +2227,10 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
 
         {/* Search Controls */}
         {tab === 'search' && (
-          <div className="p-4 border-b border-border space-y-3">
+          <div className="p-3 sm:p-4 border-b border-border space-y-3">
             <div className="flex gap-2">
               <input
-                placeholder="Search brands, companies, or keywords... (e.g. 'local car dealerships', 'Nike', 'fast food')"
+                placeholder="Search companies or keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
@@ -2240,16 +2240,15 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
               <button
                 onClick={handleSearch}
                 disabled={loading || (!searchQuery.trim() && !searchCategory)}
-                className="bg-accent text-bg-primary px-5 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
+                className="bg-accent text-bg-primary px-4 sm:px-5 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
               >
-                {loading ? 'Searching...' : 'Search'}
+                {loading ? '...' : 'Search'}
               </button>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <span className="text-xs text-text-muted self-center">Filter by:</span>
+            <div className="flex gap-1.5 flex-wrap max-h-[100px] overflow-y-auto">
               <button
                 onClick={() => { setSearchCategory(''); }}
-                className={`px-2.5 py-1 rounded text-xs font-mono border ${!searchCategory ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-card border-border text-text-muted hover:text-text-primary'}`}
+                className={`px-2 py-1 rounded text-[11px] font-mono border ${!searchCategory ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-card border-border text-text-muted'}`}
               >
                 All
               </button>
@@ -2257,7 +2256,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                 <button
                   key={cat}
                   onClick={() => { setSearchCategory(searchCategory === cat ? '' : cat) }}
-                  className={`px-2.5 py-1 rounded text-xs font-mono border ${searchCategory === cat ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-card border-border text-text-muted hover:text-text-primary'}`}
+                  className={`px-2 py-1 rounded text-[11px] font-mono border ${searchCategory === cat ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-card border-border text-text-muted'}`}
                 >
                   {cat}
                 </button>
@@ -2304,10 +2303,10 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
               return (
                 <div key={idx} className={`bg-bg-card border rounded-lg overflow-hidden transition-colors ${isAdded ? 'border-success/40 bg-success/5' : 'border-border'}`}>
                   {/* Prospect Header */}
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3">
+                  <div className="p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-sm font-medium text-text-primary">{prospect.company_name}</span>
                           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-bg-surface text-text-muted">
                             {prospect.category || prospect.sub_industry}
@@ -2330,20 +2329,18 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-success/10 text-success">Added</span>
                           )}
                         </div>
-                        <div className="flex gap-4 mt-1 text-xs text-text-muted font-mono flex-wrap">
+                        <div className="flex gap-3 mt-1 text-[11px] text-text-muted font-mono flex-wrap">
                           {prospect.headquarters_city && (
                             <span>{prospect.headquarters_city}{prospect.headquarters_state ? `, ${prospect.headquarters_state}` : ''}</span>
                           )}
                           {prospect.estimated_sponsorship_budget && (
                             <span className="text-accent">Budget: {prospect.estimated_sponsorship_budget}</span>
                           )}
-                          {prospect.estimated_revenue && <span>Rev: {prospect.estimated_revenue}</span>}
-                          {prospect.estimated_employees && <span>{prospect.estimated_employees} emp</span>}
+                          {prospect.estimated_revenue && <span>{prospect.estimated_revenue}</span>}
                         </div>
-                        <p className="text-xs text-text-secondary mt-1.5">
+                        <p className="text-xs text-text-secondary mt-1.5 line-clamp-2">
                           {prospect.why_good_fit || prospect.rationale || prospect.sponsorship_track_record}
                         </p>
-                        {/* Links */}
                         <div className="flex gap-3 mt-2">
                           {prospect.website && (
                             <a href={prospect.website.startsWith('http') ? prospect.website : `https://${prospect.website}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-accent hover:underline">
@@ -2358,12 +2355,12 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-1.5 shrink-0">
+                      <div className="flex sm:flex-col gap-2 sm:gap-1.5 shrink-0">
                         {!research && !isAdded && (
                           <button
                             onClick={() => handleResearchContacts(idx)}
                             disabled={isResearching}
-                            className="text-xs bg-accent/10 text-accent border border-accent/30 px-3 py-1.5 rounded font-medium hover:bg-accent/20 disabled:opacity-50 whitespace-nowrap"
+                            className="flex-1 sm:flex-none text-xs bg-accent/10 text-accent border border-accent/30 px-3 py-2 sm:py-1.5 rounded font-medium hover:bg-accent/20 disabled:opacity-50 whitespace-nowrap"
                           >
                             {isResearching ? 'Researching...' : 'Research Contacts'}
                           </button>
@@ -2372,7 +2369,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                           <button
                             onClick={() => handleAddProspect(idx)}
                             disabled={isAdding}
-                            className="text-xs bg-accent text-bg-primary px-3 py-1.5 rounded font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
+                            className="flex-1 sm:flex-none text-xs bg-accent text-bg-primary px-3 py-2 sm:py-1.5 rounded font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
                           >
                             {isAdding ? 'Adding...' : research ? 'Add with Contacts' : 'Add to Pipeline'}
                           </button>
@@ -2386,38 +2383,38 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
 
                   {/* Researched Contacts */}
                   {research && !research.error && research.contacts?.length > 0 && (
-                    <div className="border-t border-border bg-bg-surface/50 p-4">
+                    <div className="border-t border-border bg-bg-surface/50 p-3 sm:p-4">
                       <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">
                         Top {research.contacts.length} Contacts
                       </div>
                       <div className="space-y-2">
                         {research.contacts.map((contact, ci) => (
-                          <div key={ci} className="flex items-start gap-3 bg-bg-card border border-border rounded p-3">
-                            <div className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-mono shrink-0">
+                          <div key={ci} className="flex items-start gap-2 sm:gap-3 bg-bg-card border border-border rounded p-2.5 sm:p-3">
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[10px] sm:text-xs font-mono shrink-0">
                               {ci + 1}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-medium text-text-primary">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs sm:text-sm font-medium text-text-primary">
                                   {contact.first_name} {contact.last_name}
                                 </span>
-                                <span className="text-[10px] font-mono text-text-muted bg-bg-surface px-1.5 py-0.5 rounded">
+                                <span className="text-[9px] sm:text-[10px] font-mono text-text-muted bg-bg-surface px-1 py-0.5 rounded">
                                   {contact.position}
                                 </span>
                               </div>
-                              <div className="flex gap-3 mt-1 text-xs text-text-muted font-mono flex-wrap">
-                                {contact.email_pattern && <span>{contact.email_pattern}</span>}
+                              <div className="flex gap-2 mt-1 text-[11px] text-text-muted font-mono flex-wrap">
+                                {contact.email_pattern && <span className="break-all">{contact.email_pattern}</span>}
                                 {contact.linkedin_url && (
                                   <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-                                    LinkedIn Profile
+                                    LinkedIn
                                   </a>
                                 )}
                               </div>
                               {contact.why_target && (
-                                <p className="text-[11px] text-text-secondary mt-1">{contact.why_target}</p>
+                                <p className="text-[10px] sm:text-[11px] text-text-secondary mt-1">{contact.why_target}</p>
                               )}
                               {contact.outreach_tip && (
-                                <p className="text-[11px] text-accent/80 mt-0.5 italic">{contact.outreach_tip}</p>
+                                <p className="text-[10px] sm:text-[11px] text-accent/80 mt-0.5 italic">{contact.outreach_tip}</p>
                               )}
                             </div>
                           </div>

@@ -2093,7 +2093,26 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     if (!prospect) return
     setAddingIdx(idx)
     try {
-      const research = researchedContacts[idx]
+      // Auto-research contacts if not already done
+      let research = researchedContacts[idx]
+      if (!research || !research.contacts?.length) {
+        setResearchingIdx(idx)
+        try {
+          const data = await researchContacts({
+            company_name: prospect.company_name,
+            category: prospect.category || prospect.sub_industry,
+            website: prospect.website,
+          })
+          research = data.research
+          setResearchedContacts(prev => ({ ...prev, [idx]: research }))
+        } catch {
+          // If research fails, continue without contacts
+          research = null
+        } finally {
+          setResearchingIdx(null)
+        }
+      }
+
       const primaryContact = research?.contacts?.[0]
 
       // Create the deal
@@ -2356,26 +2375,19 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                       </div>
 
                       <div className="flex sm:flex-col gap-2 sm:gap-1.5 shrink-0">
-                        {!research && !isAdded && (
-                          <button
-                            onClick={() => handleResearchContacts(idx)}
-                            disabled={isResearching}
-                            className="flex-1 sm:flex-none text-xs bg-accent/10 text-accent border border-accent/30 px-3 py-2 sm:py-1.5 rounded font-medium hover:bg-accent/20 disabled:opacity-50 whitespace-nowrap"
-                          >
-                            {isResearching ? 'Researching...' : 'Research Contacts'}
-                          </button>
-                        )}
                         {!isAdded && (
                           <button
                             onClick={() => handleAddProspect(idx)}
-                            disabled={isAdding}
+                            disabled={isAdding || isResearching}
                             className="flex-1 sm:flex-none text-xs bg-accent text-bg-primary px-3 py-2 sm:py-1.5 rounded font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
                           >
-                            {isAdding ? 'Adding...' : research ? 'Add with Contacts' : 'Add to Pipeline'}
+                            {isResearching ? 'Researching contacts...' : isAdding ? 'Adding...' : 'Add to Pipeline'}
                           </button>
                         )}
                         {isAdded && (
-                          <span className="text-xs text-success font-medium px-3 py-1.5">Added</span>
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span className="text-xs text-success font-medium">Added with {research?.contacts?.length || 0} contacts</span>
+                          </div>
                         )}
                       </div>
                     </div>

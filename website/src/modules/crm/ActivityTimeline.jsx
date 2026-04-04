@@ -124,11 +124,11 @@ export default function ActivityTimeline() {
   const totalCount = activities?.length || 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Activity Timeline</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Activity Timeline</h1>
           <p className="text-text-secondary text-sm mt-1">
             {totalCount} activities across all deals
           </p>

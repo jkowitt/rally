@@ -33,9 +33,9 @@ export default function FulfillmentTracker() {
   const completed = records?.filter((r) => r.delivered) || []
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary">Fulfillment Tracker</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Fulfillment Tracker</h1>
         <p className="text-text-secondary text-sm mt-1">
           {pending.length} pending &middot; {completed.length} delivered
         </p>
@@ -49,6 +49,7 @@ export default function FulfillmentTracker() {
           <div>
             <h2 className="text-sm font-mono text-text-muted uppercase mb-3">Pending Delivery</h2>
             <div className="bg-bg-surface border border-border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
@@ -81,6 +82,7 @@ export default function FulfillmentTracker() {
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
 
@@ -89,6 +91,7 @@ export default function FulfillmentTracker() {
             <div>
               <h2 className="text-sm font-mono text-text-muted uppercase mb-3">Completed ({completed.length})</h2>
               <div className="bg-bg-surface border border-border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
@@ -116,6 +119,7 @@ export default function FulfillmentTracker() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           )}

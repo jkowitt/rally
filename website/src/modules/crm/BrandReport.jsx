@@ -30,8 +30,8 @@ export default function BrandReport() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between no-print">
-        <h1 className="text-2xl font-semibold text-text-primary">Brand Report</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
+        <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Brand Report</h1>
         <button
           onClick={() => window.print()}
           className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90"

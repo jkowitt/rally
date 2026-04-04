@@ -326,11 +326,11 @@ export default function TaskManager() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Task Manager</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Task Manager</h1>
           <p className="text-text-secondary text-sm mt-1">
             {totalActive} active task{totalActive !== 1 ? 's' : ''}
             {overdue.length > 0 && (
@@ -640,7 +640,7 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
           {/* Activity Type */}
           <div>
             <label className="text-xs text-text-muted">Activity Type</label>
-            <div className="grid grid-cols-4 gap-1.5 mt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-1">
               {TASK_TYPES.map(t => (
                 <button
                   key={t.value}
@@ -709,7 +709,7 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
                 <span className="text-[10px] text-accent font-mono">🔔 {formatTime(form.reminder_time)}</span>
               )}
             </div>
-            <div className="grid grid-cols-4 gap-2 mt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
               {[
                 { label: 'At time', offset: 0 },
                 { label: '15 min', offset: 15 },

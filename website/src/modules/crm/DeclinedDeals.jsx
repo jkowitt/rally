@@ -53,9 +53,9 @@ export default function DeclinedDeals() {
   const totalLostValue = deals?.reduce((sum, d) => sum + (Number(d.value) || 0), 0) || 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary">Declined Prospects</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Declined Prospects</h1>
         <p className="text-text-secondary text-sm mt-1">
           {deals?.length || 0} declined &middot; ${(totalLostValue / 1000).toFixed(0)}K lost pipeline
         </p>
@@ -69,6 +69,7 @@ export default function DeclinedDeals() {
         </div>
       ) : (
         <div className="bg-bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">
@@ -114,6 +115,7 @@ export default function DeclinedDeals() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

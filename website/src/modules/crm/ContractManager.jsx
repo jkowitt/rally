@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href
+// Disable worker — runs inline, works on all platforms including mobile
+pdfjsLib.GlobalWorkerOptions.workerSrc = ''
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -458,13 +459,7 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
           byteNumbers[i] = byteCharacters.charCodeAt(i)
         }
         const uint8Array = new Uint8Array(byteNumbers)
-        let pdf
-        try {
-          pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise
-        } catch {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-          pdf = await pdfjsLib.getDocument({ data: uint8Array, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
-        }
+        const pdf = await pdfjsLib.getDocument({ data: uint8Array, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
         let fullText = ''
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i)
@@ -949,28 +944,17 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       setStatus('Reading PDF...')
       try {
         const arrayBuffer = await file.arrayBuffer()
-        let pdf
-        try {
-          pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-        } catch {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-          try {
-            pdf = await pdfjsLib.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
-          } catch {
-            pdf = null
-          }
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+        let fullText = ''
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          fullText += content.items.map((item) => item.str).join(' ') + '\n\n'
         }
-        if (pdf) {
-          let fullText = ''
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i)
-            const content = await page.getTextContent()
-            fullText += content.items.map((item) => item.str).join(' ') + '\n\n'
-          }
-          extractedText = fullText.trim()
-        }
-      } catch {
-        // PDF stored but text extraction failed
+        extractedText = fullText.trim()
+      } catch (err) {
+        console.warn('PDF text extraction failed:', err)
+        // PDF stored but text extraction failed — user can paste text
       }
     } else {
       setStatus('Unsupported file type. Use .pdf, .docx, or .txt files.')

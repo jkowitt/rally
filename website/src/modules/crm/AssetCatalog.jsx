@@ -4,7 +4,12 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 
-const CATEGORIES = ['LED Board', 'Jersey Patch', 'Radio Read', 'Social Post', 'Naming Right', 'Signage', 'Activation Space', 'Digital']
+const CATEGORIES = [
+  'LED Board', 'Jersey Patch', 'Radio Read', 'Social Post', 'Naming Right', 'Signage', 'Activation Space', 'Digital',
+  'Title Sponsorship', 'Hospitality', 'Print Ad', 'Email/Newsletter', 'Website Banner', 'PA Announcement',
+  'First Pitch/Puck Drop', 'Halftime', 'Sampling/Giveaway', 'VIP Experience', 'Press Conference',
+  'Community Event', 'Branded Content', 'Podcast/Audio',
+]
 
 const CATEGORY_ICONS = {
   'LED Board': '📺',
@@ -15,6 +20,20 @@ const CATEGORY_ICONS = {
   'Signage': '🪧',
   'Activation Space': '🎪',
   'Digital': '💻',
+  'Title Sponsorship': '🏆',
+  'Hospitality': '🍽️',
+  'Print Ad': '📰',
+  'Email/Newsletter': '✉️',
+  'Website Banner': '🌐',
+  'PA Announcement': '📢',
+  'First Pitch/Puck Drop': '⚾',
+  'Halftime': '🎤',
+  'Sampling/Giveaway': '🎁',
+  'VIP Experience': '⭐',
+  'Press Conference': '🎙️',
+  'Community Event': '🤝',
+  'Branded Content': '🎬',
+  'Podcast/Audio': '🎧',
 }
 
 export default function AssetCatalog() {
@@ -26,6 +45,7 @@ export default function AssetCatalog() {
   const [editingAsset, setEditingAsset] = useState(null)
   const [filter, setFilter] = useState('')
   const [view, setView] = useState('grid') // grid | table
+  const [selectedAssetDetail, setSelectedAssetDetail] = useState(null)
   const [syncStatus, setSyncStatus] = useState('')
 
   // Fetch assets
@@ -324,7 +344,7 @@ export default function AssetCatalog() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {items.map((asset) => (
-                  <div key={asset.id} className="bg-bg-surface border border-border rounded-lg p-4">
+                  <div key={asset.id} className="bg-bg-surface border border-border rounded-lg p-4 cursor-pointer hover:border-accent/30 transition-colors" onClick={() => setSelectedAssetDetail(asset)}>
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <div className="text-sm font-medium text-text-primary">{asset.name}</div>
@@ -448,6 +468,17 @@ export default function AssetCatalog() {
       )}
 
       {/* Form Modal */}
+      {/* Asset Detail Modal */}
+      {selectedAssetDetail && (
+        <AssetDetailModal
+          asset={selectedAssetDetail}
+          proposedAssets={proposedAssets}
+          propertyId={propertyId}
+          onClose={() => setSelectedAssetDetail(null)}
+          onEdit={(a) => { setSelectedAssetDetail(null); setEditingAsset(a); setShowForm(true) }}
+        />
+      )}
+
       {showForm && (
         <AssetForm
           asset={editingAsset}
@@ -627,6 +658,137 @@ function AssetForm({ asset, onSave, onCancel, saving }) {
           <button onClick={onCancel} className="flex-1 bg-bg-card text-text-secondary py-2 rounded text-sm hover:text-text-primary">
             Cancel
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* Asset Detail Modal */
+function AssetDetailModal({ asset, proposedAssets, propertyId, onClose, onEdit }) {
+  // Fetch deals using this asset
+  const { data: dealAssets } = useQuery({
+    queryKey: ['asset-deals', asset.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('deal_assets')
+        .select('*, deals:deal_id(id, brand_name, value, stage, logo_url)')
+        .eq('asset_id', asset.id)
+      return data || []
+    },
+    enabled: !!asset.id,
+  })
+
+  const pitched = proposedAssets?.filter(pa => pa.asset_id === asset.id) || []
+  const contracted = dealAssets?.filter(da => {
+    const stage = da.deals?.stage
+    return ['Contracted', 'In Fulfillment', 'Renewed'].includes(stage)
+  }) || []
+  const soldCount = asset.sold_count || contracted.length
+  const pitchedCount = pitched.length
+  const available = Math.max(0, (asset.total_available || 0) - soldCount - pitchedCount)
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-bg-surface border border-border rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="p-5 border-b border-border flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{CATEGORY_ICONS[asset.category] || '📦'}</span>
+              <h2 className="text-lg font-semibold text-text-primary">{asset.name}</h2>
+            </div>
+            <span className="text-xs text-text-muted font-mono">{asset.category}</span>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => onEdit(asset)} className="text-xs text-accent hover:underline">Edit</button>
+            <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg">&times;</button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Inventory Status */}
+          <div>
+            <div className="text-xs text-text-muted font-mono uppercase tracking-wider mb-2">Inventory Status</div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
+                <div className="text-lg font-semibold text-success">{soldCount}</div>
+                <div className="text-[10px] text-text-muted font-mono">Sold</div>
+              </div>
+              <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
+                <div className="text-lg font-semibold text-warning">{pitchedCount}</div>
+                <div className="text-[10px] text-text-muted font-mono">Being Pitched</div>
+              </div>
+              <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
+                <div className="text-lg font-semibold text-accent">{available}</div>
+                <div className="text-[10px] text-text-muted font-mono">Available</div>
+              </div>
+            </div>
+            {(asset.total_available || 0) > 0 && (
+              <div className="mt-2">
+                <div className="w-full bg-bg-card rounded-full h-2 flex overflow-hidden">
+                  <div className="bg-success rounded-l-full h-2 transition-all" style={{ width: `${(soldCount / asset.total_available) * 100}%` }} />
+                  <div className="bg-warning h-2 transition-all" style={{ width: `${(pitchedCount / asset.total_available) * 100}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Pricing */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs text-text-muted">Base Price</div>
+              <div className="text-sm font-mono text-text-primary">{asset.base_price ? `$${Number(asset.base_price).toLocaleString()}` : '—'}</div>
+            </div>
+            <div>
+              <div className="text-xs text-text-muted">Total Inventory Value</div>
+              <div className="text-sm font-mono text-accent">{asset.base_price && asset.total_available ? `$${(Number(asset.base_price) * asset.total_available).toLocaleString()}` : '—'}</div>
+            </div>
+          </div>
+
+          {/* Companies Using This Asset */}
+          {dealAssets?.length > 0 && (
+            <div>
+              <div className="text-xs text-text-muted font-mono uppercase tracking-wider mb-2">
+                Companies ({dealAssets.length})
+              </div>
+              <div className="space-y-1.5">
+                {dealAssets.map(da => (
+                  <div key={da.id} className="flex items-center justify-between bg-bg-card border border-border rounded px-3 py-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs text-text-primary font-medium truncate">{da.deals?.brand_name || 'Unknown'}</span>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                        ['Contracted','In Fulfillment','Renewed'].includes(da.deals?.stage) ? 'bg-success/10 text-success' :
+                        da.is_proposed ? 'bg-warning/10 text-warning' : 'bg-bg-surface text-text-muted'
+                      }`}>
+                        {['Contracted','In Fulfillment','Renewed'].includes(da.deals?.stage) ? 'Contracted' : da.is_proposed ? 'Pitched' : da.deals?.stage}
+                      </span>
+                    </div>
+                    <div className="text-xs text-text-muted font-mono shrink-0">
+                      x{da.quantity || 1} {da.custom_price ? `$${Number(da.custom_price).toLocaleString()}` : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Description & Notes */}
+          {(asset.description || asset.notes) && (
+            <div>
+              {asset.description && (
+                <div className="mb-2">
+                  <div className="text-xs text-text-muted">Description</div>
+                  <p className="text-sm text-text-secondary">{asset.description}</p>
+                </div>
+              )}
+              {asset.notes && (
+                <div>
+                  <div className="text-xs text-text-muted">Notes</div>
+                  <p className="text-sm text-text-secondary">{asset.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

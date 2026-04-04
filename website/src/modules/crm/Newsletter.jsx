@@ -138,8 +138,11 @@ export default function Newsletter() {
     ? new Date(latestAfternoon.published_at).toISOString().split('T')[0] === todayStr
     : false
 
-  const weeklyNeeded = !weeklyIsCurrent && (isMonday ? etHour >= 6 : true)
-  const afternoonNeeded = !afternoonIsCurrent && etHour >= 13
+  // Always generate weekly if none exists for this week
+  // Schedule: Monday 6am ET, but generate immediately if there's nothing at all
+  const weeklyNeeded = !weeklyIsCurrent
+  // Always generate afternoon if none exists for today (after 1pm ET, or immediately if no afternoon exists at all)
+  const afternoonNeeded = !afternoonIsCurrent && (afternoonUpdates.length === 0 || etHour >= 13)
 
   // Mutations with progress tracking
   const weeklyMutation = useMutation({
@@ -359,9 +362,16 @@ export default function Newsletter() {
             <div className="bg-bg-surface border border-border rounded-lg p-8 sm:p-12 text-center">
               <div className="text-3xl mb-3">📰</div>
               <p className="text-text-secondary text-sm mb-1">No newsletter yet for this week</p>
-              <p className="text-text-muted text-xs">
+              <p className="text-text-muted text-xs mb-4">
                 The weekly digest auto-generates every Monday at 6:00 AM ET
               </p>
+              <button
+                onClick={() => weeklyMutation.mutate()}
+                disabled={weeklyMutation.isPending}
+                className="bg-accent text-bg-primary px-5 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                Generate Now
+              </button>
             </div>
           )}
         </>
@@ -388,7 +398,14 @@ export default function Newsletter() {
                   <p className="text-text-secondary text-sm mb-1">
                     {etHour < 13 ? 'Today\'s Afternoon Access arrives at 1:00 PM ET' : 'No afternoon updates yet'}
                   </p>
-                  <p className="text-text-muted text-xs">Daily highlights auto-generate each afternoon</p>
+                  <p className="text-text-muted text-xs mb-4">Daily highlights auto-generate each afternoon</p>
+                  <button
+                    onClick={() => afternoonMutation.mutate()}
+                    disabled={afternoonMutation.isPending}
+                    className="bg-accent text-bg-primary px-5 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                  >
+                    Generate Now
+                  </button>
                 </div>
               ) : afternoonUpdates.map(n => (
                 <NewsletterCard key={n.id} newsletter={n} onClick={() => setSelectedNewsletter(n)} />

@@ -1068,10 +1068,19 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
       let contractText = ''
       if (file.type === 'application/pdf') {
         try {
-          const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js')
-          pdfjs.GlobalWorkerOptions.workerSrc = ''
+          // Load pdfjs from CDN
+          if (!window.pdfjsLib) {
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script')
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+              script.onload = resolve
+              script.onerror = reject
+              document.head.appendChild(script)
+            })
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+          }
           const arrayBuffer = await file.arrayBuffer()
-          const pdf = await pdfjs.getDocument({ data: arrayBuffer, disableWorker: true }).promise
+          const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i)
             const content = await page.getTextContent()

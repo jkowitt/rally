@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
-let pdfjsLib = null
-async function loadPdfjs() {
-  if (pdfjsLib) return pdfjsLib
-  try {
-    pdfjsLib = await import('pdfjs-dist')
-    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-    return pdfjsLib
-  } catch {
-    return null
+async function extractPdfText(arrayBuffer) {
+  const pdfjs = await import('pdfjs-dist')
+  pdfjs.GlobalWorkerOptions.workerSrc = ''
+  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
+  let text = ''
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    text += content.items.map(item => item.str).join(' ') + '\n\n'
   }
+  return text.trim()
 }
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -466,16 +467,7 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
           byteNumbers[i] = byteCharacters.charCodeAt(i)
         }
         const uint8Array = new Uint8Array(byteNumbers)
-        const pdfjs = await loadPdfjs()
-        if (!pdfjs) throw new Error('PDF reader not available')
-        const pdf = await pdfjs.getDocument({ data: uint8Array, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
-        let fullText = ''
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i)
-          const content = await page.getTextContent()
-          const pageText = content.items.map((item) => item.str).join(' ')
-          fullText += pageText + '\n\n'
-        }
+        const fullText = await extractPdfText(uint8Array.buffer)
         setContractText(fullText.trim() || template.contract_text || '')
         setAiStatus('Template loaded! Edit the company details and benefits below, then generate your updated contract.')
       } catch (err) {
@@ -952,20 +944,10 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       setLoading(true)
       setStatus('Reading PDF...')
       try {
-        const pdfjs = await loadPdfjs()
-        if (pdfjs) {
-          const arrayBuffer = await file.arrayBuffer()
-          const pdf = await pdfjs.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
-          let fullText = ''
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i)
-            const content = await page.getTextContent()
-            fullText += content.items.map((item) => item.str).join(' ') + '\n\n'
-          }
-          extractedText = fullText.trim()
-        }
-      } catch {
-        // PDF text extraction failed — will prompt user to paste text
+        const arrayBuffer = await file.arrayBuffer()
+        extractedText = await extractPdfText(arrayBuffer)
+      } catch (err) {
+        console.warn('PDF extraction error:', err)
       }
     } else {
       setStatus('Unsupported file type. Use .pdf, .docx, or .txt files.')

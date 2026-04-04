@@ -1068,9 +1068,10 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
       let contractText = ''
       if (file.type === 'application/pdf') {
         try {
-          const { getDocument: getPdf } = await import('pdfjs-dist')
+          const pdfjs = await import('pdfjs-dist')
+          pdfjs.GlobalWorkerOptions.workerSrc = ''
           const arrayBuffer = await file.arrayBuffer()
-          const pdf = await getPdf({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+          const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i)
             const content = await page.getTextContent()

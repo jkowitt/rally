@@ -1198,7 +1198,6 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                       )}
                     </div>
                   )}
-                  </div>
                   {/* AI Enrich for this contact */}
                   <button
                     type="button"

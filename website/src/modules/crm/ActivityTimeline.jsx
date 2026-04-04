@@ -84,7 +84,9 @@ export default function ActivityTimeline() {
   const propertyId = profile?.property_id
 
   const [filterType, setFilterType] = useState('All')
+  const [filterRange, setFilterRange] = useState('all') // all, week, month
   const [showModal, setShowModal] = useState(false)
+  const [quickLogDeal, setQuickLogDeal] = useState('')
 
   // Fetch activities with deal brand_name join
   const { data: activities, isLoading } = useQuery({
@@ -116,12 +118,70 @@ export default function ActivityTimeline() {
     enabled: !!propertyId,
   })
 
+  // Quick-log mutation
+  const quickLogMutation = useMutation({
+    mutationFn: async ({ type, dealId }) => {
+      const deal = deals?.find(d => d.id === dealId)
+      await supabase.from('activities').insert({
+        property_id: propertyId,
+        deal_id: dealId || null,
+        activity_type: type,
+        subject: `${type}${deal ? ' — ' + deal.brand_name : ''}`,
+        occurred_at: new Date().toISOString(),
+        created_by: profile?.id,
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activities', propertyId] })
+      toast({ title: 'Activity logged', type: 'success' })
+    },
+  })
+
+  // Date range filter
+  const now = new Date()
+  const rangeFiltered = (activities || []).filter(a => {
+    if (filterRange === 'all') return true
+    const d = new Date(a.occurred_at)
+    if (filterRange === 'week') return (now - d) < 7 * 86400000
+    if (filterRange === 'month') return (now - d) < 30 * 86400000
+    return true
+  })
+
   const filtered = filterType === 'All'
-    ? activities || []
-    : (activities || []).filter((a) => a.activity_type === filterType)
+    ? rangeFiltered
+    : rangeFiltered.filter((a) => a.activity_type === filterType)
 
   const grouped = groupByDate(filtered)
   const totalCount = activities?.length || 0
+
+  // Activity stats
+  const stats = ACTIVITY_TYPES.map(type => ({
+    type,
+    count: rangeFiltered.filter(a => a.activity_type === type).length,
+    icon: TYPE_CONFIG[type]?.icon || '📋',
+  })).filter(s => s.count > 0)
+
+  // Export CSV
+  function exportCSV() {
+    const rows = [['Date', 'Type', 'Subject', 'Deal', 'Description']]
+    filtered.forEach(a => {
+      rows.push([
+        new Date(a.occurred_at).toLocaleDateString(),
+        a.activity_type,
+        a.subject || '',
+        a.deals?.brand_name || '',
+        (a.description || '').replace(/,/g, ';'),
+      ])
+    })
+    const csv = rows.map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `activities-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -133,15 +193,78 @@ export default function ActivityTimeline() {
             {totalCount} activities across all deals
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-accent text-black text-sm font-medium rounded-lg hover:brightness-110 transition-all"
-        >
+        <div className="flex gap-2">
+          <button
+            onClick={exportCSV}
+            disabled={filtered.length === 0}
+            className="px-3 py-2 bg-bg-card border border-border text-text-secondary text-xs font-medium rounded-lg hover:text-text-primary disabled:opacity-50"
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 bg-accent text-black text-sm font-medium rounded-lg hover:brightness-110 transition-all"
+          >
           Log Activity
-        </button>
+          </button>
+        </div>
       </div>
 
+      {/* Activity Stats */}
+      {stats.length > 0 && (
+        <div className="flex gap-2 sm:gap-3 flex-wrap">
+          {stats.map(s => (
+            <div key={s.type} className="bg-bg-surface border border-border rounded-lg px-3 py-2 flex items-center gap-1.5">
+              <span className="text-sm">{s.icon}</span>
+              <span className="text-xs font-mono text-text-primary">{s.count}</span>
+              <span className="text-[10px] text-text-muted">{s.type}{s.count !== 1 ? 's' : ''}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Quick-Log Buttons */}
+      {deals?.length > 0 && (
+        <div className="bg-bg-surface border border-border rounded-lg p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <select
+            value={quickLogDeal}
+            onChange={(e) => setQuickLogDeal(e.target.value)}
+            className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent sm:w-48"
+          >
+            <option value="">Select deal for quick log</option>
+            {deals.map(d => <option key={d.id} value={d.id}>{d.brand_name}</option>)}
+          </select>
+          <div className="flex gap-1.5 flex-wrap">
+            {['Call', 'Email', 'Meeting', 'Note', 'Follow Up'].map(type => (
+              <button
+                key={type}
+                onClick={() => quickLogMutation.mutate({ type, dealId: quickLogDeal })}
+                disabled={quickLogMutation.isPending}
+                className="flex items-center gap-1 bg-bg-card border border-border rounded px-2.5 py-1.5 text-[11px] text-text-secondary hover:text-accent hover:border-accent/30 transition-colors disabled:opacity-50"
+              >
+                <span>{TYPE_CONFIG[type]?.icon}</span>
+                <span>{type}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filter Bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Date range */}
+        <div className="flex gap-1 bg-bg-card rounded p-0.5">
+          {[{ key: 'all', label: 'All Time' }, { key: 'week', label: 'This Week' }, { key: 'month', label: 'This Month' }].map(r => (
+            <button
+              key={r.key}
+              onClick={() => setFilterRange(r.key)}
+              className={`px-2 py-1 rounded text-[10px] font-mono ${filterRange === r.key ? 'bg-accent text-bg-primary' : 'text-text-muted hover:text-text-secondary'}`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+        <span className="text-text-muted text-xs">|</span>
       <div className="flex flex-wrap gap-2">
         {['All', ...ACTIVITY_TYPES].map((type) => {
           const isActive = filterType === type
@@ -163,6 +286,7 @@ export default function ActivityTimeline() {
             </button>
           )
         })}
+      </div>
       </div>
 
       {/* Timeline */}

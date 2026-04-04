@@ -122,15 +122,25 @@ export async function searchProspects({ query, category, property_id }) {
     if (!e.message?.includes('Unknown action')) throw e
   }
 
-  // Fallback: use edit_contract with a JSON template
-  const data = await invokeEdgeFunction('contract-ai', {
-    action: 'edit_contract',
-    contract_text: `[{"company_name":"EXAMPLE CORP","category":"Technology","sub_industry":"SaaS","estimated_sponsorship_budget":"$50K-$100K","sponsorship_track_record":"Example history","why_good_fit":"Example reason","headquarters_city":"New York","headquarters_state":"NY","website":"https://example.com","linkedin_url":"https://linkedin.com/company/example","estimated_revenue":"$10M-$50M","estimated_employees":"100-500","priority":"Medium"}]`,
-    instructions: `Replace this JSON array with 10-12 REAL companies matching this search. Query: "${query || 'sports sponsorship prospects'}". ${category ? `Category: ${category}.` : ''} Return ONLY a valid JSON array of real companies that would be strong sports sponsorship prospects. Each object must have: company_name, category (Automotive/Banking & Financial Services/Beverage & Alcohol/Food & Quick Serve Restaurants/Technology & Software/Healthcare/Retail/Entertainment & Media/Fashion & Apparel/Energy & Utilities/etc), sub_industry, estimated_sponsorship_budget, sponsorship_track_record, why_good_fit, headquarters_city, headquarters_state, website, linkedin_url (https://linkedin.com/company/slug), estimated_revenue, estimated_employees, priority (High/Medium/Low). Use REAL company names, REAL websites, REAL LinkedIn URLs.`,
-  })
-
-  const parsed = tryParseJSON(data.contract_text)
-  return { prospects: Array.isArray(parsed) ? parsed : [] }
+  // Fallback: use enrich_contact which returns parsed JSON
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'enrich_contact',
+      name: query || 'sports sponsorship prospects',
+      company: category || 'all industries',
+      position: `IGNORE standard enrichment. You are a prospect researcher. Return a JSON ARRAY of 8-10 REAL companies matching "${query || 'sports sponsorship'}". ${category ? `Category: ${category}.` : ''} Format: [{"company_name":"Real Name","category":"Industry","sub_industry":"specific","estimated_sponsorship_budget":"$50K-$200K","why_good_fit":"1 sentence","headquarters_city":"City","headquarters_state":"ST","website":"https://real-url.com","linkedin_url":"https://linkedin.com/company/real-slug","estimated_revenue":"range","estimated_employees":"range","priority":"High/Medium/Low"}]. Use REAL companies. Return ONLY the JSON array.`,
+    })
+    const data = result?.enrichment
+    if (Array.isArray(data)) return { prospects: data }
+    if (data && typeof data === 'object') {
+      // Claude might have wrapped it in an object
+      const arr = Object.values(data).find(v => Array.isArray(v))
+      if (arr) return { prospects: arr }
+    }
+    return { prospects: [] }
+  } catch {
+    return { prospects: [] }
+  }
 }
 
 export async function suggestProspects({ property_id }) {
@@ -148,19 +158,28 @@ export async function suggestProspects({ property_id }) {
       const { data: deals } = await supabase.from('deals').select('brand_name, value, stage, sub_industry').eq('property_id', property_id).limit(30)
       if (deals?.length > 0) {
         const won = deals.filter(d => ['Contracted','In Fulfillment','Renewed'].includes(d.stage))
-        dealContext = `Current pipeline: ${deals.map(d => d.brand_name).join(', ')}. Won deals: ${won.map(d => d.brand_name).join(', ') || 'None'}. Industries: ${[...new Set(deals.map(d => d.sub_industry).filter(Boolean))].join(', ')}.`
+        dealContext = `Pipeline: ${deals.map(d => d.brand_name).join(', ')}. Won: ${won.map(d => d.brand_name).join(', ') || 'None'}. Industries: ${[...new Set(deals.map(d => d.sub_industry).filter(Boolean))].join(', ')}.`
       }
     } catch {}
   }
 
-  const data = await invokeEdgeFunction('contract-ai', {
-    action: 'edit_contract',
-    contract_text: `[{"company_name":"EXAMPLE CORP","category":"Technology","sub_industry":"SaaS","reason":"Similar to your winners","rationale":"Example rationale","estimated_sponsorship_budget":"$50K-$100K","headquarters_city":"New York","headquarters_state":"NY","website":"https://example.com","linkedin_url":"https://linkedin.com/company/example","priority":"High","estimated_revenue":"$10M-$50M","estimated_employees":"100-500"}]`,
-    instructions: `Replace with 12 REAL companies to suggest as sports sponsorship prospects. ${dealContext} Mix: 4 "Similar to your winners" (same industries as won deals), 4 "Trending in sports sponsorship" (companies increasing sports spend), 4 "Untapped high-potential category". Each must have: company_name, category, sub_industry, reason, rationale (1-2 sentences), estimated_sponsorship_budget, headquarters_city, headquarters_state, website, linkedin_url, priority, estimated_revenue, estimated_employees. Return ONLY valid JSON array.`,
-  })
-
-  const parsed = tryParseJSON(data.contract_text)
-  return { suggestions: Array.isArray(parsed) ? parsed : [] }
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'enrich_contact',
+      name: 'PROSPECT SUGGESTIONS for sports sponsorship',
+      company: dealContext || 'new sports property',
+      position: `IGNORE standard enrichment. Return JSON ARRAY of 8-10 REAL companies to target. ${dealContext ? 'Based on pipeline: ' + dealContext : ''} Mix: companies similar to won deals, trending in sports sponsorship, and untapped categories. Format: [{"company_name":"Real Name","category":"Industry","sub_industry":"specific","reason":"Similar to winners|Trending|Untapped","rationale":"1-2 sentences","estimated_sponsorship_budget":"range","headquarters_city":"City","headquarters_state":"ST","website":"https://url.com","linkedin_url":"https://linkedin.com/company/slug","priority":"High/Medium/Low","estimated_revenue":"range","estimated_employees":"range"}]. REAL companies only. Return ONLY JSON array.`,
+    })
+    const data = result?.enrichment
+    if (Array.isArray(data)) return { suggestions: data }
+    if (data && typeof data === 'object') {
+      const arr = Object.values(data).find(v => Array.isArray(v))
+      if (arr) return { suggestions: arr }
+    }
+    return { suggestions: [] }
+  } catch {
+    return { suggestions: [] }
+  }
 }
 
 export async function researchContacts({ company_name, category, website }) {
@@ -171,33 +190,47 @@ export async function researchContacts({ company_name, category, website }) {
     if (!e.message?.includes('Unknown action')) throw e
   }
 
-  const data = await invokeEdgeFunction('contract-ai', {
-    action: 'edit_contract',
-    contract_text: `{"contacts":[{"first_name":"Jane","last_name":"Smith","position":"VP Marketing","email_pattern":"jane.smith@company.com","linkedin_url":"https://linkedin.com/in/jane-smith","why_target":"Decision maker for sponsorships","outreach_tip":"Reference their recent campaign"}],"company_linkedin":"https://linkedin.com/company/example","company_phone":"(555) 123-4567","company_address":"123 Main St, City, ST"}`,
-    instructions: `Replace with REAL data for ${company_name}${category ? ` (${category})` : ''}${website ? `, website: ${website}` : ''}. Find the top 3 decision-makers for sports sponsorship outreach (VP/Director Marketing, CMO, Head of Partnerships, etc). Each contact needs: first_name, last_name, position, email_pattern (likely format like first.last@domain.com), linkedin_url (https://linkedin.com/in/firstname-lastname format), why_target (1 sentence), outreach_tip (1 sentence). Also include company_linkedin, company_phone, company_address. Return ONLY valid JSON object.`,
-  })
+  // Fallback: use enrich_contact with a prompt that asks for contacts
+  // enrich_contact calls Claude and returns parsed JSON via extractJSON
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'enrich_contact',
+      name: `TOP 3 DECISION MAKERS at ${company_name}`,
+      company: company_name + (category ? ` (${category})` : '') + (website ? ` — ${website}` : ''),
+      position: `IGNORE the standard enrichment format. Instead return this EXACT JSON structure: {"contacts":[{"first_name":"string","last_name":"string","position":"string","email_pattern":"first.last@domain.com","linkedin_url":"https://linkedin.com/in/name","why_target":"1 sentence","outreach_tip":"1 sentence"},{"first_name":"...","last_name":"...","position":"...","email_pattern":"...","linkedin_url":"...","why_target":"...","outreach_tip":"..."},{"first_name":"...","last_name":"...","position":"...","email_pattern":"...","linkedin_url":"...","why_target":"...","outreach_tip":"..."}],"company_linkedin":"https://linkedin.com/company/slug","company_phone":"(XXX) XXX-XXXX","company_address":"Full address"}. Find VP Marketing, CMO, or Head of Partnerships roles. Use REAL names for ${company_name}. Return ONLY this JSON.`,
+    })
 
-  const parsed = tryParseJSON(data.contract_text)
-  if (parsed && parsed.contacts) {
-    return { research: parsed }
+    // enrich_contact returns { enrichment: {...} }
+    const data = result?.enrichment
+    if (data?.contacts) {
+      return { research: data }
+    }
+    // If Claude returned standard enrichment format, try to extract contacts
+    return { research: { contacts: [], company_linkedin: '', company_phone: '', company_address: '' } }
+  } catch {
+    return { research: { contacts: [], company_linkedin: '', company_phone: '', company_address: '' } }
   }
-  return { research: { contacts: [], company_linkedin: '', company_phone: '', company_address: '' } }
 }
 
 export async function researchMoreContacts({ company_name, category, website, existing_contacts }) {
   const existingNames = (existing_contacts || []).map(c => `${c.first_name} ${c.last_name} (${c.position})`).join(', ')
 
-  const data = await invokeEdgeFunction('contract-ai', {
-    action: 'edit_contract',
-    contract_text: `{"contacts":[{"first_name":"Jane","last_name":"Doe","position":"Director of Operations","email_pattern":"jane.doe@company.com","linkedin_url":"https://linkedin.com/in/jane-doe","why_target":"Key operational decision maker","outreach_tip":"Reference their recent initiative"}],"company_linkedin":"https://linkedin.com/company/example","company_phone":"(555) 123-4567","company_address":"123 Main St, City, ST"}`,
-    instructions: `Replace with NEW contacts at ${company_name}${category ? ` (${category})` : ''}${website ? `, website: ${website}` : ''}. IMPORTANT: Do NOT include these people who are already known: ${existingNames || 'none'}. Find 3 DIFFERENT decision-makers at this company who could influence sponsorship decisions. Look for: Regional Marketing Managers, Directors of Community Relations, Event Marketing leads, Brand Managers, VP of Sales, Directors of Business Development, CFO/Finance leads who approve budgets, PR/Communications Directors. Each contact needs: first_name, last_name, position, email_pattern, linkedin_url (https://linkedin.com/in/firstname-lastname), why_target, outreach_tip. Return ONLY valid JSON.`,
-  })
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'enrich_contact',
+      name: `3 MORE DECISION MAKERS at ${company_name} (EXCLUDE: ${existingNames || 'none'})`,
+      company: company_name + (category ? ` (${category})` : '') + (website ? ` — ${website}` : ''),
+      position: `IGNORE standard enrichment. Return EXACT JSON: {"contacts":[{"first_name":"string","last_name":"string","position":"string","email_pattern":"first.last@domain.com","linkedin_url":"https://linkedin.com/in/name","why_target":"1 sentence","outreach_tip":"1 sentence"},{"first_name":"...","last_name":"...","position":"...","email_pattern":"...","linkedin_url":"...","why_target":"...","outreach_tip":"..."},{"first_name":"...","last_name":"...","position":"...","email_pattern":"...","linkedin_url":"...","why_target":"...","outreach_tip":"..."}]}. Find DIFFERENT people — try: Regional Marketing Manager, Community Relations Director, Event Marketing lead, Brand Manager, Business Development VP, CFO/Finance, PR Director. Do NOT include: ${existingNames}. Use REAL names. Return ONLY JSON.`,
+    })
 
-  const parsed = tryParseJSON(data.contract_text)
-  if (parsed && parsed.contacts) {
-    return { research: parsed }
+    const data = result?.enrichment
+    if (data?.contacts) {
+      return { research: data }
+    }
+    return { research: { contacts: [] } }
+  } catch {
+    return { research: { contacts: [] } }
   }
-  return { research: { contacts: [] } }
 }
 
 // Newsletter — tries dedicated action first, falls back to edit_contract

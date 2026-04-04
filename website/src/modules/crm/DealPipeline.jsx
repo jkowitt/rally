@@ -912,23 +912,24 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
           ...EMPTY_CONTACT,
           first_name: c.first_name || '',
           last_name: c.last_name || '',
-          email: c.email_pattern || '',
+          email: c.email_pattern || c.email || '',
           position: c.position || '',
           company: form.brand_name,
-          linkedin: c.linkedin_url || '',
+          linkedin: c.linkedin_url || c.linkedin || '',
           is_primary: contacts.length === 0 && i === 0,
           notes: c.why_target || '',
         }))
-        // Replace empty placeholder contacts or append
         const hasOnlyEmpty = contacts.length === 1 && !contacts[0].first_name && !contacts[0].email
         setContacts(hasOnlyEmpty ? newContacts : [...contacts, ...newContacts])
-        // Update deal linkedin with company linkedin
         if (data.research.company_linkedin) {
           setForm(prev => ({ ...prev, linkedin: prev.linkedin || data.research.company_linkedin }))
         }
+        toast({ title: `Found ${newContacts.length} contacts at ${form.brand_name}`, type: 'success' })
+      } else {
+        toast({ title: 'No contacts found', description: 'Try entering a more specific company name', type: 'warning' })
       }
     } catch (e) {
-      alert('Error researching contacts: ' + e.message)
+      toast({ title: 'Contact research failed', description: e.message, type: 'error' })
     } finally {
       setAiResearching(false)
     }
@@ -953,16 +954,19 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
           ...EMPTY_CONTACT,
           first_name: c.first_name || '',
           last_name: c.last_name || '',
-          email: c.email_pattern || '',
+          email: c.email_pattern || c.email || '',
           position: c.position || '',
           company: form.brand_name,
-          linkedin: c.linkedin_url || '',
+          linkedin: c.linkedin_url || c.linkedin || '',
           notes: c.why_target || '',
         }))
         setContacts(prev => [...prev, ...newContacts])
+        toast({ title: `Found ${newContacts.length} more contacts`, type: 'success' })
+      } else {
+        toast({ title: 'No additional contacts found', type: 'warning' })
       }
     } catch (e) {
-      alert('Error finding more contacts: ' + e.message)
+      toast({ title: 'Contact search failed', description: e.message, type: 'error' })
     } finally {
       setAiResearchingMore(false)
     }

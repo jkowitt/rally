@@ -190,47 +190,147 @@ export async function researchContacts({ company_name, category, website }) {
     if (!e.message?.includes('Unknown action')) throw e
   }
 
-  // Fallback: use enrich_contact with a prompt that asks for contacts
-  // enrich_contact calls Claude and returns parsed JSON via extractJSON
+  // Fallback: use parse_pdf_text which takes arbitrary text and returns parsed JSON
+  // We pass a fake "contract" that describes the contacts we want
+  const fakeContract = `SPONSORSHIP CONTACT RESEARCH DOCUMENT
+Company: ${company_name}
+Industry: ${category || 'Sports Sponsorship'}
+Website: ${website || 'N/A'}
+
+This document requires identification of the top 3 key decision-makers at ${company_name} who handle sponsorship, marketing partnerships, and brand activations.
+
+REQUIRED OUTPUT FORMAT — return as the "benefits" array with each contact as a benefit:
+- benefit 1: First decision-maker (VP/Director Marketing or CMO) — description should be JSON: {"first_name":"Real","last_name":"Name","position":"Their Title","email_pattern":"first.last@${website ? new URL(website.startsWith('http') ? website : 'https://' + website).hostname.replace('www.', '') : 'company.com'}","linkedin_url":"https://linkedin.com/in/firstname-lastname","why_target":"Why they matter","outreach_tip":"How to approach"}
+- benefit 2: Second decision-maker (Head of Partnerships or Sponsorships)
+- benefit 3: Third decision-maker (Director of Community Relations or Business Development)
+
+brand_name: ${company_name}
+contact_company: ${company_name}
+total_value: 0
+effective_date: 2025-01-01
+expiration_date: 2025-12-31`
+
   try {
     const result = await invokeEdgeFunction('contract-ai', {
-      action: 'enrich_contact',
-      name: `TOP 3 DECISION MAKERS at ${company_name}`,
-      company: company_name + (category ? ` (${category})` : '') + (website ? ` — ${website}` : ''),
-      position: `IGNORE the standard enrichment format. Instead return this EXACT JSON structure: {"contacts":[{"first_name":"string","last_name":"string","position":"string","email_pattern":"first.last@domain.com","linkedin_url":"https://linkedin.com/in/name","why_target":"1 sentence","outreach_tip":"1 sentence"},{"first_name":"...","last_name":"...","position":"...","email_pattern":"...","linkedin_url":"...","why_target":"...","outreach_tip":"..."},{"first_name":"...","last_name":"...","position":"...","email_pattern":"...","linkedin_url":"...","why_target":"...","outreach_tip":"..."}],"company_linkedin":"https://linkedin.com/company/slug","company_phone":"(XXX) XXX-XXXX","company_address":"Full address"}. Find VP Marketing, CMO, or Head of Partnerships roles. Use REAL names for ${company_name}. Return ONLY this JSON.`,
+      action: 'parse_pdf_text',
+      pdf_text: fakeContract,
     })
 
-    // enrich_contact returns { enrichment: {...} }
-    const data = result?.enrichment
-    if (data?.contacts) {
-      return { research: data }
+    // parse_pdf_text returns { parsed: { brand_name, benefits: [...], ... } }
+    const parsed = result?.parsed
+    if (parsed?.benefits?.length > 0) {
+      // Extract contacts from benefits descriptions
+      const contacts = parsed.benefits.map(b => {
+        // Try to parse JSON from the description
+        try {
+          const desc = b.description || ''
+          const jsonMatch = desc.match(/\{[\s\S]*\}/)
+          if (jsonMatch) return JSON.parse(jsonMatch[0])
+        } catch {}
+        // Fallback: use the description as a name
+        return {
+          first_name: (b.description || '').split(' ')[0] || '',
+          last_name: (b.description || '').split(' ').slice(1).join(' ') || '',
+          position: b.category || '',
+          email_pattern: '',
+          linkedin_url: '',
+          why_target: '',
+          outreach_tip: '',
+        }
+      }).filter(c => c.first_name)
+
+      if (contacts.length > 0) {
+        return {
+          research: {
+            contacts,
+            company_linkedin: `https://linkedin.com/company/${company_name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+            company_phone: '',
+            company_address: '',
+          }
+        }
+      }
     }
-    // If Claude returned standard enrichment format, try to extract contacts
-    return { research: { contacts: [], company_linkedin: '', company_phone: '', company_address: '' } }
-  } catch {
-    return { research: { contacts: [], company_linkedin: '', company_phone: '', company_address: '' } }
+
+    // If parse_pdf_text didn't give us structured contacts, try using contact fields
+    if (parsed?.contact_name) {
+      return {
+        research: {
+          contacts: [{
+            first_name: parsed.contact_name?.split(' ')[0] || '',
+            last_name: parsed.contact_name?.split(' ').slice(1).join(' ') || '',
+            position: parsed.contact_position || '',
+            email_pattern: parsed.contact_email || '',
+            linkedin_url: '',
+            why_target: 'Primary contact identified from research',
+            outreach_tip: '',
+          }],
+          company_linkedin: `https://linkedin.com/company/${company_name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+          company_phone: parsed.contact_phone || '',
+          company_address: '',
+        }
+      }
+    }
+  } catch (e) {
+    throw new Error(`Contact research failed: ${e.message}`)
   }
+
+  throw new Error('Could not find contacts. Try entering a more specific company name.')
 }
 
 export async function researchMoreContacts({ company_name, category, website, existing_contacts }) {
   const existingNames = (existing_contacts || []).map(c => `${c.first_name} ${c.last_name} (${c.position})`).join(', ')
+  const domain = website ? (website.startsWith('http') ? new URL(website).hostname.replace('www.', '') : website.replace('www.', '')) : 'company.com'
+
+  const fakeContract = `ADDITIONAL CONTACT RESEARCH DOCUMENT
+Company: ${company_name}
+Industry: ${category || 'Sports Sponsorship'}
+Website: ${website || 'N/A'}
+
+ALREADY KNOWN CONTACTS (DO NOT REPEAT): ${existingNames || 'None'}
+
+Find 3 DIFFERENT decision-makers at ${company_name}. Look for: Regional Marketing Manager, Community Relations Director, Event Marketing lead, Brand Manager, VP Sales, Business Development Director, CFO/Finance, PR/Communications Director.
+
+REQUIRED OUTPUT — return each contact as a "benefit" entry:
+- benefit 1: {"first_name":"Real","last_name":"Name","position":"Title","email_pattern":"first.last@${domain}","linkedin_url":"https://linkedin.com/in/firstname-lastname","why_target":"reason","outreach_tip":"approach"}
+- benefit 2: Different person, different role
+- benefit 3: Different person, different role
+
+brand_name: ${company_name}
+contact_company: ${company_name}
+total_value: 0`
 
   try {
     const result = await invokeEdgeFunction('contract-ai', {
-      action: 'enrich_contact',
-      name: `3 MORE DECISION MAKERS at ${company_name} (EXCLUDE: ${existingNames || 'none'})`,
-      company: company_name + (category ? ` (${category})` : '') + (website ? ` — ${website}` : ''),
-      position: `IGNORE standard enrichment. Return EXACT JSON: {"contacts":[{"first_name":"string","last_name":"string","position":"string","email_pattern":"first.last@domain.com","linkedin_url":"https://linkedin.com/in/name","why_target":"1 sentence","outreach_tip":"1 sentence"},{"first_name":"...","last_name":"...","position":"...","email_pattern":"...","linkedin_url":"...","why_target":"...","outreach_tip":"..."},{"first_name":"...","last_name":"...","position":"...","email_pattern":"...","linkedin_url":"...","why_target":"...","outreach_tip":"..."}]}. Find DIFFERENT people — try: Regional Marketing Manager, Community Relations Director, Event Marketing lead, Brand Manager, Business Development VP, CFO/Finance, PR Director. Do NOT include: ${existingNames}. Use REAL names. Return ONLY JSON.`,
+      action: 'parse_pdf_text',
+      pdf_text: fakeContract,
     })
 
-    const data = result?.enrichment
-    if (data?.contacts) {
-      return { research: data }
+    const parsed = result?.parsed
+    if (parsed?.benefits?.length > 0) {
+      const contacts = parsed.benefits.map(b => {
+        try {
+          const desc = b.description || ''
+          const jsonMatch = desc.match(/\{[\s\S]*\}/)
+          if (jsonMatch) return JSON.parse(jsonMatch[0])
+        } catch {}
+        return {
+          first_name: (b.description || '').split(' ')[0] || '',
+          last_name: (b.description || '').split(' ').slice(1).join(' ') || '',
+          position: b.category || '',
+          email_pattern: '',
+          linkedin_url: '',
+          why_target: '',
+          outreach_tip: '',
+        }
+      }).filter(c => c.first_name)
+
+      return { research: { contacts } }
     }
-    return { research: { contacts: [] } }
-  } catch {
-    return { research: { contacts: [] } }
+  } catch (e) {
+    throw new Error(`Could not find more contacts: ${e.message}`)
   }
+
+  throw new Error('No additional contacts found. Try a different company name.')
 }
 
 // Newsletter — tries dedicated action first, falls back to edit_contract

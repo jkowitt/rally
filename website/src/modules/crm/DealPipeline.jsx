@@ -6,6 +6,7 @@ import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts } from '@/lib/claude'
 
+
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
 const SOURCES = ['Referral', 'Cold Outreach', 'Inbound', 'Event', 'Renewal', 'Other']
@@ -766,6 +767,8 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
   const [activeTab, setActiveTab] = useState('contacts')
   const [enriching, setEnriching] = useState(null) // index of contact being enriched
   const [enrichResult, setEnrichResult] = useState(null)
+  const [aiResearching, setAiResearching] = useState(false)
+  const [aiResearchingMore, setAiResearchingMore] = useState(false)
 
   // Fetch available assets for proposal
   const { data: availableAssets } = useQuery({
@@ -893,6 +896,76 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
 
   function addContact() {
     setContacts(prev => [...prev, { ...EMPTY_CONTACT, company: form.brand_name }])
+  }
+
+  async function aiResearchDealContacts() {
+    if (!form.brand_name) return
+    setAiResearching(true)
+    try {
+      const data = await researchContacts({
+        company_name: form.brand_name,
+        category: form.sub_industry || '',
+        website: form.website || '',
+      })
+      if (data.research?.contacts?.length > 0) {
+        const newContacts = data.research.contacts.map((c, i) => ({
+          ...EMPTY_CONTACT,
+          first_name: c.first_name || '',
+          last_name: c.last_name || '',
+          email: c.email_pattern || '',
+          position: c.position || '',
+          company: form.brand_name,
+          linkedin: c.linkedin_url || '',
+          is_primary: contacts.length === 0 && i === 0,
+          notes: c.why_target || '',
+        }))
+        // Replace empty placeholder contacts or append
+        const hasOnlyEmpty = contacts.length === 1 && !contacts[0].first_name && !contacts[0].email
+        setContacts(hasOnlyEmpty ? newContacts : [...contacts, ...newContacts])
+        // Update deal linkedin with company linkedin
+        if (data.research.company_linkedin) {
+          setForm(prev => ({ ...prev, linkedin: prev.linkedin || data.research.company_linkedin }))
+        }
+      }
+    } catch (e) {
+      alert('Error researching contacts: ' + e.message)
+    } finally {
+      setAiResearching(false)
+    }
+  }
+
+  async function aiFindMoreDealContacts() {
+    if (!form.brand_name) return
+    setAiResearchingMore(true)
+    try {
+      const data = await researchMoreContacts({
+        company_name: form.brand_name,
+        category: form.sub_industry || '',
+        website: form.website || '',
+        existing_contacts: contacts.filter(c => c.first_name).map(c => ({
+          first_name: c.first_name,
+          last_name: c.last_name,
+          position: c.position,
+        })),
+      })
+      if (data.research?.contacts?.length > 0) {
+        const newContacts = data.research.contacts.map(c => ({
+          ...EMPTY_CONTACT,
+          first_name: c.first_name || '',
+          last_name: c.last_name || '',
+          email: c.email_pattern || '',
+          position: c.position || '',
+          company: form.brand_name,
+          linkedin: c.linkedin_url || '',
+          notes: c.why_target || '',
+        }))
+        setContacts(prev => [...prev, ...newContacts])
+      }
+    } catch (e) {
+      alert('Error finding more contacts: ' + e.message)
+    } finally {
+      setAiResearchingMore(false)
+    }
   }
 
   function removeContact(index) {
@@ -1124,13 +1197,47 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                   )}
                 </div>
               ))}
-              <button
-                type="button"
-                onClick={addContact}
-                className="w-full border border-dashed border-border rounded-lg py-2 text-xs text-text-muted hover:text-accent hover:border-accent/40 transition-colors"
-              >
-                + Add Another Contact
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={addContact}
+                  className="flex-1 border border-dashed border-border rounded-lg py-2 text-xs text-text-muted hover:text-accent hover:border-accent/40 transition-colors"
+                >
+                  + Add Manually
+                </button>
+                <button
+                  type="button"
+                  onClick={aiResearchDealContacts}
+                  disabled={aiResearching || !form.brand_name}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-accent/10 text-accent border border-accent/30 rounded-lg py-2 text-xs font-medium hover:bg-accent/20 disabled:opacity-50 transition-colors"
+                >
+                  {aiResearching ? (
+                    <>
+                      <span className="animate-spin w-3 h-3 border-2 border-accent border-t-transparent rounded-full"></span>
+                      Researching...
+                    </>
+                  ) : (
+                    <>✦ AI Find Contacts</>
+                  )}
+                </button>
+              </div>
+              {contacts.some(c => c.first_name) && (
+                <button
+                  type="button"
+                  onClick={aiFindMoreDealContacts}
+                  disabled={aiResearchingMore || !form.brand_name}
+                  className="w-full flex items-center justify-center gap-1.5 border border-dashed border-accent/20 rounded-lg py-2 text-xs text-text-muted hover:text-accent hover:border-accent/40 disabled:opacity-50 transition-colors"
+                >
+                  {aiResearchingMore ? (
+                    <>
+                      <span className="animate-spin w-3 h-3 border-2 border-accent border-t-transparent rounded-full"></span>
+                      Finding more decision-makers...
+                    </>
+                  ) : (
+                    <>+ Find More Contacts at {form.brand_name || 'Company'}</>
+                  )}
+                </button>
+              )}
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
                 <div>
                   <label className="text-xs text-text-muted">Source</label>

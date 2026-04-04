@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 async function extractPdfText(arrayBuffer) {
-  const pdfjs = await import('pdfjs-dist')
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js')
   pdfjs.GlobalWorkerOptions.workerSrc = ''
-  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
+  const pdf = await pdfjs.getDocument({ data: arrayBuffer, disableWorker: true }).promise
   let text = ''
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)

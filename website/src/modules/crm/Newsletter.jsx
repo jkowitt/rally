@@ -119,6 +119,8 @@ export default function Newsletter() {
       return data || []
     },
     retry: false,
+    refetchInterval: 15 * 60 * 1000, // Re-check every 15 minutes
+    refetchIntervalInBackground: true,
   })
 
   const weeklyDigests = (newsletters || []).filter(n => n.type === 'weekly_digest')

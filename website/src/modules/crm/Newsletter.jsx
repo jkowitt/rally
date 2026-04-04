@@ -144,14 +144,31 @@ export default function Newsletter() {
   // Always generate afternoon if none exists for today (after 1pm ET, or immediately if no afternoon exists at all)
   const afternoonNeeded = !afternoonIsCurrent && (afternoonUpdates.length === 0 || etHour >= 13)
 
+  // Locally generated newsletters (in case DB table doesn't exist yet)
+  const [localWeekly, setLocalWeekly] = useState(null)
+  const [localAfternoon, setLocalAfternoon] = useState(null)
+
   // Mutations with progress tracking
   const weeklyMutation = useMutation({
     mutationFn: () => {
       startProgress('weekly')
       return generateWeeklyNewsletter({ property_id: propertyId })
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       stopProgress()
+      // Store locally so it displays even if DB insert failed
+      if (data?.newsletter) {
+        setLocalWeekly({
+          id: 'local-weekly-' + Date.now(),
+          type: 'weekly_digest',
+          title: data.newsletter.title,
+          content: data.newsletter.content,
+          summary: data.newsletter.summary || '',
+          topics: data.newsletter.topics || [],
+          week_of: weekOf,
+          published_at: new Date().toISOString(),
+        })
+      }
       queryClient.invalidateQueries({ queryKey: ['newsletters-global'] })
     },
     onError: (err) => {
@@ -165,8 +182,19 @@ export default function Newsletter() {
       startProgress('afternoon')
       return generateAfternoonUpdate({ property_id: propertyId })
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       stopProgress()
+      if (data?.update) {
+        setLocalAfternoon({
+          id: 'local-afternoon-' + Date.now(),
+          type: 'afternoon_update',
+          title: data.update.title,
+          content: data.update.content,
+          summary: data.update.summary || '',
+          topics: data.update.topics || [],
+          published_at: new Date().toISOString(),
+        })
+      }
       queryClient.invalidateQueries({ queryKey: ['newsletters-global'] })
     },
     onError: (err) => {
@@ -193,9 +221,17 @@ export default function Newsletter() {
 
   const isGenerating = weeklyMutation.isPending || afternoonMutation.isPending
 
-  // Show old content while generating new
+  // Use local newsletters as fallback if DB didn't have them
+  const effectiveWeekly = latestWeekly || localWeekly
+  const effectiveAfternoon = latestAfternoon || localAfternoon
+  const effectiveWeeklyIsCurrent = effectiveWeekly?.week_of === weekOf || !!localWeekly
+  const effectiveAfternoonIsCurrent = effectiveAfternoon ? (
+    new Date(effectiveAfternoon.published_at).toISOString().split('T')[0] === todayStr || !!localAfternoon
+  ) : false
+
+  // Show old content while generating new — never blank the screen
   const displayNewsletter = selectedNewsletter ||
-    (view === 'latest' && latestWeekly ? latestWeekly : null)
+    (view === 'latest' && effectiveWeekly ? effectiveWeekly : null)
 
   // Progress UI data
   const progressSteps = genProgress.type ? GEN_STEPS[genProgress.type] : []
@@ -216,12 +252,12 @@ export default function Newsletter() {
         </div>
         <div className="flex gap-3 text-[10px] sm:text-xs font-mono text-text-muted items-center">
           <div className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${weeklyIsCurrent ? 'bg-success' : weeklyMutation.isPending ? 'bg-accent animate-pulse' : 'bg-warning'}`}></span>
-            <span>Weekly {weeklyIsCurrent ? 'current' : weeklyMutation.isPending ? 'generating...' : 'pending'}</span>
+            <span className={`w-2 h-2 rounded-full ${effectiveWeeklyIsCurrent ? 'bg-success' : weeklyMutation.isPending ? 'bg-accent animate-pulse' : 'bg-warning'}`}></span>
+            <span>Weekly {effectiveWeeklyIsCurrent ? 'current' : weeklyMutation.isPending ? 'generating...' : 'pending'}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${afternoonIsCurrent ? 'bg-success' : etHour < 13 ? 'bg-text-muted' : afternoonMutation.isPending ? 'bg-accent animate-pulse' : 'bg-warning'}`}></span>
-            <span>Afternoon {afternoonIsCurrent ? 'current' : etHour < 13 ? '1pm ET' : afternoonMutation.isPending ? 'generating...' : 'pending'}</span>
+            <span className={`w-2 h-2 rounded-full ${effectiveAfternoonIsCurrent ? 'bg-success' : etHour < 13 ? 'bg-text-muted' : afternoonMutation.isPending ? 'bg-accent animate-pulse' : 'bg-warning'}`}></span>
+            <span>Afternoon {effectiveAfternoonIsCurrent ? 'current' : etHour < 13 ? '1pm ET' : afternoonMutation.isPending ? 'generating...' : 'pending'}</span>
           </div>
         </div>
       </div>
@@ -331,26 +367,26 @@ export default function Newsletter() {
               )}
 
               {/* Quick switch */}
-              {(latestWeekly || latestAfternoon) && (
+              {(effectiveWeekly || effectiveAfternoon) && (
                 <div className="flex gap-2 mb-4 flex-wrap">
-                  {latestWeekly && (
+                  {effectiveWeekly && (
                     <button
-                      onClick={() => setSelectedNewsletter(latestWeekly)}
+                      onClick={() => setSelectedNewsletter(effectiveWeekly)}
                       className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
-                        (displayNewsletter?.id === latestWeekly?.id) ? 'bg-accent text-bg-primary border-accent' : 'border-border text-text-secondary hover:border-accent/50'
+                        (displayNewsletter?.id === effectiveWeekly?.id) ? 'bg-accent text-bg-primary border-accent' : 'border-border text-text-secondary hover:border-accent/50'
                       }`}
                     >
-                      Weekly Digest &mdash; {latestWeekly.week_of}
+                      Weekly Digest &mdash; {effectiveWeekly.week_of}
                     </button>
                   )}
-                  {latestAfternoon && (
+                  {effectiveAfternoon && (
                     <button
-                      onClick={() => setSelectedNewsletter(latestAfternoon)}
+                      onClick={() => setSelectedNewsletter(effectiveAfternoon)}
                       className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
-                        (displayNewsletter?.id === latestAfternoon?.id) ? 'bg-warning/80 text-bg-primary border-warning' : 'border-border text-text-secondary hover:border-warning/50'
+                        (displayNewsletter?.id === effectiveAfternoon?.id) ? 'bg-warning/80 text-bg-primary border-warning' : 'border-border text-text-secondary hover:border-warning/50'
                       }`}
                     >
-                      Afternoon Access &mdash; {new Date(latestAfternoon.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      Afternoon Access &mdash; {new Date(effectiveAfternoon.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </button>
                   )}
                 </div>
@@ -392,7 +428,7 @@ export default function Newsletter() {
             </div>
           ) : (
             <>
-              {afternoonUpdates.length === 0 && !isGenerating ? (
+              {afternoonUpdates.length === 0 && !localAfternoon && !isGenerating ? (
                 <div className="bg-bg-surface border border-border rounded-lg p-8 sm:p-12 text-center">
                   <div className="text-3xl mb-3">☀️</div>
                   <p className="text-text-secondary text-sm mb-1">
@@ -407,9 +443,16 @@ export default function Newsletter() {
                     Generate Now
                   </button>
                 </div>
-              ) : afternoonUpdates.map(n => (
-                <NewsletterCard key={n.id} newsletter={n} onClick={() => setSelectedNewsletter(n)} />
-              ))}
+              ) : (
+                <>
+                  {localAfternoon && !afternoonUpdates.some(n => n.id === localAfternoon.id) && (
+                    <NewsletterCard key={localAfternoon.id} newsletter={localAfternoon} onClick={() => setSelectedNewsletter(localAfternoon)} />
+                  )}
+                  {afternoonUpdates.map(n => (
+                    <NewsletterCard key={n.id} newsletter={n} onClick={() => setSelectedNewsletter(n)} />
+                  ))}
+                </>
+              )}
             </>
           )}
         </div>
@@ -430,7 +473,7 @@ export default function Newsletter() {
             </div>
           ) : (
             <>
-              {(!newsletters || newsletters.length === 0) ? (
+              {(!newsletters || newsletters.length === 0) && !localWeekly && !localAfternoon ? (
                 <div className="bg-bg-surface border border-border rounded-lg p-8 sm:p-12 text-center">
                   <div className="text-3xl mb-3">📁</div>
                   <p className="text-text-secondary text-sm">No archived newsletters yet</p>

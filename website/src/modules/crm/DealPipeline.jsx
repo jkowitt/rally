@@ -1152,18 +1152,52 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <input
-                      placeholder="LinkedIn URL"
-                      value={contact.linkedin}
-                      onChange={(e) => updateContact(idx, 'linkedin', e.target.value)}
-                      className="bg-bg-surface border border-border rounded px-2.5 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
-                    />
+                    <div className="flex gap-1">
+                      <input
+                        placeholder="LinkedIn URL"
+                        value={contact.linkedin}
+                        onChange={(e) => updateContact(idx, 'linkedin', e.target.value)}
+                        className="flex-1 bg-bg-surface border border-border rounded px-2.5 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent min-w-0"
+                      />
+                      {contact.linkedin && (
+                        <a
+                          href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 flex items-center justify-center w-8 h-8 bg-accent/10 text-accent border border-accent/30 rounded hover:bg-accent/20 self-center text-xs font-bold"
+                          title="Open LinkedIn profile"
+                        >
+                          in
+                        </a>
+                      )}
+                    </div>
                     <input
                       placeholder="Website"
                       value={contact.website}
                       onChange={(e) => updateContact(idx, 'website', e.target.value)}
                       className="bg-bg-surface border border-border rounded px-2.5 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                     />
+                  </div>
+                  {/* Contact summary with clickable links */}
+                  {(contact.first_name || contact.last_name) && (contact.linkedin || contact.email) && (
+                    <div className="flex items-center gap-2 flex-wrap text-[11px] bg-bg-surface rounded px-2.5 py-1.5">
+                      <span className="text-text-primary font-medium">{contact.first_name} {contact.last_name}</span>
+                      {contact.position && <span className="text-text-muted">— {contact.position}</span>}
+                      {contact.linkedin && (
+                        <a
+                          href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-accent hover:underline"
+                        >
+                          LinkedIn Profile &rarr;
+                        </a>
+                      )}
+                      {contact.email && (
+                        <a href={`mailto:${contact.email}`} className="text-accent hover:underline">{contact.email}</a>
+                      )}
+                    </div>
+                  )}
                   </div>
                   {/* AI Enrich for this contact */}
                   <button

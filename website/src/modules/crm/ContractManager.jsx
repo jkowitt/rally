@@ -1,8 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
-import * as pdfjsLib from 'pdfjs-dist'
-
-// Disable worker — runs inline, works on all platforms including mobile
-pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+let pdfjsLib = null
+async function loadPdfjs() {
+  if (pdfjsLib) return pdfjsLib
+  try {
+    pdfjsLib = await import('pdfjs-dist')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+    return pdfjsLib
+  } catch {
+    return null
+  }
+}
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -459,7 +466,9 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
           byteNumbers[i] = byteCharacters.charCodeAt(i)
         }
         const uint8Array = new Uint8Array(byteNumbers)
-        const pdf = await pdfjsLib.getDocument({ data: uint8Array, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+        const pdfjs = await loadPdfjs()
+        if (!pdfjs) throw new Error('PDF reader not available')
+        const pdf = await pdfjs.getDocument({ data: uint8Array, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
         let fullText = ''
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i)
@@ -943,25 +952,27 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       setLoading(true)
       setStatus('Reading PDF...')
       try {
-        const arrayBuffer = await file.arrayBuffer()
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
-        let fullText = ''
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i)
-          const content = await page.getTextContent()
-          fullText += content.items.map((item) => item.str).join(' ') + '\n\n'
+        const pdfjs = await loadPdfjs()
+        if (pdfjs) {
+          const arrayBuffer = await file.arrayBuffer()
+          const pdf = await pdfjs.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+          let fullText = ''
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i)
+            const content = await page.getTextContent()
+            fullText += content.items.map((item) => item.str).join(' ') + '\n\n'
+          }
+          extractedText = fullText.trim()
         }
-        extractedText = fullText.trim()
-      } catch (err) {
-        console.warn('PDF text extraction failed:', err)
-        // PDF stored but text extraction failed — user can paste text
+      } catch {
+        // PDF text extraction failed — will prompt user to paste text
       }
     } else {
       setStatus('Unsupported file type. Use .pdf, .docx, or .txt files.')
       return
     }
 
-    // Set text and auto-analyze with AI
+    // Auto-analyze with AI if text was extracted
     if (extractedText.length > 20) {
       setPdfText(extractedText)
       setStatus('AI is analyzing the contract...')
@@ -970,10 +981,14 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
         setParsed(result.parsed)
         setStatus('Contract analyzed! Review the extracted data below and import.')
       } catch (e) {
-        setStatus('Text extracted. AI analysis failed: ' + e.message + '. You can still import without AI parse.')
+        setStatus('Text extracted but AI analysis failed: ' + e.message)
       }
+    } else if (pdfBase64) {
+      // PDF was stored but text couldn't be extracted (scanned PDF or mobile browser limitation)
+      setStatus('')
+      setPdfText('')
     } else {
-      setStatus('PDF stored. Could not extract text automatically — paste the contract text below and click "Analyze with AI".')
+      setStatus('Could not read file.')
     }
     setLoading(false)
   }
@@ -1168,12 +1183,25 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
           </div>
         )}
 
-        {/* Text area for paste or extracted text */}
-        {(!pdfBase64 || pdfText) && (
+        {/* Text area — always visible for paste or editing extracted text */}
+        {(pdfBase64 && !pdfText) ? (
+          <div className="bg-bg-card border border-accent/30 rounded-lg p-4 space-y-3">
+            <div className="text-xs text-accent font-medium">PDF stored successfully — paste contract text to analyze</div>
+            <p className="text-[11px] text-text-muted">Open the PDF on your device, select all text (Ctrl+A / Cmd+A), copy it, and paste below. AI will extract deal info, benefits, and revenue.</p>
+            <textarea
+              value={pdfText}
+              onChange={(e) => setPdfText(e.target.value)}
+              rows={8}
+              placeholder="Paste contract text here..."
+              className="w-full bg-bg-surface border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent resize-y font-mono"
+              autoFocus
+            />
+          </div>
+        ) : (
           <textarea
             value={pdfText}
             onChange={(e) => setPdfText(e.target.value)}
-            rows={pdfBase64 ? 4 : 10}
+            rows={pdfBase64 ? 4 : 8}
             placeholder="Or paste contract text here..."
             className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent resize-y font-mono"
           />

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
+import * as pdfjsLib from 'pdfjs-dist'
 
-GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.6.205/build/pdf.worker.min.mjs'
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -194,16 +194,16 @@ export default function ContractManager() {
       </div>
 
       {/* View tabs */}
-      <div className="flex gap-1 bg-bg-card rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-bg-card rounded-lg p-1 w-fit overflow-x-auto">
         {[
           { key: 'list', label: 'Contracts' },
-          { key: 'editor', label: 'AI Editor' },
-          { key: 'upload', label: 'Upload Template' },
+          { key: 'upload', label: 'Upload Contract' },
+          { key: 'editor', label: 'Create from Template' },
         ].map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setView(key)}
-            className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${view === key ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+            className={`px-4 py-1.5 rounded text-sm font-medium transition-colors whitespace-nowrap ${view === key ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
           >
             {label}
           </button>
@@ -458,7 +458,13 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
           byteNumbers[i] = byteCharacters.charCodeAt(i)
         }
         const uint8Array = new Uint8Array(byteNumbers)
-        const pdf = await getDocument({ data: uint8Array, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+        let pdf
+        try {
+          pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise
+        } catch {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+          pdf = await pdfjsLib.getDocument({ data: uint8Array, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+        }
         let fullText = ''
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i)
@@ -938,7 +944,14 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       setStatus('Extracting text from PDF...')
       try {
         const arrayBuffer = await file.arrayBuffer()
-        const pdf = await getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+        let pdf
+        try {
+          pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        } catch {
+          // Fallback: try without worker
+          pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+          pdf = await pdfjsLib.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+        }
         let fullText = ''
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i)
@@ -948,12 +961,13 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
         }
         if (fullText.trim().length > 20) {
           setPdfText(fullText.trim())
-          setStatus(`PDF uploaded (${pdf.numPages} pages). The original PDF will be stored exactly as uploaded. Click "Parse with AI" to extract data.`)
+          setStatus(`PDF uploaded (${pdf.numPages} pages). Click "Parse with AI" to extract data.`)
         } else {
-          setStatus('PDF appears to be scanned/image-based. The PDF will still be stored as-is. Try copy-pasting the contract text for AI parsing.')
+          setStatus('PDF uploaded. Text could not be extracted (may be scanned). Click "Parse with AI" to analyze or paste text below.')
         }
       } catch (err) {
-        setStatus('Error reading PDF: ' + (err.message || 'Unknown error'))
+        // PDF stored but text extraction failed — still usable
+        setStatus('PDF stored successfully. Paste the contract text below to analyze with AI.')
       } finally {
         setLoading(false)
       }

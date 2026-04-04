@@ -912,79 +912,96 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       const text = await file.text()
       setPdfText(text)
-      setStatus('Text file loaded. Click "Parse with AI" to extract contract data.')
-      return
-    }
-
-    // Extract text from Word documents
-    if (file.name.endsWith('.docx') || file.name.endsWith('.doc') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      setLoading(true)
-      setStatus('Extracting text from Word document...')
-      try {
-        const mammoth = await import('mammoth')
-        const arrayBuffer = await file.arrayBuffer()
-        const result = await mammoth.default.extractRawText({ arrayBuffer })
-        if (result.value?.trim().length > 20) {
-          setPdfText(result.value.trim())
-          setStatus(`Word document loaded (${result.value.length} characters). Click "Parse with AI" to extract data.`)
-        } else {
-          setStatus('Could not extract text from this document. Try a .docx format.')
+      if (text.trim().length > 20) {
+        setLoading(true)
+        setStatus('AI is analyzing the contract...')
+        try {
+          const result = await parsePdfText(text)
+          setParsed(result.parsed)
+          setStatus('Contract analyzed! Review the extracted data below and import.')
+        } catch (e) {
+          setStatus('Text loaded. AI analysis failed: ' + e.message)
         }
-      } catch (err) {
-        setStatus('Error reading Word document: ' + (err.message || 'Unknown error'))
-      } finally {
         setLoading(false)
       }
       return
     }
 
-    // Extract text from PDF using pdf.js
-    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+    // Extract text from Word documents
+    // Extract text then auto-analyze
+    let extractedText = ''
+
+    if (file.name.endsWith('.docx') || file.name.endsWith('.doc') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       setLoading(true)
-      setStatus('Extracting text from PDF...')
+      setStatus('Reading Word document...')
+      try {
+        const mammoth = await import('mammoth')
+        const arrayBuffer = await file.arrayBuffer()
+        const result = await mammoth.default.extractRawText({ arrayBuffer })
+        extractedText = result.value?.trim() || ''
+      } catch {
+        setStatus('Could not read Word document. Try .docx format.')
+        setLoading(false)
+        return
+      }
+    } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      setLoading(true)
+      setStatus('Reading PDF...')
       try {
         const arrayBuffer = await file.arrayBuffer()
         let pdf
         try {
           pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
         } catch {
-          // Fallback: try without worker
           pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-          pdf = await pdfjsLib.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+          try {
+            pdf = await pdfjsLib.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+          } catch {
+            pdf = null
+          }
         }
-        let fullText = ''
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i)
-          const content = await page.getTextContent()
-          const pageText = content.items.map((item) => item.str).join(' ')
-          fullText += pageText + '\n\n'
+        if (pdf) {
+          let fullText = ''
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i)
+            const content = await page.getTextContent()
+            fullText += content.items.map((item) => item.str).join(' ') + '\n\n'
+          }
+          extractedText = fullText.trim()
         }
-        if (fullText.trim().length > 20) {
-          setPdfText(fullText.trim())
-          setStatus(`PDF uploaded (${pdf.numPages} pages). Click "Parse with AI" to extract data.`)
-        } else {
-          setStatus('PDF uploaded. Text could not be extracted (may be scanned). Click "Parse with AI" to analyze or paste text below.')
-        }
-      } catch (err) {
-        // PDF stored but text extraction failed — still usable
-        setStatus('PDF stored successfully. Paste the contract text below to analyze with AI.')
-      } finally {
-        setLoading(false)
+      } catch {
+        // PDF stored but text extraction failed
       }
+    } else {
+      setStatus('Unsupported file type. Use .pdf, .docx, or .txt files.')
       return
     }
 
-    setStatus('Unsupported file type. Use .pdf, .docx, or .txt files.')
+    // Set text and auto-analyze with AI
+    if (extractedText.length > 20) {
+      setPdfText(extractedText)
+      setStatus('AI is analyzing the contract...')
+      try {
+        const result = await parsePdfText(extractedText)
+        setParsed(result.parsed)
+        setStatus('Contract analyzed! Review the extracted data below and import.')
+      } catch (e) {
+        setStatus('Text extracted. AI analysis failed: ' + e.message + '. You can still import without AI parse.')
+      }
+    } else {
+      setStatus('PDF stored. Could not extract text automatically — paste the contract text below and click "Analyze with AI".')
+    }
+    setLoading(false)
   }
 
   async function handleParse() {
     if (!pdfText.trim()) return alert('Upload a file or paste contract text first')
     setLoading(true)
-    setStatus('Claude AI is reading the contract...')
+    setStatus('AI is analyzing the contract...')
     try {
       const result = await parsePdfText(pdfText)
       setParsed(result.parsed)
-      setStatus('Contract parsed! Benefits auto-extracted. Review the data below and import.')
+      setStatus('Contract analyzed! Review the data below and import.')
     } catch (e) {
       setStatus('Error parsing: ' + e.message)
     } finally {
@@ -1205,7 +1222,7 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
             disabled={loading || !pdfText.trim()}
             className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
           >
-            {loading ? 'Parsing...' : 'Parse with AI'}
+            {loading ? 'Analyzing...' : 'Analyze with AI'}
           </button>
           {pdfBase64 && (
             <button
@@ -1213,7 +1230,7 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
               disabled={loading}
               className="bg-bg-card border border-accent text-accent px-4 py-2 rounded text-sm font-medium hover:bg-accent/10 disabled:opacity-50"
             >
-              {saveAsTemplate ? 'Save Template (Skip AI Parse)' : 'Import Without AI Parse'}
+              {saveAsTemplate ? 'Save as Template' : 'Import Without Analysis'}
             </button>
           )}
         </div>

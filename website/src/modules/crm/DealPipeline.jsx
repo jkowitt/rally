@@ -1234,13 +1234,59 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
           {deal ? 'Edit Deal' : 'New Deal'}
         </h2>
 
-        {/* Brand name always visible */}
-        <input
-          placeholder="Brand / Company Name"
-          value={form.brand_name}
-          onChange={(e) => setForm({ ...form, brand_name: e.target.value })}
-          className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent mt-3 mb-4"
-        />
+        {/* Brand name with Apollo enrich button */}
+        <div className="flex gap-2 mt-3 mb-4">
+          <input
+            placeholder="Brand / Company Name"
+            value={form.brand_name}
+            onChange={(e) => setForm({ ...form, brand_name: e.target.value })}
+            className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+          />
+          <button
+            type="button"
+            disabled={!form.brand_name || enriching === 'company'}
+            onClick={async () => {
+              setEnriching('company')
+              try {
+                const { apolloEnrichCompany } = await import('@/lib/claude')
+                const res = await apolloEnrichCompany({
+                  company_name: form.brand_name,
+                  domain: form.website || undefined,
+                  property_id: propertyId,
+                })
+                if (res?.data) {
+                  const d = res.data
+                  setForm(prev => ({
+                    ...prev,
+                    website: d.website || prev.website,
+                    linkedin: d.linkedin_url || prev.linkedin,
+                    city: d.city || prev.city,
+                    state: d.state || prev.state,
+                    sub_industry: d.industry || prev.sub_industry,
+                    employees: d.estimated_num_employees || prev.employees,
+                    revenue_thousands: d.annual_revenue ? Math.round(d.annual_revenue / 1000) : prev.revenue_thousands,
+                    founded: d.founded_year || prev.founded,
+                  }))
+                  toast({
+                    title: `Enriched from Apollo`,
+                    description: res.cached ? 'From 30-day cache' : `${d.estimated_num_employees || '?'} employees, ${d.industry || 'unknown industry'}`,
+                    type: 'success',
+                  })
+                } else if (res?.error) {
+                  toast({ title: 'Apollo not configured', description: 'Add APOLLO_API_KEY to enable company enrichment', type: 'warning' })
+                }
+              } catch (e) {
+                toast({ title: 'Enrichment failed', description: e.message, type: 'error' })
+              } finally {
+                setEnriching(null)
+              }
+            }}
+            className="shrink-0 bg-accent/10 text-accent border border-accent/30 rounded px-3 py-2 text-xs font-medium hover:bg-accent/20 disabled:opacity-50 whitespace-nowrap"
+            title="Enrich with Apollo.io firmographic data"
+          >
+            {enriching === 'company' ? '...' : '✦ Enrich'}
+          </button>
+        </div>
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border mb-4">

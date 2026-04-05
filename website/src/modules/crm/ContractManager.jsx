@@ -154,8 +154,10 @@ export default function ContractManager() {
 
       // Save benefits and auto-sync to assets + fulfillment
       if (_benefits && _benefits.length > 0 && savedContract) {
+        const syncErrors = []
         // Remove existing benefits for this contract and re-insert
-        await supabase.from('contract_benefits').delete().eq('contract_id', savedContract.id)
+        const { error: delErr } = await supabase.from('contract_benefits').delete().eq('contract_id', savedContract.id)
+        if (delErr) syncErrors.push('Delete benefits: ' + delErr.message)
         const benefitRows = _benefits.map(b => ({
           contract_id: savedContract.id,
           benefit_description: b.benefit_description,
@@ -164,46 +166,51 @@ export default function ContractManager() {
           value: b.value ? Number(b.value) : null,
           fulfillment_auto_generated: false,
         }))
-        const { data: insertedBenefits } = await supabase.from('contract_benefits').insert(benefitRows).select()
+        const { data: insertedBenefits, error: benErr } = await supabase.from('contract_benefits').insert(benefitRows).select()
+        if (benErr) syncErrors.push('Insert benefits: ' + benErr.message)
 
         // Auto-create fulfillment records
         if (insertedBenefits?.length > 0 && savedContract.deal_id) {
-          try {
-            // Clear existing auto-generated fulfillment for this contract
-            await supabase.from('fulfillment_records').delete().eq('contract_id', savedContract.id).eq('auto_generated', true)
-            const fulfillmentRows = insertedBenefits.map(b => ({
-              deal_id: savedContract.deal_id,
-              contract_id: savedContract.id,
-              benefit_id: b.id,
-              scheduled_date: savedContract.effective_date || null,
-              delivered: false,
-              auto_generated: true,
-            }))
-            await supabase.from('fulfillment_records').insert(fulfillmentRows)
-          } catch { /* table may not exist */ }
+          await supabase.from('fulfillment_records').delete().eq('contract_id', savedContract.id).eq('auto_generated', true)
+          const fulfillmentRows = insertedBenefits.map(b => ({
+            deal_id: savedContract.deal_id,
+            contract_id: savedContract.id,
+            benefit_id: b.id,
+            scheduled_date: savedContract.effective_date || null,
+            delivered: false,
+            auto_generated: true,
+          }))
+          const { error: fulErr } = await supabase.from('fulfillment_records').insert(fulfillmentRows)
+          if (fulErr) syncErrors.push('Fulfillment: ' + fulErr.message)
         }
 
         // Auto-sync to asset catalog
         if (insertedBenefits?.length > 0) {
-          try {
-            // Remove existing assets from this contract
-            await supabase.from('assets').delete().eq('source_contract_id', savedContract.id).eq('from_contract', true)
-            for (const b of insertedBenefits) {
-              const category = guessAssetCategory(b.benefit_description || '')
-              await supabase.from('assets').insert({
-                property_id: propertyId,
-                name: b.benefit_description || 'Contract Benefit',
-                category,
-                quantity: b.quantity || 1,
-                base_price: b.value || null,
-                active: true,
-                from_contract: true,
-                source_contract_id: savedContract.id,
-                sold_count: b.quantity || 1,
-                total_available: 0,
-              })
+          await supabase.from('assets').delete().eq('source_contract_id', savedContract.id).eq('from_contract', true)
+          for (const b of insertedBenefits) {
+            const category = guessAssetCategory(b.benefit_description || '')
+            const { error: assetErr } = await supabase.from('assets').insert({
+              property_id: propertyId,
+              name: b.benefit_description || 'Contract Benefit',
+              category,
+              quantity: b.quantity || 1,
+              base_price: b.value || null,
+              active: true,
+              from_contract: true,
+              source_contract_id: savedContract.id,
+              sold_count: b.quantity || 1,
+              total_available: 0,
+            })
+            if (assetErr) {
+              syncErrors.push('Asset: ' + assetErr.message)
+              break
             }
-          } catch { /* columns may not exist */ }
+          }
+        }
+
+        if (syncErrors.length > 0) {
+          console.error('Benefit sync errors:', syncErrors)
+          savedContract._syncErrors = syncErrors
         }
       }
 
@@ -214,7 +221,11 @@ export default function ContractManager() {
       queryClient.invalidateQueries({ queryKey: ['contract-templates', propertyId] })
       queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
       queryClient.invalidateQueries({ queryKey: ['fulfillment-records'] })
-      toast({ title: 'Contract saved — benefits synced to Assets & Fulfillment', type: 'success' })
+      if (data?._syncErrors?.length > 0) {
+        toast({ title: 'Contract saved — sync issues', description: data._syncErrors[0], type: 'warning' })
+      } else {
+        toast({ title: 'Contract saved — benefits synced to Assets & Fulfillment', type: 'success' })
+      }
       setShowForm(false)
       if (data) setSelectedContract(data)
     },
@@ -223,11 +234,17 @@ export default function ContractManager() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
+      // Clean up linked assets and fulfillment records first
+      await supabase.from('assets').delete().eq('source_contract_id', id).eq('from_contract', true)
+      await supabase.from('fulfillment_records').delete().eq('contract_id', id).eq('auto_generated', true)
+      // contract_benefits cascade automatically on contract delete
       const { error } = await supabase.from('contracts').delete().eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
+      queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
+      queryClient.invalidateQueries({ queryKey: ['fulfillment-records'] })
       queryClient.invalidateQueries({ queryKey: ['contract-templates', propertyId] })
       toast({ title: 'Contract deleted', type: 'success' })
       setSelectedContract(null)

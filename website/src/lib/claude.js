@@ -100,6 +100,56 @@ export async function generateMeetingNotes({ deal, attendees, agenda, raw_notes 
 
 // Prospect Search & Discovery — with fallback for undeployed edge function actions
 
+// Apollo.io enrichment (primary)
+export async function apolloEnrichCompany({ company_name, domain, property_id }) {
+  try {
+    return await invokeEdgeFunction('apollo-enrichment', { action: 'enrich_company', company_name, domain, property_id })
+  } catch {
+    return { data: null, error: 'Apollo not configured' }
+  }
+}
+
+export async function apolloFindPeople({ company_name, property_id }) {
+  try {
+    return await invokeEdgeFunction('apollo-enrichment', { action: 'find_people', company_name, property_id })
+  } catch {
+    return { data: null, error: 'Apollo not configured' }
+  }
+}
+
+export async function apolloEnrichPerson({ person_name, company_name, property_id }) {
+  try {
+    return await invokeEdgeFunction('apollo-enrichment', { action: 'enrich_person', person_name, company_name, property_id })
+  } catch {
+    return { data: null, error: 'Apollo not configured' }
+  }
+}
+
+// Hunter.io email verification
+export async function hunterVerifyEmail({ email, property_id }) {
+  try {
+    return await invokeEdgeFunction('hunter-verify', { action: 'verify_email', email, property_id })
+  } catch {
+    return { data: null, error: 'Hunter not configured' }
+  }
+}
+
+export async function hunterFindEmail({ first_name, last_name, domain, property_id }) {
+  try {
+    return await invokeEdgeFunction('hunter-verify', { action: 'find_email', first_name, last_name, domain, property_id })
+  } catch {
+    return { data: null, error: 'Hunter not configured' }
+  }
+}
+
+export async function hunterDomainSearch({ domain, property_id }) {
+  try {
+    return await invokeEdgeFunction('hunter-verify', { action: 'domain_search', domain, property_id })
+  } catch {
+    return { data: null, error: 'Hunter not configured' }
+  }
+}
+
 function tryParseJSON(text) {
   if (!text) return null
   try {
@@ -225,10 +275,36 @@ export async function suggestProspects({ property_id }) {
   return { suggestions }
 }
 
-export async function researchContacts({ company_name, category, website }) {
+export async function researchContacts({ company_name, category, website, property_id }) {
+  // TIER 1: Apollo.io (real, verified data)
+  try {
+    const apollo = await invokeEdgeFunction('apollo-enrichment', {
+      action: 'find_people',
+      company_name,
+      property_id,
+    })
+    if (apollo?.data && Array.isArray(apollo.data) && apollo.data.length > 0) {
+      const contacts = apollo.data.map(p => ({
+        first_name: p.first_name || '',
+        last_name: p.last_name || '',
+        position: p.title || '',
+        email_pattern: p.email || '',
+        email_verified: p.email_status === 'verified' ? 'verified' : p.email_status === 'unavailable' ? 'invalid' : 'unknown',
+        linkedin_url: p.linkedin_url || `https://www.google.com/search?q=${encodeURIComponent((p.first_name || '') + ' ' + (p.last_name || '') + ' ' + company_name + ' LinkedIn')}`,
+        why_target: p.headline || `${p.title} at ${company_name}`,
+        outreach_tip: p.seniority ? `Senior ${p.departments?.[0] || 'decision-maker'}` : '',
+        phone: p.phone || '',
+        photo_url: p.photo_url || '',
+        source: 'apollo',
+      }))
+      return { research: { contacts, source: 'apollo', verified: true } }
+    }
+  } catch { /* Apollo not configured or failed, fall through */ }
+
+  // TIER 2: Claude AI (fallback when Apollo not available)
   try {
     const result = await invokeEdgeFunction('contract-ai', { action: 'research_contacts', company_name, category, website })
-    if (result?.research) return result
+    if (result?.research) return { ...result, research: { ...result.research, source: 'claude' } }
   } catch (e) {
     if (!e.message?.includes('Unknown action')) throw e
   }
@@ -294,10 +370,12 @@ Do NOT leave brackets [ ] or placeholders. Do NOT use generic names. Keep the pi
   if (contacts.length > 0) {
     return {
       research: {
-        contacts,
+        contacts: contacts.map(c => ({ ...c, source: 'claude', email_verified: 'unknown' })),
         company_linkedin: companyLinkedin,
         company_phone: '',
         company_address: '',
+        source: 'claude',
+        verified: false,
       }
     }
   }

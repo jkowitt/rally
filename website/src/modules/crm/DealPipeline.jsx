@@ -247,9 +247,16 @@ export default function DealPipeline() {
               linkedin: c.linkedin || null,
               website: c.website || null,
               is_primary: c.is_primary || i === 0,
+              email_verified: c.email_verified || 'unknown',
+              enriched_from: c.enriched_from || null,
             }))
           if (contactRows.length > 0) {
-            await supabase.from('contacts').insert(contactRows)
+            // Try with enrichment fields first; fall back without if columns don't exist
+            const { error: insertErr } = await supabase.from('contacts').insert(contactRows)
+            if (insertErr) {
+              const fallbackRows = contactRows.map(({ email_verified, enriched_from, ...rest }) => rest)
+              await supabase.from('contacts').insert(fallbackRows)
+            }
           }
         } catch {
           // contacts table may not exist yet — silently skip
@@ -846,11 +853,11 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
     }
   }
 
-  const EMPTY_CONTACT = { first_name: '', last_name: '', email: '', phone: '', position: '', company: '', city: '', state: '', linkedin: '', website: '', is_primary: false }
+  const EMPTY_CONTACT = { first_name: '', last_name: '', email: '', email_verified: 'unknown', phone: '', position: '', company: '', city: '', state: '', linkedin: '', website: '', is_primary: false, enriched_from: null }
 
   // Initialize contacts from dealContacts (from contacts table) or fall back to deal's inline contact fields
   const initialContacts = dealContacts?.length > 0
-    ? dealContacts.map(c => ({ ...EMPTY_CONTACT, ...c, first_name: c.first_name || '', last_name: c.last_name || '', email: c.email || '', phone: c.phone || '', position: c.position || '', company: c.company || '', city: c.city || '', state: c.state || '', linkedin: c.linkedin || '', website: c.website || '', is_primary: !!c.is_primary }))
+    ? dealContacts.map(c => ({ ...EMPTY_CONTACT, ...c, first_name: c.first_name || '', last_name: c.last_name || '', email: c.email || '', phone: c.phone || '', position: c.position || '', company: c.company || '', city: c.city || '', state: c.state || '', linkedin: c.linkedin || '', website: c.website || '', is_primary: !!c.is_primary, email_verified: c.email_verified || 'unknown', enriched_from: c.enriched_from || null }))
     : [{
         ...EMPTY_CONTACT,
         first_name: deal?.contact_first_name || deal?.contact_name?.split(' ')[0] || '',
@@ -913,25 +920,34 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
         company_name: form.brand_name,
         category: form.sub_industry || '',
         website: form.website || '',
+        property_id: propertyId,
       })
       if (data.research?.contacts?.length > 0) {
+        const source = data.research.source || 'claude'
         const newContacts = data.research.contacts.map((c, i) => ({
           ...EMPTY_CONTACT,
           first_name: c.first_name || '',
           last_name: c.last_name || '',
           email: c.email_pattern || c.email || '',
+          email_verified: c.email_verified || 'unknown',
           position: c.position || '',
           company: form.brand_name,
+          phone: c.phone || '',
           linkedin: c.linkedin_url || c.linkedin || '',
           is_primary: contacts.length === 0 && i === 0,
           notes: c.why_target || '',
+          enriched_from: c.source || source,
         }))
         const hasOnlyEmpty = contacts.length === 1 && !contacts[0].first_name && !contacts[0].email
         setContacts(hasOnlyEmpty ? newContacts : [...contacts, ...newContacts])
         if (data.research.company_linkedin) {
           setForm(prev => ({ ...prev, linkedin: prev.linkedin || data.research.company_linkedin }))
         }
-        toast({ title: `Found ${newContacts.length} contacts at ${form.brand_name}`, type: 'success' })
+        toast({
+          title: `Found ${newContacts.length} contacts at ${form.brand_name}`,
+          description: source === 'apollo' ? 'Verified via Apollo.io' : 'AI-researched (unverified)',
+          type: 'success',
+        })
       } else {
         toast({ title: 'No contacts found', description: 'Try entering a more specific company name', type: 'warning' })
       }
@@ -962,10 +978,13 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
           first_name: c.first_name || '',
           last_name: c.last_name || '',
           email: c.email_pattern || c.email || '',
+          email_verified: c.email_verified || 'unknown',
           position: c.position || '',
           company: form.brand_name,
+          phone: c.phone || '',
           linkedin: c.linkedin_url || c.linkedin || '',
           notes: c.why_target || '',
+          enriched_from: c.source || data.research.source || 'claude',
         }))
         setContacts(prev => [...prev, ...newContacts])
         toast({ title: `Found ${newContacts.length} more contacts`, type: 'success' })
@@ -1286,13 +1305,47 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                     className="w-full bg-bg-surface border border-border rounded px-2.5 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                   />
                   <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={contact.email}
-                      onChange={(e) => updateContact(idx, 'email', e.target.value)}
-                      className="bg-bg-surface border border-border rounded px-2.5 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
-                    />
+                    <div className="flex gap-1 relative">
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={contact.email}
+                        onChange={(e) => updateContact(idx, 'email', e.target.value)}
+                        className="flex-1 bg-bg-surface border border-border rounded px-2.5 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent min-w-0 pr-7"
+                      />
+                      {contact.email_verified === 'verified' && (
+                        <span title="Verified" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-success text-xs">✓</span>
+                      )}
+                      {contact.email_verified === 'invalid' && (
+                        <span title="Invalid" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-danger text-xs">✗</span>
+                      )}
+                      {contact.email && contact.email_verified !== 'verified' && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const { hunterVerifyEmail } = await import('@/lib/claude')
+                              const res = await hunterVerifyEmail({ email: contact.email, property_id: propertyId })
+                              if (res?.data?.result) {
+                                const status = res.data.result === 'deliverable' ? 'verified' :
+                                  res.data.result === 'undeliverable' ? 'invalid' :
+                                  res.data.result === 'risky' ? 'risky' : 'unknown'
+                                updateContact(idx, 'email_verified', status)
+                                toast({ title: `Email: ${status}`, type: status === 'verified' ? 'success' : 'warning' })
+                              } else if (res?.error) {
+                                toast({ title: 'Verify failed', description: res.error, type: 'error' })
+                              }
+                            } catch (e) {
+                              toast({ title: 'Verify failed', description: e.message, type: 'error' })
+                            }
+                          }}
+                          title="Verify email with Hunter.io"
+                          className="shrink-0 bg-accent/10 text-accent border border-accent/30 rounded px-2 text-[10px] font-medium hover:bg-accent/20"
+                        >
+                          Verify
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="tel"
                       placeholder="Phone"
@@ -1346,6 +1399,12 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                   {(contact.first_name || contact.last_name) && (contact.linkedin || contact.email) && (
                     <div className="flex items-center gap-2 flex-wrap text-[11px] bg-bg-surface rounded px-2.5 py-1.5">
                       <span className="text-text-primary font-medium">{contact.first_name} {contact.last_name}</span>
+                      {contact.enriched_from === 'apollo' && (
+                        <span title="Verified via Apollo.io" className="text-[9px] font-mono px-1 py-0.5 rounded bg-success/10 text-success border border-success/30">✓ Apollo</span>
+                      )}
+                      {contact.enriched_from === 'claude' && (
+                        <span title="AI-researched (unverified)" className="text-[9px] font-mono px-1 py-0.5 rounded bg-warning/10 text-warning border border-warning/30">AI</span>
+                      )}
                       {contact.position && <span className="text-text-muted">— {contact.position}</span>}
                       {contact.linkedin && (
                         <a
@@ -1354,11 +1413,22 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                           rel="noopener noreferrer"
                           className="text-accent hover:underline font-medium"
                         >
-                          Find on LinkedIn &rarr;
+                          {contact.enriched_from === 'apollo' ? 'LinkedIn →' : 'Find on LinkedIn →'}
                         </a>
                       )}
                       {contact.email && (
-                        <a href={`mailto:${contact.email}`} className="text-accent hover:underline">{contact.email}</a>
+                        <span className="flex items-center gap-1">
+                          <a href={`mailto:${contact.email}`} className="text-accent hover:underline">{contact.email}</a>
+                          {contact.email_verified === 'verified' && (
+                            <span title="Email verified via Hunter.io" className="text-success text-[10px]">✓</span>
+                          )}
+                          {contact.email_verified === 'invalid' && (
+                            <span title="Email invalid" className="text-danger text-[10px]">✗</span>
+                          )}
+                          {contact.email_verified === 'risky' && (
+                            <span title="Email risky" className="text-warning text-[10px]">⚠</span>
+                          )}
+                        </span>
                       )}
                       {contact.phone && (
                         <a

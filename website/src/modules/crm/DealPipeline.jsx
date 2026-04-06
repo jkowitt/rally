@@ -127,15 +127,14 @@ export default function DealPipeline() {
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals', propertyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('deals')
-        .select('*')
-        .eq('property_id', propertyId)
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return data
+      let query = supabase.from('deals').select('*').order('created_at', { ascending: false })
+      // Developer sees all deals if no property assigned
+      if (propertyId) query = query.eq('property_id', propertyId)
+      const { data, error } = await query
+      if (error) { console.error('Deals query error:', error); return [] }
+      return data || []
     },
-    enabled: !!propertyId,
+    enabled: !!propertyId || profile?.role === 'developer',
   })
 
   // Fetch contacts for all deals (gracefully fails if table doesn't exist yet)
@@ -430,7 +429,11 @@ export default function DealPipeline() {
   }
 
   // Filter out Declined deals from the active pipeline
-  const activeDealsRaw = deals?.filter((d) => d.stage !== 'Declined') || []
+  // Include deals with no stage (default to Prospect) and exclude Declined
+  const activeDealsRaw = (deals || []).filter((d) => d.stage !== 'Declined').map(d => ({
+    ...d,
+    stage: d.stage || 'Prospect', // Default null stage to Prospect
+  }))
 
   // Category filter
   const activeDealsFiltered = filterCategory

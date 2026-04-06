@@ -98,6 +98,11 @@ export async function generateMeetingNotes({ deal, attendees, agenda, raw_notes 
   return invokeEdgeFunction('contract-ai', { action: 'meeting_notes', deal, attendees, agenda, raw_notes })
 }
 
+// Email sending
+export async function sendEmail({ to, subject, body, reply_to }) {
+  return invokeEdgeFunction('send-email', { to, subject, body, reply_to })
+}
+
 // Prospect Search & Discovery — with fallback for undeployed edge function actions
 
 // Apollo.io enrichment (primary)

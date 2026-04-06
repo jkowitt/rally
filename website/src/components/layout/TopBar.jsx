@@ -1,4 +1,5 @@
 import { useAuth } from '@/hooks/useAuth'
+import NotificationCenter from '../NotificationCenter'
 
 export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
   const { profile, signOut } = useAuth()
@@ -52,6 +53,7 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
           ⌕
         </button>
 
+        <NotificationCenter />
         <span className="hidden sm:inline text-sm text-text-secondary truncate max-w-[120px]">
           {profile?.full_name || profile?.id?.slice(0, 8)}
         </span>

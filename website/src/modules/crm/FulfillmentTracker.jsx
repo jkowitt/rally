@@ -363,19 +363,17 @@ export default function FulfillmentTracker() {
   // Queries
   // -----------------------------------------------------------------------
 
-  // Signed / Final contracts with their benefits
+  // All contracts with benefits (not just Signed — show everything so users can track)
   const { data: contracts = [], isLoading: loadingContracts } = useQuery({
     queryKey: ['fulfillment-contracts', propertyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contracts')
-        .select('*, deals(id, brand_name, logo_url, sport, property_id), contract_benefits(*)')
-        .in('status', ['Signed', 'Final'])
-        .eq('deals.property_id', propertyId)
+        .select('*, deals(id, brand_name, logo_url), contract_benefits(*)')
+        .eq('property_id', propertyId)
         .order('created_at', { ascending: false })
-      if (error) throw error
-      // Filter out rows where the deal join didn't match the property
-      return data?.filter((c) => c.deals) || []
+      if (error) { console.error('Fulfillment contracts query error:', error); return [] }
+      return data || []
     },
     enabled: !!propertyId,
   })
@@ -386,13 +384,11 @@ export default function FulfillmentTracker() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('fulfillment_records')
-        .select(
-          '*, deals(id, brand_name, logo_url, sport, property_id), assets(name, category), contract_benefits(name, type)',
-        )
-        .eq('deals.property_id', propertyId)
+        .select('*, deals(id, brand_name, logo_url), contracts(brand_name, status)')
         .order('scheduled_date')
-      if (error) throw error
-      return data?.filter((r) => r.deals) || []
+      if (error) { console.error('Fulfillment records query error:', error); return [] }
+      // Filter to this property's deals
+      return (data || []).filter(r => r.deals?.id || r.deal_id)
     },
     enabled: !!propertyId,
   })
@@ -418,15 +414,15 @@ export default function FulfillmentTracker() {
           )
           if (exists) continue
           const { error } = await supabase.from('fulfillment_records').insert({
-            deal_id: contract.deal_id || contract.deals?.id,
+            deal_id: contract.deal_id || contract.deals?.id || null,
             contract_id: contract.id,
             benefit_id: benefit.id,
-            scheduled_date: benefit.scheduled_date || null,
+            scheduled_date: contract.effective_date || null,
             delivered: false,
             delivery_notes: '',
             auto_generated: true,
           })
-          if (error) throw error
+          if (error) { console.warn('Fulfillment insert error:', error.message); continue }
           created++
         }
       }

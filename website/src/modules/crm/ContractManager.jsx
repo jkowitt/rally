@@ -341,6 +341,61 @@ export default function ContractManager() {
               alert('Error generating fulfillment: ' + e.message)
             }
           }}
+          onStatusChange={async (contractId, newStatus) => {
+            const { error } = await supabase.from('contracts').update({ status: newStatus }).eq('id', contractId)
+            if (error) {
+              toast({ title: 'Error updating status', description: error.message, type: 'error' })
+              return
+            }
+            queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
+            toast({ title: `Contract status: ${newStatus}`, type: 'success' })
+
+            // When marked as Signed, sync benefits to fulfillment + assets
+            if (newStatus === 'Signed') {
+              const contract = contracts?.find(c => c.id === contractId)
+              if (contract?.contract_benefits?.length > 0) {
+                let assetCount = 0
+                let fulCount = 0
+                for (const b of contract.contract_benefits) {
+                  // Create fulfillment record if not exists
+                  const { data: existing } = await supabase.from('fulfillment_records').select('id').eq('contract_id', contractId).eq('benefit_id', b.id).limit(1)
+                  if (!existing?.length) {
+                    await supabase.from('fulfillment_records').insert({
+                      deal_id: contract.deal_id || null,
+                      contract_id: contractId,
+                      benefit_id: b.id,
+                      scheduled_date: contract.effective_date || null,
+                      delivered: false,
+                      auto_generated: true,
+                    })
+                    fulCount++
+                  }
+                  // Create asset if not exists
+                  const { data: existingAsset } = await supabase.from('assets').select('id').eq('source_contract_id', contractId).eq('name', b.benefit_description).limit(1)
+                  if (!existingAsset?.length) {
+                    await supabase.from('assets').insert({
+                      property_id: propertyId,
+                      name: b.benefit_description || 'Contract Benefit',
+                      category: guessAssetCategory(b.benefit_description || ''),
+                      quantity: b.quantity || 1,
+                      base_price: b.value || null,
+                      active: true,
+                      from_contract: true,
+                      source_contract_id: contractId,
+                      sold_count: b.quantity || 1,
+                      total_available: 0,
+                    })
+                    assetCount++
+                  }
+                }
+                if (assetCount > 0 || fulCount > 0) {
+                  queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
+                  queryClient.invalidateQueries({ queryKey: ['fulfillment-records'] })
+                  toast({ title: `Synced: ${assetCount} assets, ${fulCount} fulfillment records`, type: 'success' })
+                }
+              }
+            }
+          }}
         />
       )}
 
@@ -453,7 +508,7 @@ function PDFViewerModal({ contract, onClose }) {
 }
 
 /* ============ Contract List ============ */
-function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpenEditor, onGenerateFulfillment }) {
+function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpenEditor, onGenerateFulfillment, onStatusChange }) {
   if (isLoading) {
     return <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="skeleton h-20" />)}</div>
   }
@@ -496,6 +551,13 @@ function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpe
               </div>
             </div>
             <div className="flex flex-col gap-1.5 shrink-0">
+              <select
+                value={contract.status || 'Draft'}
+                onChange={(e) => onStatusChange(contract.id, e.target.value)}
+                className={`text-xs font-mono px-2 py-1 rounded focus:outline-none focus:border-accent ${STATUS_COLORS[contract.status] || STATUS_COLORS.Draft}`}
+              >
+                {['Draft', 'In Review', 'Final', 'Signed', 'Expired'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
               <button onClick={() => onOpenEditor(contract)} className="text-xs text-text-muted hover:text-accent px-2 py-1 bg-bg-card rounded">AI Edit</button>
               <button onClick={() => onViewPdf(contract)} className="text-xs text-text-muted hover:text-accent px-2 py-1 bg-bg-card rounded">PDF</button>
               <button onClick={() => onEdit(contract)} className="text-xs text-text-muted hover:text-accent px-2 py-1 bg-bg-card rounded">Edit</button>

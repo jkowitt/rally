@@ -155,6 +155,20 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
             </NavLink>
           </div>
         )}
+        {/* Settings */}
+        <div className="mb-4 mt-auto pt-2 border-t border-border">
+          <NavLink
+            to="/app/settings"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
+                isActive ? 'text-accent bg-accent/5 border-r-2 border-accent' : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
+              } ${!showLabels ? 'justify-center' : ''}`
+            }
+          >
+            <span className="text-base">⚙</span>
+            {showLabels && <span>Settings</span>}
+          </NavLink>
+        </div>
       </nav>
 
       {/* User */}

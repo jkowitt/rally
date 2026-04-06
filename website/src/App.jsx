@@ -27,6 +27,8 @@ const EventManager = lazy(() => import('./modules/sportify/EventManager'))
 const EventDetail = lazy(() => import('./modules/sportify/EventDetail'))
 const ValuationEngine = lazy(() => import('./modules/valora/ValuationEngine'))
 const BusinessNow = lazy(() => import('./modules/businessnow/BusinessNow'))
+const Settings = lazy(() => import('./modules/crm/Settings'))
+const HelpCenter = lazy(() => import('./modules/crm/HelpCenter'))
 const DeveloperDashboard = lazy(() => import('./modules/developer/DeveloperDashboard'))
 
 function PageLoader() {
@@ -72,6 +74,8 @@ export default function App() {
                             <Route path="/crm/insights" element={<DealInsights />} />
                             <Route path="/crm/newsletter" element={<Newsletter />} />
                             <Route path="/crm/team" element={<TeamManager />} />
+                            <Route path="/settings" element={<Settings />} />
+                            <Route path="/help" element={<HelpCenter />} />
                             {/* Sportify */}
                             <Route path="/sportify/events" element={<EventManager />} />
                             <Route path="/sportify/events/:eventId" element={<EventDetail />} />

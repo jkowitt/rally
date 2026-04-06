@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import OnboardingChecklist from '@/components/OnboardingChecklist'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts'
 import { useNavigate } from 'react-router-dom'
 
@@ -554,6 +555,9 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* Onboarding */}
+      <OnboardingChecklist />
 
       {/* Settings Panel */}
       {showSettings && (

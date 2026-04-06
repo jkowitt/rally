@@ -154,30 +154,48 @@ export default function LoginPage() {
 
       if (authData.user) {
         // 2. Create property
-        const { data: property, error: propErr } = await supabase.from('properties').insert({
+        const propertyData = {
           name: propertyName,
-          type: propertyType,
-          sport: sport || null,
-          conference: conference || null,
-          city: propertyCity || null,
-          state: propertyState || null,
           plan: 'free',
           billing_email: email,
           trial_started_at: new Date().toISOString(),
           trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
-        }).select().single()
-        if (propErr) throw propErr
+        }
+        // Add optional fields that may not exist in DB yet
+        if (sport) propertyData.sport = sport
+        if (conference) propertyData.conference = conference
+        if (propertyCity) propertyData.city = propertyCity
+        if (propertyState) propertyData.state = propertyState
+
+        // Try with type field, fall back without
+        let property
+        const { data: prop1, error: propErr1 } = await supabase.from('properties').insert({ ...propertyData, type: propertyType }).select().single()
+        if (propErr1) {
+          console.warn('Property insert with type failed:', propErr1.message, '— retrying without type')
+          const { data: prop2, error: propErr2 } = await supabase.from('properties').insert(propertyData).select().single()
+          if (propErr2) throw propErr2
+          property = prop2
+        } else {
+          property = prop1
+        }
+
+        if (!property) throw new Error('Property creation failed')
 
         // 3. Create profile as admin of the property (developer for owner email)
         const userRole = email.toLowerCase() === 'jlkowitt25@gmail.com' ? 'developer' : 'admin'
-        await supabase.from('profiles').upsert({
+        const profileData = {
           id: authData.user.id,
           property_id: property.id,
           full_name: fullName,
-          email,
           role: userRole,
-          onboarding_completed: false,
-        })
+        }
+        // Try with optional columns, fall back without
+        const { error: profErr1 } = await supabase.from('profiles').upsert({ ...profileData, email, onboarding_completed: false })
+        if (profErr1) {
+          console.warn('Profile insert with extras failed:', profErr1.message, '— retrying basic')
+          const { error: profErr2 } = await supabase.from('profiles').upsert(profileData)
+          if (profErr2) console.error('Profile insert failed:', profErr2.message)
+        }
 
         // 4. Create team
         try {

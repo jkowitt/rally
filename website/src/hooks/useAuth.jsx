@@ -30,7 +30,7 @@ export function AuthProvider({ children }) {
   async function fetchProfile(userId) {
     const { data } = await supabase
       .from('profiles')
-      .select('*, properties(name, sport, conference, type, plan, logo_url, trial_ends_at)')
+      .select('*, properties(*)')
       .eq('id', userId)
       .single()
 
@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
         email,
         role,
         onboarding_completed: false,
-      }).select('*, properties(name, sport, conference, type, plan, logo_url, trial_ends_at)').single()
+      }).select('*, properties(*)').single()
       setProfile(newProfile)
     } else {
       // Ensure developer email always has developer role

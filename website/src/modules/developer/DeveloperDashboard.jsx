@@ -33,7 +33,8 @@ export default function DeveloperDashboard() {
   const { data: profiles } = useQuery({
     queryKey: ['dev-profiles'],
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('*, properties(name, plan, type, trial_ends_at)').order('created_at', { ascending: false })
+      const { data, error } = await supabase.from('profiles').select('*, properties(*)').order('created_at', { ascending: false })
+      if (error) { console.error('Profiles query error:', error); return [] }
       return data || []
     },
     refetchInterval: 10000,

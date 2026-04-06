@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import DOMPurify from 'dompurify'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
@@ -649,7 +650,7 @@ function NewsletterReader({ newsletter }) {
             [&_blockquote]:border-l-2 [&_blockquote]:border-accent [&_blockquote]:pl-4 [&_blockquote]:py-2 [&_blockquote]:my-4 [&_blockquote]:bg-accent/5 [&_blockquote]:rounded-r
             [&_blockquote_p]:text-accent/90 [&_blockquote_p]:text-xs [&_blockquote_p]:sm:text-sm [&_blockquote_p]:italic
             [&_a]:text-accent [&_a]:underline [&_a]:underline-offset-2"
-          dangerouslySetInnerHTML={{ __html: newsletter.content }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(newsletter.content, { ALLOWED_TAGS: ['h1','h2','h3','h4','p','ul','ol','li','strong','em','a','blockquote','br','span','div'], ALLOWED_ATTR: ['href','target','rel','class'] }) }}
         />
       </div>
 

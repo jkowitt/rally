@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { generateICalFeed, downloadIcal } from '@/lib/ical'
 
 const EVENT_TYPES = ['Game Day', 'Tournament', 'Banquet', 'Clinic', 'Fundraiser', 'Other']
 const STATUSES = ['Planning', 'Confirmed', 'In Progress', 'Completed']
@@ -111,6 +112,19 @@ export default function EventManager() {
             <button onClick={() => setViewMode('grid')} className={`px-3 py-1.5 text-xs font-mono ${viewMode === 'grid' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Grid</button>
             <button onClick={() => setViewMode('calendar')} className={`px-3 py-1.5 text-xs font-mono ${viewMode === 'calendar' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Calendar</button>
           </div>
+          <button
+            onClick={() => {
+              if (events?.length > 0) {
+                const ical = generateICalFeed(events)
+                downloadIcal(ical, 'loud-legacy-events.ics')
+                toast({ title: 'Calendar exported', type: 'success' })
+              }
+            }}
+            disabled={!events?.length}
+            className="bg-bg-card border border-border text-text-secondary px-3 py-2 rounded text-xs hover:text-text-primary disabled:opacity-50"
+          >
+            Export iCal
+          </button>
           <button onClick={() => { setEditingEvent(null); setShowForm(true) }} className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90">
             + New Event
           </button>

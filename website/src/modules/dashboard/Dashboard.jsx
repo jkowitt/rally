@@ -295,13 +295,13 @@ export default function Dashboard() {
       <div key="stage-counts">
         <h3 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">Prospect / Deal Stages</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
-          <StageCard label="Total Prospects" count={stageCounts.prospects.length} color="text-accent" />
-          <StageCard label="Not Contacted" count={stageCounts.notContacted.length} color="text-warning" />
-          <StageCard label="Has Meeting" count={stageCounts.hasMeeting.length} color="text-text-primary" />
-          <StageCard label="Proposal Sent" count={stageCounts.proposalSent.length} color="text-accent" />
-          <StageCard label="Contract Sent" count={stageCounts.contractSent.length} color="text-text-primary" />
-          <StageCard label="Under Contract" count={stageCounts.underContract.length} color="text-success" />
-          <StageCard label="Declined" count={stageCounts.declined.length} color="text-danger" />
+          <StageCard label="Total Prospects" count={stageCounts.prospects.length} color="text-accent" href="/app/crm/pipeline" />
+          <StageCard label="Not Contacted" count={stageCounts.notContacted.length} color="text-warning" href="/app/crm/pipeline" />
+          <StageCard label="Has Meeting" count={stageCounts.hasMeeting.length} color="text-text-primary" href="/app/crm/pipeline" />
+          <StageCard label="Proposal Sent" count={stageCounts.proposalSent.length} color="text-accent" href="/app/crm/pipeline" />
+          <StageCard label="Contract Sent" count={stageCounts.contractSent.length} color="text-text-primary" href="/app/crm/contracts" />
+          <StageCard label="Under Contract" count={stageCounts.underContract.length} color="text-success" href="/app/crm/fulfillment" />
+          <StageCard label="Declined" count={stageCounts.declined.length} color="text-danger" href="/app/crm/declined" />
         </div>
       </div>
     ),
@@ -593,12 +593,13 @@ export default function Dashboard() {
 
 // --- Sub-components ---
 
-function StageCard({ label, count, color }) {
+function StageCard({ label, count, color, href }) {
+  const Tag = href ? 'a' : 'div'
   return (
-    <div className="bg-bg-surface border border-border rounded-lg p-3 sm:p-4">
+    <Tag href={href} className={`bg-bg-surface border border-border rounded-lg p-3 sm:p-4 ${href ? 'cursor-pointer hover:border-accent/30 transition-colors' : ''}`}>
       <div className="text-[10px] text-text-muted uppercase tracking-wider font-mono leading-tight">{label}</div>
       <div className={`text-xl sm:text-2xl font-semibold font-mono mt-1 ${color}`}>{count}</div>
-    </div>
+    </Tag>
   )
 }
 

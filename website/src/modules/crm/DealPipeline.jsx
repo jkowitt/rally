@@ -156,12 +156,24 @@ export default function DealPipeline() {
   }, {})
 
   const updateStageMutation = useMutation({
-    mutationFn: async ({ id, stage }) => {
+    mutationFn: async ({ id, stage, oldStage }) => {
       const { error } = await supabase.from('deals').update({ stage }).eq('id', id)
       if (error) throw error
+      // Auto-log stage change to activity timeline
+      try {
+        await supabase.from('activities').insert({
+          property_id: propertyId,
+          deal_id: id,
+          activity_type: 'Stage Change',
+          subject: `Stage changed: ${oldStage || '?'} → ${stage}`,
+          occurred_at: new Date().toISOString(),
+          created_by: profile?.id,
+        })
+      } catch (e) { console.warn(e) }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+      queryClient.invalidateQueries({ queryKey: ['activities', propertyId] })
       toast({ title: 'Stage updated', type: 'success' })
     },
   })
@@ -341,7 +353,9 @@ export default function DealPipeline() {
     if (!result.destination) return
     const dealId = result.draggableId
     const newStage = result.destination.droppableId
-    updateStageMutation.mutate({ id: dealId, stage: newStage })
+    const oldStage = result.source.droppableId
+    if (oldStage === newStage) return
+    updateStageMutation.mutate({ id: dealId, stage: newStage, oldStage })
   }
 
   // Filter out Declined deals from the active pipeline

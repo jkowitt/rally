@@ -156,15 +156,22 @@ export default function DealPipeline() {
     enabled: !!propertyId,
   })
 
-  // Auto-open deal from URL param (?deal=<id>)
+  // Auto-open deal from URL param (?deal=<id>) or filter by stage (?stage=<name>)
   useEffect(() => {
     const dealId = searchParams.get('deal')
+    const stageParam = searchParams.get('stage')
     if (dealId && deals?.length) {
       const found = deals.find(d => d.id === dealId)
       if (found) {
         setViewingDeal({ ...found, stage: found.stage || 'Prospect' })
-        setSearchParams({}, { replace: true }) // clear param after opening
+        setSearchParams({}, { replace: true })
       }
+    } else if (stageParam && deals?.length) {
+      // Switch to table view and filter to the requested stage
+      setViewMode('table')
+      setShowColumnFilters(true)
+      setColumnFilters(prev => ({ ...prev, stage: stageParam }))
+      setSearchParams({}, { replace: true })
     }
   }, [deals, searchParams, setSearchParams])
 

@@ -170,18 +170,18 @@ export default function Dashboard() {
     return list
   }, [deals, filterCategory, sortField, sortDir])
 
-  // Stage counts (use filteredDeals for filter-awareness)
+  // Stage counts — every stage represented
   const stageCounts = useMemo(() => {
     const all = filteredDeals
-    const prospects = all.filter(d => d.stage === 'Prospect')
+    const byStage = {}
+    STAGE_ORDER.forEach(s => { byStage[s] = all.filter(d => d.stage === s) })
+    byStage['Declined'] = all.filter(d => d.stage === 'Declined')
+    // Legacy sub-counts for prospects
+    const prospects = byStage['Prospect'] || []
     const notContacted = prospects.filter(d => !d.last_contacted)
     const hasMeeting = prospects.filter(d => dealIdsWithMeeting.has(d.id))
-    const proposalSent = all.filter(d => d.stage === 'Proposal Sent')
-    const contractSent = all.filter(d => d.stage === 'Negotiation' || dealIdsWithContractInReview.has(d.id))
-    const underContract = all.filter(d => d.stage === 'Contracted' || d.stage === 'In Fulfillment')
-    const declined = all.filter(d => d.stage === 'Declined')
-    return { prospects, notContacted, hasMeeting, proposalSent, contractSent, underContract, declined }
-  }, [filteredDeals, dealIdsWithMeeting, dealIdsWithContractInReview])
+    return { ...byStage, prospects, notContacted, hasMeeting }
+  }, [filteredDeals, dealIdsWithMeeting])
 
   // KPI calcs
   const activeDeals = filteredDeals.filter(d => d.stage !== 'Declined')
@@ -304,16 +304,32 @@ export default function Dashboard() {
 
     'stage-counts': () => (
       <div key="stage-counts">
-        <h3 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">Prospect / Deal Stages</h3>
+        <h3 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">Deal Stages</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
-          <StageCard label="Total Prospects" count={stageCounts.prospects.length} color="text-accent" href="/app/crm/pipeline" />
-          <StageCard label="Not Contacted" count={stageCounts.notContacted.length} color="text-warning" href="/app/crm/pipeline" />
-          <StageCard label="Has Meeting" count={stageCounts.hasMeeting.length} color="text-text-primary" href="/app/crm/pipeline" />
-          <StageCard label="Proposal Sent" count={stageCounts.proposalSent.length} color="text-accent" href="/app/crm/pipeline" />
-          <StageCard label="Contract Sent" count={stageCounts.contractSent.length} color="text-text-primary" href="/app/crm/contracts" />
-          <StageCard label="Under Contract" count={stageCounts.underContract.length} color="text-success" href="/app/crm/fulfillment" />
-          <StageCard label="Declined" count={stageCounts.declined.length} color="text-danger" href="/app/crm/declined" />
+          {STAGE_ORDER.map((stage, i) => (
+            <StageCard
+              key={stage}
+              label={stage}
+              count={(stageCounts[stage] || []).length}
+              color={i < 2 ? 'text-accent' : i < 4 ? 'text-text-primary' : 'text-success'}
+              href={`/app/crm/pipeline?stage=${encodeURIComponent(stage)}`}
+            />
+          ))}
+          <StageCard label="Declined" count={(stageCounts['Declined'] || []).length} color="text-danger" href="/app/crm/declined" />
         </div>
+        {/* Sub-counts for prospects */}
+        {stageCounts.prospects?.length > 0 && (
+          <div className="flex gap-2 sm:gap-3 mt-2 flex-wrap">
+            <div className="bg-bg-surface border border-border rounded-lg px-3 py-2">
+              <div className="text-[10px] text-text-muted font-mono">Not Contacted</div>
+              <div className="text-sm font-mono text-warning">{stageCounts.notContacted.length}</div>
+            </div>
+            <div className="bg-bg-surface border border-border rounded-lg px-3 py-2">
+              <div className="text-[10px] text-text-muted font-mono">Has Meeting</div>
+              <div className="text-sm font-mono text-text-primary">{stageCounts.hasMeeting.length}</div>
+            </div>
+          </div>
+        )}
       </div>
     ),
 

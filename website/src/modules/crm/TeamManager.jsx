@@ -12,7 +12,18 @@ export default function TeamManager() {
   const [showInvite, setShowInvite] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('member')
+  const [inviteLink, setInviteLink] = useState('')
   const [showGoals, setShowGoals] = useState(null)
+
+  // Fetch pending invitations
+  const { data: pendingInvites } = useQuery({
+    queryKey: ['pending-invites', propertyId],
+    queryFn: async () => {
+      const { data } = await supabase.from('invitations').select('*').eq('property_id', propertyId).eq('accepted', false).order('created_at', { ascending: false })
+      return data || []
+    },
+    enabled: !!propertyId,
+  })
 
   // Fetch team
   const { data: team } = useQuery({
@@ -72,26 +83,73 @@ export default function TeamManager() {
     onError: (err) => toast({ title: 'Error', description: err.message, type: 'error' }),
   })
 
-  // Invite member
+  // Invite member — creates invitation record + optionally adds existing user
   const inviteMutation = useMutation({
     mutationFn: async () => {
-      // Find user by email
-      const { data: user } = await supabase.from('profiles').select('id').eq('email', inviteEmail).single()
-      if (!user) throw new Error('No user found with that email')
-      await supabase.from('team_members').insert({
-        team_id: team.id,
-        user_id: user.id,
+      if (!inviteEmail.trim()) throw new Error('Email is required')
+
+      // 1. Create invitation record with unique token
+      const { data: invitation, error: invErr } = await supabase.from('invitations').insert({
+        property_id: propertyId,
+        email: inviteEmail.trim().toLowerCase(),
         role: inviteRole,
         invited_by: profile?.id,
-      })
+      }).select().single()
+      if (invErr) throw invErr
+
+      // 2. Check if user already exists — if so, add them directly
+      const { data: existingUser } = await supabase.from('profiles').select('id').eq('email', inviteEmail.trim().toLowerCase()).single()
+      if (existingUser) {
+        // User exists — add to team + update property
+        await supabase.from('profiles').update({ property_id: propertyId }).eq('id', existingUser.id)
+        if (team) {
+          await supabase.from('team_members').insert({
+            team_id: team.id,
+            user_id: existingUser.id,
+            role: inviteRole === 'admin' ? 'admin' : 'member',
+            invited_by: profile?.id,
+          })
+        }
+        await supabase.from('invitations').update({ accepted: true, accepted_at: new Date().toISOString() }).eq('id', invitation.id)
+      }
+
+      // 3. Try to send invite email
+      try {
+        await supabase.functions.invoke('send-email', {
+          body: {
+            to: inviteEmail.trim(),
+            subject: `${profile?.full_name || 'Your teammate'} invited you to ${profile?.properties?.name || 'their team'} on Loud Legacy`,
+            body: `<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
+              <div style="background:#080A0F;padding:24px;text-align:center;">
+                <h1 style="color:#E8B84B;font-family:monospace;font-size:20px;margin:0;">LOUD LEGACY</h1>
+              </div>
+              <div style="padding:32px 24px;background:#0F1218;color:#F0F2F8;">
+                <h2 style="margin:0 0 16px;">You've been invited!</h2>
+                <p style="color:#8B92A8;line-height:1.6;"><strong style="color:#F0F2F8;">${profile?.full_name || 'A teammate'}</strong> has invited you to join <strong style="color:#E8B84B;">${profile?.properties?.name || 'their team'}</strong> as a <strong>${inviteRole}</strong>.</p>
+                <div style="text-align:center;margin:32px 0;">
+                  <a href="${window.location.origin}/login?invite=${invitation.token}" style="background:#E8B84B;color:#080A0F;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">Accept Invitation</a>
+                </div>
+                <p style="color:#555D75;font-size:12px;">This invitation expires in 7 days.</p>
+              </div>
+            </div>`,
+          },
+        })
+      } catch { /* email sending may not be configured */ }
+
+      return { invitation, existingUser: !!existingUser }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['team-members'] })
-      toast({ title: 'Member invited', type: 'success' })
+      if (result.existingUser) {
+        toast({ title: 'User added to team', description: `${inviteEmail} was already registered and has been added`, type: 'success' })
+      } else {
+        toast({ title: 'Invitation sent', description: `Invite link created for ${inviteEmail}`, type: 'success' })
+      }
       setShowInvite(false)
       setInviteEmail('')
+      setInviteLink('')
     },
-    onError: (err) => toast({ title: 'Error', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Invite failed', description: err.message, type: 'error' }),
   })
 
   // Update member role
@@ -301,39 +359,125 @@ export default function TeamManager() {
         </div>
       )}
 
+      {/* Pending Invitations */}
+      {team && pendingInvites?.length > 0 && (
+        <div>
+          <h2 className="text-sm font-mono text-text-muted uppercase tracking-wider mb-2">Pending Invitations</h2>
+          <div className="space-y-2">
+            {pendingInvites.map(inv => (
+              <div key={inv.id} className="bg-bg-surface border border-border rounded-lg px-4 py-3 flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-text-primary">{inv.email}</span>
+                  <span className="text-[10px] text-text-muted ml-2 font-mono">{inv.role}</span>
+                  <span className="text-[10px] text-text-muted ml-2">{new Date(inv.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const link = `${window.location.origin}/login?invite=${inv.token}`
+                      navigator.clipboard.writeText(link)
+                      toast({ title: 'Invite link copied!', type: 'success' })
+                    }}
+                    className="text-[10px] text-accent hover:underline"
+                  >
+                    Copy Link
+                  </button>
+                  <span className="text-[10px] font-mono text-warning">Pending</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Invite modal */}
       {showInvite && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-bg-surface border border-border rounded-lg p-6 w-full max-w-sm">
-            <h3 className="text-lg font-semibold text-text-primary mb-4">Invite Team Member</h3>
-            <div className="space-y-3">
-              <input
-                type="email"
-                placeholder="Email address"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
-                autoFocus
-              />
-              <select
-                value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value)}
-                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-              </select>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => inviteMutation.mutate()}
-                  disabled={!inviteEmail || inviteMutation.isPending}
-                  className="flex-1 bg-accent text-bg-primary py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
-                >
-                  {inviteMutation.isPending ? 'Inviting...' : 'Invite'}
-                </button>
-                <button onClick={() => setShowInvite(false)} className="flex-1 bg-bg-card text-text-secondary py-2 rounded text-sm">Cancel</button>
-              </div>
+        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
+          <div className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg p-5 sm:p-6 w-full sm:max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-text-primary">Invite Team Member</h3>
+              <button onClick={() => { setShowInvite(false); setInviteLink('') }} className="text-text-muted hover:text-text-primary">&times;</button>
             </div>
+
+            {inviteLink ? (
+              /* Show invite link after creation */
+              <div className="space-y-3">
+                <div className="bg-success/10 border border-success/30 rounded-lg p-3 text-center">
+                  <div className="text-success text-sm font-medium mb-1">Invitation Created!</div>
+                  <p className="text-xs text-text-secondary">Share this link with your teammate</p>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    value={inviteLink}
+                    readOnly
+                    className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-xs text-text-primary font-mono focus:outline-none"
+                    onClick={(e) => e.target.select()}
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(inviteLink)
+                      toast({ title: 'Link copied!', type: 'success' })
+                    }}
+                    className="bg-accent text-bg-primary px-4 py-2 rounded text-xs font-medium hover:opacity-90 shrink-0"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-[10px] text-text-muted text-center">
+                  When they open this link, they'll create an account and automatically join your team as a {inviteRole}.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setInviteLink(''); setInviteEmail('') }}
+                    className="flex-1 bg-accent text-bg-primary py-2 rounded text-sm font-medium hover:opacity-90"
+                  >
+                    Invite Another
+                  </button>
+                  <button onClick={() => { setShowInvite(false); setInviteLink('') }} className="flex-1 bg-bg-card text-text-secondary py-2 rounded text-sm">Done</button>
+                </div>
+              </div>
+            ) : (
+              /* Invite form */
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-text-muted">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="teammate@company.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent mt-1"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted">Role</label>
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value)}
+                    className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent mt-1"
+                  >
+                    <option value="rep">Member — can manage their own deals and contacts</option>
+                    <option value="admin">Admin — can manage the team, settings, and all deals</option>
+                  </select>
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={async () => {
+                      const result = await inviteMutation.mutateAsync()
+                      if (result?.invitation?.token) {
+                        setInviteLink(`${window.location.origin}/login?invite=${result.invitation.token}`)
+                      }
+                    }}
+                    disabled={!inviteEmail.trim() || inviteMutation.isPending}
+                    className="flex-1 bg-accent text-bg-primary py-2.5 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                  >
+                    {inviteMutation.isPending ? 'Creating...' : 'Send Invitation'}
+                  </button>
+                  <button onClick={() => { setShowInvite(false); setInviteLink('') }} className="flex-1 bg-bg-card text-text-secondary py-2.5 rounded text-sm">Cancel</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

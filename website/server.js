@@ -65,6 +65,7 @@ app.get('/health', (_req, res) => {
 
 // SPA fallback - serve index.html for all non-file routes
 app.use((_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache')
   res.sendFile(path.join(__dirname, 'dist', 'index.html'))
 })
 

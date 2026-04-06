@@ -115,9 +115,11 @@ export default function DealPipeline() {
   const [viewMode, setViewMode] = useState('kanban')
   const [showBulkImport, setShowBulkImport] = useState(false)
   const [showProspectFinder, setShowProspectFinder] = useState(false)
-  const [sortField, setSortField] = useState(null) // null | field name
-  const [sortDir, setSortDir] = useState('asc') // 'asc' | 'desc'
+  const [sortField, setSortField] = useState(null)
+  const [sortDir, setSortDir] = useState('asc')
   const [filterCategory, setFilterCategory] = useState('')
+  const [selectedDeals, setSelectedDeals] = useState(new Set())
+  const [bulkMode, setBulkMode] = useState(false)
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals', propertyId],
@@ -333,6 +335,55 @@ export default function DealPipeline() {
     onError: (err) => toast({ title: 'Error declining deal', description: err.message, type: 'error' }),
   })
 
+  // Bulk operations
+  async function bulkDelete() {
+    if (!selectedDeals.size) return
+    if (!confirm(`Delete ${selectedDeals.size} deal${selectedDeals.size > 1 ? 's' : ''}? This cannot be undone.`)) return
+    for (const id of selectedDeals) {
+      await supabase.from('deals').delete().eq('id', id)
+    }
+    setSelectedDeals(new Set())
+    setBulkMode(false)
+    queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+    toast({ title: `${selectedDeals.size} deals deleted`, type: 'success' })
+  }
+
+  async function bulkChangeStage(stage) {
+    if (!selectedDeals.size) return
+    for (const id of selectedDeals) {
+      await supabase.from('deals').update({ stage }).eq('id', id)
+    }
+    setSelectedDeals(new Set())
+    queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+    toast({ title: `${selectedDeals.size} deals moved to ${stage}`, type: 'success' })
+  }
+
+  async function bulkDeleteAll() {
+    if (!confirm(`DELETE ALL ${activeDeals.length} active deals? This cannot be undone.`)) return
+    if (!confirm('Are you absolutely sure? This deletes everything in your pipeline.')) return
+    const { error } = await supabase.from('deals').delete().eq('property_id', propertyId).neq('stage', 'Declined')
+    if (error) { toast({ title: 'Error', description: error.message, type: 'error' }); return }
+    queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+    toast({ title: 'All deals deleted', type: 'success' })
+  }
+
+  function toggleSelectDeal(id) {
+    setSelectedDeals(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function selectAll() {
+    if (selectedDeals.size === activeDeals.length) {
+      setSelectedDeals(new Set())
+    } else {
+      setSelectedDeals(new Set(activeDeals.map(d => d.id)))
+    }
+  }
+
   // Inline field update (for double-click editing in table)
   const inlineUpdateMutation = useMutation({
     mutationFn: async ({ id, field, value }) => {
@@ -449,6 +500,12 @@ export default function DealPipeline() {
             Find Prospects
           </button>
           <button
+            onClick={() => { setBulkMode(!bulkMode); setSelectedDeals(new Set()) }}
+            className={`px-3 py-2 rounded text-sm font-medium transition-colors ${bulkMode ? 'bg-danger/10 border border-danger/30 text-danger' : 'bg-bg-surface border border-border text-text-secondary hover:text-text-primary'}`}
+          >
+            {bulkMode ? 'Cancel' : 'Bulk Edit'}
+          </button>
+          <button
             onClick={() => setShowBulkImport(true)}
             className="bg-bg-surface border border-border text-text-secondary px-4 py-2 rounded text-sm font-medium hover:text-text-primary hover:border-accent/50 transition-colors"
           >
@@ -462,6 +519,44 @@ export default function DealPipeline() {
           </button>
         </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {bulkMode && (
+        <div className="bg-bg-surface border border-accent/30 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <button onClick={selectAll} className="text-xs text-accent hover:underline font-medium">
+              {selectedDeals.size === activeDeals.length ? 'Deselect All' : `Select All (${activeDeals.length})`}
+            </button>
+            <span className="text-xs text-text-muted font-mono">{selectedDeals.size} selected</span>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <select
+              onChange={(e) => { if (e.target.value) bulkChangeStage(e.target.value); e.target.value = '' }}
+              disabled={!selectedDeals.size}
+              className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent disabled:opacity-50"
+              defaultValue=""
+            >
+              <option value="" disabled>Move to stage...</option>
+              {['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed', 'Declined'].map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <button
+              onClick={bulkDelete}
+              disabled={!selectedDeals.size}
+              className="bg-danger/10 text-danger border border-danger/30 px-3 py-1.5 rounded text-xs font-medium hover:bg-danger/20 disabled:opacity-50"
+            >
+              Delete Selected ({selectedDeals.size})
+            </button>
+            <button
+              onClick={bulkDeleteAll}
+              className="bg-danger text-white px-3 py-1.5 rounded text-xs font-medium hover:opacity-90"
+            >
+              Delete All Deals
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Pipeline Health Metrics */}
       {activeDeals.length > 0 && (
@@ -631,9 +726,19 @@ export default function DealPipeline() {
               {activeDeals.map((deal) => {
                 const category = guessCategory(deal.brand_name, deal.sub_industry)
                 return (
-                <tr key={deal.id} className="border-b border-border last:border-0 hover:bg-bg-card/50">
+                <tr key={deal.id} className={`border-b border-border last:border-0 hover:bg-bg-card/50 ${selectedDeals.has(deal.id) ? 'bg-accent/5' : ''}`}>
                   <td className="px-4 py-3 text-text-primary font-medium">
-                    <EditableCell value={deal.brand_name} dealId={deal.id} field="brand_name" onSave={(v) => inlineUpdateMutation.mutate(v)} />
+                    <div className="flex items-center gap-2">
+                      {bulkMode && (
+                        <input
+                          type="checkbox"
+                          checked={selectedDeals.has(deal.id)}
+                          onChange={() => toggleSelectDeal(deal.id)}
+                          className="accent-accent shrink-0"
+                        />
+                      )}
+                      <EditableCell value={deal.brand_name} dealId={deal.id} field="brand_name" onSave={(v) => inlineUpdateMutation.mutate(v)} />
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <EditableCell value={deal.sub_industry || category} dealId={deal.id} field="sub_industry" onSave={(v) => inlineUpdateMutation.mutate(v)} options={INDUSTRY_CATEGORIES} className="text-[11px] font-mono text-text-muted" />

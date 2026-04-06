@@ -24,17 +24,19 @@ export default function DeveloperDashboard() {
   const { data: properties } = useQuery({
     queryKey: ['dev-properties'],
     queryFn: async () => {
-      const { data } = await supabase.from('properties').select('*').order('name')
+      const { data } = await supabase.from('properties').select('*').order('created_at', { ascending: false })
       return data || []
     },
+    refetchInterval: 10000, // every 10 seconds
   })
 
   const { data: profiles } = useQuery({
     queryKey: ['dev-profiles'],
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('*, properties(name)').order('created_at', { ascending: false })
+      const { data } = await supabase.from('profiles').select('*, properties(name, plan, type, trial_ends_at)').order('created_at', { ascending: false })
       return data || []
     },
+    refetchInterval: 10000,
   })
 
   const { data: invitations } = useQuery({
@@ -43,6 +45,7 @@ export default function DeveloperDashboard() {
       const { data } = await supabase.from('invitations').select('*, properties(name)').order('created_at', { ascending: false }).limit(50)
       return data || []
     },
+    refetchInterval: 30000,
   })
 
   const { data: apiUsage } = useQuery({
@@ -139,7 +142,8 @@ export default function DeveloperDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dev-properties'] })
-      toast({ title: 'Property updated', type: 'success' })
+      queryClient.invalidateQueries({ queryKey: ['dev-profiles'] })
+      toast({ title: 'Plan updated', type: 'success' })
     },
   })
 
@@ -215,35 +219,60 @@ export default function DeveloperDashboard() {
       {/* OVERVIEW */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* All Signups */}
-          <Panel title={`All Signups (${profiles?.length || 0})`}>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {profiles?.map(p => (
-                <div key={p.id} className="flex items-center justify-between py-1.5 group">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-text-primary truncate">{p.full_name || p.email || p.id.slice(0, 8)}</span>
-                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${roleColor[p.role]}`}>{p.role}</span>
-                    </div>
-                    <div className="flex gap-2 text-[10px] text-text-muted">
-                      <span>{p.properties?.name || 'No property'}</span>
-                      <span>{p.email}</span>
-                      <span>{p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}</span>
+          {/* All Signups - Real-Time */}
+          <Panel title={`All Signups (${profiles?.length || 0}) — live`}>
+            <div className="text-[9px] text-text-muted font-mono mb-2">Auto-refreshes every 10 seconds</div>
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {profiles?.map(p => {
+                const plan = p.properties?.plan || 'free'
+                const planColors = { free: 'bg-bg-card text-text-muted', starter: 'bg-warning/10 text-warning', pro: 'bg-accent/10 text-accent', enterprise: 'bg-success/10 text-success' }
+                const trialEnds = p.properties?.trial_ends_at ? new Date(p.properties.trial_ends_at) : null
+                const trialActive = trialEnds && trialEnds > new Date()
+                const trialDays = trialActive ? Math.ceil((trialEnds - new Date()) / 86400000) : 0
+                return (
+                  <div key={p.id} className="bg-bg-card border border-border rounded-lg px-3 py-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-sm text-text-primary font-medium truncate">{p.full_name || p.id.slice(0, 8)}</span>
+                          <span className={`text-[9px] font-mono px-1 py-0.5 rounded ${roleColor[p.role]}`}>{p.role}</span>
+                          <span className={`text-[9px] font-mono px-1 py-0.5 rounded ${planColors[plan]}`}>{plan}</span>
+                          {trialActive && <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-accent/10 text-accent">{trialDays}d trial</span>}
+                        </div>
+                        <div className="flex gap-2 text-[10px] text-text-muted mt-0.5 flex-wrap">
+                          <span>{p.email || '—'}</span>
+                          <span>{p.properties?.name || 'No property'}</span>
+                          <span>{p.created_at ? new Date(p.created_at).toLocaleDateString() + ' ' + new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <select
+                          value={plan}
+                          onChange={(e) => {
+                            if (p.property_id) {
+                              updatePropertyMutation.mutate({ id: p.property_id, updates: { plan: e.target.value } })
+                            } else {
+                              toast({ title: 'No property linked', description: 'This user needs a property first', type: 'warning' })
+                            }
+                          }}
+                          className={`border rounded px-2 py-1 text-[10px] font-mono focus:outline-none focus:border-accent ${planColors[plan]}`}
+                        >
+                          {PLANS.map(pl => <option key={pl} value={pl}>{pl}</option>)}
+                        </select>
+                        <select
+                          value={p.role}
+                          onChange={(e) => updateRoleMutation.mutate({ userId: p.id, role: e.target.value })}
+                          className="bg-bg-surface border border-border rounded px-2 py-1 text-[10px] text-text-primary focus:outline-none focus:border-accent"
+                        >
+                          {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                      </div>
                     </div>
                   </div>
-                  <select
-                    value={p.properties?.plan || 'free'}
-                    onChange={(e) => {
-                      if (p.property_id) updatePropertyMutation.mutate({ id: p.property_id, updates: { plan: e.target.value } })
-                    }}
-                    className="bg-bg-card border border-border rounded px-1.5 py-0.5 text-[10px] text-text-primary focus:outline-none focus:border-accent opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    {PLANS.map(plan => <option key={plan} value={plan}>{plan}</option>)}
-                  </select>
-                </div>
-              ))}
+                )
+              })}
               {(!profiles || profiles.length === 0) && (
-                <div className="text-text-muted text-xs text-center py-4">No signups yet</div>
+                <div className="text-text-muted text-xs text-center py-8">No signups yet. Share your signup link to get started.</div>
               )}
             </div>
           </Panel>

@@ -30,10 +30,32 @@ export function AuthProvider({ children }) {
   async function fetchProfile(userId) {
     const { data } = await supabase
       .from('profiles')
-      .select('*, properties(name, sport, conference, type, plan, logo_url)')
+      .select('*, properties(name, sport, conference, type, plan, logo_url, trial_ends_at)')
       .eq('id', userId)
       .single()
-    setProfile(data)
+
+    if (!data) {
+      // Profile doesn't exist yet — first login after email confirmation
+      // Create a minimal profile so the user can access the onboarding flow
+      const { data: { user } } = await supabase.auth.getUser()
+      const email = user?.email || ''
+      const role = email.toLowerCase() === 'jlkowitt25@gmail.com' ? 'developer' : 'admin'
+      const { data: newProfile } = await supabase.from('profiles').upsert({
+        id: userId,
+        full_name: user?.user_metadata?.full_name || '',
+        email,
+        role,
+        onboarding_completed: false,
+      }).select('*, properties(name, sport, conference, type, plan, logo_url, trial_ends_at)').single()
+      setProfile(newProfile)
+    } else {
+      // Ensure developer email always has developer role
+      if (data.email?.toLowerCase() === 'jlkowitt25@gmail.com' && data.role !== 'developer') {
+        await supabase.from('profiles').update({ role: 'developer' }).eq('id', userId)
+        data.role = 'developer'
+      }
+      setProfile(data)
+    }
     setLoading(false)
   }
 

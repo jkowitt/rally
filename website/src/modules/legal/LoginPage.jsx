@@ -110,7 +110,7 @@ export default function LoginPage() {
             property_id: invitation.property_id,
             full_name: fullName,
             email,
-            role: invitation.role || 'rep',
+            role: email.toLowerCase() === 'jlkowitt25@gmail.com' ? 'developer' : (invitation.role || 'rep'),
             onboarding_completed: true,
           })
           // Mark invitation as accepted
@@ -142,6 +142,16 @@ export default function LoginPage() {
       })
       if (authErr) throw authErr
 
+      // Check if email confirmation is required
+      if (authData.user && !authData.session) {
+        // Email confirmation is enabled — user needs to verify email first
+        setError('')
+        setStep(1)
+        setMode('confirm')
+        setLoading(false)
+        return
+      }
+
       if (authData.user) {
         // 2. Create property
         const { data: property, error: propErr } = await supabase.from('properties').insert({
@@ -158,13 +168,14 @@ export default function LoginPage() {
         }).select().single()
         if (propErr) throw propErr
 
-        // 3. Create profile as admin of the property
+        // 3. Create profile as admin of the property (developer for owner email)
+        const userRole = email.toLowerCase() === 'jlkowitt25@gmail.com' ? 'developer' : 'admin'
         await supabase.from('profiles').upsert({
           id: authData.user.id,
           property_id: property.id,
           full_name: fullName,
           email,
-          role: 'admin',
+          role: userRole,
           onboarding_completed: false,
         })
 
@@ -308,6 +319,23 @@ export default function LoginPage() {
               &larr; Back
             </button>
           </form>
+        )}
+
+        {/* EMAIL CONFIRMATION NEEDED */}
+        {mode === 'confirm' && (
+          <div className="bg-bg-surface border border-border rounded-lg p-5 sm:p-6 space-y-4 text-center">
+            <div className="text-4xl">📧</div>
+            <h2 className="text-lg font-semibold text-text-primary">Check Your Email</h2>
+            <p className="text-sm text-text-secondary">
+              We sent a confirmation link to <strong className="text-accent">{email}</strong>. Click the link to activate your account, then come back here and sign in.
+            </p>
+            <button
+              onClick={() => { setMode('signin'); setError('') }}
+              className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 text-sm"
+            >
+              Go to Sign In
+            </button>
+          </div>
         )}
 
         {/* ONBOARDING - Step 3: Welcome */}

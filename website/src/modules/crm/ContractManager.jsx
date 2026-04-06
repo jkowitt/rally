@@ -1149,6 +1149,10 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       if (contractErr) throw contractErr
 
       // Auto-insert benefits if extracted
+      let benefitCount = 0
+      let assetCount = 0
+      let fulfillmentCount = 0
+
       if (parsed?.benefits?.length > 0) {
         const benefitRows = parsed.benefits.map((b) => ({
           contract_id: contract.id,
@@ -1158,24 +1162,31 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
           value: b.value || null,
           fulfillment_auto_generated: false,
         }))
-        const { data: insertedBenefits } = await supabase.from('contract_benefits').insert(benefitRows).select()
 
-        // Auto-create fulfillment records for each benefit
-        if (insertedBenefits?.length > 0 && dealId) {
-          try {
-            const fulfillmentRows = insertedBenefits.map((b) => ({
-              deal_id: dealId,
-              contract_id: contract.id,
-              benefit_id: b.id,
-              scheduled_date: parsed.effective_date || null,
-              delivered: false,
-              auto_generated: true,
-            }))
-            await supabase.from('fulfillment_records').insert(fulfillmentRows)
-          } catch { /* fulfillment table may not exist */ }
+        const { data: insertedBenefits, error: benefitsErr } = await supabase.from('contract_benefits').insert(benefitRows).select()
+        if (benefitsErr) {
+          console.error('Benefits insert error:', benefitsErr)
+          setStatus('Warning: Benefits could not be saved — ' + benefitsErr.message)
         }
 
-        // Auto-sync benefits to asset catalog
+        benefitCount = insertedBenefits?.length || 0
+
+        // Auto-create fulfillment records
+        if (insertedBenefits?.length > 0 && dealId) {
+          const fulfillmentRows = insertedBenefits.map((b) => ({
+            deal_id: dealId,
+            contract_id: contract.id,
+            benefit_id: b.id,
+            scheduled_date: parsed.effective_date || null,
+            delivered: false,
+            auto_generated: true,
+          }))
+          const { error: fulErr } = await supabase.from('fulfillment_records').insert(fulfillmentRows)
+          if (fulErr) console.warn('Fulfillment insert error:', fulErr.message)
+          else fulfillmentCount = fulfillmentRows.length
+        }
+
+        // Auto-sync to asset catalog
         if (insertedBenefits?.length > 0) {
           for (const b of insertedBenefits) {
             const category = guessAssetCategory(b.benefit_description || '')
@@ -1191,7 +1202,8 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
               sold_count: b.quantity || 1,
               total_available: 0,
             })
-            if (assetErr) console.warn('Asset sync error:', assetErr.message)
+            if (assetErr) console.warn('Asset insert error:', assetErr.message)
+            else assetCount++
           }
         }
       }
@@ -1220,7 +1232,7 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
 
       setStatus(saveAsTemplate
         ? 'Template saved! You can now use it in the AI Editor to create new contracts.'
-        : 'Imported! Contract, deal, benefits, fulfillment records, and assets created automatically.'
+        : `Imported! ${benefitCount} benefit${benefitCount !== 1 ? 's' : ''}, ${assetCount} asset${assetCount !== 1 ? 's' : ''}, ${fulfillmentCount} fulfillment record${fulfillmentCount !== 1 ? 's' : ''} created.`
       )
       setTimeout(() => onImported(), 1500)
     } catch (e) {

@@ -1168,21 +1168,24 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
           value: b.value || null,
           fulfillment_auto_generated: false,
         }))
-        const { data: insertedBenefits } = await supabase.from('contract_benefits').insert(benefitRows).select()
+        const { data: insertedBenefits, error: benErr } = await supabase.from('contract_benefits').insert(benefitRows).select()
+        if (benErr) {
+          console.error('Benefits insert failed:', benErr)
+          toast({ title: 'Benefits could not be saved', description: benErr.message, type: 'warning' })
+        }
         benefitCount = insertedBenefits?.length || 0
 
         // Create fulfillment records
         if (insertedBenefits?.length > 0) {
-          try {
-            await supabase.from('fulfillment_records').insert(insertedBenefits.map(b => ({
-              deal_id: deal.id,
-              contract_id: newContract.id,
-              benefit_id: b.id,
-              scheduled_date: parsed.effective_date || null,
-              delivered: false,
-              auto_generated: true,
-            })))
-          } catch (e) { console.warn(e) }
+          const { error: fulErr } = await supabase.from('fulfillment_records').insert(insertedBenefits.map(b => ({
+            deal_id: deal.id,
+            contract_id: newContract.id,
+            benefit_id: b.id,
+            scheduled_date: parsed.effective_date || null,
+            delivered: false,
+            auto_generated: true,
+          })))
+          if (fulErr) console.warn('Fulfillment insert error:', fulErr.message)
         }
 
         // Sync to asset catalog
@@ -1202,7 +1205,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
               return 'Digital'
             }
             for (const b of insertedBenefits) {
-              await supabase.from('assets').insert({
+              const { error: assetErr } = await supabase.from('assets').insert({
                 property_id: propertyId,
                 name: b.benefit_description || 'Contract Benefit',
                 category: guessCategory(b.benefit_description),
@@ -1214,8 +1217,9 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                 sold_count: b.quantity || 1,
                 total_available: 0,
               })
+              if (assetErr) console.warn('Asset insert error:', assetErr.message)
             }
-          } catch (e) { console.warn(e) }
+          } catch (e) { console.warn('Asset sync error:', e) }
         }
       }
 

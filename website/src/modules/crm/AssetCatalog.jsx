@@ -192,6 +192,9 @@ export default function AssetCatalog() {
     if (items.length > 0) acc.push({ category: cat, items, count: items.length })
     return acc
   }, [])
+  // Add uncategorized assets
+  const uncategorized = filtered.filter(a => !CATEGORIES.includes(a.category))
+  if (uncategorized.length > 0) grouped.push({ category: 'Other', items: uncategorized, count: uncategorized.length })
 
   // Category summary stats
   const categorySummary = CATEGORIES.map(cat => {

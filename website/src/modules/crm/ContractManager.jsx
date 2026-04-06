@@ -1177,23 +1177,22 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
 
         // Auto-sync benefits to asset catalog
         if (insertedBenefits?.length > 0) {
-          try {
-            for (const b of insertedBenefits) {
-              const category = guessAssetCategory(b.benefit_description || '')
-              await supabase.from('assets').insert({
-                property_id: propertyId,
-                name: b.benefit_description || 'Contract Benefit',
-                category,
-                quantity: b.quantity || 1,
-                base_price: b.value || null,
-                active: true,
-                from_contract: true,
-                source_contract_id: contract.id,
-                sold_count: b.quantity || 1,
-                total_available: 0,
-              })
-            }
-          } catch { /* assets columns may not exist */ }
+          for (const b of insertedBenefits) {
+            const category = guessAssetCategory(b.benefit_description || '')
+            const { error: assetErr } = await supabase.from('assets').insert({
+              property_id: propertyId,
+              name: b.benefit_description || 'Contract Benefit',
+              category,
+              quantity: b.quantity || 1,
+              base_price: b.value || null,
+              active: true,
+              from_contract: true,
+              source_contract_id: contract.id,
+              sold_count: b.quantity || 1,
+              total_available: 0,
+            })
+            if (assetErr) console.warn('Asset sync error:', assetErr.message)
+          }
         }
       }
 

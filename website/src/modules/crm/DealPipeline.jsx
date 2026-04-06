@@ -123,6 +123,8 @@ export default function DealPipeline() {
   const [bulkMode, setBulkMode] = useState(false)
   const [showCSVImport, setShowCSVImport] = useState(false)
   const [viewingDeal, setViewingDeal] = useState(null)
+  const [columnFilters, setColumnFilters] = useState({})
+  const [showColumnFilters, setShowColumnFilters] = useState(false)
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals', propertyId],
@@ -436,9 +438,49 @@ export default function DealPipeline() {
   }))
 
   // Category filter
-  const activeDealsFiltered = filterCategory
+  const activeDealsAfterCategory = filterCategory
     ? activeDealsRaw.filter(d => guessCategory(d.brand_name, d.sub_industry) === filterCategory)
     : activeDealsRaw
+
+  // Column filters
+  const activeDealsFiltered = Object.keys(columnFilters).length > 0
+    ? activeDealsAfterCategory.filter(d => {
+        for (const [col, val] of Object.entries(columnFilters)) {
+          if (!val) continue
+          const lower = val.toLowerCase()
+          if (col === 'brand_name') {
+            if (!(d.brand_name || '').toLowerCase().includes(lower)) return false
+          } else if (col === 'category') {
+            if (guessCategory(d.brand_name, d.sub_industry) !== val) return false
+          } else if (col === 'contact_name') {
+            const name = `${d.contact_first_name || ''} ${d.contact_last_name || ''}`.trim()
+            if (!name.toLowerCase().includes(lower)) return false
+          } else if (col === 'contact_email') {
+            if (!(d.contact_email || '').toLowerCase().includes(lower)) return false
+          } else if (col === 'value') {
+            const numVal = Number(d.value) || 0
+            const filterNum = Number(val.replace(/[$,]/g, ''))
+            if (!isNaN(filterNum) && numVal < filterNum) return false
+          } else if (col === 'stage') {
+            if (d.stage !== val) return false
+          } else if (col === 'priority') {
+            if (d.priority !== val) return false
+          } else if (col === 'source') {
+            if (d.source !== val) return false
+          }
+        }
+        return true
+      })
+    : activeDealsAfterCategory
+
+  const setColumnFilter = (col, val) => {
+    setColumnFilters(prev => {
+      const next = { ...prev }
+      if (val) next[col] = val; else delete next[col]
+      return next
+    })
+  }
+  const activeColumnFilterCount = Object.values(columnFilters).filter(Boolean).length
 
   // Sorting
   function toggleSort(field) {
@@ -513,6 +555,17 @@ export default function DealPipeline() {
           </select>
           {filterCategory && (
             <button onClick={() => setFilterCategory('')} className="text-xs text-text-muted hover:text-accent">Clear</button>
+          )}
+          {viewMode === 'table' && (
+            <button
+              onClick={() => { setShowColumnFilters(!showColumnFilters); if (showColumnFilters) setColumnFilters({}) }}
+              className={`px-3 py-1.5 text-xs font-mono rounded border transition-colors ${showColumnFilters ? 'bg-accent/10 border-accent/30 text-accent' : 'bg-bg-surface border-border text-text-muted hover:text-text-primary'}`}
+            >
+              Filters{activeColumnFilterCount > 0 ? ` (${activeColumnFilterCount})` : ''}
+            </button>
+          )}
+          {activeColumnFilterCount > 0 && (
+            <button onClick={() => setColumnFilters({})} className="text-xs text-text-muted hover:text-accent">Clear Filters</button>
           )}
           <button
             onClick={() => setShowProspectFinder(true)}
@@ -754,6 +807,49 @@ export default function DealPipeline() {
                 ))}
                 <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Actions</th>
               </tr>
+              {showColumnFilters && (
+                <tr className="border-b border-border bg-bg-card/30">
+                  <td className="px-2 py-2">
+                    <input type="text" placeholder="Filter brand..." value={columnFilters.brand_name || ''} onChange={(e) => setColumnFilter('brand_name', e.target.value)} className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent" />
+                  </td>
+                  <td className="px-2 py-2">
+                    <select value={columnFilters.category || ''} onChange={(e) => setColumnFilter('category', e.target.value)} className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-secondary focus:outline-none focus:border-accent">
+                      <option value="">All</option>
+                      {dealCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-2 py-2">
+                    <input type="text" placeholder="Filter contact..." value={columnFilters.contact_name || ''} onChange={(e) => setColumnFilter('contact_name', e.target.value)} className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent" />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input type="text" placeholder="Filter email..." value={columnFilters.contact_email || ''} onChange={(e) => setColumnFilter('contact_email', e.target.value)} className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent" />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input type="text" placeholder="Min $..." value={columnFilters.value || ''} onChange={(e) => setColumnFilter('value', e.target.value)} className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary font-mono focus:outline-none focus:border-accent" />
+                  </td>
+                  <td className="px-2 py-2">
+                    <select value={columnFilters.stage || ''} onChange={(e) => setColumnFilter('stage', e.target.value)} className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-secondary focus:outline-none focus:border-accent">
+                      <option value="">All</option>
+                      {ALL_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-2 py-2">
+                    <select value={columnFilters.priority || ''} onChange={(e) => setColumnFilter('priority', e.target.value)} className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-secondary focus:outline-none focus:border-accent">
+                      <option value="">All</option>
+                      {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-2 py-2">
+                    <select value={columnFilters.source || ''} onChange={(e) => setColumnFilter('source', e.target.value)} className="w-full bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-secondary focus:outline-none focus:border-accent">
+                      <option value="">All</option>
+                      {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-2 py-2"></td>
+                  <td className="px-2 py-2"></td>
+                  <td className="px-2 py-2"></td>
+                </tr>
+              )}
             </thead>
             <tbody>
               {activeDeals.map((deal) => {

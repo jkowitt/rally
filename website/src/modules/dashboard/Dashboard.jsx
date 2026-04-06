@@ -59,7 +59,7 @@ export default function Dashboard() {
 
   // --- Data Queries ---
 
-  const { data: deals } = useQuery({
+  const { data: deals, isLoading: dealsLoading } = useQuery({
     queryKey: ['deals-dashboard', propertyId],
     queryFn: async () => {
       if (!propertyId) return []
@@ -513,6 +513,9 @@ export default function Dashboard() {
             Welcome back, {profile?.full_name || 'there'}
           </p>
         </div>
+        {dealsLoading && (
+          <div className="text-xs text-text-muted font-mono animate-pulse">Loading...</div>
+        )}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Filter by category */}
           <select

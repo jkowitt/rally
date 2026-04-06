@@ -31,7 +31,7 @@ export default function BrandReport() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
-        <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Brand Report</h1>
+        <h1 className="text-xl sm:text-xl sm:text-2xl font-semibold text-text-primary">Brand Report</h1>
         <button
           onClick={() => window.print()}
           className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90"
@@ -50,7 +50,7 @@ export default function BrandReport() {
             </p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-mono text-accent">${Number(deal.value || 0).toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-mono text-accent">${Number(deal.value || 0).toLocaleString()}</div>
             <div className="text-xs font-mono text-text-muted mt-1">{deal.stage}</div>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function BrandReport() {
       <div className="bg-bg-surface border border-border rounded-lg p-6">
         <h3 className="text-sm font-mono text-text-muted uppercase mb-3">Fulfillment Status</h3>
         <div className="flex items-center gap-4 mb-4">
-          <div className="text-2xl font-mono text-text-primary">{deliveredCount}/{totalFulfillment}</div>
+          <div className="text-xl sm:text-2xl font-mono text-text-primary">{deliveredCount}/{totalFulfillment}</div>
           <div className="flex-1 h-2 bg-bg-card rounded-full overflow-hidden">
             <div
               className="h-full bg-success rounded-full transition-all"

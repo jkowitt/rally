@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts } from '@/lib/claude'
+import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail } from '@/lib/claude'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
@@ -258,7 +258,7 @@ export default function DealPipeline() {
               await supabase.from('contacts').insert(fallbackRows)
             }
           }
-        } catch {
+        } catch (e) { console.warn(e) 
           // contacts table may not exist yet — silently skip
         }
       }
@@ -277,7 +277,7 @@ export default function DealPipeline() {
             notes: pa.notes || null,
           }))
           await supabase.from('deal_assets').insert(assetRows)
-        } catch {
+        } catch (e) { console.warn(e) 
           // deal_assets columns may not exist yet
         }
       }
@@ -848,7 +848,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
       }
       queryClient.invalidateQueries({ queryKey: ['deal-assets', deal.id] })
       toast({ title: `${proposedAssets.length} proposed assets saved`, type: 'success' })
-    } catch {
+    } catch (e) { console.warn(e) 
       // deal_assets table columns may not exist yet
     }
   }
@@ -1105,14 +1105,13 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
             const content = await page.getTextContent()
             contractText += content.items.map(item => item.str).join(' ') + '\n\n'
           }
-        } catch {}
+        } catch (e) { console.warn(e) }
       }
 
       // Try to parse contract text with AI to extract benefits
       let parsed = null
       if (contractText) {
         try {
-          const { parsePdfText } = await import('@/lib/claude')
           const result = await parsePdfText(contractText)
           parsed = result.parsed
         } catch { /* parsing failed, continue without benefits */ }
@@ -1161,7 +1160,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
               delivered: false,
               auto_generated: true,
             })))
-          } catch {}
+          } catch (e) { console.warn(e) }
         }
 
         // Sync to asset catalog
@@ -1194,7 +1193,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                 total_available: 0,
               })
             }
-          } catch {}
+          } catch (e) { console.warn(e) }
         }
       }
 
@@ -1248,7 +1247,6 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
             onClick={async () => {
               setEnriching('company')
               try {
-                const { apolloEnrichCompany } = await import('@/lib/claude')
                 const res = await apolloEnrichCompany({
                   company_name: form.brand_name,
                   domain: form.website || undefined,
@@ -1370,7 +1368,6 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                           type="button"
                           onClick={async () => {
                             try {
-                              const { hunterVerifyEmail } = await import('@/lib/claude')
                               const res = await hunterVerifyEmail({ email: contact.email, property_id: propertyId })
                               if (res?.data?.result) {
                                 const status = res.data.result === 'deliverable' ? 'verified' :
@@ -2731,7 +2728,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
           })
           research = data.research
           setResearchedContacts(prev => ({ ...prev, [idx]: research }))
-        } catch {
+        } catch (e) { console.warn(e) 
           // If research fails, continue without contacts
           research = null
         } finally {
@@ -2824,7 +2821,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
         notes: c.why_target || null,
       }))
       await supabase.from('contacts').insert(contactRows)
-    } catch {
+    } catch (e) { console.warn(e) 
       // contacts table may not exist
     }
   }

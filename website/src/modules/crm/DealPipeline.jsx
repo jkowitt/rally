@@ -7,6 +7,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail } from '@/lib/claude'
 import { usePlanLimits } from '@/hooks/usePlanLimits'
 import UpgradeGate, { UsageBadge } from '@/components/UpgradeGate'
+import CSVImportWizard from '@/components/CSVImportWizard'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
@@ -120,6 +121,7 @@ export default function DealPipeline() {
   const [filterCategory, setFilterCategory] = useState('')
   const [selectedDeals, setSelectedDeals] = useState(new Set())
   const [bulkMode, setBulkMode] = useState(false)
+  const [showCSVImport, setShowCSVImport] = useState(false)
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals', propertyId],
@@ -507,9 +509,15 @@ export default function DealPipeline() {
           </button>
           <button
             onClick={() => setShowBulkImport(true)}
-            className="bg-bg-surface border border-border text-text-secondary px-4 py-2 rounded text-sm font-medium hover:text-text-primary hover:border-accent/50 transition-colors"
+            className="bg-bg-surface border border-border text-text-secondary px-3 py-2 rounded text-sm font-medium hover:text-text-primary hover:border-accent/50 transition-colors"
           >
             Paste List
+          </button>
+          <button
+            onClick={() => setShowCSVImport(true)}
+            className="bg-bg-surface border border-border text-text-secondary px-3 py-2 rounded text-sm font-medium hover:text-text-primary hover:border-accent/50 transition-colors"
+          >
+            CSV Import
           </button>
           <button
             onClick={() => { setEditingDeal(null); setShowForm(true) }}
@@ -823,6 +831,17 @@ export default function DealPipeline() {
             queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
             queryClient.invalidateQueries({ queryKey: ['contacts', propertyId] })
             toast({ title: `${count} prospect${count !== 1 ? 's' : ''} added to pipeline`, type: 'success' })
+          }}
+        />
+      )}
+
+      {showCSVImport && (
+        <CSVImportWizard
+          onClose={() => setShowCSVImport(false)}
+          onImported={(count) => {
+            queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+            toast({ title: `${count} deals imported from CSV`, type: 'success' })
+            setShowCSVImport(false)
           }}
         />
       )}

@@ -70,8 +70,8 @@ function Hero() {
         </motion.div>
 
         <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl font-bold leading-[1.05] tracking-tight">
-          The operating system for{' '}
-          <span className="text-accent">sports partnerships</span>
+          The Operating System For{' '}
+          <span className="text-accent">Sports Partnerships</span>
         </motion.h1>
 
         <motion.p variants={fadeUp} className="text-lg md:text-xl text-text-secondary mt-6 max-w-2xl mx-auto leading-relaxed">

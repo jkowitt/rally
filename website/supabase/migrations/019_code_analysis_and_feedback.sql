@@ -77,3 +77,69 @@ alter table code_fix_requests enable row level security;
 create policy "fix_requests_dev_only" on code_fix_requests for all using (
   exists (select 1 from profiles where id = auth.uid() and role = 'developer')
 );
+
+-- Custom dashboard requests
+create table if not exists custom_dashboard_requests (
+  id uuid primary key default gen_random_uuid(),
+  property_id uuid references properties(id) on delete cascade,
+  requested_by uuid references profiles(id),
+  contact_name text not null,
+  contact_email text not null,
+  contact_phone text,
+  property_name text,
+  -- What they want
+  description text not null,
+  desired_features jsonb, -- [{feature, priority, details}]
+  branding jsonb, -- {logo_url, primary_color, accent_color, font}
+  integrations_needed text, -- free text: "Salesforce, custom API, etc."
+  timeline text, -- "ASAP", "Next quarter", etc.
+  budget_range text, -- "$5K-$10K", "$10K-$25K", etc.
+  -- Status tracking
+  status text check (status in ('submitted', 'contacted', 'scoping', 'building', 'delivered', 'declined')) default 'submitted',
+  developer_notes text,
+  -- Delivery
+  custom_dashboard_url text, -- /app/custom/:slug when built
+  custom_config jsonb, -- the white-label config for this team
+  created_at timestamptz default now(),
+  updated_at timestamptz
+);
+
+create index if not exists idx_custom_dash_property on custom_dashboard_requests(property_id);
+create index if not exists idx_custom_dash_status on custom_dashboard_requests(status);
+
+alter table custom_dashboard_requests enable row level security;
+create policy "custom_dash_insert_admin" on custom_dashboard_requests for insert with check (
+  exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'developer'))
+);
+create policy "custom_dash_read" on custom_dashboard_requests for select using (
+  property_id in (select property_id from profiles where id = auth.uid())
+  or exists (select 1 from profiles where id = auth.uid() and role = 'developer')
+);
+create policy "custom_dash_update_dev" on custom_dashboard_requests for update using (
+  exists (select 1 from profiles where id = auth.uid() and role = 'developer')
+);
+
+-- Custom dashboard configs (built by developer, served to specific properties)
+create table if not exists custom_dashboards (
+  id uuid primary key default gen_random_uuid(),
+  property_id uuid not null references properties(id) on delete cascade,
+  slug text unique not null,
+  name text not null,
+  config jsonb not null, -- {logo, colors, widgets[], layout, data_sources[]}
+  active boolean default true,
+  created_by uuid references profiles(id),
+  created_at timestamptz default now(),
+  updated_at timestamptz
+);
+
+create index if not exists idx_custom_dashboards_property on custom_dashboards(property_id);
+create index if not exists idx_custom_dashboards_slug on custom_dashboards(slug);
+
+alter table custom_dashboards enable row level security;
+create policy "custom_dashboards_read" on custom_dashboards for select using (
+  property_id in (select property_id from profiles where id = auth.uid())
+  or exists (select 1 from profiles where id = auth.uid() and role = 'developer')
+);
+create policy "custom_dashboards_manage_dev" on custom_dashboards for all using (
+  exists (select 1 from profiles where id = auth.uid() and role = 'developer')
+);

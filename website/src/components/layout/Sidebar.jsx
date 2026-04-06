@@ -168,6 +168,17 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
             <span className="text-base">⚙</span>
             {showLabels && <span>Settings</span>}
           </NavLink>
+          <NavLink
+            to="/app/custom-dashboard"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
+                isActive ? 'text-accent bg-accent/5 border-r-2 border-accent' : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
+              } ${!showLabels ? 'justify-center' : ''}`
+            }
+          >
+            <span className="text-base">🎨</span>
+            {showLabels && <span>Custom Dashboard</span>}
+          </NavLink>
         </div>
       </nav>
 

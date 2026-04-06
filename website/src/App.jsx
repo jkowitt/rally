@@ -29,6 +29,8 @@ const ValuationEngine = lazy(() => import('./modules/valora/ValuationEngine'))
 const BusinessNow = lazy(() => import('./modules/businessnow/BusinessNow'))
 const Settings = lazy(() => import('./modules/crm/Settings'))
 const HelpCenter = lazy(() => import('./modules/crm/HelpCenter'))
+const CustomDashboardRequest = lazy(() => import('./modules/crm/CustomDashboardRequest'))
+const CustomDashboard = lazy(() => import('./modules/crm/CustomDashboard'))
 const DeveloperDashboard = lazy(() => import('./modules/developer/DeveloperDashboard'))
 
 function PageLoader() {
@@ -76,6 +78,8 @@ export default function App() {
                             <Route path="/crm/team" element={<TeamManager />} />
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/help" element={<HelpCenter />} />
+                            <Route path="/custom-dashboard" element={<CustomDashboardRequest />} />
+                            <Route path="/custom/:slug" element={<CustomDashboard />} />
                             {/* Sportify */}
                             <Route path="/sportify/events" element={<EventManager />} />
                             <Route path="/sportify/events/:eventId" element={<EventDetail />} />

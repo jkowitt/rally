@@ -85,6 +85,26 @@ export default function DeveloperDashboard() {
     },
   })
 
+  // Custom dashboard requests
+  const { data: customRequests } = useQuery({
+    queryKey: ['dev-custom-requests'],
+    queryFn: async () => {
+      const { data } = await supabase.from('custom_dashboard_requests').select('*, properties(name)').order('created_at', { ascending: false })
+      return data || []
+    },
+  })
+
+  const updateCustomRequestMutation = useMutation({
+    mutationFn: async ({ id, updates }) => {
+      const { error } = await supabase.from('custom_dashboard_requests').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dev-custom-requests'] })
+      toast({ title: 'Request updated', type: 'success' })
+    },
+  })
+
   async function runCodeAnalysis() {
     setRunningAnalysis(true)
     try {
@@ -153,6 +173,7 @@ export default function DeveloperDashboard() {
     { id: 'api', label: 'API Usage' },
     { id: 'health', label: `Code Health (${analysisReports?.length || 0})` },
     { id: 'suggestions', label: `Suggestions (${suggestions?.filter(s => s.status === 'new').length || 0})` },
+    { id: 'custom', label: 'Custom Dashboards' },
   ]
 
   const roleColor = { developer: 'bg-accent/20 text-accent', admin: 'bg-warning/20 text-warning', rep: 'bg-bg-card text-text-muted' }
@@ -543,6 +564,73 @@ export default function DeveloperDashboard() {
           {(!suggestions || suggestions.length === 0) && (
             <div className="text-center text-text-muted text-sm py-12 bg-bg-surface border border-border rounded-lg">
               No feature suggestions yet. Users can submit from the sidebar.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* CUSTOM DASHBOARDS */}
+      {activeTab === 'custom' && (
+        <div className="space-y-3">
+          <p className="text-xs text-text-muted">Custom dashboard requests from property admins. Use Claude Code to build each one and deliver to the requesting property.</p>
+          {customRequests?.map(r => {
+            const statusColors = {
+              submitted: 'bg-accent/10 text-accent', contacted: 'bg-accent/10 text-accent',
+              scoping: 'bg-warning/10 text-warning', building: 'bg-success/10 text-success',
+              delivered: 'bg-success/10 text-success', declined: 'bg-danger/10 text-danger',
+            }
+            return (
+              <div key={r.id} className="bg-bg-surface border border-border rounded-lg p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-sm font-medium text-text-primary">{r.property_name || r.properties?.name}</span>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${statusColors[r.status]}`}>{r.status}</span>
+                    </div>
+                    <p className="text-xs text-text-secondary mb-2">{r.description}</p>
+                    <div className="flex gap-3 text-[10px] text-text-muted flex-wrap">
+                      <span>{r.contact_name}</span>
+                      <span>{r.contact_email}</span>
+                      {r.contact_phone && <span>{r.contact_phone}</span>}
+                      {r.budget_range && <span className="text-accent">{r.budget_range}</span>}
+                      {r.timeline && <span>{r.timeline}</span>}
+                    </div>
+                    {r.desired_features?.length > 0 && (
+                      <div className="flex gap-1 flex-wrap mt-2">
+                        {r.desired_features.map((f, i) => (
+                          <span key={i} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-bg-card text-text-muted">{f.feature}</span>
+                        ))}
+                      </div>
+                    )}
+                    {r.integrations_needed && (
+                      <div className="text-[10px] text-text-muted mt-1">Integrations: {r.integrations_needed}</div>
+                    )}
+                    {r.branding?.logo_url && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] text-text-muted">Logo:</span>
+                        <img src={r.branding.logo_url} alt="Logo" className="h-6 object-contain" />
+                        {r.branding.primary_color && <span className="w-4 h-4 rounded" style={{ background: r.branding.primary_color }} />}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5 shrink-0">
+                    <select
+                      value={r.status}
+                      onChange={(e) => updateCustomRequestMutation.mutate({ id: r.id, updates: { status: e.target.value } })}
+                      className="bg-bg-card border border-border rounded px-2 py-1 text-[10px] text-text-primary focus:outline-none focus:border-accent"
+                    >
+                      {['submitted', 'contacted', 'scoping', 'building', 'delivered', 'declined'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+          {(!customRequests || customRequests.length === 0) && (
+            <div className="text-center text-text-muted text-sm py-12 bg-bg-surface border border-border rounded-lg">
+              No custom dashboard requests yet. Admins can request from their sidebar.
             </div>
           )}
         </div>

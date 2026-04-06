@@ -75,7 +75,7 @@ function Hero() {
         </motion.h1>
 
         <motion.p variants={fadeUp} className="text-lg md:text-xl text-text-secondary mt-6 max-w-2xl mx-auto leading-relaxed">
-          Loud Legacy unifies CRM, event management, AI-powered valuations, and business intelligence into one platform built for college athletic departments, professional sports teams, and minor league sports teams.
+          AI-powered sponsorship CRM, verified contact intelligence, contract analysis, event operations, and media valuations — built for college athletics, professional teams, and sports agencies.
         </motion.p>
 
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
@@ -97,8 +97,8 @@ function Hero() {
         <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 mt-16 max-w-lg mx-auto">
           {[
             { value: '4', label: 'Integrated Modules' },
-            { value: 'AI', label: 'Claude-Powered' },
-            { value: '1', label: 'Unified Platform' },
+            { value: '22', label: 'Asset Categories' },
+            { value: 'AI', label: 'Powered Intelligence' },
           ].map((stat) => (
             <div key={stat.label}>
               <div className="text-2xl font-mono font-bold text-accent">{stat.value}</div>
@@ -150,10 +150,10 @@ function Ecosystem() {
           {/* Module cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { name: 'Legacy CRM', icon: '▣', color: 'text-accent', desc: 'Pipeline & partnerships', detail: 'Manage sponsors from prospect to renewal with drag-and-drop Kanban, contracts, and fulfillment tracking.' },
-              { name: 'Sportify', icon: '◈', color: 'text-success', desc: 'Events & operations', detail: 'Plan and execute game days, tournaments, and activations with task management and vendor coordination.' },
-              { name: 'VALORA', icon: '◇', color: 'text-warning', desc: 'AI valuations', detail: 'Claude-powered media valuation engine that calculates EMV from broadcast data and market benchmarks.' },
-              { name: 'Business Now', icon: '◆', color: 'text-text-primary', desc: 'Intelligence & metrics', detail: 'AI-generated daily briefings, recommendations, and business metric tracking for executive insights.' },
+              { name: 'Legacy CRM', icon: '▣', color: 'text-accent', desc: 'Pipeline & partnerships', detail: 'AI-powered prospecting, deal pipeline, contract intelligence, asset inventory, fulfillment tracking, and verified contact enrichment — all connected.' },
+              { name: 'Sportify', icon: '◈', color: 'text-success', desc: 'Events & operations', detail: 'Game day command center with run-of-show, sponsor activations, vendor coordination, attendance tracking, and broadcast analytics.' },
+              { name: 'VALORA', icon: '◇', color: 'text-warning', desc: 'AI valuations', detail: 'Know what every asset is worth. Market position analysis, pricing intelligence, and AI-calculated media values tied to real sponsor data.' },
+              { name: 'Business Now', icon: '◆', color: 'text-text-primary', desc: 'Intelligence & metrics', detail: 'Live pipeline alerts, AI daily briefings, sports business newsletters, and team performance dashboards — your real-time command center.' },
             ].map((mod, i) => (
               <motion.div
                 key={mod.name}
@@ -182,44 +182,45 @@ function Modules() {
       name: 'Legacy CRM',
       tagline: 'From prospect to renewal in one view',
       features: [
-        { title: 'Asset Catalog', desc: 'Inventory every sponsorship asset—LED boards, jersey patches, radio reads, naming rights—with pricing and availability.' },
-        { title: 'Deal Pipeline', desc: 'Drag-and-drop Kanban board tracks deals from Prospect through Contracted to Renewed. Never lose a deal in email again.' },
-        { title: 'Contract Manager', desc: 'Generate contracts tied to deals, track benefits and deliverables, export professional PDFs with one click.' },
-        { title: 'Fulfillment Tracker', desc: 'Every promised deliverable tracked to completion. Know exactly what you owe each sponsor and when.' },
-        { title: 'Brand Reports', desc: 'Print-ready partnership recaps showing asset delivery, contract status, and fulfillment progress.' },
+        { title: 'Smart Prospecting', desc: 'AI-powered prospect search discovers new sponsors by industry, brand, or keyword. Decision-maker contacts with LinkedIn profiles researched automatically.' },
+        { title: 'Deal Pipeline', desc: 'Drag-and-drop Kanban board tracks deals from Prospect to Renewed. Multi-year revenue tracking, win rate analytics, and stage-by-stage forecasting.' },
+        { title: 'Contract Intelligence', desc: 'Upload PDF or Word contracts and AI instantly extracts benefits, revenue, and contact info. Create contracts from templates with guided field entry.' },
+        { title: 'Asset Catalog', desc: '22 sponsorship asset categories with real-time inventory. See what\'s sold, being pitched, and available at a glance. Every asset linked to deals and fulfillment.' },
+        { title: 'Fulfillment Tracker', desc: 'Contracted benefits auto-populate for tracking. Mark delivered, add proof, generate recap reports. Know exactly where you stand with every sponsor.' },
+        { title: 'Contact Intelligence', desc: 'Verified executive contacts with email validation, LinkedIn profiles, and enriched company data. Integrated with leading data providers for 95%+ accuracy.' },
       ],
     },
     {
       id: 'sportify',
       name: 'Sportify',
-      tagline: 'Game day operations, organized',
+      tagline: 'Event operations, elevated',
       features: [
-        { title: 'Event Manager', desc: 'Create and manage game days, tournaments, banquets, clinics, and fundraisers with status tracking.' },
-        { title: 'Task Management', desc: 'Assign and track event tasks with due dates and completion status. Nothing falls through the cracks.' },
-        { title: 'Vendor Coordination', desc: 'Track vendor confirmations, categories, and contacts for every event in one place.' },
-        { title: 'Sponsor Activations', desc: 'Link sponsor activations to events and deals. Track setup, location, and completion for every activation.' },
+        { title: 'Event Command Center', desc: 'Grid and calendar views for every game day, tournament, banquet, and clinic. Days-until countdowns, sponsor logos, and progress tracking at a glance.' },
+        { title: 'Run of Show', desc: 'Minute-by-minute event schedule with time, duration, owner, and completion tracking. Your entire event timeline in one place.' },
+        { title: 'Sponsor Activations', desc: 'Track every sponsor setup with status, location, and proof of delivery. Link activations to deals and bulk-mark complete after events.' },
+        { title: 'Attendance & Broadcast', desc: 'Expected vs actual attendance with capacity utilization. Broadcast channel, viewership tracking, and direct links to media valuations.' },
       ],
     },
     {
       id: 'valora',
       name: 'VALORA',
-      tagline: 'AI-powered media valuation',
+      tagline: 'Know what your inventory is worth',
       features: [
-        { title: 'Valuation Engine', desc: 'Input broadcast minutes, screen share, audience size, and clarity—Claude AI calculates estimated media value with reasoning.' },
-        { title: 'Market Benchmarks', desc: 'AI-maintained benchmark data keeps your valuations grounded in current market rates, updated automatically.' },
-        { title: 'Training Data', desc: 'Historical valuation data feeds the AI, making each valuation more accurate than the last.' },
-        { title: 'Visual Analytics', desc: 'Charts comparing calculated EMV vs. Claude-suggested EMV across assets and time periods.' },
+        { title: 'AI Media Valuation', desc: 'Calculate estimated media value from broadcast data, audience metrics, and market benchmarks. Every valuation includes AI reasoning and confidence levels.' },
+        { title: 'Market Position Analysis', desc: 'Every asset automatically classified as below, fair, or above market value. See where you\'re leaving money on the table.' },
+        { title: 'Pricing Intelligence', desc: 'Historical pricing data per asset category with trend analysis. AI-generated recommendations tell you when to raise prices and by how much.' },
+        { title: 'Deal-Linked Valuations', desc: 'Valuations tied to specific sponsors show company size, revenue, and industry context — helping you price assets relative to what each brand can invest.' },
       ],
     },
     {
       id: 'businessnow',
       name: 'Business Now',
-      tagline: 'Your daily AI briefing',
+      tagline: 'Your real-time business command center',
       features: [
-        { title: 'Intelligence Briefings', desc: 'Claude analyzes your deals, events, fulfillment, and metrics to produce an executive summary with prioritized recommendations.' },
-        { title: 'Smart Alerts', desc: 'Renewal deadlines, overdue fulfillment, and opportunity flags surfaced automatically.' },
-        { title: 'Metric Tracking', desc: 'Track custom business KPIs over time with trend visualization.' },
-        { title: 'Briefing Archive', desc: 'Full history of AI briefings and data snapshots for longitudinal analysis.' },
+        { title: 'Live Pipeline Alerts', desc: 'Real-time monitoring flags stale deals, hot opportunities, expiring contracts, and overdue tasks. Actionable alerts, not noise.' },
+        { title: 'AI Daily Briefings', desc: 'Morning intelligence report analyzes your entire pipeline and delivers prioritized recommendations. Know exactly what to focus on today.' },
+        { title: 'Sports Business Newsletter', desc: 'Auto-generated weekly digest and daily afternoon highlights covering deals, trends, and market intelligence from the sports business world.' },
+        { title: 'Team Performance', desc: 'Revenue goals, activity tracking, and deal analytics per team member. Admins see the full picture. Reps see their targets and progress.' },
       ],
     },
   ]
@@ -271,11 +272,11 @@ function Modules() {
 /* ─── HOW IT WORKS ─── */
 function HowItWorks() {
   const steps = [
-    { num: '01', title: 'Set up your property', desc: 'Add your team, sport, and conference. Invite your partnership sales staff with role-based access.' },
-    { num: '02', title: 'Build your asset catalog', desc: 'Inventory every sponsorship asset—from LED boards to social posts—with pricing and availability.' },
-    { num: '03', title: 'Work your pipeline', desc: 'Add prospects, move deals through stages, generate contracts, and track fulfillment deliverables.' },
-    { num: '04', title: 'Plan events & activations', desc: 'Manage game days, assign tasks, coordinate vendors, and link sponsor activations.' },
-    { num: '05', title: 'Let AI do the heavy lifting', desc: 'VALORA calculates media values. Business Now generates daily intelligence briefings. Claude AI keeps you ahead.' },
+    { num: '01', title: 'Set up your property', desc: 'Add your team, sport, and conference. Invite your sales staff with role-based access. Admins set revenue goals and monitor team performance.' },
+    { num: '02', title: 'Build your asset catalog', desc: '22 sponsorship asset categories — LED boards to VIP experiences. Set pricing, track inventory, and see what\'s sold, pitched, and available.' },
+    { num: '03', title: 'Find and close sponsors', desc: 'AI discovers prospects with verified contacts and LinkedIn profiles. Move deals through your pipeline, attach assets, and generate contracts in clicks.' },
+    { num: '04', title: 'Upload contracts & track fulfillment', desc: 'Upload PDF or Word contracts — AI extracts benefits automatically. Fulfillment tracker shows exactly what\'s been delivered and what\'s outstanding.' },
+    { num: '05', title: 'Execute events & prove value', desc: 'Run of show, sponsor activations, broadcast tracking, and media valuations — everything you need to deliver and prove ROI.' },
   ]
 
   return (
@@ -326,9 +327,9 @@ function AISection() {
     <section id="ai" className="py-24 px-6 bg-bg-surface border-t border-border">
       <div className="max-w-6xl mx-auto">
         <SectionHeader
-          tag="Powered by Claude AI"
-          title="Intelligence that actually understands sports business"
-          description="Loud Legacy integrates Anthropic's Claude AI throughout the platform—not as a gimmick, but as a core part of how the system works."
+          tag="AI + Verified Data"
+          title="Intelligence that does the work for you"
+          description="AI reads your contracts, finds your prospects, values your assets, and writes your briefings. Verified contact databases ensure the data is real."
         />
 
         <motion.div
@@ -340,19 +341,34 @@ function AISection() {
         >
           {[
             {
-              title: 'Valuation Engine',
-              desc: 'Claude analyzes broadcast data, screen share percentages, audience metrics, and historical benchmarks to calculate estimated media values for every sponsorship asset. Each valuation includes reasoning so you understand the "why" behind the number.',
+              title: 'Contract Analysis',
+              desc: 'Upload a PDF or Word document and AI instantly extracts sponsor info, benefits, revenue by year, and contact details. Multi-year contracts are automatically broken down with per-year revenue tracking.',
+              tag: 'Contracts',
+            },
+            {
+              title: 'Prospect Intelligence',
+              desc: 'Search for prospects and AI discovers decision-makers with names, titles, emails, and LinkedIn profiles. Company firmographics — revenue, headcount, industry — enriched from verified databases.',
+              tag: 'CRM',
+            },
+            {
+              title: 'Media Valuations',
+              desc: 'AI calculates estimated media value from broadcast data and market benchmarks, then classifies each asset as below, fair, or above market price. Pricing recommendations tell you exactly when to raise rates.',
               tag: 'VALORA',
             },
             {
               title: 'Daily Intelligence',
-              desc: 'Every morning, Claude reviews your active deals, upcoming events, pending fulfillment, and business metrics to produce an executive briefing with prioritized recommendations and alerts.',
+              desc: 'AI monitors your pipeline for stale deals, hot opportunities, and expiring contracts. Weekly sports business newsletters and daily afternoon digests keep your team informed on industry trends.',
               tag: 'Business Now',
             },
             {
-              title: 'Benchmark Updater',
-              desc: 'Claude periodically reviews valuation history and training data to refresh market benchmarks automatically—keeping your valuations grounded in current market reality.',
-              tag: 'Background',
+              title: 'Email & Outreach',
+              desc: 'AI drafts follow-up emails, proposal messages, and meeting notes based on your deal context. Pipeline forecasting predicts 30/60/90 day revenue with best-case and worst-case scenarios.',
+              tag: 'Insights',
+            },
+            {
+              title: 'Verified Data',
+              desc: 'Integrated with industry-leading contact databases for verified executive emails, direct phone numbers, and real LinkedIn profiles. Email verification confirms deliverability before you send.',
+              tag: 'Enrichment',
             },
           ].map((item, i) => (
             <motion.div
@@ -376,10 +392,9 @@ function AISection() {
           className="mt-10 bg-bg-card border border-border rounded-xl p-6 text-center"
         >
           <p className="text-sm text-text-secondary max-w-2xl mx-auto leading-relaxed">
-            <span className="text-text-primary font-medium">Privacy first.</span>{' '}
-            Your data is processed through Supabase Edge Functions with row-level security,
-            hosted on Railway's cloud infrastructure.
-            AI interactions are scoped to your property and are never used for model training.
+            <span className="text-text-primary font-medium">Your data stays yours.</span>{' '}
+            Enterprise-grade security with row-level access control. Every team sees only their data.
+            AI interactions are scoped to your organization and are never used for training.
           </p>
         </motion.div>
       </div>
@@ -390,12 +405,12 @@ function AISection() {
 /* ─── WHY LOUD LEGACY ─── */
 function WhyLoudLegacy() {
   const points = [
-    { title: 'Built for sports', desc: 'Not a generic CRM with a sports skin. Every table, field, and workflow is designed for partnership sales teams.' },
-    { title: 'Property-scoped security', desc: 'Row-level security on every table. Each team sees only their data. Developer accounts manage the platform.' },
-    { title: 'Modular by design', desc: 'Feature flags control which modules are active. Start with CRM, unlock Sportify, VALORA, and Business Now as you grow.' },
-    { title: 'AI that adds value', desc: 'Claude AI handles valuations and intelligence—tasks that would take hours of manual research and analysis.' },
-    { title: 'Legal compliance', desc: 'Versioned terms of service and privacy policy with audit-logged acceptances. Built-in compliance from day one.' },
-    { title: 'Modern stack', desc: 'React, Vite, Supabase, Railway, Tailwind. Cloud-native infrastructure built to scale with your organization.' },
+    { title: 'Built exclusively for sports', desc: 'Not a generic CRM. Every workflow, asset category, and data model is designed for the sponsorship sales process.' },
+    { title: 'Verified contact intelligence', desc: 'Real decision-maker names, verified emails, and LinkedIn profiles from industry-leading databases. Not guesses — actual contacts.' },
+    { title: 'Upload-to-insight in seconds', desc: 'Upload a contract PDF and watch AI extract every benefit, contact, and revenue figure instantly. No manual data entry.' },
+    { title: 'Know your inventory value', desc: 'VALORA tells you if you\'re underpricing assets, when to raise rates, and what similar properties charge. Data-driven pricing.' },
+    { title: 'Mobile-first design', desc: 'Full functionality on your phone. Click-to-call contacts, manage your pipeline, read newsletters, and update deals from anywhere.' },
+    { title: 'Enterprise security, startup speed', desc: 'Row-level security, team hierarchy with role-based access, and modular design. Start with CRM, unlock modules as you grow.' },
   ]
 
   return (

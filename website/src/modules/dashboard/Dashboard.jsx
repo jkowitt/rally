@@ -21,6 +21,7 @@ const ALL_CARDS = [
   { id: 'win-rate', label: 'Win Rate Breakdown' },
   { id: 'revenue-by-year', label: 'Revenue by Year' },
   { id: 'pipeline-charts', label: 'Pipeline Charts' },
+  { id: 'top-deals', label: 'Top Deals' },
   { id: 'activity-tasks', label: 'Recent Activity & Tasks' },
 ]
 
@@ -61,15 +62,23 @@ export default function Dashboard() {
 
   // --- Data Queries ---
 
-  const { data: deals, isLoading: dealsLoading } = useQuery({
-    queryKey: ['deals-dashboard', propertyId],
+  const { data: dealsRaw, isLoading: dealsLoading } = useQuery({
+    queryKey: ['deals', propertyId],
     queryFn: async () => {
       if (!propertyId) return []
       const { data } = await supabase.from('deals').select('*').eq('property_id', propertyId)
       return data || []
     },
     enabled: !!propertyId && flags.crm,
+    refetchOnWindowFocus: true,
+    staleTime: 10_000,
   })
+
+  // Normalize null stages to 'Prospect' (same as pipeline)
+  const deals = useMemo(() =>
+    (dealsRaw || []).map(d => ({ ...d, stage: d.stage || 'Prospect' })),
+    [dealsRaw]
+  )
 
   const { data: tasks } = useQuery({
     queryKey: ['tasks-dashboard', propertyId],
@@ -415,6 +424,45 @@ export default function Dashboard() {
       </div>
     ) : null,
 
+    'top-deals': () => flags.crm && activeDeals.length > 0 ? (
+      <div key="top-deals">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-mono text-text-muted uppercase tracking-wider">Top Deals</h3>
+          <button onClick={() => navigate('/app/crm/pipeline')} className="text-xs text-accent hover:underline">View pipeline</button>
+        </div>
+        <div className="bg-bg-surface border border-border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left">
+                <th className="px-4 py-2.5 text-[10px] text-text-muted font-mono uppercase">Brand</th>
+                <th className="px-4 py-2.5 text-[10px] text-text-muted font-mono uppercase hidden sm:table-cell">Stage</th>
+                <th className="px-4 py-2.5 text-[10px] text-text-muted font-mono uppercase text-right">Value</th>
+                <th className="px-4 py-2.5 text-[10px] text-text-muted font-mono uppercase hidden md:table-cell">Contact</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activeDeals.slice(0, 10).map(deal => (
+                <tr
+                  key={deal.id}
+                  onClick={() => navigate(`/app/crm/pipeline?deal=${deal.id}`)}
+                  className="border-b border-border last:border-0 hover:bg-bg-card/50 cursor-pointer transition-colors"
+                >
+                  <td className="px-4 py-2.5 text-text-primary font-medium">{deal.brand_name || 'Untitled'}</td>
+                  <td className="px-4 py-2.5 hidden sm:table-cell">
+                    <span className="text-[10px] font-mono bg-bg-card px-2 py-0.5 rounded text-text-secondary">{deal.stage}</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-mono text-accent">{deal.value ? fmtMoney(Number(deal.value)) : '—'}</td>
+                  <td className="px-4 py-2.5 text-text-muted text-xs hidden md:table-cell truncate max-w-[150px]">
+                    {deal.contact_first_name ? `${deal.contact_first_name} ${deal.contact_last_name || ''}`.trim() : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ) : null,
+
     'activity-tasks': () => (
       <div key="activity-tasks">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -602,12 +650,15 @@ export default function Dashboard() {
 // --- Sub-components ---
 
 function StageCard({ label, count, color, href }) {
-  const Tag = href ? 'a' : 'div'
+  const navigate = useNavigate()
   return (
-    <Tag href={href} className={`bg-bg-surface border border-border rounded-lg p-3 sm:p-4 ${href ? 'cursor-pointer hover:border-accent/30 transition-colors' : ''}`}>
+    <div
+      onClick={() => href && navigate(href)}
+      className={`bg-bg-surface border border-border rounded-lg p-3 sm:p-4 ${href ? 'cursor-pointer hover:border-accent/30 transition-colors' : ''}`}
+    >
       <div className="text-[10px] text-text-muted uppercase tracking-wider font-mono leading-tight">{label}</div>
       <div className={`text-xl sm:text-2xl font-semibold font-mono mt-1 ${color}`}>{count}</div>
-    </Tag>
+    </div>
   )
 }
 

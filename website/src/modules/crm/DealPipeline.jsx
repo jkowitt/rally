@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -125,6 +126,7 @@ export default function DealPipeline() {
   const [viewingDeal, setViewingDeal] = useState(null)
   const [columnFilters, setColumnFilters] = useState({})
   const [showColumnFilters, setShowColumnFilters] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals', propertyId],
@@ -153,6 +155,18 @@ export default function DealPipeline() {
     },
     enabled: !!propertyId,
   })
+
+  // Auto-open deal from URL param (?deal=<id>)
+  useEffect(() => {
+    const dealId = searchParams.get('deal')
+    if (dealId && deals?.length) {
+      const found = deals.find(d => d.id === dealId)
+      if (found) {
+        setViewingDeal({ ...found, stage: found.stage || 'Prospect' })
+        setSearchParams({}, { replace: true }) // clear param after opening
+      }
+    }
+  }, [deals, searchParams, setSearchParams])
 
   // Group contacts by deal_id for easy lookup
   const contactsByDeal = (allContacts || []).reduce((acc, c) => {

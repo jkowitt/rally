@@ -56,13 +56,13 @@ export default function LoginPage() {
   useEffect(() => {
     if (inviteToken) {
       supabase.from('invitations').select('*, properties(name)').eq('token', inviteToken).single()
-        .then(({ data }) => {
-          if (data && !data.accepted) {
-            setInvitation(data)
-            setEmail(data.email || '')
-          } else {
+        .then(({ data, error: invErr }) => {
+          if (invErr || !data || data.accepted) {
             setError('This invitation has expired or already been used.')
             setMode('signin')
+          } else {
+            setInvitation(data)
+            setEmail(data.email || '')
           }
         })
     }

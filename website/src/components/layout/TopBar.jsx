@@ -5,7 +5,7 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
   const { profile, signOut } = useAuth()
 
   function openSearch() {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))
   }
 
   return (

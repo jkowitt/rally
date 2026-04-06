@@ -42,7 +42,6 @@ import {
   editContractText,
   parsePdfText,
   summarizeContract,
-  extractBenefits,
   generateFulfillment,
 } from '@/lib/claude'
 import jsPDF from 'jspdf'
@@ -335,7 +334,7 @@ export default function ContractManager() {
                 start_date: c.effective_date || c.deals?.start_date,
                 end_date: c.expiration_date || c.deals?.end_date,
               })
-              queryClient.invalidateQueries({ queryKey: ['fulfillment', propertyId] })
+              queryClient.invalidateQueries({ queryKey: ['fulfillment-records'] })
               alert(`Generated ${result.count || 0} fulfillment records!`)
             } catch (e) {
               alert('Error generating fulfillment: ' + e.message)
@@ -608,6 +607,31 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
       value: b.value || '',
     })) || []
   )
+
+  // Sync state when contract prop changes (e.g. user selects a different contract to edit)
+  useEffect(() => {
+    if (contract) {
+      setSelectedDeal(contract.deal_id || '')
+      setContractText(contract.contract_text || '')
+      setSummary(contract.ai_summary || '')
+      setCompanyDetails({
+        company_name: contract.company_name || '',
+        company_address: contract.company_address || '',
+        company_signee: contract.company_signee || '',
+        company_email: contract.company_email || '',
+        notice_address: contract.notice_address || '',
+        notice_email: contract.notice_email || '',
+      })
+      setBenefits(contract.contract_benefits?.map(b => ({
+        benefit_description: b.benefit_description || '',
+        quantity: b.quantity || 1,
+        frequency: b.frequency || 'Per Season',
+        value: b.value || '',
+      })) || [])
+      setSelectedTemplate('')
+      setLoadedFromTemplate(false)
+    }
+  }, [contract?.id])
 
   // Load template
   async function handleLoadTemplate(templateId) {

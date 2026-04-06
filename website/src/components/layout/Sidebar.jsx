@@ -97,7 +97,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
                       isActive
                         ? 'text-accent bg-accent/5 border-r-2 border-accent'
                         : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
-                    } $${!showLabels ? 'justify-center' : ''}`
+                    } ${!showLabels ? 'justify-center' : ''}`
                   }
                 >
                   <span className="text-base">{item.icon}</span>
@@ -123,7 +123,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
                   isActive
                     ? 'text-accent bg-accent/5 border-r-2 border-accent'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
-                } $${!showLabels ? 'justify-center' : ''}`
+                } ${!showLabels ? 'justify-center' : ''}`
               }
             >
               <span className="text-base">✗</span>
@@ -147,7 +147,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
                   isActive
                     ? 'text-accent bg-accent/5 border-r-2 border-accent'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
-                } $${!showLabels ? 'justify-center' : ''}`
+                } ${!showLabels ? 'justify-center' : ''}`
               }
             >
               <span className="text-base">⚙</span>

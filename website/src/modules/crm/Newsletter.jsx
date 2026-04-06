@@ -322,7 +322,7 @@ export default function Newsletter() {
       {(weeklyMutation.isError || afternoonMutation.isError) && (
         <div className="bg-danger/10 border border-danger/30 rounded-lg p-4 flex items-center justify-between">
           <div className="text-sm text-danger">
-            Failed to generate newsletter. {weeklyMutation.error?.message || afternoonMutation.error?.message}
+            Failed to generate newsletter. {weeklyMutation.error?.message || afternoonMutation.error?.message || 'Please try again.'}
           </div>
           <button
             onClick={() => weeklyMutation.isError ? weeklyMutation.mutate() : afternoonMutation.mutate()}

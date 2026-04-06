@@ -122,6 +122,7 @@ export default function DealPipeline() {
   const [selectedDeals, setSelectedDeals] = useState(new Set())
   const [bulkMode, setBulkMode] = useState(false)
   const [showCSVImport, setShowCSVImport] = useState(false)
+  const [viewingDeal, setViewingDeal] = useState(null)
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals', propertyId],
@@ -360,6 +361,21 @@ export default function DealPipeline() {
     toast({ title: `${selectedDeals.size} deals moved to ${stage}`, type: 'success' })
   }
 
+  async function autoCategorize() {
+    const uncategorized = (deals || []).filter(d => !d.sub_industry)
+    if (uncategorized.length === 0) { toast({ title: 'All deals already categorized', type: 'success' }); return }
+    let updated = 0
+    for (const deal of uncategorized) {
+      const category = guessCategory(deal.brand_name, '')
+      if (category && category !== 'Misc') {
+        await supabase.from('deals').update({ sub_industry: category }).eq('id', deal.id)
+        updated++
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+    toast({ title: `${updated} deals categorized`, type: 'success' })
+  }
+
   async function bulkDeleteAll() {
     if (!confirm(`DELETE ALL ${activeDeals.length} active deals? This cannot be undone.`)) return
     if (!confirm('Are you absolutely sure? This deletes everything in your pipeline.')) return
@@ -557,6 +573,12 @@ export default function DealPipeline() {
               Delete Selected ({selectedDeals.size})
             </button>
             <button
+              onClick={autoCategorize}
+              className="bg-accent/10 text-accent border border-accent/30 px-3 py-1.5 rounded text-xs font-medium hover:bg-accent/20"
+            >
+              Auto-Categorize
+            </button>
+            <button
               onClick={bulkDeleteAll}
               className="bg-danger text-white px-3 py-1.5 rounded text-xs font-medium hover:opacity-90"
             >
@@ -634,7 +656,7 @@ export default function DealPipeline() {
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              onClick={() => { setEditingDeal(deal); setShowForm(true) }}
+                              onClick={() => setViewingDeal(deal)}
                               className={`bg-bg-card border border-border rounded p-3 cursor-pointer hover:border-accent/30 transition-colors ${
                                 snapshot.isDragging ? 'shadow-lg border-accent/50' : ''
                               }`}
@@ -734,7 +756,7 @@ export default function DealPipeline() {
               {activeDeals.map((deal) => {
                 const category = guessCategory(deal.brand_name, deal.sub_industry)
                 return (
-                <tr key={deal.id} className={`border-b border-border last:border-0 hover:bg-bg-card/50 ${selectedDeals.has(deal.id) ? 'bg-accent/5' : ''}`}>
+                <tr key={deal.id} onClick={() => !bulkMode && setViewingDeal(deal)} className={`border-b border-border last:border-0 hover:bg-bg-card/50 cursor-pointer ${selectedDeals.has(deal.id) ? 'bg-accent/5' : ''}`}>
                   <td className="px-4 py-3 text-text-primary font-medium">
                     <div className="flex items-center gap-2">
                       {bulkMode && (
@@ -835,6 +857,15 @@ export default function DealPipeline() {
         />
       )}
 
+      {viewingDeal && (
+        <DealViewer
+          deal={viewingDeal}
+          contacts={contactsByDeal[viewingDeal.id] || []}
+          onClose={() => setViewingDeal(null)}
+          onEdit={() => { setEditingDeal(viewingDeal); setShowForm(true); setViewingDeal(null) }}
+        />
+      )}
+
       {showCSVImport && (
         <CSVImportWizard
           onClose={() => setShowCSVImport(false)}
@@ -907,6 +938,164 @@ function EditableCell({ value, dealId, field, onSave, className, format, type = 
     >
       {display}
     </span>
+  )
+}
+
+/* ============ Deal Viewer (Read-Only) ============ */
+function DealViewer({ deal, contacts, onClose, onEdit }) {
+  const priorityColor = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
+  const stageColor = {
+    Prospect: 'bg-bg-card text-text-secondary',
+    'Proposal Sent': 'bg-warning/10 text-warning',
+    Negotiation: 'bg-accent/10 text-accent',
+    Contracted: 'bg-success/10 text-success',
+    'In Fulfillment': 'bg-success/10 text-success',
+    Renewed: 'bg-success/10 text-success',
+    Declined: 'bg-danger/10 text-danger',
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-border flex items-start justify-between gap-3 sticky top-0 bg-bg-surface z-10">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold text-text-primary truncate">{deal.brand_name}</h2>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${stageColor[deal.stage] || stageColor.Prospect}`}>{deal.stage}</span>
+              {deal.priority && <span className={`text-[10px] font-mono ${priorityColor[deal.priority]}`}>{deal.priority}</span>}
+              {deal.source && <span className="text-[10px] text-text-muted font-mono">{deal.source}</span>}
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button onClick={onEdit} className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium hover:opacity-90">Edit</button>
+            <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg">&times;</button>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5 space-y-4">
+          {/* Value + Dates */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
+              <div className="text-[10px] text-text-muted font-mono">Value</div>
+              <div className="text-lg font-semibold text-accent font-mono">{deal.value ? `$${Number(deal.value).toLocaleString()}` : '—'}</div>
+            </div>
+            <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
+              <div className="text-[10px] text-text-muted font-mono">Start</div>
+              <div className="text-sm text-text-primary font-mono">{deal.start_date || '—'}</div>
+            </div>
+            <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
+              <div className="text-[10px] text-text-muted font-mono">End</div>
+              <div className="text-sm text-text-primary font-mono">{deal.end_date || '—'}</div>
+            </div>
+          </div>
+
+          {/* Contacts */}
+          <div>
+            <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">Contacts ({contacts.length || (deal.contact_name ? 1 : 0)})</div>
+            {contacts.length > 0 ? (
+              <div className="space-y-2">
+                {contacts.map((c, i) => (
+                  <div key={c.id || i} className="bg-bg-card border border-border rounded-lg p-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-text-primary font-medium">{c.first_name} {c.last_name}</span>
+                      {c.is_primary && <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-accent text-bg-primary">Primary</span>}
+                    </div>
+                    {c.position && <div className="text-xs text-text-secondary mt-0.5">{c.position}</div>}
+                    <div className="flex gap-3 mt-1.5 flex-wrap">
+                      {c.email && <a href={`mailto:${c.email}`} className="text-xs text-accent hover:underline">{c.email}</a>}
+                      {c.phone && <a href={`tel:${c.phone}`} className="text-xs text-accent hover:underline">{c.phone}</a>}
+                      {c.linkedin && (
+                        <a href={c.linkedin.startsWith('http') ? c.linkedin : `https://${c.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline">
+                          LinkedIn &rarr;
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : deal.contact_name ? (
+              <div className="bg-bg-card border border-border rounded-lg p-3">
+                <span className="text-sm text-text-primary">{deal.contact_name}</span>
+                {deal.contact_position && <div className="text-xs text-text-secondary mt-0.5">{deal.contact_position}</div>}
+                <div className="flex gap-3 mt-1.5 flex-wrap">
+                  {deal.contact_email && <a href={`mailto:${deal.contact_email}`} className="text-xs text-accent hover:underline">{deal.contact_email}</a>}
+                  {deal.contact_phone && <a href={`tel:${deal.contact_phone}`} className="text-xs text-accent hover:underline">{deal.contact_phone}</a>}
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-text-muted bg-bg-card rounded-lg p-3 text-center">No contacts yet</div>
+            )}
+          </div>
+
+          {/* Company Info */}
+          {(deal.city || deal.state || deal.website || deal.linkedin || deal.sub_industry) && (
+            <div>
+              <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">Company Info</div>
+              <div className="bg-bg-card border border-border rounded-lg p-3 space-y-1.5">
+                {deal.sub_industry && <div className="text-xs text-text-secondary"><span className="text-text-muted">Industry:</span> {deal.sub_industry}</div>}
+                {(deal.city || deal.state) && <div className="text-xs text-text-secondary"><span className="text-text-muted">Location:</span> {[deal.city, deal.state].filter(Boolean).join(', ')}</div>}
+                {deal.website && (
+                  <div className="text-xs">
+                    <span className="text-text-muted">Website: </span>
+                    <a href={deal.website.startsWith('http') ? deal.website : `https://${deal.website}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">{deal.website}</a>
+                  </div>
+                )}
+                {deal.linkedin && (
+                  <div className="text-xs">
+                    <span className="text-text-muted">LinkedIn: </span>
+                    <a href={deal.linkedin.startsWith('http') ? deal.linkedin : `https://${deal.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Company Page &rarr;</a>
+                  </div>
+                )}
+                {deal.employees && <div className="text-xs text-text-secondary"><span className="text-text-muted">Employees:</span> {deal.employees}</div>}
+                {deal.revenue_thousands && <div className="text-xs text-text-secondary"><span className="text-text-muted">Revenue:</span> ${Number(deal.revenue_thousands).toLocaleString()}K</div>}
+              </div>
+            </div>
+          )}
+
+          {/* Deal Details */}
+          <div>
+            <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">Deal Details</div>
+            <div className="bg-bg-card border border-border rounded-lg p-3 space-y-1.5">
+              {deal.win_probability > 0 && <div className="text-xs text-text-secondary"><span className="text-text-muted">Win Probability:</span> {deal.win_probability}%</div>}
+              {deal.expected_close_date && <div className="text-xs text-text-secondary"><span className="text-text-muted">Expected Close:</span> {deal.expected_close_date}</div>}
+              {deal.renewal_date && <div className="text-xs text-text-secondary"><span className="text-text-muted">Renewal Date:</span> {deal.renewal_date}</div>}
+              {deal.is_multi_year && <div className="text-xs text-text-secondary"><span className="text-text-muted">Multi-Year:</span> {deal.deal_years} years</div>}
+              {deal.tags?.length > 0 && (
+                <div className="flex gap-1 flex-wrap mt-1">
+                  {deal.tags.map((t, i) => <span key={i} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-bg-surface text-text-muted">{t}</span>)}
+                </div>
+              )}
+              {deal.date_added && <div className="text-xs text-text-secondary"><span className="text-text-muted">Added:</span> {deal.date_added}</div>}
+              {deal.last_contacted && <div className="text-xs text-text-secondary"><span className="text-text-muted">Last Contacted:</span> {deal.last_contacted}</div>}
+            </div>
+          </div>
+
+          {/* Notes */}
+          {deal.notes && (
+            <div>
+              <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">Notes</div>
+              <div className="bg-bg-card border border-border rounded-lg p-3 text-xs text-text-secondary whitespace-pre-wrap">{deal.notes}</div>
+            </div>
+          )}
+
+          {/* Annual Revenue (multi-year) */}
+          {deal.annual_values && Object.keys(deal.annual_values).length > 0 && (
+            <div>
+              <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">Revenue by Year</div>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.entries(deal.annual_values).map(([year, val]) => (
+                  <div key={year} className="bg-bg-card border border-border rounded p-2 text-center">
+                    <div className="text-[10px] text-text-muted font-mono">{year}</div>
+                    <div className="text-sm text-accent font-mono">${Number(val).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 

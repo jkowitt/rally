@@ -5,6 +5,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail } from '@/lib/claude'
+import { usePlanLimits } from '@/hooks/usePlanLimits'
+import UpgradeGate, { UsageBadge } from '@/components/UpgradeGate'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
@@ -787,6 +789,7 @@ function EditableCell({ value, dealId, field, onSave, className, format, type = 
 function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel, saving }) {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const planLimits = usePlanLimits()
   const [activeTab, setActiveTab] = useState('contacts')
   const [enriching, setEnriching] = useState(null) // index of contact being enriched
   const [enrichResult, setEnrichResult] = useState(null)
@@ -928,7 +931,12 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
 
   async function aiResearchDealContacts() {
     if (!form.brand_name) return
+    if (!planLimits.canUse('contact_research')) {
+      toast({ title: 'Contact research limit reached', description: 'Upgrade your plan for more contact searches', type: 'warning' })
+      return
+    }
     setAiResearching(true)
+    planLimits.trackUsage('contact_research')
     try {
       const data = await researchContacts({
         company_name: form.brand_name,
@@ -1558,7 +1566,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                       Researching...
                     </>
                   ) : (
-                    <>✦ AI Find Contacts</>
+                    <>✦ AI Find Contacts <UsageBadge action="contact_research" /></>
                   )}
                 </button>
               </div>
@@ -2626,6 +2634,7 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
 
 /* ============ Prospect Finder - AI-Powered Prospect Search & Discovery ============ */
 function ProspectFinder({ propertyId, onClose, onAdded }) {
+  const planLimits = usePlanLimits()
   const [tab, setTab] = useState('search') // search | suggestions
   const [searchQuery, setSearchQuery] = useState('')
   const [searchCategory, setSearchCategory] = useState('')
@@ -2639,8 +2648,13 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
 
   async function handleSearch() {
     if (!searchQuery.trim() && !searchCategory) return
+    if (!planLimits.canUse('prospect_search')) {
+      setStatus('Prospect search limit reached. Upgrade your plan for more searches.')
+      return
+    }
     setLoading(true)
     setStatus('Searching for prospects...')
+    planLimits.trackUsage('prospect_search')
     setResults([])
     setResearchedContacts({})
     setAddedIdxs(new Set())

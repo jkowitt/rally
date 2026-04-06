@@ -153,6 +153,8 @@ export default function LoginPage() {
           state: propertyState || null,
           plan: 'free',
           billing_email: email,
+          trial_started_at: new Date().toISOString(),
+          trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
         }).select().single()
         if (propErr) throw propErr
 

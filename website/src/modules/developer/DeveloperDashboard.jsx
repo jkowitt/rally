@@ -215,18 +215,36 @@ export default function DeveloperDashboard() {
       {/* OVERVIEW */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Recent Users */}
-          <Panel title="Recent Users">
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {profiles?.slice(0, 10).map(p => (
-                <div key={p.id} className="flex items-center justify-between py-1.5">
-                  <div>
-                    <span className="text-sm text-text-primary">{p.full_name || p.email || p.id.slice(0, 8)}</span>
-                    <span className="text-xs text-text-muted ml-2">{p.properties?.name || 'No property'}</span>
+          {/* All Signups */}
+          <Panel title={`All Signups (${profiles?.length || 0})`}>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {profiles?.map(p => (
+                <div key={p.id} className="flex items-center justify-between py-1.5 group">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-text-primary truncate">{p.full_name || p.email || p.id.slice(0, 8)}</span>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${roleColor[p.role]}`}>{p.role}</span>
+                    </div>
+                    <div className="flex gap-2 text-[10px] text-text-muted">
+                      <span>{p.properties?.name || 'No property'}</span>
+                      <span>{p.email}</span>
+                      <span>{p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}</span>
+                    </div>
                   </div>
-                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${roleColor[p.role]}`}>{p.role}</span>
+                  <select
+                    value={p.properties?.plan || 'free'}
+                    onChange={(e) => {
+                      if (p.property_id) updatePropertyMutation.mutate({ id: p.property_id, updates: { plan: e.target.value } })
+                    }}
+                    className="bg-bg-card border border-border rounded px-1.5 py-0.5 text-[10px] text-text-primary focus:outline-none focus:border-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    {PLANS.map(plan => <option key={plan} value={plan}>{plan}</option>)}
+                  </select>
                 </div>
               ))}
+              {(!profiles || profiles.length === 0) && (
+                <div className="text-text-muted text-xs text-center py-4">No signups yet</div>
+              )}
             </div>
           </Panel>
 

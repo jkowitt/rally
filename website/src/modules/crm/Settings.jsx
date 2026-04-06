@@ -5,10 +5,10 @@ import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { supabase } from '@/lib/supabase'
 
 const PLANS = [
-  { id: 'free', name: 'Free', price: '$0', period: 'forever', users: 3, features: ['CRM Pipeline', '50 deals', '5 AI researches/mo', 'Basic reports'] },
-  { id: 'starter', name: 'Starter', price: '$49', period: '/month', users: 10, features: ['Everything in Free', 'Unlimited deals', '50 AI researches/mo', 'Events module', 'Email support'], recommended: false },
-  { id: 'pro', name: 'Pro', price: '$149', period: '/month', users: 'Unlimited', features: ['Everything in Starter', 'All modules', '200 AI researches/mo', 'Apollo + Hunter enrichment', 'PowerPoint reports', 'Priority support'], recommended: true },
-  { id: 'enterprise', name: 'Enterprise', price: 'Custom', period: '', users: 'Unlimited', features: ['Everything in Pro', 'White-label branding', 'API access', 'Custom integrations', 'Dedicated support', 'SLA guarantee'] },
+  { id: 'free', name: 'Free', price: '$0', period: '7-day trial', users: 3, features: ['CRM Pipeline (15 deals)', '3 prospect searches/mo', '3 contact researches/mo', '2 contract uploads/mo', 'Basic CSV export'] },
+  { id: 'starter', name: 'Starter', price: '$49', period: '/month', users: 10, features: ['Everything in Free', '500 deals', '50 prospect searches/mo', '50 contact researches/mo', '25 contract uploads/mo', 'Events module', 'AI insights', 'Fulfillment reports', 'Team goals', 'Bulk import'] },
+  { id: 'pro', name: 'Pro', price: '$149', period: '/month', users: 'Unlimited', features: ['Everything in Starter', 'All modules', '200 prospect searches/mo', '200 contact researches/mo', 'Unlimited contracts', 'Verified contacts (Apollo)', 'Email verification (Hunter)', 'PowerPoint reports', 'Custom dashboard eligible', 'Priority support'], recommended: true },
+  { id: 'enterprise', name: 'Enterprise', price: 'Custom', period: '', users: 'Unlimited', features: ['Everything in Pro', 'Unlimited everything', 'White-label dashboard', 'Custom integrations', 'API access', 'Dedicated support', 'SLA guarantee'] },
 ]
 
 export default function Settings() {

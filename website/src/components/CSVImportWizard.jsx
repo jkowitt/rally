@@ -5,11 +5,13 @@ import { useToast } from '@/components/Toast'
 
 const DEAL_FIELDS = [
   { key: 'brand_name', label: 'Company / Brand Name', required: true },
-  { key: 'contact_first_name', label: 'Contact First Name' },
-  { key: 'contact_last_name', label: 'Contact Last Name' },
+  { key: 'full_name', label: 'Full Name' },
+  { key: 'contact_first_name', label: 'First Name' },
+  { key: 'contact_last_name', label: 'Last Name' },
   { key: 'contact_email', label: 'Email' },
   { key: 'contact_phone', label: 'Phone' },
   { key: 'contact_position', label: 'Title / Position' },
+  { key: 'linkedin', label: 'LinkedIn' },
   { key: 'value', label: 'Deal Value ($)' },
   { key: 'source', label: 'Source' },
   { key: 'notes', label: 'Notes' },
@@ -20,17 +22,46 @@ const DEAL_FIELDS = [
   { key: 'skip', label: '— Skip this column —' },
 ]
 
+// Fuzzy column matcher — recognizes many variations
+function matchColumn(header) {
+  const h = header.toLowerCase().trim()
+  const rules = [
+    { key: 'brand_name', patterns: ['company', 'brand', 'organization', 'org', 'employer', 'business', 'account'] },
+    { key: 'full_name', patterns: ['full name', 'name', 'contact name', 'person'] },
+    { key: 'contact_first_name', patterns: ['first name', 'first', 'firstname', 'given name', 'given'] },
+    { key: 'contact_last_name', patterns: ['last name', 'last', 'lastname', 'surname', 'family name', 'family'] },
+    { key: 'contact_email', patterns: ['email', 'e-mail', 'mail', 'email address'] },
+    { key: 'contact_phone', patterns: ['phone', 'telephone', 'mobile', 'cell', 'direct', 'phone number', 'tel'] },
+    { key: 'contact_position', patterns: ['title', 'position', 'role', 'job title', 'job', 'designation'] },
+    { key: 'linkedin', patterns: ['linkedin', 'linked in', 'linkedin url', 'linkedin profile', 'li url', 'li profile'] },
+    { key: 'value', patterns: ['value', 'amount', 'revenue', 'deal value', 'price', 'budget', 'annual revenue'] },
+    { key: 'city', patterns: ['city', 'town', 'location'] },
+    { key: 'state', patterns: ['state', 'province', 'region', 'st'] },
+    { key: 'website', patterns: ['website', 'url', 'web', 'site', 'domain', 'company website'] },
+    { key: 'sub_industry', patterns: ['industry', 'sector', 'category', 'sub-industry', 'sub industry', 'vertical'] },
+    { key: 'source', patterns: ['source', 'lead source', 'referral', 'origin'] },
+    { key: 'notes', patterns: ['notes', 'note', 'comments', 'description', 'memo'] },
+  ]
+  for (const rule of rules) {
+    for (const pattern of rule.patterns) {
+      if (h === pattern || h.includes(pattern)) return rule.key
+    }
+  }
+  return 'skip'
+}
+
 export default function CSVImportWizard({ onClose, onImported }) {
   const { profile } = useAuth()
   const { toast } = useToast()
   const propertyId = profile?.property_id
   const fileRef = useRef(null)
-  const [step, setStep] = useState(1) // 1=upload, 2=map, 3=preview, 4=importing
+  const [step, setStep] = useState(1)
   const [rawData, setRawData] = useState([])
   const [headers, setHeaders] = useState([])
   const [mapping, setMapping] = useState({})
   const [importing, setImporting] = useState(false)
   const [importCount, setImportCount] = useState(0)
+  const [importStats, setImportStats] = useState({ deals: 0, contacts: 0, skipped: 0 })
 
   function parseCSV(text) {
     const lines = text.split('\n').filter(l => l.trim())
@@ -54,28 +85,9 @@ export default function CSVImportWizard({ onClose, onImported }) {
       const { headers: h, rows } = parseCSV(reader.result)
       setHeaders(h)
       setRawData(rows)
-      // Auto-map by matching header names
+      // Auto-map using fuzzy matcher
       const autoMap = {}
-      h.forEach((header, i) => {
-        const lower = header.toLowerCase()
-        const match = DEAL_FIELDS.find(f =>
-          f.key !== 'skip' && (
-            lower.includes(f.key.replace(/_/g, ' ')) ||
-            lower.includes(f.label.toLowerCase()) ||
-            (f.key === 'brand_name' && (lower.includes('company') || lower.includes('brand'))) ||
-            (f.key === 'contact_email' && lower.includes('email')) ||
-            (f.key === 'contact_phone' && (lower.includes('phone') || lower.includes('mobile'))) ||
-            (f.key === 'contact_first_name' && lower.includes('first')) ||
-            (f.key === 'contact_last_name' && lower.includes('last')) ||
-            (f.key === 'contact_position' && (lower.includes('title') || lower.includes('position'))) ||
-            (f.key === 'value' && (lower.includes('value') || lower.includes('amount') || lower.includes('revenue'))) ||
-            (f.key === 'website' && (lower.includes('website') || lower.includes('url'))) ||
-            (f.key === 'city' && lower.includes('city')) ||
-            (f.key === 'state' && (lower.includes('state') || lower.includes('province')))
-          )
-        )
-        autoMap[i] = match?.key || 'skip'
-      })
+      h.forEach((header, i) => { autoMap[i] = matchColumn(header) })
       setMapping(autoMap)
       setStep(2)
     }
@@ -87,57 +99,157 @@ export default function CSVImportWizard({ onClose, onImported }) {
       const mapped = {}
       headers.forEach((h, i) => {
         const field = mapping[i]
-        if (field && field !== 'skip') {
-          mapped[field] = row[h]
-        }
+        if (field && field !== 'skip') mapped[field] = row[h]
       })
+      // Handle full_name → split into first/last
+      if (mapped.full_name && !mapped.contact_first_name) {
+        const parts = mapped.full_name.trim().split(/\s+/)
+        mapped.contact_first_name = parts[0] || ''
+        mapped.contact_last_name = parts.slice(1).join(' ') || ''
+      }
       return mapped
-    }).filter(r => r.brand_name)
+    }).filter(r => r.brand_name || r.contact_first_name || r.contact_email)
+  }
+
+  // Group by company — multiple contacts at same company become one deal
+  function getGroupedData() {
+    const data = getMappedData()
+    const groups = new Map()
+    for (const row of data) {
+      const key = (row.brand_name || '').toLowerCase().trim()
+      if (!key) continue
+      if (!groups.has(key)) {
+        groups.set(key, {
+          brand_name: row.brand_name,
+          city: row.city,
+          state: row.state,
+          website: row.website,
+          linkedin: row.linkedin,
+          sub_industry: row.sub_industry,
+          value: row.value,
+          source: row.source,
+          notes: row.notes,
+          contacts: [],
+        })
+      }
+      const group = groups.get(key)
+      // Merge company-level fields from subsequent rows
+      if (row.city && !group.city) group.city = row.city
+      if (row.state && !group.state) group.state = row.state
+      if (row.website && !group.website) group.website = row.website
+      if (row.sub_industry && !group.sub_industry) group.sub_industry = row.sub_industry
+      if (row.value && !group.value) group.value = row.value
+      // Add contact if has name or email
+      if (row.contact_first_name || row.contact_last_name || row.contact_email) {
+        group.contacts.push({
+          first_name: row.contact_first_name || '',
+          last_name: row.contact_last_name || '',
+          email: row.contact_email || '',
+          phone: row.contact_phone || '',
+          position: row.contact_position || '',
+          linkedin: row.linkedin || '',
+        })
+      }
+    }
+    return Array.from(groups.values())
   }
 
   async function handleImport() {
-    const data = getMappedData()
-    if (!data.length) return
+    const groups = getGroupedData()
+    if (!groups.length) return
     setImporting(true)
     setStep(4)
-    let count = 0
-    for (const row of data) {
-      try {
+    let dealCount = 0, contactCount = 0, skipped = 0
+
+    for (const group of groups) {
+      // Check if deal already exists by brand_name
+      const { data: existing } = await supabase
+        .from('deals')
+        .select('id')
+        .eq('property_id', propertyId)
+        .ilike('brand_name', group.brand_name.trim())
+        .limit(1)
+
+      let dealId
+      if (existing?.length > 0) {
+        // Deal exists — just add contacts
+        dealId = existing[0].id
+        skipped++
+      } else {
+        // Create new deal
         const deal = {
           property_id: propertyId,
-          brand_name: row.brand_name,
-          contact_first_name: row.contact_first_name || null,
-          contact_last_name: row.contact_last_name || null,
-          contact_name: [row.contact_first_name, row.contact_last_name].filter(Boolean).join(' ') || null,
-          contact_email: row.contact_email || null,
-          contact_phone: row.contact_phone || null,
-          contact_position: row.contact_position || null,
-          value: row.value ? Number(String(row.value).replace(/[$,]/g, '')) || null : null,
-          source: row.source || 'Other',
-          notes: row.notes || null,
+          brand_name: group.brand_name,
+          contact_first_name: group.contacts[0]?.first_name || null,
+          contact_last_name: group.contacts[0]?.last_name || null,
+          contact_name: [group.contacts[0]?.first_name, group.contacts[0]?.last_name].filter(Boolean).join(' ') || null,
+          contact_email: group.contacts[0]?.email || null,
+          contact_phone: group.contacts[0]?.phone || null,
+          contact_position: group.contacts[0]?.position || null,
           stage: 'Prospect',
           date_added: new Date().toISOString().split('T')[0],
+          source: group.source || 'Other',
+          notes: group.notes || null,
         }
-        // Try with extra fields, fall back without
         const extras = {}
-        if (row.city) extras.city = row.city
-        if (row.state) extras.state = row.state
-        if (row.website) extras.website = row.website
-        if (row.sub_industry) extras.sub_industry = row.sub_industry
-        const { error } = await supabase.from('deals').insert({ ...deal, ...extras })
+        if (group.city) extras.city = group.city
+        if (group.state) extras.state = group.state
+        if (group.website) extras.website = group.website
+        if (group.linkedin) extras.linkedin = group.linkedin
+        if (group.sub_industry) extras.sub_industry = group.sub_industry
+        if (group.value) extras.value = Number(String(group.value).replace(/[$,\s]/g, '')) || null
+
+        const { data: newDeal, error } = await supabase.from('deals').insert({ ...deal, ...extras }).select('id').single()
         if (error) {
-          await supabase.from('deals').insert(deal)
+          const { data: fallback } = await supabase.from('deals').insert(deal).select('id').single()
+          dealId = fallback?.id
+        } else {
+          dealId = newDeal.id
         }
-        count++
-        setImportCount(count)
-      } catch (e) { console.warn(e) }
+        if (dealId) dealCount++
+      }
+
+      // Add contacts to the deal
+      if (dealId && group.contacts.length > 0) {
+        for (const c of group.contacts) {
+          if (!c.first_name && !c.email) continue
+          // Check for duplicate contact
+          const { data: existingContact } = await supabase
+            .from('contacts')
+            .select('id')
+            .eq('deal_id', dealId)
+            .eq('email', c.email || '__none__')
+            .limit(1)
+          if (existingContact?.length > 0) continue
+
+          try {
+            await supabase.from('contacts').insert({
+              property_id: propertyId,
+              deal_id: dealId,
+              first_name: c.first_name || '',
+              last_name: c.last_name || null,
+              email: c.email || null,
+              phone: c.phone || null,
+              position: c.position || null,
+              company: group.brand_name,
+              linkedin: c.linkedin || null,
+              is_primary: group.contacts.indexOf(c) === 0,
+            })
+            contactCount++
+          } catch (e) { console.warn(e) }
+        }
+      }
+
+      setImportCount(dealCount + skipped)
+      setImportStats({ deals: dealCount, contacts: contactCount, skipped })
     }
-    toast({ title: `${count} deals imported`, type: 'success' })
-    onImported?.(count)
+
+    toast({ title: `${dealCount} new deals, ${contactCount} contacts, ${skipped} existing updated`, type: 'success' })
+    onImported?.(dealCount)
     setImporting(false)
   }
 
-  const previewData = step >= 3 ? getMappedData().slice(0, 5) : []
+  const grouped = step >= 3 ? getGroupedData() : []
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
@@ -145,7 +257,7 @@ export default function CSVImportWizard({ onClose, onImported }) {
         <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between">
           <div>
             <h2 className="text-base sm:text-lg font-semibold text-text-primary">Import CSV</h2>
-            <p className="text-[10px] sm:text-xs text-text-muted">Step {step} of 4</p>
+            <p className="text-[10px] sm:text-xs text-text-muted">Step {step} of 4 &middot; Auto-groups contacts by company &middot; Skips duplicates</p>
           </div>
           <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg">&times;</button>
         </div>
@@ -155,19 +267,19 @@ export default function CSVImportWizard({ onClose, onImported }) {
           {step === 1 && (
             <div className="text-center py-8">
               <div className="text-3xl mb-3">📄</div>
-              <p className="text-sm text-text-secondary mb-4">Upload a CSV or Excel export with your prospect data</p>
+              <p className="text-sm text-text-secondary mb-2">Upload a CSV with your prospect data</p>
+              <p className="text-xs text-text-muted mb-4">Columns are auto-detected. Multiple contacts at the same company are grouped into one deal.</p>
               <button onClick={() => fileRef.current?.click()} className="bg-accent text-bg-primary px-6 py-2.5 rounded text-sm font-medium hover:opacity-90">
                 Choose CSV File
               </button>
               <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" onChange={handleFile} className="hidden" />
-              <p className="text-[10px] text-text-muted mt-3">Supports CSV, TSV, and tab-delimited files</p>
             </div>
           )}
 
           {/* Step 2: Map columns */}
           {step === 2 && (
             <div className="space-y-3">
-              <p className="text-xs text-text-muted">Map each column to a field. Auto-detected mappings are pre-selected.</p>
+              <p className="text-xs text-text-muted">Columns auto-matched. Adjust if needed. "Full Name" will be split into first/last automatically.</p>
               {headers.map((header, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span className="text-xs text-text-primary font-mono w-1/3 truncate" title={header}>{header}</span>
@@ -175,7 +287,9 @@ export default function CSVImportWizard({ onClose, onImported }) {
                   <select
                     value={mapping[i] || 'skip'}
                     onChange={(e) => setMapping({ ...mapping, [i]: e.target.value })}
-                    className="flex-1 bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+                    className={`flex-1 bg-bg-card border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent ${
+                      mapping[i] === 'skip' ? 'border-border text-text-muted' : 'border-accent/50'
+                    }`}
                   >
                     {DEAL_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
                   </select>
@@ -188,34 +302,34 @@ export default function CSVImportWizard({ onClose, onImported }) {
             </div>
           )}
 
-          {/* Step 3: Preview */}
+          {/* Step 3: Preview — grouped by company */}
           {step === 3 && (
             <div className="space-y-3">
-              <p className="text-xs text-text-muted">{getMappedData().length} rows will be imported. Preview of first 5:</p>
-              <div className="overflow-x-auto">
-                <table className="text-xs w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      {Object.keys(previewData[0] || {}).map(k => (
-                        <th key={k} className="px-2 py-1 text-left text-text-muted font-mono">{k}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewData.map((row, i) => (
-                      <tr key={i} className="border-b border-border/50">
-                        {Object.values(row).map((v, j) => (
-                          <td key={j} className="px-2 py-1 text-text-primary truncate max-w-[150px]">{v}</td>
-                        ))}
-                      </tr>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-text-muted">{grouped.length} companies, {grouped.reduce((s, g) => s + g.contacts.length, 0)} contacts</p>
+                <span className="text-[10px] text-accent font-mono">Grouped by company</span>
+              </div>
+              <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+                {grouped.slice(0, 20).map((g, i) => (
+                  <div key={i} className="bg-bg-card border border-border rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-text-primary font-medium">{g.brand_name}</span>
+                      <span className="text-[10px] text-text-muted font-mono">{g.contacts.length} contact{g.contacts.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    {g.contacts.slice(0, 3).map((c, ci) => (
+                      <div key={ci} className="text-xs text-text-muted mt-1">
+                        {[c.first_name, c.last_name].filter(Boolean).join(' ')} {c.position && `— ${c.position}`} {c.email && `(${c.email})`}
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                    {g.contacts.length > 3 && <div className="text-[10px] text-text-muted mt-1">+{g.contacts.length - 3} more</div>}
+                  </div>
+                ))}
+                {grouped.length > 20 && <div className="text-xs text-text-muted text-center">+{grouped.length - 20} more companies</div>}
               </div>
               <div className="flex gap-3 pt-3">
                 <button onClick={() => setStep(2)} className="flex-1 bg-bg-card text-text-secondary py-2 rounded text-sm">Back</button>
                 <button onClick={handleImport} className="flex-1 bg-accent text-bg-primary py-2 rounded text-sm font-medium hover:opacity-90">
-                  Import {getMappedData().length} Deals
+                  Import {grouped.length} Companies
                 </button>
               </div>
             </div>
@@ -227,15 +341,23 @@ export default function CSVImportWizard({ onClose, onImported }) {
               {importing ? (
                 <>
                   <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-3"></div>
-                  <p className="text-sm text-text-muted">Importing... {importCount} of {rawData.length}</p>
+                  <p className="text-sm text-text-muted">Importing... {importCount} of {getGroupedData().length} companies</p>
                   <div className="w-48 mx-auto bg-bg-card rounded-full h-1.5 mt-3">
-                    <div className="bg-accent rounded-full h-1.5 transition-all" style={{ width: `${(importCount / rawData.length) * 100}%` }} />
+                    <div className="bg-accent rounded-full h-1.5 transition-all" style={{ width: `${(importCount / (getGroupedData().length || 1)) * 100}%` }} />
+                  </div>
+                  <div className="text-[10px] text-text-muted mt-2 font-mono">
+                    {importStats.deals} new &middot; {importStats.contacts} contacts &middot; {importStats.skipped} existing
                   </div>
                 </>
               ) : (
                 <>
                   <div className="text-3xl mb-3">✅</div>
-                  <p className="text-sm text-text-primary font-medium">{importCount} deals imported successfully!</p>
+                  <p className="text-sm text-text-primary font-medium">Import complete!</p>
+                  <div className="text-xs text-text-muted mt-2 space-y-0.5">
+                    <div>{importStats.deals} new deals created</div>
+                    <div>{importStats.contacts} contacts added</div>
+                    {importStats.skipped > 0 && <div>{importStats.skipped} existing companies updated with new contacts</div>}
+                  </div>
                   <button onClick={onClose} className="bg-accent text-bg-primary px-6 py-2 rounded text-sm font-medium mt-4 hover:opacity-90">Done</button>
                 </>
               )}

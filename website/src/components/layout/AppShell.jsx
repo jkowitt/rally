@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import GlobalSearch from '../GlobalSearch'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 
+const FeatureSuggestion = lazy(() => import('../FeatureSuggestion'))
+
 export default function AppShell({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showSuggestion, setShowSuggestion] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const location = useLocation()
 
@@ -36,6 +39,13 @@ export default function AppShell({ children }) {
     }
     return () => { document.body.style.overflow = '' }
   }, [mobileMenuOpen])
+
+  // Listen for suggestion modal trigger
+  useEffect(() => {
+    const handler = () => setShowSuggestion(true)
+    window.addEventListener('open-suggestion', handler)
+    return () => window.removeEventListener('open-suggestion', handler)
+  }, [])
 
   return (
     <div className="min-h-screen bg-bg-primary flex">
@@ -76,6 +86,13 @@ export default function AppShell({ children }) {
         {/* Mobile bottom nav */}
         <MobileBottomNav />
       </div>
+
+      {/* Feature suggestion modal */}
+      {showSuggestion && (
+        <Suspense fallback={null}>
+          <FeatureSuggestion onClose={() => setShowSuggestion(false)} />
+        </Suspense>
+      )}
     </div>
   )
 }

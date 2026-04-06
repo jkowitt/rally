@@ -173,8 +173,14 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
 
       {/* User */}
       {showLabels && (
-        <div className="border-t border-border px-4 py-3">
-          <div className="text-xs text-text-muted font-mono">v0.1.0</div>
+        <div className="border-t border-border px-4 py-3 space-y-2">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('open-suggestion'))}
+            className="w-full text-left text-[10px] text-text-muted hover:text-accent font-mono transition-colors"
+          >
+            💡 Suggest a Feature
+          </button>
+          <div className="text-[10px] text-text-muted font-mono">v1.0.0</div>
         </div>
       )}
     </aside>

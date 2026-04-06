@@ -17,6 +17,7 @@ export default function DeveloperDashboard() {
   const [activeTab, setActiveTab] = useState('overview')
   const [editingUser, setEditingUser] = useState(null)
   const [showInvite, setShowInvite] = useState(false)
+  const [runningAnalysis, setRunningAnalysis] = useState(false)
 
   if (!isDeveloper) return <Navigate to="/app" replace />
 
@@ -54,6 +55,49 @@ export default function DeveloperDashboard() {
       return grouped
     },
   })
+
+  // Code analysis reports
+  const { data: analysisReports } = useQuery({
+    queryKey: ['dev-analysis'],
+    queryFn: async () => {
+      const { data } = await supabase.from('code_analysis_reports').select('*').order('run_date', { ascending: false }).limit(14)
+      return data || []
+    },
+  })
+
+  // Feature suggestions
+  const { data: suggestions } = useQuery({
+    queryKey: ['dev-suggestions'],
+    queryFn: async () => {
+      const { data } = await supabase.from('feature_suggestions').select('*').order('created_at', { ascending: false })
+      return data || []
+    },
+  })
+
+  const updateSuggestionMutation = useMutation({
+    mutationFn: async ({ id, updates }) => {
+      const { error } = await supabase.from('feature_suggestions').update(updates).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dev-suggestions'] })
+      toast({ title: 'Suggestion updated', type: 'success' })
+    },
+  })
+
+  async function runCodeAnalysis() {
+    setRunningAnalysis(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('code-analysis', { body: { action: 'run_analysis' } })
+      if (error) throw error
+      if (data?.error) toast({ title: 'Analysis error', description: data.error, type: 'warning' })
+      else toast({ title: 'Analysis complete', type: 'success' })
+      queryClient.invalidateQueries({ queryKey: ['dev-analysis'] })
+    } catch (e) {
+      toast({ title: 'Analysis failed', description: e.message, type: 'error' })
+    }
+    setRunningAnalysis(false)
+  }
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }) => {
@@ -107,6 +151,8 @@ export default function DeveloperDashboard() {
     { id: 'users', label: `Users (${profiles?.length || 0})` },
     { id: 'flags', label: 'Feature Flags' },
     { id: 'api', label: 'API Usage' },
+    { id: 'health', label: `Code Health (${analysisReports?.length || 0})` },
+    { id: 'suggestions', label: `Suggestions (${suggestions?.filter(s => s.status === 'new').length || 0})` },
   ]
 
   const roleColor = { developer: 'bg-accent/20 text-accent', admin: 'bg-warning/20 text-warning', rep: 'bg-bg-card text-text-muted' }
@@ -374,6 +420,131 @@ export default function DeveloperDashboard() {
               ))}
             </div>
           </Panel>
+        </div>
+      )}
+
+      {/* CODE HEALTH */}
+      {activeTab === 'health' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-text-muted">Automated code analysis runs twice daily. Reports include working modules, issues, and AI-suggested improvements.</p>
+            <button
+              onClick={runCodeAnalysis}
+              disabled={runningAnalysis}
+              className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50 shrink-0"
+            >
+              {runningAnalysis ? 'Analyzing...' : 'Run Analysis Now'}
+            </button>
+          </div>
+          {analysisReports?.map(report => (
+            <div key={report.id} className="bg-bg-surface border border-border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-text-primary">{report.run_date}</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-bg-card text-text-muted">{report.run_time}</span>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${report.status === 'completed' ? 'bg-success/10 text-success' : report.status === 'failed' ? 'bg-danger/10 text-danger' : 'bg-warning/10 text-warning'}`}>{report.status}</span>
+                </div>
+                {report.build_status && <span className="text-[10px] font-mono text-text-muted">Build: {report.build_status}</span>}
+              </div>
+              {report.summary && <p className="text-xs text-text-secondary mb-3">{report.summary}</p>}
+              {/* Issues */}
+              {report.issues?.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1">Issues ({report.issues.length})</div>
+                  {report.issues.map((issue, i) => (
+                    <div key={i} className={`flex items-start gap-2 py-1.5 text-xs border-l-2 pl-2 mb-1 ${
+                      issue.severity === 'critical' || issue.severity === 'high' ? 'border-l-danger' : issue.severity === 'medium' ? 'border-l-warning' : 'border-l-text-muted'
+                    }`}>
+                      <div className="flex-1">
+                        <span className="text-text-primary">[{issue.module}] {issue.description}</span>
+                        {issue.fix_suggestion && <div className="text-text-muted mt-0.5">Fix: {issue.fix_suggestion}</div>}
+                      </div>
+                      {issue.can_auto_fix && (
+                        <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-accent/10 text-accent shrink-0">auto-fixable</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Improvements */}
+              {report.improvements?.length > 0 && (
+                <div>
+                  <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1">Improvements ({report.improvements.length})</div>
+                  {report.improvements.map((imp, i) => (
+                    <div key={i} className="flex items-start justify-between py-1 text-xs">
+                      <span className="text-text-secondary">[{imp.module}] {imp.description}</span>
+                      <div className="flex gap-1 shrink-0">
+                        <span className={`text-[9px] font-mono px-1 py-0.5 rounded ${imp.impact === 'high' ? 'bg-success/10 text-success' : 'bg-bg-card text-text-muted'}`}>{imp.impact}</span>
+                        <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-bg-card text-text-muted">{imp.effort}</span>
+                        {imp.from_user_suggestion && <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-accent/10 text-accent">user req</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          {(!analysisReports || analysisReports.length === 0) && (
+            <div className="text-center text-text-muted text-sm py-12 bg-bg-surface border border-border rounded-lg">
+              No analysis reports yet. Click "Run Analysis Now" to generate your first report.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* FEATURE SUGGESTIONS */}
+      {activeTab === 'suggestions' && (
+        <div className="space-y-3">
+          <div className="flex gap-2 flex-wrap text-xs">
+            <span className="text-text-muted font-mono">
+              {suggestions?.length || 0} total &middot;
+              {suggestions?.filter(s => s.status === 'new').length || 0} new &middot;
+              {suggestions?.filter(s => s.status === 'planned').length || 0} planned &middot;
+              {suggestions?.filter(s => s.contact_me).length || 0} want contact
+            </span>
+          </div>
+          {suggestions?.map(s => {
+            const statusColors = {
+              new: 'bg-accent/10 text-accent', reviewed: 'bg-bg-card text-text-muted',
+              planned: 'bg-success/10 text-success', in_progress: 'bg-warning/10 text-warning',
+              completed: 'bg-success/10 text-success', declined: 'bg-danger/10 text-danger',
+            }
+            const priorityColors = { critical: 'text-danger', important: 'text-warning', nice_to_have: 'text-text-muted' }
+            return (
+              <div key={s.id} className="bg-bg-surface border border-border rounded-lg p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-sm font-medium text-text-primary">{s.title}</span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-bg-card text-text-muted">{s.category}</span>
+                      <span className={`text-[9px] font-mono ${priorityColors[s.priority]}`}>{s.priority?.replace(/_/g, ' ')}</span>
+                    </div>
+                    <p className="text-xs text-text-secondary mb-2">{s.description}</p>
+                    <div className="flex gap-3 text-[10px] text-text-muted">
+                      <span>{s.user_name}</span>
+                      <span>{s.user_email}</span>
+                      {s.contact_me && <span className="text-accent">Wants contact</span>}
+                      <span>{new Date(s.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <select
+                    value={s.status}
+                    onChange={(e) => updateSuggestionMutation.mutate({ id: s.id, updates: { status: e.target.value } })}
+                    className="bg-bg-card border border-border rounded px-2 py-1 text-[10px] text-text-primary focus:outline-none focus:border-accent shrink-0"
+                  >
+                    {['new', 'reviewed', 'planned', 'in_progress', 'completed', 'declined'].map(st => (
+                      <option key={st} value={st}>{st.replace(/_/g, ' ')}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )
+          })}
+          {(!suggestions || suggestions.length === 0) && (
+            <div className="text-center text-text-muted text-sm py-12 bg-bg-surface border border-border rounded-lg">
+              No feature suggestions yet. Users can submit from the sidebar.
+            </div>
+          )}
         </div>
       )}
     </div>

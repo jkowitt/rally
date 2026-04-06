@@ -4,12 +4,28 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 
 const PROPERTY_TYPES = [
-  { value: 'college', label: 'College / University' },
-  { value: 'professional', label: 'Professional Team' },
-  { value: 'minor_league', label: 'Minor League / Independent' },
-  { value: 'agency', label: 'Agency / Company' },
-  { value: 'other', label: 'Other' },
+  { group: 'Sports', items: [
+    { value: 'college', label: 'College / University Athletics' },
+    { value: 'professional', label: 'Professional Team' },
+    { value: 'minor_league', label: 'Minor League / Independent' },
+  ]},
+  { group: 'Entertainment', items: [
+    { value: 'entertainment', label: 'Music Venue / Entertainment' },
+    { value: 'esports', label: 'Esports / Gaming Organization' },
+  ]},
+  { group: 'Events & Media', items: [
+    { value: 'conference', label: 'Conference / Trade Show' },
+    { value: 'media', label: 'Media / Publishing' },
+  ]},
+  { group: 'Other', items: [
+    { value: 'nonprofit', label: 'Nonprofit / Foundation' },
+    { value: 'realestate', label: 'Real Estate / Property Advertising' },
+    { value: 'agency', label: 'Agency / Company' },
+    { value: 'other', label: 'Other' },
+  ]},
 ]
+
+const ALL_PROPERTY_TYPES = PROPERTY_TYPES.flatMap(g => g.items)
 
 const SPORTS = ['Football', 'Basketball', 'Baseball', 'Soccer', 'Hockey', 'Lacrosse', 'Volleyball', 'Track & Field', 'Swimming', 'Tennis', 'Golf', 'Wrestling', 'Softball', 'Multi-Sport', 'Other']
 
@@ -265,7 +281,11 @@ export default function LoginPage() {
             </div>
             <input type="text" placeholder="Property / Team Name *" value={propertyName} onChange={(e) => setPropertyName(e.target.value)} required className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" autoFocus />
             <select value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent">
-              {PROPERTY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {PROPERTY_TYPES.map(g => (
+                <optgroup key={g.group} label={g.group}>
+                  {g.items.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </optgroup>
+              ))}
             </select>
             <div className="grid grid-cols-2 gap-3">
               <select value={sport} onChange={(e) => setSport(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent">

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 
 const CATEGORIES = [
   'LED Board', 'Jersey Patch', 'Radio Read', 'Social Post', 'Naming Right', 'Signage', 'Activation Space', 'Digital',
@@ -40,6 +41,9 @@ export default function AssetCatalog() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const industryConfig = useIndustryConfig()
+  const CATEGORIES = industryConfig.assetCategories
+  const CATEGORY_ICONS = industryConfig.assetIcons
   const propertyId = profile?.property_id
   const [showForm, setShowForm] = useState(false)
   const [editingAsset, setEditingAsset] = useState(null)

@@ -30,7 +30,7 @@ export function AuthProvider({ children }) {
   async function fetchProfile(userId) {
     const { data } = await supabase
       .from('profiles')
-      .select('*, properties(name, sport, conference)')
+      .select('*, properties(name, sport, conference, type, plan, logo_url)')
       .eq('id', userId)
       .single()
     setProfile(data)

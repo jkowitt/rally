@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/hooks/useAuth'
+import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 
 const navSections = [
   {
@@ -50,6 +51,8 @@ const navSections = [
 export default function Sidebar({ collapsed, onToggle, mobile }) {
   const { flags } = useFeatureFlags()
   const { isDeveloper } = useAuth()
+  const config = useIndustryConfig()
+  const moduleLabels = config.moduleLabels || {}
 
   const width = mobile ? 'w-[280px]' : collapsed ? 'w-16' : 'w-[220px]'
   const showLabels = mobile || !collapsed
@@ -78,7 +81,10 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
             <div key={section.label} className="mb-4">
               {showLabels && (
                 <div className="px-4 mb-1 text-[10px] uppercase tracking-widest text-text-muted font-mono">
-                  {section.label}
+                  {section.flag === 'sportify' ? (moduleLabels.sportify || section.label) :
+                   section.flag === 'valora' ? (moduleLabels.valora || section.label) :
+                   section.flag === 'businessnow' ? (moduleLabels.businessnow || section.label) :
+                   section.label}
                 </div>
               )}
               {section.items.map((item) => (

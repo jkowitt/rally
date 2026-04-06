@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { runValuation } from '@/lib/claude'
+import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 const CHART_COLORS = ['#E8B84B', '#52C48A', '#E0B352', '#E05252', '#8B92A8', '#6B7BFF', '#FF6B9B', '#4ECDC4']
@@ -20,6 +21,9 @@ export default function ValuationEngine() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const config = useIndustryConfig()
+  const valoraModel = config.valoraModel
+  const valoraLabel = config.moduleLabels?.valora || 'VALORA'
   const propertyId = profile?.property_id
   const [showForm, setShowForm] = useState(false)
   const [view, setView] = useState('overview') // overview | assets | pricing
@@ -163,7 +167,7 @@ export default function ValuationEngine() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">VALORA</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">{valoraLabel}</h1>
           <p className="text-text-secondary text-xs sm:text-sm mt-1">
             AI media valuation engine &middot; {valuationsTagged.length} valuations &middot; ${(totalEMV / 1000).toFixed(0)}K total EMV
           </p>

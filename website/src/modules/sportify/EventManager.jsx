@@ -5,8 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { generateICalFeed, downloadIcal } from '@/lib/ical'
+import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 
-const EVENT_TYPES = ['Game Day', 'Tournament', 'Banquet', 'Clinic', 'Fundraiser', 'Other']
+const DEFAULT_EVENT_TYPES = ['Game Day', 'Tournament', 'Banquet', 'Clinic', 'Fundraiser', 'Other']
 const STATUSES = ['Planning', 'Confirmed', 'In Progress', 'Completed']
 
 const statusColor = {
@@ -30,6 +31,8 @@ export default function EventManager() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const config = useIndustryConfig()
+  const EVENT_TYPES = config.eventTypes || DEFAULT_EVENT_TYPES
   const propertyId = profile?.property_id
   const [showForm, setShowForm] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)

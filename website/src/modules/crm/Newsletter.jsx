@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { generateWeeklyNewsletter, generateAfternoonUpdate } from '@/lib/claude'
+import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 
 function getMonday(date = new Date()) {
   const d = new Date(date)
@@ -72,6 +73,7 @@ export default function Newsletter() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const config = useIndustryConfig()
   const propertyId = profile?.property_id
   const [view, setView] = useState('latest')
   const [selectedNewsletter, setSelectedNewsletter] = useState(null)

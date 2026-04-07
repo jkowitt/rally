@@ -3,8 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
 const LIMITS = {
-  apollo: { label: 'Apollo', max: 50, icon: '🔍' },
-  hunter: { label: 'Hunter', max: 25, icon: '✉️' },
+  contact_lookup: { label: 'Contact Lookups', max: 25, icon: '👤', combineKeys: ['apollo', 'hunter'] },
   claude: { label: 'Claude AI', max: 500, icon: '🤖' },
 }
 
@@ -32,12 +31,17 @@ export default function APIUsageBanner({ compact }) {
   if (!usage) return null
 
   const services = Object.entries(LIMITS).map(([key, config]) => {
-    const used = usage[key] || 0
+    let used
+    if (config.combineKeys) {
+      used = config.combineKeys.reduce((sum, k) => sum + (usage[k] || 0), 0)
+    } else {
+      used = usage[key] || 0
+    }
     const pct = Math.round((used / config.max) * 100)
     const isWarning = pct >= 80
     const isDanger = pct >= 95
     return { key, ...config, used, pct, isWarning, isDanger }
-  }).filter(s => s.used > 0 || s.key !== 'claude') // always show apollo/hunter, claude only if used
+  }).filter(s => s.used > 0 || s.key === 'contact_lookup') // always show contact lookups
 
   if (services.length === 0) return null
 

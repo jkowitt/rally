@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 
@@ -321,11 +321,26 @@ export default function EventDetail() {
         </div>
       )}
 
-      {/* ACTIVATIONS */}
+      {/* ACTIVATIONS — GAME DAY CHECKLIST */}
       {activeTab === 'activations' && (
-        <div className="space-y-2">
+        <div className="space-y-3">
+          {/* Game Day Mode banner */}
+          {activations.length > 0 && (
+            <div className="bg-accent/5 border border-accent/20 rounded-lg p-3 flex items-center justify-between">
+              <div>
+                <div className="text-xs font-mono text-accent uppercase tracking-wider">Game Day Checklist</div>
+                <div className="text-[10px] text-text-muted mt-0.5">
+                  {activationsDone}/{activations.length} complete
+                </div>
+              </div>
+              <div className="w-24 bg-bg-card rounded-full h-2 overflow-hidden">
+                <div className={`h-2 rounded-full transition-all ${activationsDone === activations.length ? 'bg-success' : 'bg-accent'}`} style={{ width: `${activations.length ? (activationsDone / activations.length) * 100 : 0}%` }} />
+              </div>
+            </div>
+          )}
+
           {activations.map(a => (
-            <ActivationCard key={a.id} activation={a} onUpdate={(updates) => updateActivationMutation.mutate({ id: a.id, updates })} />
+            <GameDayActivationCard key={a.id} activation={a} onUpdate={(updates) => updateActivationMutation.mutate({ id: a.id, updates })} />
           ))}
           {activations.length === 0 && (
             <div className="text-center text-text-muted text-sm py-6 bg-bg-surface border border-border rounded">
@@ -500,6 +515,81 @@ function VendorCard({ vendor, onUpdate }) {
         >
           {vendor.confirmed ? '✓ Confirmed' : 'Pending'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+function GameDayActivationCard({ activation, onUpdate }) {
+  const [expanded, setExpanded] = useState(false)
+  const [proofUrl, setProofUrl] = useState('')
+  const isDone = activation.status === 'Done' || activation.completed
+  const fileRef = useRef(null)
+  const { toast } = useToast()
+
+  async function handleProofPhoto(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { toast({ title: 'File too large (max 5MB)', type: 'error' }); return }
+    const reader = new FileReader()
+    reader.onload = async () => {
+      onUpdate({ proof_photo_url: reader.result, status: 'Done', completed: true })
+      toast({ title: 'Proof uploaded & marked done', type: 'success' })
+    }
+    reader.readAsDataURL(file)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  return (
+    <div className={`bg-bg-surface border rounded-lg overflow-hidden transition-colors ${isDone ? 'border-success/30' : 'border-border'}`}>
+      <div className="p-3 flex items-start gap-3">
+        {/* Checkbox */}
+        <button
+          onClick={() => onUpdate({ status: isDone ? 'Scheduled' : 'Done', completed: !isDone })}
+          className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${isDone ? 'bg-success border-success text-white' : 'border-border hover:border-accent'}`}
+        >
+          {isDone && <span className="text-[10px]">✓</span>}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {activation.deals?.logo_url && (
+              <img src={activation.deals.logo_url} alt="" className="w-5 h-5 rounded object-cover" />
+            )}
+            <span className={`text-sm font-medium ${isDone ? 'text-text-muted line-through' : 'text-text-primary'}`}>
+              {activation.deals?.brand_name || 'Activation'}
+            </span>
+          </div>
+          {activation.activation_description && (
+            <div className={`text-xs mt-0.5 ${isDone ? 'text-text-muted' : 'text-text-secondary'}`}>{activation.activation_description}</div>
+          )}
+          <div className="flex gap-3 mt-1 text-[10px] text-text-muted font-mono flex-wrap">
+            {activation.location && <span>{activation.location}</span>}
+            {activation.asset_delivered && <span>{activation.asset_delivered}</span>}
+            {activation.quantity_delivered && <span>qty: {activation.quantity_delivered}</span>}
+          </div>
+
+          {/* Proof photo */}
+          {activation.proof_photo_url && (
+            <div className="mt-2">
+              <img src={activation.proof_photo_url} alt="Proof" className="w-24 h-24 object-cover rounded border border-border" />
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleProofPhoto} className="hidden" />
+          <button onClick={() => fileRef.current?.click()} className="text-[10px] font-mono text-accent hover:underline" title="Upload proof photo">
+            {activation.proof_photo_url ? 'Replace' : 'Photo'}
+          </button>
+          <select
+            value={activation.status || 'Scheduled'}
+            onChange={(e) => onUpdate({ status: e.target.value, completed: e.target.value === 'Done' })}
+            className={`text-[10px] font-mono px-2 py-1 rounded shrink-0 focus:outline-none ${activationStatusColor[activation.status || 'Scheduled']}`}
+          >
+            {ACTIVATION_STATUS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
       </div>
     </div>
   )

@@ -245,7 +245,91 @@ function MarkDeliveredButton({ record, onToggle }) {
 // Record row -- responsive with sm:/md: breakpoints
 // ---------------------------------------------------------------------------
 
+function ProofOfDelivery({ record, onRefresh }) {
+  const [photos, setPhotos] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef(null)
+  const { toast } = useToast()
+
+  // Fetch existing proof photos
+  const { data: media } = useQuery({
+    queryKey: ['fulfillment-media', record.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('fulfillment_media').select('*').eq('fulfillment_id', record.id).order('uploaded_at', { ascending: false })
+      return data || []
+    },
+    enabled: !!record.id,
+  })
+
+  async function handleUpload(e) {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    setUploading(true)
+    let count = 0
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) { toast({ title: `${file.name} too large (max 5MB)`, type: 'error' }); continue }
+      const reader = new FileReader()
+      const base64 = await new Promise((resolve) => {
+        reader.onload = () => resolve(reader.result)
+        reader.readAsDataURL(file)
+      })
+      const { error } = await supabase.from('fulfillment_media').insert({
+        fulfillment_id: record.id,
+        deal_id: record.deal_id || null,
+        property_id: record.contracts?.property_id || record.deals?.property_id,
+        file_url: base64,
+        file_name: file.name,
+        file_type: file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'document',
+        mime_type: file.type,
+      })
+      if (!error) count++
+    }
+    setUploading(false)
+    if (count) {
+      toast({ title: `${count} proof photo${count > 1 ? 's' : ''} uploaded`, type: 'success' })
+      onRefresh()
+    }
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  async function handleDelete(id) {
+    if (!confirm('Delete this proof photo?')) return
+    await supabase.from('fulfillment_media').delete().eq('id', id)
+    onRefresh()
+  }
+
+  const allMedia = media || []
+
+  return (
+    <div className="mt-2 space-y-2">
+      {allMedia.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {allMedia.map(m => (
+            <div key={m.id} className="relative group">
+              {m.file_type === 'image' ? (
+                <img src={m.file_url} alt={m.file_name} className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded border border-border" />
+              ) : (
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-bg-card border border-border rounded flex items-center justify-center text-[10px] text-text-muted font-mono">{m.file_type}</div>
+              )}
+              <button onClick={() => handleDelete(m.id)} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-danger text-white text-[10px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">&times;</button>
+              <div className="text-[8px] text-text-muted truncate max-w-[80px] mt-0.5">{m.file_name}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <input ref={fileRef} type="file" accept="image/*,video/*" multiple onChange={handleUpload} className="hidden" />
+        <button onClick={() => fileRef.current?.click()} disabled={uploading} className="text-[10px] font-mono text-accent hover:underline disabled:opacity-50">
+          {uploading ? 'Uploading...' : allMedia.length > 0 ? '+ Add more' : '+ Upload proof photo'}
+        </button>
+        {allMedia.length > 0 && <span className="text-[10px] text-text-muted font-mono">{allMedia.length} photo{allMedia.length !== 1 ? 's' : ''}</span>}
+      </div>
+    </div>
+  )
+}
+
 function RecordRow({ rec, onToggle, onRefresh }) {
+  const [showProof, setShowProof] = useState(false)
   const status = deriveStatus(rec)
   const benefitName = rec.contract_benefits?.name || rec.assets?.name || '\u2014'
   const category = rec.contract_benefits?.type || rec.assets?.category || '\u2014'
@@ -254,14 +338,17 @@ function RecordRow({ rec, onToggle, onRefresh }) {
   return (
     <div className="border-b border-border last:border-0 px-3 py-3 sm:px-4 sm:py-3 hover:bg-bg-card/50 transition-colors">
       {/* Desktop layout */}
-      <div className="hidden md:grid md:grid-cols-[1.2fr_1.2fr_0.8fr_0.6fr_0.5fr_1fr_auto] gap-3 items-center">
+      <div className="hidden md:grid md:grid-cols-[1.2fr_1.2fr_0.8fr_0.6fr_0.5fr_1fr_0.6fr] gap-3 items-center">
         <span className="text-text-primary text-sm truncate">{brandName}</span>
         <span className="text-text-primary text-xs font-mono truncate">{benefitName}</span>
         <span className="text-text-primary text-xs font-mono">{category}</span>
         <span className="text-text-primary text-xs font-mono">{fmtDate(rec.scheduled_date)}</span>
         <StatusBadge status={status} />
         <DeliveryNotesEditor record={rec} onSaved={onRefresh} />
-        <MarkDeliveredButton record={rec} onToggle={onToggle} />
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowProof(!showProof)} className="text-[10px] font-mono text-accent hover:underline">{showProof ? 'Hide' : 'Proof'}</button>
+          <MarkDeliveredButton record={rec} onToggle={onToggle} />
+        </div>
       </div>
 
       {/* Tablet layout */}
@@ -278,6 +365,7 @@ function RecordRow({ rec, onToggle, onRefresh }) {
           <span className="text-text-primary text-xs font-mono">{fmtDate(rec.scheduled_date)}</span>
           <div className="flex items-center gap-3">
             <DeliveryNotesEditor record={rec} onSaved={onRefresh} />
+            <button onClick={() => setShowProof(!showProof)} className="text-[10px] font-mono text-accent hover:underline">{showProof ? 'Hide' : 'Proof'}</button>
             <MarkDeliveredButton record={rec} onToggle={onToggle} />
           </div>
         </div>
@@ -295,10 +383,16 @@ function RecordRow({ rec, onToggle, onRefresh }) {
           <span className="text-text-primary font-mono">{fmtDate(rec.scheduled_date)}</span>
         </div>
         <DeliveryNotesEditor record={rec} onSaved={onRefresh} />
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-3">
+          <button onClick={() => setShowProof(!showProof)} className="text-[10px] font-mono text-accent hover:underline">
+            {showProof ? 'Hide proof' : 'Proof'}
+          </button>
           <MarkDeliveredButton record={rec} onToggle={onToggle} />
         </div>
       </div>
+
+      {/* Proof of delivery photos (all breakpoints) */}
+      {showProof && <ProofOfDelivery record={rec} onRefresh={onRefresh} />}
     </div>
   )
 }
@@ -615,14 +709,14 @@ export default function FulfillmentTracker() {
             ) : (
               <div className="bg-bg-surface border border-border rounded-lg overflow-hidden">
                 {/* Desktop table header */}
-                <div className="hidden md:grid md:grid-cols-[1.2fr_1.2fr_0.8fr_0.6fr_0.5fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-bg-card">
+                <div className="hidden md:grid md:grid-cols-[1.2fr_1.2fr_0.8fr_0.6fr_0.5fr_1fr_0.6fr] gap-3 px-4 py-2 border-b border-border bg-bg-card">
                   <span className="text-xs text-text-primary font-mono">Brand</span>
                   <span className="text-xs text-text-primary font-mono">Benefit</span>
                   <span className="text-xs text-text-primary font-mono">Category</span>
                   <span className="text-xs text-text-primary font-mono">Date</span>
                   <span className="text-xs text-text-primary font-mono">Status</span>
                   <span className="text-xs text-text-primary font-mono">Notes</span>
-                  <span className="text-xs text-text-primary font-mono">Action</span>
+                  <span className="text-xs text-text-primary font-mono">Actions</span>
                 </div>
 
                 {filteredRecords.map((rec) => (

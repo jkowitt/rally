@@ -32,6 +32,7 @@ const HelpCenter = lazy(() => import('./modules/crm/HelpCenter'))
 const CustomDashboardRequest = lazy(() => import('./modules/crm/CustomDashboardRequest'))
 const CustomDashboard = lazy(() => import('./modules/crm/CustomDashboard'))
 const DeveloperDashboard = lazy(() => import('./modules/developer/DeveloperDashboard'))
+const SponsorPortal = lazy(() => import('./modules/crm/SponsorPortal'))
 
 function PageLoader() {
   return (
@@ -52,6 +53,7 @@ export default function App() {
             {/* Public */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/sponsor/:token" element={<SponsorPortal />} />
 
             {/* Authenticated app */}
             <Route

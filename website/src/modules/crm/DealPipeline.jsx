@@ -1064,6 +1064,10 @@ function EditableCell({ value, dealId, field, onSave, className, format, type = 
 /* ============ Deal Viewer (Read-Only) ============ */
 function DealViewer({ deal, contacts, onClose, onEdit }) {
   const navigate = useNavigate()
+  const { toast } = useToast()
+  const { profile } = useAuth()
+  const [shareCopied, setShareCopied] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const propertyId = deal.property_id
   const priorityColor = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
   const stageColor = {
@@ -1074,6 +1078,40 @@ function DealViewer({ deal, contacts, onClose, onEdit }) {
     'In Fulfillment': 'bg-success/10 text-success',
     Renewed: 'bg-success/10 text-success',
     Declined: 'bg-danger/10 text-danger',
+  }
+
+  const handleShare = async () => {
+    try {
+      setSharing(true)
+      // Check for existing active link
+      const { data: existing } = await supabase
+        .from('sponsor_portal_links')
+        .select('token')
+        .eq('deal_id', deal.id)
+        .eq('active', true)
+        .limit(1)
+        .maybeSingle()
+      let linkToken = existing?.token
+      if (!linkToken) {
+        const { data: created, error } = await supabase
+          .from('sponsor_portal_links')
+          .insert({ deal_id: deal.id, property_id: propertyId, created_by: profile?.id })
+          .select('token')
+          .single()
+        if (error) throw error
+        linkToken = created.token
+      }
+      const url = `${window.location.origin}/sponsor/${linkToken}`
+      await navigator.clipboard.writeText(url)
+      setShareCopied(true)
+      toast({ title: 'Sponsor link copied to clipboard!', type: 'success' })
+      setTimeout(() => setShareCopied(false), 3000)
+    } catch (err) {
+      console.error('Share error:', err)
+      toast({ title: 'Failed to create share link', type: 'error' })
+    } finally {
+      setSharing(false)
+    }
   }
 
   // Fetch contracts linked to this deal
@@ -1146,6 +1184,9 @@ function DealViewer({ deal, contacts, onClose, onEdit }) {
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
+            <button onClick={handleShare} disabled={sharing} className="border border-accent text-accent px-3 py-1.5 rounded text-xs font-medium hover:bg-accent/10 disabled:opacity-50">
+              {sharing ? '...' : shareCopied ? 'Copied!' : 'Share'}
+            </button>
             <button onClick={onEdit} className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium hover:opacity-90">Edit</button>
             <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg">&times;</button>
           </div>

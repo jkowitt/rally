@@ -346,10 +346,18 @@ export default function DeveloperDashboard() {
                     }`}>{p.plan || 'free'}</span>
                   </div>
                   <div className="flex gap-3 mt-1 text-xs text-text-muted font-mono flex-wrap">
+                    {p.city && <span>{p.city}{p.state ? `, ${p.state}` : ''}</span>}
                     {p.sport && <span>{p.sport}</span>}
-                    {p.conference && <span>{p.conference}</span>}
-                    {p.city && <span>{p.city}, {p.state}</span>}
+                    {p.billing_email && <span>{p.billing_email}</span>}
                     <span>{profiles?.filter(pr => pr.property_id === p.id).length || 0} users</span>
+                  </div>
+                  {/* Users at this company */}
+                  <div className="flex gap-1 mt-1.5 flex-wrap">
+                    {profiles?.filter(pr => pr.property_id === p.id).map(u => (
+                      <span key={u.id} className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${roleColor[u.role] || 'bg-bg-card text-text-muted'}`}>
+                        {u.full_name || u.email || u.id.slice(0, 6)} ({u.role})
+                      </span>
+                    ))}
                   </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
@@ -370,44 +378,57 @@ export default function DeveloperDashboard() {
       {/* USERS */}
       {activeTab === 'users' && (
         <div className="space-y-2">
-          {profiles?.map(p => (
-            <div key={p.id} className="bg-bg-surface border border-border rounded-lg px-4 py-3 flex items-center justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm text-text-primary">{p.full_name || p.id.slice(0, 8)}</span>
-                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${roleColor[p.role]}`}>{p.role}</span>
+          <div className="text-xs text-text-muted mb-2">
+            Manage all users. Change roles, reassign companies, or disable accounts. First user at each company is auto-assigned admin.
+          </div>
+          {profiles?.map(p => {
+            const isDisabled = p.role === 'disabled'
+            return (
+            <div key={p.id} className={`bg-bg-surface border rounded-lg px-4 py-3 ${isDisabled ? 'border-danger/30 opacity-60' : 'border-border'}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-text-primary">{p.full_name || p.id.slice(0, 8)}</span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${roleColor[p.role] || 'bg-danger/20 text-danger'}`}>{p.role}</span>
+                    {isDisabled && <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-danger/10 text-danger">DISABLED</span>}
+                  </div>
+                  <div className="text-xs text-text-muted mt-0.5 flex gap-2 flex-wrap">
+                    <span>{p.email || p.id.slice(0, 12)}</span>
+                    <span>{p.properties?.name || 'No company'}</span>
+                    {p.properties?.city && <span>{p.properties.city}{p.properties.state ? `, ${p.properties.state}` : ''}</span>}
+                    {p.properties?.type && <span className="text-[10px] font-mono">{p.properties.type}</span>}
+                  </div>
                 </div>
-                <div className="text-xs text-text-muted mt-0.5">
-                  {p.email || p.id.slice(0, 12)} &middot; {p.properties?.name || 'No property'}
-                </div>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <select
-                  value={p.role}
-                  onChange={(e) => updateRoleMutation.mutate({ userId: p.id, role: e.target.value })}
-                  className="bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent"
-                >
-                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-                <select
-                  value={p.property_id || ''}
-                  onChange={(e) => assignPropertyMutation.mutate({ userId: p.id, propertyId: e.target.value || null })}
-                  className="bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent max-w-[120px]"
-                >
-                  <option value="">No property</option>
-                  {properties?.map(prop => <option key={prop.id} value={prop.id}>{prop.name}</option>)}
-                </select>
-                {p.id !== profile?.id && (
-                  <button
-                    onClick={() => { if (confirm(`Remove ${p.full_name || p.id.slice(0, 8)}?`)) deleteUserMutation.mutate(p.id) }}
-                    className="text-text-muted hover:text-danger text-xs px-1"
+                <div className="flex gap-2 shrink-0 flex-wrap">
+                  <select
+                    value={p.role}
+                    onChange={(e) => updateRoleMutation.mutate({ userId: p.id, role: e.target.value })}
+                    className="bg-bg-card border border-border rounded px-2 py-1 text-[10px] text-text-primary focus:outline-none focus:border-accent"
                   >
-                    &times;
-                  </button>
-                )}
+                    {[...ROLES, 'disabled'].map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <select
+                    value={p.property_id || ''}
+                    onChange={(e) => assignPropertyMutation.mutate({ userId: p.id, propertyId: e.target.value || null })}
+                    className="bg-bg-card border border-border rounded px-2 py-1 text-[10px] text-text-primary focus:outline-none focus:border-accent max-w-[140px]"
+                  >
+                    <option value="">No company</option>
+                    {properties?.map(prop => <option key={prop.id} value={prop.id}>{prop.name}</option>)}
+                  </select>
+                  {p.id !== profile?.id && (
+                    <button
+                      onClick={() => { if (confirm(`Permanently delete ${p.full_name || 'this user'}? This removes all their data.`)) deleteUserMutation.mutate(p.id) }}
+                      className="text-text-muted hover:text-danger text-xs px-1"
+                      title="Delete user"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

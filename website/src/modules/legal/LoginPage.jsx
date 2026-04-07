@@ -3,31 +3,20 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 
-const PROPERTY_TYPES = [
-  { group: 'Sports', items: [
-    { value: 'college', label: 'College / University Athletics' },
-    { value: 'professional', label: 'Professional Team' },
-    { value: 'minor_league', label: 'Minor League / Independent' },
-  ]},
-  { group: 'Entertainment', items: [
-    { value: 'entertainment', label: 'Music Venue / Entertainment' },
-    { value: 'esports', label: 'Esports / Gaming Organization' },
-  ]},
-  { group: 'Events & Media', items: [
-    { value: 'conference', label: 'Conference / Trade Show' },
-    { value: 'media', label: 'Media / Publishing' },
-  ]},
-  { group: 'Other', items: [
-    { value: 'nonprofit', label: 'Nonprofit / Foundation' },
-    { value: 'realestate', label: 'Real Estate / Property Advertising' },
-    { value: 'agency', label: 'Agency / Company' },
-    { value: 'other', label: 'Other' },
-  ]},
+const INDUSTRY_OPTIONS = [
+  { value: 'college', label: 'College / University Athletics' },
+  { value: 'professional', label: 'Professional Sports Team' },
+  { value: 'minor_league', label: 'Minor League / Independent' },
+  { value: 'agency', label: 'Partnership / Sponsorship Agency' },
+  { value: 'entertainment', label: 'Entertainment Venue' },
+  { value: 'conference', label: 'Conference / Trade Show' },
+  { value: 'nonprofit', label: 'Nonprofit / Foundation' },
+  { value: 'media', label: 'Media / Publishing' },
+  { value: 'realestate', label: 'Real Estate' },
+  { value: 'other', label: 'Other' },
 ]
 
-const ALL_PROPERTY_TYPES = PROPERTY_TYPES.flatMap(g => g.items)
-
-const SPORTS = ['Football', 'Basketball', 'Baseball', 'Soccer', 'Hockey', 'Lacrosse', 'Volleyball', 'Track & Field', 'Swimming', 'Tennis', 'Golf', 'Wrestling', 'Softball', 'Multi-Sport', 'Other']
+const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
 
 export default function LoginPage() {
   const { signIn, signUp, session, fetchProfile } = useAuth()
@@ -39,8 +28,7 @@ export default function LoginPage() {
   // Map landing page industry IDs to property types
   const industryToType = { sports: 'college', entertainment: 'entertainment', conference: 'conference', nonprofit: 'nonprofit', media: 'media', realestate: 'realestate', agency: 'agency' }
 
-  const [mode, setMode] = useState(inviteToken ? 'invite' : 'signin') // signin | signup | invite | onboard
-  const [step, setStep] = useState(1) // signup: 1=account, 2=property, 3=team
+  const [mode, setMode] = useState(inviteToken ? 'invite' : 'signin') // signin | signup | invite | onboard | confirm
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -48,13 +36,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [invitation, setInvitation] = useState(null)
 
-  // Property setup fields
-  const [propertyName, setPropertyName] = useState('')
-  const [propertyType, setPropertyType] = useState(industryToType[industryParam] || 'college')
-  const [sport, setSport] = useState('')
-  const [conference, setConference] = useState('')
-  const [propertyCity, setPropertyCity] = useState('')
-  const [propertyState, setPropertyState] = useState('')
+  // Company setup fields (all on one screen)
+  const [companyName, setCompanyName] = useState('')
+  const [industryType, setIndustryType] = useState(industryToType[industryParam] || 'college')
+  const [companyCity, setCompanyCity] = useState('')
+  const [companyState, setCompanyState] = useState('')
 
   // Invite flow: load invitation
   useEffect(() => {
@@ -91,10 +77,10 @@ export default function LoginPage() {
     setLoading(false)
   }
 
-  async function handleSignUpStep1(e) {
+  async function handleSignUp(e) {
     e.preventDefault()
     setError('')
-    if (!fullName || !email || !password) return setError('All fields required')
+    if (!fullName || !email || !password) return setError('Full name, email, and password are required')
     if (password.length < 6) return setError('Password must be at least 6 characters')
 
     if (invitation) {
@@ -102,13 +88,10 @@ export default function LoginPage() {
       setLoading(true)
       try {
         const { data: authData, error: authErr } = await supabase.auth.signUp({
-          email,
-          password,
+          email, password,
           options: { data: { full_name: fullName } },
         })
         if (authErr) throw authErr
-
-        // Create profile linked to the invitation's property
         if (authData.user) {
           await supabase.from('profiles').upsert({
             id: authData.user.id,
@@ -118,111 +101,84 @@ export default function LoginPage() {
             role: email.toLowerCase() === 'jlkowitt25@gmail.com' ? 'developer' : (invitation.role || 'rep'),
             onboarding_completed: true,
           })
-          // Mark invitation as accepted
           await supabase.from('invitations').update({ accepted: true, accepted_at: new Date().toISOString() }).eq('id', invitation.id)
           await fetchProfile(authData.user.id)
         }
+        localStorage.setItem('ll-has-account', '1')
         navigate('/app', { replace: true })
-      } catch (err) {
-        setError(err.message)
-      }
+      } catch (err) { setError(err.message) }
       setLoading(false)
-    } else {
-      // New signup: go to property setup
-      setStep(2)
+      return
     }
-  }
 
-  async function handlePropertySetup(e) {
-    e.preventDefault()
-    setError('')
-    if (!propertyName) return setError('Property name is required')
+    // New user signup — single step
+    if (!companyName) return setError('Company name is required')
     setLoading(true)
     try {
-      // 1. Create Supabase auth user
+      // 1. Create auth user
       const { data: authData, error: authErr } = await supabase.auth.signUp({
-        email,
-        password,
+        email, password,
         options: { data: { full_name: fullName } },
       })
       if (authErr) throw authErr
       localStorage.setItem('ll-has-account', '1')
 
-      // Check if email confirmation is required
+      // Email confirmation required?
       if (authData.user && !authData.session) {
-        // Email confirmation is enabled — user needs to verify email first
-        setError('')
-        setStep(1)
         setMode('confirm')
         setLoading(false)
         return
       }
 
       if (authData.user) {
-        // 2. Create property
+        // 2. Create company/property
         const propertyData = {
-          name: propertyName,
+          name: companyName,
           plan: 'free',
           billing_email: email,
           trial_started_at: new Date().toISOString(),
           trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
         }
-        // Add optional fields that may not exist in DB yet
-        if (sport) propertyData.sport = sport
-        if (conference) propertyData.conference = conference
-        if (propertyCity) propertyData.city = propertyCity
-        if (propertyState) propertyData.state = propertyState
+        if (companyCity) propertyData.city = companyCity
+        if (companyState) propertyData.state = companyState
 
-        // Try with type field, fall back without
         let property
-        const { data: prop1, error: propErr1 } = await supabase.from('properties').insert({ ...propertyData, type: propertyType }).select().single()
-        if (propErr1) {
-          console.warn('Property insert with type failed:', propErr1.message, '— retrying without type')
-          const { data: prop2, error: propErr2 } = await supabase.from('properties').insert(propertyData).select().single()
-          if (propErr2) throw propErr2
-          property = prop2
-        } else {
-          property = prop1
-        }
+        const { data: p1, error: e1 } = await supabase.from('properties').insert({ ...propertyData, type: industryType }).select().single()
+        if (e1) {
+          const { data: p2, error: e2 } = await supabase.from('properties').insert(propertyData).select().single()
+          if (e2) throw e2
+          property = p2
+        } else { property = p1 }
+        if (!property) throw new Error('Company creation failed')
 
-        if (!property) throw new Error('Property creation failed')
-
-        // 3. Create profile as admin of the property (developer for owner email)
+        // 3. Create profile — first person at a company = admin (developer for jlkowitt25)
         const userRole = email.toLowerCase() === 'jlkowitt25@gmail.com' ? 'developer' : 'admin'
-        const profileData = {
+        const { error: profErr } = await supabase.from('profiles').upsert({
           id: authData.user.id,
           property_id: property.id,
           full_name: fullName,
+          email,
           role: userRole,
-        }
-        // Try with optional columns, fall back without
-        const { error: profErr1 } = await supabase.from('profiles').upsert({ ...profileData, email, onboarding_completed: false })
-        if (profErr1) {
-          console.warn('Profile insert with extras failed:', profErr1.message, '— retrying basic')
-          const { error: profErr2 } = await supabase.from('profiles').upsert(profileData)
-          if (profErr2) console.error('Profile insert failed:', profErr2.message)
+          onboarding_completed: false,
+        })
+        if (profErr) {
+          // Fallback without optional columns
+          await supabase.from('profiles').upsert({ id: authData.user.id, property_id: property.id, full_name: fullName, role: userRole })
         }
 
-        // 4. Create team
+        // 4. Create team + owner membership
         try {
           const { data: team } = await supabase.from('teams').insert({
-            name: propertyName,
-            property_id: property.id,
-            type: propertyType === 'agency' ? 'agency' : 'property',
+            name: companyName, property_id: property.id,
+            type: industryType === 'agency' ? 'agency' : 'property',
             created_by: authData.user.id,
           }).select().single()
-
           if (team) {
-            await supabase.from('team_members').insert({
-              team_id: team.id,
-              user_id: authData.user.id,
-              role: 'owner',
-              invited_by: authData.user.id,
-            })
+            await supabase.from('team_members').insert({ team_id: team.id, user_id: authData.user.id, role: 'owner', invited_by: authData.user.id })
           }
         } catch { /* team tables may not exist */ }
 
-        // 5. Enable CRM by default
+        // 5. Enable default modules
         try {
           await supabase.from('feature_flags').upsert([
             { module: 'crm', enabled: true },
@@ -234,11 +190,8 @@ export default function LoginPage() {
 
         await fetchProfile(authData.user.id)
         setMode('onboard')
-        setStep(3)
       }
-    } catch (err) {
-      setError(err.message)
-    }
+    } catch (err) { setError(err.message) }
     setLoading(false)
   }
 
@@ -246,9 +199,7 @@ export default function LoginPage() {
     try {
       await supabase.from('profiles').update({ onboarding_completed: true }).eq('id', session.user.id)
       navigate('/app', { replace: true })
-    } catch {
-      navigate('/app', { replace: true })
-    }
+    } catch { navigate('/app', { replace: true }) }
   }
 
   return (
@@ -256,7 +207,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-6 sm:mb-8">
           <h1 onClick={() => navigate('/')} className="font-mono font-bold text-accent text-xl sm:text-2xl cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</h1>
-          <p className="text-text-muted text-xs sm:text-sm mt-1">Sports Business Operating Suite</p>
+          <p className="text-text-muted text-xs sm:text-sm mt-1">The operating system for revenue teams</p>
         </div>
 
         {/* SIGN IN */}
@@ -270,77 +221,55 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
             <button type="button" onClick={() => { setMode('signup'); setError(''); setStep(1) }} className="w-full text-center text-text-muted text-xs hover:text-text-secondary">
-              Don't have an account? Register your property
+              Don't have an account? Sign up free
             </button>
           </form>
         )}
 
-        {/* SIGN UP - Step 1: Account */}
-        {(mode === 'signup' || mode === 'invite') && step === 1 && (
-          <form onSubmit={handleSignUpStep1} className="bg-bg-surface border border-border rounded-lg p-5 sm:p-6 space-y-4">
+        {/* SIGN UP — single step */}
+        {(mode === 'signup' || mode === 'invite') && (
+          <form onSubmit={handleSignUp} className="bg-bg-surface border border-border rounded-lg p-5 sm:p-6 space-y-4">
             <div>
               <h2 className="text-lg font-semibold text-text-primary">
-                {invitation ? `Join ${invitation.properties?.name}` : 'Create Account'}
+                {invitation ? `Join ${invitation.properties?.name}` : 'Create Your Account'}
               </h2>
               {invitation && (
                 <p className="text-xs text-text-muted mt-1">You've been invited as a {invitation.role}</p>
               )}
               {!invitation && (
-                <div className="flex gap-2 mt-2">
-                  <div className="flex-1 h-1 rounded bg-accent" />
-                  <div className="flex-1 h-1 rounded bg-border" />
-                </div>
+                <p className="text-xs text-text-muted mt-1">One form. Takes 30 seconds.</p>
               )}
             </div>
-            <input type="text" placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" autoFocus />
-            <input type="email" placeholder="Work Email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!!invitation} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-60" />
-            <input type="password" placeholder="Password (6+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+
+            <input type="text" placeholder="Full Name *" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" autoFocus />
+            <input type="email" placeholder="Work Email *" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!!invitation} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-60" />
+            <input type="password" placeholder="Password (6+ characters) *" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+
+            {!invitation && (
+              <>
+                <div className="border-t border-border pt-3">
+                  <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">Your Company</div>
+                </div>
+                <input type="text" placeholder="Company / Organization Name *" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+                <select value={industryType} onChange={(e) => setIndustryType(e.target.value)} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent">
+                  {INDUSTRY_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <input placeholder="City" value={companyCity} onChange={(e) => setCompanyCity(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+                  <select value={companyState} onChange={(e) => setCompanyState(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent">
+                    <option value="">State</option>
+                    {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
+
             {error && <div className="text-danger text-xs">{error}</div>}
             <button type="submit" disabled={loading} className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 disabled:opacity-50 text-sm">
-              {loading ? 'Creating...' : invitation ? 'Join Team' : 'Next: Set Up Property'}
+              {loading ? 'Creating your account...' : invitation ? 'Join Team' : 'Get Started Free'}
             </button>
             <button type="button" onClick={() => { setMode('signin'); setError('') }} className="w-full text-center text-text-muted text-xs hover:text-text-secondary">
               Already have an account? Sign in
-            </button>
-          </form>
-        )}
-
-        {/* SIGN UP - Step 2: Property Setup */}
-        {mode === 'signup' && step === 2 && (
-          <form onSubmit={handlePropertySetup} className="bg-bg-surface border border-border rounded-lg p-5 sm:p-6 space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold text-text-primary">Set Up Your Property</h2>
-              <p className="text-xs text-text-muted mt-1">This is your team, school, or organization</p>
-              <div className="flex gap-2 mt-2">
-                <div className="flex-1 h-1 rounded bg-accent" />
-                <div className="flex-1 h-1 rounded bg-accent" />
-              </div>
-            </div>
-            <input type="text" placeholder="Property / Team Name *" value={propertyName} onChange={(e) => setPropertyName(e.target.value)} required className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" autoFocus />
-            <select value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent">
-              {PROPERTY_TYPES.map(g => (
-                <optgroup key={g.group} label={g.group}>
-                  {g.items.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </optgroup>
-              ))}
-            </select>
-            <div className="grid grid-cols-2 gap-3">
-              <select value={sport} onChange={(e) => setSport(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent">
-                <option value="">Sport</option>
-                {SPORTS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <input placeholder="Conference" value={conference} onChange={(e) => setConference(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <input placeholder="City" value={propertyCity} onChange={(e) => setPropertyCity(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
-              <input placeholder="State" value={propertyState} onChange={(e) => setPropertyState(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
-            </div>
-            {error && <div className="text-danger text-xs">{error}</div>}
-            <button type="submit" disabled={loading} className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 disabled:opacity-50 text-sm">
-              {loading ? 'Setting up...' : 'Create Property & Get Started'}
-            </button>
-            <button type="button" onClick={() => setStep(1)} className="w-full text-center text-text-muted text-xs hover:text-text-secondary">
-              &larr; Back
             </button>
           </form>
         )}
@@ -362,13 +291,13 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* ONBOARDING - Step 3: Welcome */}
-        {mode === 'onboard' && step === 3 && (
+        {/* ONBOARDING - Welcome */}
+        {mode === 'onboard' && (
           <div className="bg-bg-surface border border-border rounded-lg p-5 sm:p-6 space-y-5 text-center">
             <div className="text-4xl">🎉</div>
             <h2 className="text-lg font-semibold text-text-primary">Welcome to Loud Legacy!</h2>
             <p className="text-sm text-text-secondary">
-              Your property <span className="text-accent font-medium">{propertyName}</span> is set up and ready to go.
+              <span className="text-accent font-medium">{companyName}</span> is set up and ready to go.
             </p>
             <div className="bg-bg-card border border-border rounded-lg p-4 text-left space-y-2">
               <h3 className="text-xs font-mono text-text-muted uppercase tracking-wider">Quick Start</h3>

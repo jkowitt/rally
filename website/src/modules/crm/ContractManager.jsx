@@ -1079,6 +1079,7 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
   const [status, setStatus] = useState('')
   const [selectedDeal, setSelectedDeal] = useState('')
   const [saveAsTemplate, setSaveAsTemplate] = useState(false)
+  const [autoImport, setAutoImport] = useState(false)
   const [templateName, setTemplateName] = useState('')
   const fileRef = useRef(null)
 
@@ -1105,7 +1106,8 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
         try {
           const result = await parsePdfText(text)
           setParsed(result.parsed)
-          setStatus('Contract analyzed! Review the extracted data below and import.')
+          setAutoImport(true)
+          setStatus('Contract analyzed! Importing benefits...')
         } catch (e) {
           setStatus('Text loaded. AI analysis failed: ' + e.message)
         }
@@ -1152,7 +1154,8 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       try {
         const result = await parsePdfText(extractedText)
         setParsed(result.parsed)
-        setStatus('Contract analyzed! Review the extracted data below and import.')
+        setAutoImport(true) // trigger auto-import via useEffect
+        setStatus('Contract analyzed! Importing benefits...')
       } catch (e) {
         setStatus('Text extracted but AI analysis failed: ' + e.message)
       }
@@ -1330,6 +1333,14 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       setLoading(false)
     }
   }
+
+  // Auto-import after AI analysis completes
+  useEffect(() => {
+    if (autoImport && parsed && !loading) {
+      setAutoImport(false)
+      handleImport()
+    }
+  }, [autoImport, parsed, loading])
 
   return (
     <div className="space-y-4">

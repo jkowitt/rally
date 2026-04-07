@@ -9,6 +9,7 @@ import { enrichContact, searchProspects, suggestProspects, researchContacts, res
 import { usePlanLimits } from '@/hooks/usePlanLimits'
 import UpgradeGate, { UsageBadge } from '@/components/UpgradeGate'
 import CSVImportWizard from '@/components/CSVImportWizard'
+import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
@@ -111,6 +112,8 @@ export default function DealPipeline() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const config = useIndustryConfig()
+  const t = config.terminology || {}
   const propertyId = profile?.property_id
   const [showForm, setShowForm] = useState(false)
   const [editingDeal, setEditingDeal] = useState(null)
@@ -555,7 +558,7 @@ export default function DealPipeline() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Deal Pipeline</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">{t.deal || 'Deal'} Pipeline</h1>
           <p className="text-text-secondary text-xs sm:text-sm mt-1">
             {activeDeals.length} active deals &middot; ${(totalValue / 1000).toFixed(0)}K pipeline
             {declinedCount > 0 && <span className="text-text-muted"> &middot; {declinedCount} declined</span>}
@@ -592,7 +595,7 @@ export default function DealPipeline() {
             onClick={() => setShowProspectFinder(true)}
             className="bg-accent/10 border border-accent/30 text-accent px-4 py-2 rounded text-sm font-medium hover:bg-accent/20 transition-colors"
           >
-            Find Prospects
+            Find {t.prospect || 'Prospect'}s
           </button>
           <button
             onClick={() => { setBulkMode(!bulkMode); setSelectedDeals(new Set()) }}

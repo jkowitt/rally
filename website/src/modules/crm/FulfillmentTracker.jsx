@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -445,6 +446,8 @@ export default function FulfillmentTracker() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const industryConfig = useIndustryConfig()
+  const fulfillmentLabel = industryConfig.terminology?.fulfillment || 'Fulfillment'
   const propertyId = profile?.property_id
   const reportBtnRef = useRef(null)
 
@@ -600,7 +603,7 @@ export default function FulfillmentTracker() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">
-            Fulfillment Tracker
+            {fulfillmentLabel} Tracker
           </h1>
           <p className="text-text-primary text-sm mt-1">
             <span className="text-warning">{totalPending} pending</span>

@@ -13,6 +13,7 @@ const CONFIGS = {
     industryName: 'Entertainment',
     moduleLabels: { sportify: 'VenueOps', valora: 'ValueIQ', businessnow: 'Business Now' },
     terminology: { asset: 'Placement', sponsor: 'Partner', property: 'Venue', deal: 'Partnership', prospect: 'Partner Lead', fulfillment: 'Delivery', benefit: 'Deliverable' },
+    hiddenModules: [],
     assetCategories: [
       'Stage Banner', 'VIP Lounge Naming', 'Bar/Concession Branding', 'Ticket Back Ad',
       'Wristband Branding', 'Social Post', 'Email/Newsletter', 'Website Banner',
@@ -59,6 +60,7 @@ const CONFIGS = {
     industryName: 'Events & Conferences',
     moduleLabels: { sportify: 'EventOps', valora: 'ValueIQ', businessnow: 'Business Now' },
     terminology: { asset: 'Package Item', sponsor: 'Exhibitor', property: 'Event Organization', deal: 'Sponsorship', prospect: 'Exhibitor Lead', fulfillment: 'Delivery', benefit: 'Deliverable' },
+    hiddenModules: [],
     assetCategories: [
       'Booth Space', 'Keynote Sponsorship', 'Lanyard/Badge Branding', 'WiFi Sponsorship',
       'App Sponsorship', 'Breakout Room Naming', 'Charging Station', 'Registration Sponsor',
@@ -104,6 +106,7 @@ const CONFIGS = {
     industryName: 'Nonprofit & Philanthropy',
     moduleLabels: { sportify: 'Programs', valora: 'ImpactIQ', businessnow: 'Business Now' },
     terminology: { asset: 'Recognition Item', sponsor: 'Corporate Partner', property: 'Organization', deal: 'Partnership', prospect: 'Donor Lead', fulfillment: 'Recognition', benefit: 'Recognition Item' },
+    hiddenModules: [],
     assetCategories: [
       'Title Sponsorship', 'Table Sponsorship', 'Program Ad', 'Naming Opportunity',
       'Logo Placement', 'Social Post', 'Email/Newsletter', 'Website Banner',
@@ -147,6 +150,7 @@ const CONFIGS = {
     industryName: 'Media & Publishing',
     moduleLabels: { sportify: 'ContentOps', valora: 'AdPriceIQ', businessnow: 'Business Now' },
     terminology: { asset: 'Ad Placement', sponsor: 'Advertiser', property: 'Publication', deal: 'Campaign', prospect: 'Advertiser Lead', fulfillment: 'Impression Delivery', benefit: 'Placement' },
+    hiddenModules: [],
     assetCategories: [
       'Display Ad', 'Sponsored Article', 'Newsletter Sponsorship', 'Podcast Ad Read',
       'Video Pre-Roll', 'Banner Ad', 'Native Content', 'Email Blast',
@@ -190,6 +194,7 @@ const CONFIGS = {
     industryName: 'Esports & Gaming',
     moduleLabels: { sportify: 'TourneyOps', valora: 'StreamValue', businessnow: 'Business Now' },
     terminology: { asset: 'Asset', sponsor: 'Partner', property: 'Team/Org', deal: 'Deal', prospect: 'Partner Lead', fulfillment: 'Delivery', benefit: 'Deliverable' },
+    hiddenModules: [],
     assetCategories: [
       'Jersey/Team Branding', 'Stream Overlay', 'Social Post', 'Tournament Naming',
       'In-Game Integration', 'Content Series', 'Podcast/Audio', 'Email/Newsletter',
@@ -229,50 +234,93 @@ const CONFIGS = {
 
   // ─── REAL ESTATE ───
   realestate: {
-    label: 'Property Advertising',
-    industryName: 'Real Estate & Advertising',
-    moduleLabels: { sportify: 'PropertyOps', valora: 'MediaValue', businessnow: 'Business Now' },
-    terminology: { asset: 'Ad Space', sponsor: 'Advertiser', property: 'Property Group', deal: 'Lease', prospect: 'Advertiser Lead', fulfillment: 'Display Delivery', benefit: 'Placement' },
+    label: 'Real Estate Operations',
+    industryName: 'Real Estate',
+    moduleLabels: { sportify: 'PropertyOps', valora: 'MarketValue', businessnow: 'Business Now' },
+    terminology: { asset: 'Unit/Space', sponsor: 'Tenant', property: 'Property Group', deal: 'Lease', prospect: 'Tenant Lead', fulfillment: 'Build-Out', benefit: 'Lease Term' },
+    hiddenModules: [],
     assetCategories: [
-      'Billboard', 'Building Wrap', 'Digital Screen', 'Elevator Ad',
-      'Lobby Display', 'Parking Garage', 'Directory Listing', 'Welcome Desk',
-      'Common Area Signage', 'Print Ad', 'Email/Newsletter', 'Website Banner',
-      'Social Post', 'Event Sponsorship', 'Branded Content', 'Digital',
+      'Office Suite', 'Retail Space', 'Warehouse Unit', 'Flex Space', 'Conference Room',
+      'Parking Space', 'Storage Unit', 'Common Area', 'Rooftop/Patio', 'Billboard',
+      'Digital Screen', 'Lobby Display', 'Building Wrap', 'Directory Listing',
+      'Website Banner', 'Email/Newsletter',
     ],
     assetIcons: {
-      'Billboard': '🪧', 'Building Wrap': '🏢', 'Digital Screen': '📺',
-      'Elevator Ad': '🛗', 'Lobby Display': '🖼️', 'Parking Garage': '🅿️',
-      'Directory Listing': '📋', 'Welcome Desk': '🛎️', 'Common Area Signage': '📌',
-      'Print Ad': '📰', 'Email/Newsletter': '✉️', 'Website Banner': '🌐',
-      'Social Post': '📱', 'Event Sponsorship': '🎤', 'Branded Content': '🎬',
-      'Digital': '💻',
+      'Office Suite': '🏢', 'Retail Space': '🏪', 'Warehouse Unit': '📦', 'Flex Space': '🔧',
+      'Conference Room': '🤝', 'Parking Space': '🅿️', 'Storage Unit': '🗄️', 'Common Area': '🛋️',
+      'Rooftop/Patio': '☀️', 'Billboard': '🪧', 'Digital Screen': '📺', 'Lobby Display': '🖼️',
+      'Building Wrap': '🏗️', 'Directory Listing': '📋', 'Website Banner': '🌐', 'Email/Newsletter': '✉️',
     },
-    eventTypes: ['Open House', 'Community Event', 'Tenant Appreciation', 'Grand Opening', 'Other'],
+    eventTypes: ['Open House', 'Broker Tour', 'Community Event', 'Tenant Appreciation', 'Grand Opening', 'Other'],
     valoraModel: {
-      name: 'Traffic Value',
-      outputLabel: 'Estimated Media Value',
+      name: 'Lease Value',
+      outputLabel: 'Estimated Annual Lease Value',
       inputs: [
-        { key: 'daily_traffic', label: 'Daily Foot/Vehicle Traffic', type: 'number' },
-        { key: 'visibility_score', label: 'Visibility Score (0-1)', type: 'number', default: 0.8 },
-        { key: 'display_hours', label: 'Display Hours/Day', type: 'number', default: 16 },
-        { key: 'cpm_rate', label: 'CPM Rate ($)', type: 'number', default: 10 },
+        { key: 'square_feet', label: 'Square Feet', type: 'number' },
+        { key: 'price_per_sqft', label: 'Price per Sq Ft ($)', type: 'number', default: 25 },
+        { key: 'occupancy_rate', label: 'Occupancy Rate (%)', type: 'number', default: 90 },
+        { key: 'lease_years', label: 'Lease Term (years)', type: 'number', default: 3 },
       ],
-      calculate: (v) => (v.daily_traffic || 0) * (v.visibility_score || 0.8) * ((v.display_hours || 16) / 24) * ((v.cpm_rate || 10) / 1000) * 30,
+      calculate: (v) => (v.square_feet || 0) * (v.price_per_sqft || 25) * ((v.occupancy_rate || 90) / 100),
     },
-    newsletterTitle: 'The Property Ad Weekly',
+    newsletterTitle: 'The Property Market Weekly',
     afternoonTitle: 'Afternoon Listing',
-    newsletterTopic: 'out-of-home advertising, digital signage trends, property advertising, DOOH market, billboard industry',
-    newsletterSources: 'OAAA, Billboard Insider, Digital Signage Today, AdQuick Blog',
-    prospectPrompt: 'Find brands that buy out-of-home advertising, billboard space, digital signage, and property-based media',
+    newsletterTopic: 'commercial real estate trends, leasing market, property management, tenant retention, CRE technology',
+    newsletterSources: 'CoStar, Commercial Observer, Bisnow, GlobeSt, NAIOP',
+    prospectPrompt: 'Find businesses looking for commercial real estate, office space, retail locations, and warehouse space',
     companyCategories: [
-      'Retail', 'Food & Quick Serve Restaurants', 'Automotive', 'Healthcare',
-      'Financial Services', 'Entertainment & Media', 'Technology', 'Telecom',
+      'Technology & Software', 'Healthcare', 'Financial Services', 'Retail',
+      'Food & Quick Serve Restaurants', 'Legal Services', 'Education', 'Manufacturing',
+      'Government', 'Nonprofit',
+    ],
+  },
+
+  // ─── AGENCY ───
+  agency: {
+    label: 'Agency Operations',
+    industryName: 'Agency',
+    moduleLabels: { sportify: 'ProjectOps', valora: 'ValueScope', businessnow: 'Business Now' },
+    terminology: { asset: 'Service', sponsor: 'Client', property: 'Agency', deal: 'Engagement', prospect: 'Lead', fulfillment: 'Deliverable', benefit: 'Scope Item' },
+    hiddenModules: [],
+    assetCategories: [
+      'Strategy & Planning', 'Creative/Design', 'Media Buying', 'Social Media Management',
+      'Content Production', 'PR & Communications', 'Event Management', 'Influencer Campaign',
+      'SEO/SEM', 'Email Marketing', 'Analytics & Reporting', 'Brand Development',
+      'Video Production', 'Photography', 'Web Development', 'Consulting',
+    ],
+    assetIcons: {
+      'Strategy & Planning': '📋', 'Creative/Design': '🎨', 'Media Buying': '📺',
+      'Social Media Management': '📱', 'Content Production': '🎬', 'PR & Communications': '📣',
+      'Event Management': '🎤', 'Influencer Campaign': '⭐', 'SEO/SEM': '🔍',
+      'Email Marketing': '✉️', 'Analytics & Reporting': '📊', 'Brand Development': '💎',
+      'Video Production': '🎥', 'Photography': '📸', 'Web Development': '💻', 'Consulting': '🤝',
+    },
+    eventTypes: ['Client Kickoff', 'Quarterly Review', 'Campaign Launch', 'Workshop', 'Pitch Meeting', 'Other'],
+    valoraModel: {
+      name: 'Engagement Value',
+      outputLabel: 'Estimated Engagement Value',
+      inputs: [
+        { key: 'monthly_retainer', label: 'Monthly Retainer ($)', type: 'number' },
+        { key: 'contract_months', label: 'Contract Length (months)', type: 'number', default: 12 },
+        { key: 'project_fees', label: 'Project Fees ($)', type: 'number', default: 0 },
+        { key: 'media_spend_commission', label: 'Media Commission ($)', type: 'number', default: 0 },
+      ],
+      calculate: (v) => ((v.monthly_retainer || 0) * (v.contract_months || 12)) + (v.project_fees || 0) + (v.media_spend_commission || 0),
+    },
+    newsletterTitle: 'The Agency Weekly',
+    afternoonTitle: 'Afternoon Brief',
+    newsletterTopic: 'agency new business, client retention, marketing trends, pitch strategies, agency operations',
+    newsletterSources: 'Ad Age, Adweek, Digiday, Campaign, AgencySpy, The Drum',
+    prospectPrompt: 'Find companies looking for marketing agencies, PR firms, creative services, and consulting partners',
+    companyCategories: [
+      'Technology & Software', 'Consumer Packaged Goods', 'Healthcare', 'Financial Services',
+      'Retail', 'Automotive', 'Food & Beverage', 'Entertainment & Media', 'Travel & Hospitality',
+      'Education', 'Nonprofit',
     ],
   },
 
   // ─── DEFAULT / OTHER ───
   other: sportsConfig('Partnership Management'),
-  agency: sportsConfig('Agency Partnerships'),
 }
 
 // Sports is the default / most detailed config
@@ -282,6 +330,7 @@ function sportsConfig(label) {
     industryName: 'Sports',
     moduleLabels: { sportify: 'Sportify', valora: 'VALORA', businessnow: 'Business Now' },
     terminology: { asset: 'Asset', sponsor: 'Sponsor', property: 'Property', deal: 'Deal', prospect: 'Prospect', fulfillment: 'Fulfillment', benefit: 'Benefit' },
+    hiddenModules: [],
     assetCategories: [
       'LED Board', 'Jersey Patch', 'Radio Read', 'Social Post', 'Naming Right', 'Signage', 'Activation Space', 'Digital',
       'Title Sponsorship', 'Hospitality', 'Print Ad', 'Email/Newsletter', 'Website Banner', 'PA Announcement',

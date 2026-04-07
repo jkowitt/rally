@@ -209,7 +209,7 @@ export default function AssetCatalog() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Asset Catalog</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">{industryConfig.terminology?.asset || 'Asset'} Catalog</h1>
           <p className="text-text-secondary text-sm mt-1">
             {assets?.length || 0} assets across {categorySummary.length} categories
           </p>

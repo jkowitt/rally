@@ -3,7 +3,8 @@ import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/hooks/useAuth'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 
-const navSections = [
+function getNavSections(t) {
+  return [
   {
     label: 'Overview',
     items: [
@@ -14,10 +15,10 @@ const navSections = [
     label: 'Legacy CRM',
     flag: 'crm',
     items: [
-      { to: '/app/crm/assets', label: 'Assets', icon: '▣' },
-      { to: '/app/crm/pipeline', label: 'Pipeline', icon: '▤' },
+      { to: '/app/crm/assets', label: t?.asset ? `${t.asset}s` : 'Assets', icon: '▣' },
+      { to: '/app/crm/pipeline', label: `${t?.deal || 'Deal'} Pipeline`, icon: '▤' },
       { to: '/app/crm/contracts', label: 'Contracts', icon: '▥' },
-      { to: '/app/crm/fulfillment', label: 'Fulfillment', icon: '▦' },
+      { to: '/app/crm/fulfillment', label: t?.fulfillment || 'Fulfillment', icon: '▦' },
       { to: '/app/crm/activities', label: 'Activities', icon: '◎' },
       { to: '/app/crm/tasks', label: 'Tasks', icon: '☐' },
       { to: '/app/crm/insights', label: 'AI Insights', icon: '✦' },
@@ -46,13 +47,15 @@ const navSections = [
       { to: '/app/businessnow', label: 'Intelligence', icon: '◆' },
     ],
   },
-]
+]}
 
 export default function Sidebar({ collapsed, onToggle, mobile }) {
   const { flags } = useFeatureFlags()
   const { isDeveloper } = useAuth()
   const config = useIndustryConfig()
   const moduleLabels = config.moduleLabels || {}
+  const t = config.terminology || {}
+  const navSections = getNavSections(t)
 
   const width = mobile ? 'w-[280px]' : collapsed ? 'w-16' : 'w-[220px]'
   const showLabels = mobile || !collapsed

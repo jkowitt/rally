@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
+import EditableText, { EditableImage } from '@/components/cms/EditableText'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },

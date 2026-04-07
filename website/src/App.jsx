@@ -8,6 +8,8 @@ import LegalGate from './components/layout/LegalGate'
 import AppShell from './components/layout/AppShell'
 import ErrorBoundary from './components/ErrorBoundary'
 import { CMSProvider } from './hooks/useCMS'
+import CMSToolbar from './components/cms/CMSToolbar'
+import PageEditor from './components/cms/PageEditor'
 
 // Auto-reload on chunk load failure (stale cache after deploy)
 function lazyRetry(fn) {
@@ -114,6 +116,8 @@ export default function App() {
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <CMSToolbar />
+          <PageEditor />
           </Suspense>
           </ToastProvider>
           </CMSProvider>

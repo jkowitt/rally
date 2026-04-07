@@ -50,9 +50,13 @@ export function AuthProvider({ children }) {
       setProfile(newProfile)
     } else {
       // Ensure developer email always has developer role
-      if (data.email?.toLowerCase() === 'jlkowitt25@gmail.com' && data.role !== 'developer') {
-        await supabase.from('profiles').update({ role: 'developer' }).eq('id', userId)
+      const { data: { user } } = await supabase.auth.getUser()
+      const authEmail = user?.email?.toLowerCase() || ''
+      const profileEmail = (data.email || '').toLowerCase()
+      if ((profileEmail === 'jlkowitt25@gmail.com' || authEmail === 'jlkowitt25@gmail.com') && data.role !== 'developer') {
+        await supabase.from('profiles').update({ role: 'developer', email: 'jlkowitt25@gmail.com' }).eq('id', userId)
         data.role = 'developer'
+        data.email = 'jlkowitt25@gmail.com'
       }
       setProfile(data)
     }

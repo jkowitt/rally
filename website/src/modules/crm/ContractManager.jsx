@@ -463,7 +463,40 @@ export default function ContractManager() {
 
 /* ============ PDF Viewer Modal ============ */
 function PDFViewerModal({ contract, onClose }) {
-  const dataUrl = `data:${contract.pdf_content_type || 'application/pdf'};base64,${contract.pdf_file_data}`
+  const [pages, setPages] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!contract.pdf_file_data) return
+    renderPages()
+  }, [contract.pdf_file_data])
+
+  async function renderPages() {
+    try {
+      const byteCharacters = atob(contract.pdf_file_data)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      const byteArray = new Uint8Array(byteNumbers)
+      const pdf = await pdfjsLib.getDocument({ data: byteArray }).promise
+      const rendered = []
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const viewport = page.getViewport({ scale: 1.5 })
+        const canvas = document.createElement('canvas')
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        const ctx = canvas.getContext('2d')
+        await page.render({ canvasContext: ctx, viewport }).promise
+        rendered.push(canvas.toDataURL('image/png'))
+      }
+      setPages(rendered)
+    } catch (err) {
+      console.error('PDF render error:', err)
+    }
+    setLoading(false)
+  }
 
   function handleDownload() {
     const byteCharacters = atob(contract.pdf_file_data)
@@ -495,26 +528,21 @@ function PDFViewerModal({ contract, onClose }) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleDownload}
-            className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium hover:opacity-90"
-          >
+          <button onClick={handleDownload} className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium hover:opacity-90">
             Download
           </button>
-          <button
-            onClick={onClose}
-            className="text-text-muted hover:text-text-primary text-lg px-2"
-          >
-            &times;
-          </button>
+          <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg px-2">&times;</button>
         </div>
       </div>
-      <div className="flex-1 bg-bg-card">
-        <iframe
-          src={dataUrl}
-          className="w-full h-full border-0"
-          title="Contract PDF"
-        />
+      <div className="flex-1 overflow-y-auto bg-bg-card p-4 flex flex-col items-center gap-4">
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin w-6 h-6 border-2 border-accent border-t-transparent rounded-full" />
+          </div>
+        )}
+        {pages.map((src, i) => (
+          <img key={i} src={src} alt={`Page ${i + 1}`} className="max-w-full shadow-lg rounded border border-border" />
+        ))}
       </div>
     </div>
   )

@@ -121,7 +121,7 @@ export default function SponsorPortal() {
     queryFn: async () => {
       const { data } = await supabase
         .from('fulfillment_records')
-        .select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_benefits(benefit_description)')
+        .select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_benefits!fulfillment_records_benefit_id_fkey(benefit_description)')
         .eq('deal_id', portalLink.deal_id)
         .order('scheduled_date')
       return data || []

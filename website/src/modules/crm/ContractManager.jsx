@@ -14,8 +14,9 @@ async function loadPdfjsFromCDN() {
 
   if (!window.pdfjsLib) throw new Error('pdfjs failed to initialize')
 
-  // Disable worker entirely — parse on main thread
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+  // Create a fake worker via blob URL to avoid loading external worker
+  const workerBlob = new Blob(['self.onmessage = function() {}'], { type: 'application/javascript' })
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(workerBlob)
   pdfjsLoaded = window.pdfjsLib
   return pdfjsLoaded
 }

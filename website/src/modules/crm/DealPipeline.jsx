@@ -1192,12 +1192,12 @@ function DealViewer({ deal, contacts, onClose, onEdit }) {
     queryKey: ['deal-fulfillment', deal.id, dealContracts],
     queryFn: async () => {
       // First try by deal_id
-      const { data: byDeal } = await supabase.from('fulfillment_records').select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_id, contract_benefits(benefit_description)').eq('deal_id', deal.id).order('scheduled_date')
+      const { data: byDeal } = await supabase.from('fulfillment_records').select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_id, contract_benefits!fulfillment_records_benefit_id_fkey(benefit_description)').eq('deal_id', deal.id).order('scheduled_date')
       let records = byDeal || []
       // Also get fulfillment records linked to this deal's contracts (for deal-less records)
       const contractIds = (dealContracts || []).map(c => c.id).filter(Boolean)
       if (contractIds.length > 0) {
-        const { data: byContract } = await supabase.from('fulfillment_records').select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_id, contract_benefits(benefit_description)').in('contract_id', contractIds).order('scheduled_date')
+        const { data: byContract } = await supabase.from('fulfillment_records').select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_id, contract_benefits!fulfillment_records_benefit_id_fkey(benefit_description)').in('contract_id', contractIds).order('scheduled_date')
         const existingIds = new Set(records.map(r => r.id))
         for (const r of (byContract || [])) {
           if (!existingIds.has(r.id)) records.push(r)

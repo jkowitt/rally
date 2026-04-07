@@ -8,31 +8,39 @@ import LegalGate from './components/layout/LegalGate'
 import AppShell from './components/layout/AppShell'
 import ErrorBoundary from './components/ErrorBoundary'
 
+// Auto-reload on chunk load failure (stale cache after deploy)
+function lazyRetry(fn) {
+  return lazy(() => fn().catch(() => {
+    window.location.reload()
+    return new Promise(() => {}) // never resolves — page will reload
+  }))
+}
+
 // Lazy-loaded pages — each loads only when navigated to
-const LandingPage = lazy(() => import('./pages/LandingPage'))
-const LoginPage = lazy(() => import('./modules/legal/LoginPage'))
-const Dashboard = lazy(() => import('./modules/dashboard/Dashboard'))
-const AssetCatalog = lazy(() => import('./modules/crm/AssetCatalog'))
-const DealPipeline = lazy(() => import('./modules/crm/DealPipeline'))
-const ContractManager = lazy(() => import('./modules/crm/ContractManager'))
-const FulfillmentTracker = lazy(() => import('./modules/crm/FulfillmentTracker'))
-const BrandReport = lazy(() => import('./modules/crm/BrandReport'))
-const DeclinedDeals = lazy(() => import('./modules/crm/DeclinedDeals'))
-const ActivityTimeline = lazy(() => import('./modules/crm/ActivityTimeline'))
-const TaskManager = lazy(() => import('./modules/crm/TaskManager'))
-const DealInsights = lazy(() => import('./modules/crm/DealInsights'))
-const Newsletter = lazy(() => import('./modules/crm/Newsletter'))
-const TeamManager = lazy(() => import('./modules/crm/TeamManager'))
-const EventManager = lazy(() => import('./modules/sportify/EventManager'))
-const EventDetail = lazy(() => import('./modules/sportify/EventDetail'))
-const ValuationEngine = lazy(() => import('./modules/valora/ValuationEngine'))
-const BusinessNow = lazy(() => import('./modules/businessnow/BusinessNow'))
-const Settings = lazy(() => import('./modules/crm/Settings'))
-const HelpCenter = lazy(() => import('./modules/crm/HelpCenter'))
-const CustomDashboardRequest = lazy(() => import('./modules/crm/CustomDashboardRequest'))
-const CustomDashboard = lazy(() => import('./modules/crm/CustomDashboard'))
-const DeveloperDashboard = lazy(() => import('./modules/developer/DeveloperDashboard'))
-const SponsorPortal = lazy(() => import('./modules/crm/SponsorPortal'))
+const LandingPage = lazyRetry(() => import('./pages/LandingPage'))
+const LoginPage = lazyRetry(() => import('./modules/legal/LoginPage'))
+const Dashboard = lazyRetry(() => import('./modules/dashboard/Dashboard'))
+const AssetCatalog = lazyRetry(() => import('./modules/crm/AssetCatalog'))
+const DealPipeline = lazyRetry(() => import('./modules/crm/DealPipeline'))
+const ContractManager = lazyRetry(() => import('./modules/crm/ContractManager'))
+const FulfillmentTracker = lazyRetry(() => import('./modules/crm/FulfillmentTracker'))
+const BrandReport = lazyRetry(() => import('./modules/crm/BrandReport'))
+const DeclinedDeals = lazyRetry(() => import('./modules/crm/DeclinedDeals'))
+const ActivityTimeline = lazyRetry(() => import('./modules/crm/ActivityTimeline'))
+const TaskManager = lazyRetry(() => import('./modules/crm/TaskManager'))
+const DealInsights = lazyRetry(() => import('./modules/crm/DealInsights'))
+const Newsletter = lazyRetry(() => import('./modules/crm/Newsletter'))
+const TeamManager = lazyRetry(() => import('./modules/crm/TeamManager'))
+const EventManager = lazyRetry(() => import('./modules/sportify/EventManager'))
+const EventDetail = lazyRetry(() => import('./modules/sportify/EventDetail'))
+const ValuationEngine = lazyRetry(() => import('./modules/valora/ValuationEngine'))
+const BusinessNow = lazyRetry(() => import('./modules/businessnow/BusinessNow'))
+const Settings = lazyRetry(() => import('./modules/crm/Settings'))
+const HelpCenter = lazyRetry(() => import('./modules/crm/HelpCenter'))
+const CustomDashboardRequest = lazyRetry(() => import('./modules/crm/CustomDashboardRequest'))
+const CustomDashboard = lazyRetry(() => import('./modules/crm/CustomDashboard'))
+const DeveloperDashboard = lazyRetry(() => import('./modules/developer/DeveloperDashboard'))
+const SponsorPortal = lazyRetry(() => import('./modules/crm/SponsorPortal'))
 
 function PageLoader() {
   return (

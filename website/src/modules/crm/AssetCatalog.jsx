@@ -184,7 +184,7 @@ export default function AssetCatalog() {
     },
   })
 
-  const filtered = assets?.filter((a) => !filter || a.category === filter) || []
+  const filtered = (assets || []).filter((a) => !filter || a.category === filter) || []
 
   // Group by category for grid view
   const grouped = CATEGORIES.reduce((acc, cat) => {
@@ -198,7 +198,7 @@ export default function AssetCatalog() {
 
   // Category summary stats
   const categorySummary = CATEGORIES.map(cat => {
-    const items = assets?.filter(a => a.category === cat) || []
+    const items = (assets || []).filter(a => a.category === cat) || []
     const totalAvailable = items.reduce((s, a) => s + (a.total_available || 0), 0)
     const totalSold = items.reduce((s, a) => s + (a.sold_count || 0), 0)
     const totalValue = items.reduce((s, a) => s + (Number(a.base_price) || 0) * (a.quantity || 1), 0)
@@ -318,7 +318,7 @@ export default function AssetCatalog() {
             All ({assets?.length || 0})
           </button>
           {CATEGORIES.map((cat) => {
-            const count = assets?.filter((a) => a.category === cat).length || 0
+            const count = (assets || []).filter((a) => a.category === cat).length || 0
             if (count === 0) return null
             return (
               <button

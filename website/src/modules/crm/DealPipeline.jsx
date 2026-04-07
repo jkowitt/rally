@@ -551,7 +551,7 @@ export default function DealPipeline() {
   }, {})
 
   const totalValue = activeDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0)
-  const declinedCount = deals?.filter((d) => d.stage === 'Declined').length || 0
+  const declinedCount = (deals || []).filter((d) => d.stage === 'Declined').length || 0
   const priorityColor = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
 
   // Get unique categories in current deals for the filter
@@ -700,7 +700,7 @@ export default function DealPipeline() {
               {deals ? Math.round((deals.filter(d => ['Contracted','In Fulfillment','Renewed'].includes(d.stage)).length / (deals.filter(d => d.stage !== 'Declined').length || 1)) * 100) : 0}%
             </div>
             <div className="text-[10px] text-text-muted font-mono mt-0.5">
-              {deals?.filter(d => ['Contracted','In Fulfillment','Renewed'].includes(d.stage)).length || 0}/{deals?.filter(d => d.stage !== 'Declined').length || 0} prospects
+              {(deals || []).filter(d => ['Contracted','In Fulfillment','Renewed'].includes(d.stage)).length || 0}/{(deals || []).filter(d => d.stage !== 'Declined').length || 0} prospects
             </div>
           </div>
           <div className="bg-bg-surface border border-border rounded-lg p-3">
@@ -1195,7 +1195,7 @@ function DealViewer({ deal, contacts, onClose, onEdit }) {
     enabled: !!deal.id,
   })
 
-  const fulfillmentDelivered = dealFulfillment?.filter(f => f.delivered).length || 0
+  const fulfillmentDelivered = (dealFulfillment || []).filter(f => f.delivered).length || 0
   const fulfillmentTotal = dealFulfillment?.length || 0
 
   return (

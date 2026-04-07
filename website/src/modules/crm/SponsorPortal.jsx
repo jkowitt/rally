@@ -151,7 +151,7 @@ export default function SponsorPortal() {
     )
   }
 
-  const fulfillmentDelivered = fulfillment?.filter(f => f.delivered).length || 0
+  const fulfillmentDelivered = (fulfillment || []).filter(f => f.delivered).length || 0
   const fulfillmentTotal = fulfillment?.length || 0
   const fulfillmentPct = fulfillmentTotal ? Math.round((fulfillmentDelivered / fulfillmentTotal) * 100) : 0
 

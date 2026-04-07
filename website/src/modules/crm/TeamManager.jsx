@@ -195,11 +195,11 @@ export default function TeamManager() {
   const roleColors = { owner: 'text-accent', admin: 'text-warning', member: 'text-text-secondary' }
 
   function getMemberDeals(userId) {
-    return memberStats?.deals?.filter(d => d.created_by === userId) || []
+    return (memberStats?.deals || []).filter(d => d.created_by === userId)
   }
 
   function getMemberActivities(userId) {
-    return memberStats?.activities?.filter(a => a.created_by === userId) || []
+    return (memberStats?.activities || []).filter(a => a.created_by === userId)
   }
 
   return (

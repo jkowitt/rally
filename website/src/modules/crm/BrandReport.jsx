@@ -25,7 +25,7 @@ export default function BrandReport() {
     return <div className="text-text-muted text-sm p-6">Loading report...</div>
   }
 
-  const deliveredCount = deal.fulfillment_records?.filter((r) => r.delivered).length || 0
+  const deliveredCount = (deal.fulfillment_records || []).filter((r) => r.delivered).length
   const totalFulfillment = deal.fulfillment_records?.length || 0
 
   return (

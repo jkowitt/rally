@@ -221,7 +221,7 @@ export default function DeveloperDashboard() {
     { id: 'flags', label: 'Feature Flags' },
     { id: 'api', label: 'API Usage' },
     { id: 'health', label: `Code Health (${analysisReports?.length || 0})` },
-    { id: 'suggestions', label: `Suggestions (${suggestions?.filter(s => s.status === 'new').length || 0})` },
+    { id: 'suggestions', label: `Suggestions (${(suggestions || []).filter(s => s.status === 'new').length || 0})` },
     { id: 'custom', label: 'Custom Dashboards' },
   ]
 
@@ -248,8 +248,8 @@ export default function DeveloperDashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <StatCard label="Properties" value={properties?.length || 0} color="text-accent" />
         <StatCard label="Total Users" value={profiles?.length || 0} color="text-text-primary" />
-        <StatCard label="Admins" value={profiles?.filter(p => p.role === 'admin').length || 0} color="text-warning" />
-        <StatCard label="Pending Invites" value={invitations?.filter(i => !i.accepted).length || 0} color="text-text-muted" />
+        <StatCard label="Admins" value={(profiles || []).filter(p => p.role === 'admin').length || 0} color="text-warning" />
+        <StatCard label="Pending Invites" value={(invitations || []).filter(i => !i.accepted).length || 0} color="text-text-muted" />
       </div>
 
       {/* Tabs */}
@@ -364,13 +364,13 @@ export default function DeveloperDashboard() {
           {/* Pending Invitations */}
           <Panel title="Pending Invitations">
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {invitations?.filter(i => !i.accepted).slice(0, 10).map(inv => (
+              {(invitations || []).filter(i => !i.accepted).slice(0, 10).map(inv => (
                 <div key={inv.id} className="flex items-center justify-between py-1 text-xs">
                   <span className="text-text-primary">{inv.email}</span>
                   <span className="text-text-muted">{inv.properties?.name} &middot; {inv.role}</span>
                 </div>
               ))}
-              {invitations?.filter(i => !i.accepted).length === 0 && (
+              {(invitations || []).filter(i => !i.accepted).length === 0 && (
                 <div className="text-text-muted text-xs">No pending invitations</div>
               )}
             </div>
@@ -487,11 +487,11 @@ export default function DeveloperDashboard() {
                     {p.city && <span>{p.city}{p.state ? `, ${p.state}` : ''}</span>}
                     {p.sport && <span>{p.sport}</span>}
                     {p.billing_email && <span>{p.billing_email}</span>}
-                    <span>{profiles?.filter(pr => pr.property_id === p.id).length || 0} users</span>
+                    <span>{(profiles || []).filter(pr => pr.property_id === p.id).length || 0} users</span>
                   </div>
                   {/* Users at this company */}
                   <div className="flex gap-1 mt-1.5 flex-wrap">
-                    {profiles?.filter(pr => pr.property_id === p.id).map(u => (
+                    {(profiles || []).filter(pr => pr.property_id === p.id).map(u => (
                       <span key={u.id} className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${roleColor[u.role] || 'bg-bg-card text-text-muted'}`}>
                         {u.full_name || u.email || u.id.slice(0, 6)} ({u.role})
                       </span>
@@ -726,9 +726,9 @@ export default function DeveloperDashboard() {
           <div className="flex gap-2 flex-wrap text-xs">
             <span className="text-text-muted font-mono">
               {suggestions?.length || 0} total &middot;
-              {suggestions?.filter(s => s.status === 'new').length || 0} new &middot;
-              {suggestions?.filter(s => s.status === 'planned').length || 0} planned &middot;
-              {suggestions?.filter(s => s.contact_me).length || 0} want contact
+              {(suggestions || []).filter(s => s.status === 'new').length || 0} new &middot;
+              {(suggestions || []).filter(s => s.status === 'planned').length || 0} planned &middot;
+              {(suggestions || []).filter(s => s.contact_me).length || 0} want contact
             </span>
           </div>
           {suggestions?.map(s => {

@@ -17,13 +17,17 @@ const INDUSTRIES = [
     label: 'Sports',
     icon: '🏟',
     headline: 'Sports Partnerships',
-    subtitle: 'College athletics, professional teams, and minor league organizations',
+    subtitle: 'Teams, athletic departments, leagues, and partnership agencies',
     description: 'AI-powered sponsorship CRM, verified contact intelligence, contract analysis, event operations, and media valuations — built for college athletics, professional teams, and sports agencies.',
     deals: 'sponsorship deals',
     assets: 'sponsorship assets',
     cta: 'sports business',
     modules: ['Pipeline', 'Contracts', 'Assets', 'Fulfillment', 'Events', 'VALORA', 'Newsletter'],
     stats: [{ value: '22', label: 'Asset Categories' }, { value: 'AI', label: 'Powered Intelligence' }, { value: '∞', label: 'Scalable Pipeline' }],
+    subChoices: [
+      { id: 'property', label: 'Sports Property', description: 'Team, athletic department, or league', industryId: 'sports' },
+      { id: 'agency', label: 'Partnership Agency', description: 'Sell sponsorships on behalf of properties', industryId: 'agency' },
+    ],
   },
   {
     id: 'entertainment',
@@ -90,19 +94,6 @@ const INDUSTRIES = [
     modules: ['Tenant Pipeline', 'Lease Contracts', 'Property Units', 'Build-Out Tracking', 'Analytics'],
     stats: [{ value: '8+', label: 'Property Types' }, { value: 'AI', label: 'Market Analysis' }, { value: '∞', label: 'Tenant Pipeline' }],
   },
-  {
-    id: 'agency',
-    label: 'Agencies',
-    icon: '📊',
-    headline: 'Client Pipeline Management',
-    subtitle: 'Marketing, PR, sports, and consulting agencies',
-    description: 'Manage client pipelines, track deliverables, automate contracts, and keep your team aligned — from pitch to fulfillment.',
-    deals: 'client engagements',
-    assets: 'service deliverables',
-    cta: 'agency',
-    modules: ['Client Pipeline', 'Contracts', 'Deliverables', 'Fulfillment', 'Team Management', 'Newsletter'],
-    stats: [{ value: '10+', label: 'Service Categories' }, { value: 'AI', label: 'Proposal Drafting' }, { value: '∞', label: 'Client Pipeline' }],
-  },
 ]
 
 export default function LandingPage() {
@@ -159,7 +150,8 @@ export default function LandingPage() {
 
 /* ─── WELCOME GATE ─── */
 function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selectedIndustry, onSelectIndustry }) {
-  const [step, setStep] = useState(hasAccount ? 'returning' : 'choose') // choose | industry | returning
+  const [step, setStep] = useState(hasAccount ? 'returning' : 'choose') // choose | industry | sub-choice | returning
+  const [pendingIndustry, setPendingIndustry] = useState(null)
   const navigate = useNavigate()
 
   return (
@@ -333,9 +325,13 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 + i * 0.05 }}
                     onClick={() => {
-                      onSelectIndustry(ind)
-                      localStorage.setItem('ll-has-account', '1')
-                      onNewUser()
+                      if (ind.subChoices) {
+                        setPendingIndustry(ind)
+                        setStep('sub-choice')
+                      } else {
+                        onSelectIndustry(ind)
+                        onNewUser()
+                      }
                     }}
                     className={`flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all hover:border-accent/50 hover:bg-accent/5 ${
                       selectedIndustry.id === ind.id ? 'border-accent bg-accent/5' : 'border-border'
@@ -358,6 +354,70 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                 className="text-xs text-text-muted hover:text-text-secondary transition-colors"
               >
                 &larr; Go back
+              </motion.button>
+            </motion.div>
+          )}
+
+          {/* Step 2b: Sub-choice (e.g. Sports Property vs Agency) */}
+          {step === 'sub-choice' && pendingIndustry && (
+            <motion.div
+              key="sub-choice"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.35 }}
+              className="text-center space-y-6"
+            >
+              <div>
+                <span className="text-3xl">{pendingIndustry.icon}</span>
+                <motion.h2
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-xl font-semibold text-text-primary mt-3"
+                >
+                  Which best describes you?
+                </motion.h2>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="space-y-3"
+              >
+                {pendingIndustry.subChoices.map((sub, i) => (
+                  <motion.button
+                    key={sub.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 + i * 0.1 }}
+                    onClick={() => {
+                      // Use the parent industry for landing page display
+                      onSelectIndustry({ ...pendingIndustry, _subChoice: sub.id, _registrationId: sub.industryId })
+                      onNewUser()
+                    }}
+                    className="w-full flex items-center gap-4 p-4 rounded-lg border border-border text-left transition-all hover:border-accent/50 hover:bg-accent/5"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent font-bold text-sm shrink-0">
+                      {sub.id === 'property' ? '🏟' : '📋'}
+                    </div>
+                    <div>
+                      <div className="text-sm text-text-primary font-medium">{sub.label}</div>
+                      <div className="text-[11px] text-text-muted mt-0.5">{sub.description}</div>
+                    </div>
+                  </motion.button>
+                ))}
+              </motion.div>
+
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                onClick={() => setStep('industry')}
+                className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+              >
+                &larr; Pick a different industry
               </motion.button>
             </motion.div>
           )}
@@ -441,7 +501,7 @@ function Hero({ industry }) {
 
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
           <Link
-            to={`/login?industry=${industry.id}`}
+            to={`/login?industry=${industry._registrationId || industry.id}`}
             className="bg-accent text-bg-primary px-8 py-3.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
           >
             Get Started Free
@@ -517,7 +577,7 @@ function IndustrySelector({ selected, onSelect }) {
                 </div>
                 <div className="mt-4">
                   <Link
-                    to={`/login?industry=${selected.id}`}
+                    to={`/login?industry=${selected._registrationId || selected.id}`}
                     className="inline-block bg-accent text-bg-primary px-6 py-2.5 rounded text-sm font-semibold hover:opacity-90 transition-opacity"
                   >
                     Start Free — {selected.label}
@@ -887,7 +947,7 @@ function CTA({ industry }) {
         </motion.p>
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
           <Link
-            to={`/login?industry=${industry.id}`}
+            to={`/login?industry=${industry._registrationId || industry.id}`}
             className="bg-accent text-bg-primary px-8 py-3.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
           >
             Create Your Free Account

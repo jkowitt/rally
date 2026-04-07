@@ -9,8 +9,8 @@ import { usePlanLimits } from '@/hooks/usePlanLimits'
 
 const PLANS = [
   { id: 'free', name: 'Free', price: '$0', period: '7-day trial', users: 3, features: ['CRM Pipeline (15 deals)', '3 prospect searches/mo', '2 contract uploads/mo', 'Basic CSV export', 'No verified contact lookups'] },
-  { id: 'starter', name: 'Starter', price: '$49', period: '/month', users: 10, features: ['Everything in Free', '500 deals', '50 prospect searches/mo', '50 verified contact lookups/mo', '25 contract uploads/mo', 'Events module', 'AI insights', 'Fulfillment reports', 'Team goals', 'Bulk import'] },
-  { id: 'pro', name: 'Pro', price: '$149', period: '/month', users: 'Unlimited', features: ['Everything in Starter', 'All modules', '200 prospect searches/mo', '200 contact researches/mo', 'Unlimited contracts', 'Verified contacts', 'Email verification', 'PowerPoint reports', 'Custom dashboard eligible', 'Priority support'], recommended: true },
+  { id: 'starter', name: 'Starter', price: '$49', period: '/month', users: 10, features: ['Everything in Free', '500 deals', '40 prospect searches/mo', '40 verified contact lookups/mo', '20 contract uploads/mo', 'Events module', 'AI insights', 'Fulfillment reports', 'Team goals', 'Bulk import'] },
+  { id: 'pro', name: 'Pro', price: '$149', period: '/month', users: 'Unlimited', features: ['Everything in Starter', 'All modules', '160 prospect searches/mo', '160 verified contact lookups/mo', '800 contract uploads/mo', 'Verified contacts', 'Email verification', 'PowerPoint reports', 'Custom dashboard eligible', 'Priority support'], recommended: true },
   { id: 'enterprise', name: 'Enterprise', price: 'Custom', period: '', users: 'Unlimited', features: ['Everything in Pro', 'Unlimited everything', 'White-label dashboard', 'Custom integrations', 'API access', 'Dedicated support', 'SLA guarantee'] },
 ]
 

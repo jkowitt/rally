@@ -6,9 +6,9 @@ import { useAuth } from './useAuth'
 const PLAN_LIMITS = {
   free: {
     prospect_search: 3,
-    contact_research: 3,
+    contact_research: 0,
     contract_upload: 2,
-    ai_valuation: 2,
+    ai_valuation: 0,
     newsletter_generate: 1,
     deals: 15,
     users: 3,

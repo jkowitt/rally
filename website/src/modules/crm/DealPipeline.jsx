@@ -1127,6 +1127,7 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   const [enrichingCompany, setEnrichingCompany] = useState(false)
   const [verifyingEmail, setVerifyingEmail] = useState(null)
   const queryClient = useQueryClient()
+  const viewerPlanLimits = usePlanLimits()
   const propertyId = deal.property_id
   const priorityColor = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
   const stageColor = {
@@ -1140,7 +1141,13 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   }
 
   async function handleEnrichCompany() {
+    if (!viewerPlanLimits.canUse('contact_research')) {
+      toast({ title: 'Upgrade required', description: 'Verified contact lookups require a paid plan.', type: 'warning' })
+      return
+    }
     setEnrichingCompany(true)
+    const isExempt = viewerPlanLimits.plan === 'enterprise' || viewerPlanLimits.plan === 'developer'
+    if (!isExempt) viewerPlanLimits.trackUsage('contact_research')
     try {
       const res = await apolloEnrichCompany({ company_name: deal.brand_name, domain: deal.website, property_id: propertyId })
       if (res?.data) {
@@ -1167,7 +1174,13 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   }
 
   async function handleVerifyEmail(contactId, email) {
+    if (!viewerPlanLimits.canUse('contact_research')) {
+      toast({ title: 'Upgrade required', description: 'Email verification requires a paid plan.', type: 'warning' })
+      return
+    }
     setVerifyingEmail(contactId)
+    const isExempt = viewerPlanLimits.plan === 'enterprise' || viewerPlanLimits.plan === 'developer'
+    if (!isExempt) viewerPlanLimits.trackUsage('contact_research')
     try {
       const res = await hunterVerifyEmail({ email, property_id: propertyId })
       const status = res?.status || res?.result || 'unknown'
@@ -3502,9 +3515,16 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   async function handleResearchContacts(idx) {
     const prospect = results[idx]
     if (!prospect) return
+
+    // Check if user can use contact research
+    if (!planLimits.canUse('contact_research')) {
+      setStatus('Verified contact lookups require a paid plan. Upgrade to Starter or higher for 50+ lookups/mo.')
+      return
+    }
+
     setResearchingIdx(idx)
 
-    // Always charge a credit for non-enterprise/developer users
+    // Charge a credit for non-enterprise/developer users
     const isExempt = planLimits.plan === 'enterprise' || planLimits.plan === 'developer'
     if (!isExempt) {
       planLimits.trackUsage('contact_research')

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Loud Legacy Logo Download</title>
+  <style>
+    body { background: #0D1117; color: #F0F2F8; font-family: system-ui; display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 30px; }
+    .preview { border: 1px solid #1E2435; border-radius: 12px; padding: 24px; text-align: center; }
+    .preview canvas { display: block; margin: 12px auto; }
+    .label { font-size: 12px; color: #8B92A8; margin-bottom: 8px; }
+    button { background: #E8B84B; color: #080A0F; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; margin: 4px; }
+    button:hover { opacity: 0.9; }
+    h1 { font-family: 'Courier New', monospace; color: #E8B84B; letter-spacing: 3px; word-spacing: -4px; }
+  </style>
+</head>
+<body>
+  <h1>LOUD LEGACY</h1>
+  <p style="color:#8B92A8;font-size:14px;">Click to download logo in each format</p>
+
+  <div class="preview">
+    <div class="label">Dark Background (1200x300)</div>
+    <canvas id="dark" width="1200" height="300"></canvas>
+    <button onclick="download('dark','png')">Download PNG (Dark)</button>
+    <button onclick="download('dark','jpeg')">Download JPEG (Dark)</button>
+  </div>
+
+  <div class="preview">
+    <div class="label">Transparent Background (1200x300)</div>
+    <canvas id="transparent" width="1200" height="300"></canvas>
+    <button onclick="download('transparent','png')">Download PNG (Transparent)</button>
+  </div>
+
+  <div class="preview">
+    <div class="label">White Background (1200x300)</div>
+    <canvas id="white" width="1200" height="300"></canvas>
+    <button onclick="download('white','png')">Download PNG (White)</button>
+    <button onclick="download('white','jpeg')">Download JPEG (White)</button>
+  </div>
+
+  <div class="preview">
+    <div class="label">Icon / Square (512x512)</div>
+    <canvas id="icon" width="512" height="512"></canvas>
+    <button onclick="download('icon','png')">Download PNG (Icon)</button>
+  </div>
+
+  <script>
+    function drawLogo(canvasId, bg, textColor) {
+      const c = document.getElementById(canvasId)
+      const ctx = c.getContext('2d')
+      if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height) }
+
+      const isIcon = canvasId === 'icon'
+      const fontSize = isIcon ? 72 : 80
+      ctx.font = `bold ${fontSize}px 'Courier New', Courier, monospace`
+      ctx.fillStyle = textColor || '#E8B84B'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+
+      if (isIcon) {
+        ctx.fillText('LL', c.width/2, c.height/2)
+        // Subtle border
+        ctx.strokeStyle = textColor || '#E8B84B'
+        ctx.lineWidth = 3
+        ctx.strokeRect(40, 40, c.width-80, c.height-80)
+      } else {
+        // Draw with tighter spacing
+        const text = 'LOUD LEGACY'
+        ctx.letterSpacing = '3px'
+        ctx.fillText(text, c.width/2, c.height/2)
+      }
+    }
+
+    drawLogo('dark', '#0D1117', '#E8B84B')
+    drawLogo('transparent', null, '#E8B84B')
+    drawLogo('white', '#FFFFFF', '#0D1117')
+    drawLogo('icon', '#0D1117', '#E8B84B')
+
+    function download(canvasId, format) {
+      const c = document.getElementById(canvasId)
+      const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png'
+      const ext = format === 'jpeg' ? 'jpg' : 'png'
+      const a = document.createElement('a')
+      a.download = `loud-legacy-logo-${canvasId}.${ext}`
+      a.href = c.toDataURL(mime, 0.95)
+      a.click()
+    }
+  </script>
+</body>
+</html>

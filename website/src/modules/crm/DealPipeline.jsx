@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -1063,6 +1063,8 @@ function EditableCell({ value, dealId, field, onSave, className, format, type = 
 
 /* ============ Deal Viewer (Read-Only) ============ */
 function DealViewer({ deal, contacts, onClose, onEdit }) {
+  const navigate = useNavigate()
+  const propertyId = deal.property_id
   const priorityColor = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
   const stageColor = {
     Prospect: 'bg-bg-card text-text-secondary',
@@ -1073,6 +1075,62 @@ function DealViewer({ deal, contacts, onClose, onEdit }) {
     Renewed: 'bg-success/10 text-success',
     Declined: 'bg-danger/10 text-danger',
   }
+
+  // Fetch contracts linked to this deal
+  const { data: dealContracts } = useQuery({
+    queryKey: ['deal-contracts', deal.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('contracts').select('id, brand_name, status, signed, effective_date, expiration_date, total_value, contract_benefits(*)').eq('deal_id', deal.id)
+      return data || []
+    },
+    enabled: !!deal.id,
+  })
+
+  // Fetch assets linked via deal_assets OR sourced from this deal's contracts
+  const { data: dealAssets } = useQuery({
+    queryKey: ['deal-assets-viewer', deal.id],
+    queryFn: async () => {
+      // Get assets from deal_assets join table
+      const { data: fromDealAssets } = await supabase.from('deal_assets').select('*, assets(id, name, category, base_price, quantity)').eq('deal_id', deal.id)
+      // Get assets auto-created from contracts linked to this deal
+      const contractIds = (dealContracts || []).map(c => c.id).filter(Boolean)
+      let fromContracts = []
+      if (contractIds.length > 0) {
+        const { data } = await supabase.from('assets').select('id, name, category, base_price, quantity, from_contract, source_contract_id').in('source_contract_id', contractIds)
+        fromContracts = data || []
+      }
+      // Merge, dedupe by asset id
+      const allAssets = []
+      const seen = new Set()
+      for (const da of (fromDealAssets || [])) {
+        if (da.assets && !seen.has(da.assets.id)) {
+          seen.add(da.assets.id)
+          allAssets.push({ ...da.assets, proposed_price: da.custom_price, is_proposed: da.is_proposed })
+        }
+      }
+      for (const a of fromContracts) {
+        if (!seen.has(a.id)) {
+          seen.add(a.id)
+          allAssets.push(a)
+        }
+      }
+      return allAssets
+    },
+    enabled: !!deal.id && dealContracts !== undefined,
+  })
+
+  // Fetch fulfillment records for this deal
+  const { data: dealFulfillment } = useQuery({
+    queryKey: ['deal-fulfillment', deal.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('fulfillment_records').select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_benefits(benefit_description)').eq('deal_id', deal.id).order('scheduled_date')
+      return data || []
+    },
+    enabled: !!deal.id,
+  })
+
+  const fulfillmentDelivered = dealFulfillment?.filter(f => f.delivered).length || 0
+  const fulfillmentTotal = dealFulfillment?.length || 0
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
@@ -1210,6 +1268,116 @@ function DealViewer({ deal, contacts, onClose, onEdit }) {
                     <div className="text-sm text-accent font-mono">${Number(val).toLocaleString()}</div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Contracts */}
+          {dealContracts?.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider">Contracts ({dealContracts.length})</div>
+                <button onClick={() => { onClose(); navigate('/app/crm/contracts') }} className="text-[10px] text-accent hover:underline">View all &rarr;</button>
+              </div>
+              <div className="space-y-2">
+                {dealContracts.map(c => (
+                  <div key={c.id} className="bg-bg-card border border-border rounded-lg p-3 cursor-pointer hover:border-accent/30 transition-colors" onClick={() => { onClose(); navigate('/app/crm/contracts') }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-text-primary font-medium">{c.brand_name || 'Contract'}</span>
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${c.signed ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                        {c.status || (c.signed ? 'Signed' : 'Draft')}
+                      </span>
+                    </div>
+                    {c.total_value && <div className="text-xs text-accent font-mono mt-1">${Number(c.total_value).toLocaleString()}</div>}
+                    <div className="flex gap-3 mt-1 text-[10px] text-text-muted font-mono">
+                      {c.effective_date && <span>Start: {c.effective_date}</span>}
+                      {c.expiration_date && <span>End: {c.expiration_date}</span>}
+                    </div>
+                    {/* Contract Benefits */}
+                    {c.contract_benefits?.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        <div className="text-[10px] text-text-muted font-mono">Benefits ({c.contract_benefits.length}):</div>
+                        {c.contract_benefits.slice(0, 5).map((b, i) => (
+                          <div key={b.id || i} className="flex items-center justify-between text-[11px]">
+                            <span className="text-text-secondary truncate mr-2">{b.benefit_description}</span>
+                            <span className="text-text-muted font-mono shrink-0">
+                              {b.quantity > 1 ? `${b.quantity}x` : ''}{b.value ? ` $${Number(b.value).toLocaleString()}` : ''}
+                            </span>
+                          </div>
+                        ))}
+                        {c.contract_benefits.length > 5 && <div className="text-[10px] text-text-muted">+{c.contract_benefits.length - 5} more</div>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Assets */}
+          {dealAssets?.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider">Assets ({dealAssets.length})</div>
+                <button onClick={() => { onClose(); navigate('/app/crm/assets') }} className="text-[10px] text-accent hover:underline">View catalog &rarr;</button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {dealAssets.map(a => (
+                  <div key={a.id} className="bg-bg-card border border-border rounded-lg p-2.5 cursor-pointer hover:border-accent/30 transition-colors" onClick={() => { onClose(); navigate('/app/crm/assets') }}>
+                    <div className="text-xs text-text-primary font-medium truncate">{a.name}</div>
+                    <div className="text-[10px] text-text-muted font-mono">{a.category}</div>
+                    {(a.base_price || a.proposed_price) && (
+                      <div className="text-[10px] text-accent font-mono mt-0.5">
+                        ${Number(a.proposed_price || a.base_price).toLocaleString()}
+                        {a.quantity > 1 && ` x${a.quantity}`}
+                      </div>
+                    )}
+                    {a.from_contract && <div className="text-[9px] font-mono text-text-muted mt-0.5">From contract</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Fulfillment */}
+          {dealFulfillment?.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+                  Fulfillment ({fulfillmentDelivered}/{fulfillmentTotal} delivered)
+                </div>
+                <button onClick={() => { onClose(); navigate('/app/crm/fulfillment') }} className="text-[10px] text-accent hover:underline">View tracker &rarr;</button>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full bg-bg-card rounded-full h-2 mb-2">
+                <div className={`h-2 rounded-full transition-all ${fulfillmentDelivered === fulfillmentTotal ? 'bg-success' : 'bg-accent'}`} style={{ width: `${fulfillmentTotal ? (fulfillmentDelivered / fulfillmentTotal) * 100 : 0}%` }} />
+              </div>
+              <div className="space-y-1.5">
+                {dealFulfillment.slice(0, 8).map(f => (
+                  <div key={f.id} className="flex items-center justify-between text-[11px] py-1 border-b border-border last:border-0">
+                    <span className={`truncate mr-2 ${f.delivered ? 'text-text-muted line-through' : 'text-text-secondary'}`}>
+                      {f.contract_benefits?.benefit_description || 'Fulfillment item'}
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {f.scheduled_date && <span className="text-[10px] text-text-muted font-mono">{f.scheduled_date}</span>}
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${f.delivered ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                        {f.delivered ? 'Delivered' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {dealFulfillment.length > 8 && <div className="text-[10px] text-text-muted text-center py-1">+{dealFulfillment.length - 8} more items</div>}
+              </div>
+            </div>
+          )}
+
+          {/* Quick links when no data yet */}
+          {!dealContracts?.length && !dealAssets?.length && !dealFulfillment?.length && (
+            <div className="bg-bg-card border border-border rounded-lg p-3 text-center space-y-2">
+              <div className="text-xs text-text-muted">No contracts, assets, or fulfillment linked yet.</div>
+              <div className="flex justify-center gap-3">
+                <button onClick={() => { onClose(); navigate('/app/crm/contracts') }} className="text-[10px] text-accent hover:underline">Upload contract</button>
+                <button onClick={() => { onClose(); navigate('/app/crm/assets') }} className="text-[10px] text-accent hover:underline">Add assets</button>
               </div>
             </div>
           )}

@@ -168,11 +168,11 @@ export default function ContractManager() {
         const { data: insertedBenefits, error: benErr } = await supabase.from('contract_benefits').insert(benefitRows).select()
         if (benErr) syncErrors.push('Insert benefits: ' + benErr.message)
 
-        // Auto-create fulfillment records
-        if (insertedBenefits?.length > 0 && savedContract.deal_id) {
+        // Auto-create fulfillment records (deal_id is nullable since migration 021)
+        if (insertedBenefits?.length > 0) {
           await supabase.from('fulfillment_records').delete().eq('contract_id', savedContract.id).eq('auto_generated', true)
           const fulfillmentRows = insertedBenefits.map(b => ({
-            deal_id: savedContract.deal_id,
+            deal_id: savedContract.deal_id || null,
             contract_id: savedContract.id,
             benefit_id: b.id,
             scheduled_date: savedContract.effective_date || null,
@@ -1257,13 +1257,13 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
 
         benefitCount = insertedBenefits?.length || 0
 
-        // Auto-create fulfillment records
-        if (insertedBenefits?.length > 0 && dealId) {
+        // Auto-create fulfillment records (deal_id nullable since migration 021)
+        if (insertedBenefits?.length > 0) {
           const fulfillmentRows = insertedBenefits.map((b) => ({
-            deal_id: dealId,
+            deal_id: dealId || null,
             contract_id: contract.id,
             benefit_id: b.id,
-            scheduled_date: parsed.effective_date || null,
+            scheduled_date: parsed?.effective_date || null,
             delivered: false,
             auto_generated: true,
           }))

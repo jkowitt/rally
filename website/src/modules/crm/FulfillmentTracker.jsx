@@ -382,15 +382,17 @@ export default function FulfillmentTracker() {
   const { data: records = [], isLoading: loadingRecords } = useQuery({
     queryKey: ['fulfillment-records', propertyId],
     queryFn: async () => {
+      // Get contract IDs for this property to include deal-less fulfillment records
+      const contractIds = contracts.map(c => c.id).filter(Boolean)
       const { data, error } = await supabase
         .from('fulfillment_records')
-        .select('*, deals(id, brand_name, logo_url), contracts(brand_name, status)')
+        .select('*, deals(id, brand_name, logo_url), contracts(brand_name, status, property_id)')
         .order('scheduled_date')
       if (error) { console.error('Fulfillment records query error:', error); return [] }
-      // Filter to this property's deals
-      return (data || []).filter(r => r.deals?.id || r.deal_id)
+      // Filter to this property's records: has a deal OR belongs to a contract from this property
+      return (data || []).filter(r => r.deals?.id || r.deal_id || contractIds.includes(r.contract_id))
     },
-    enabled: !!propertyId,
+    enabled: !!propertyId && !loadingContracts,
   })
 
   // -----------------------------------------------------------------------

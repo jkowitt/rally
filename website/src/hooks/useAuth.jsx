@@ -60,8 +60,10 @@ export function AuthProvider({ children }) {
   }
 
   async function signIn(email, password) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    // Wait for profile to load before returning — prevents black screen flash
+    if (data?.user) await fetchProfile(data.user.id)
   }
 
   async function signUp(email, password, fullName) {

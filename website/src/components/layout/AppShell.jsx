@@ -6,6 +6,7 @@ import GlobalSearch from '../GlobalSearch'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 
 const FeatureSuggestion = lazy(() => import('../FeatureSuggestion'))
+const CMSToolbar = lazy(() => import('../cms/CMSToolbar'))
 
 export default function AppShell({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -93,6 +94,11 @@ export default function AppShell({ children }) {
           <FeatureSuggestion onClose={() => setShowSuggestion(false)} />
         </Suspense>
       )}
+
+      {/* CMS edit mode toolbar */}
+      <Suspense fallback={null}>
+        <CMSToolbar />
+      </Suspense>
     </div>
   )
 }

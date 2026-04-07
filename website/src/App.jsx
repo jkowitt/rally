@@ -7,6 +7,7 @@ import ProtectedRoute from './components/layout/ProtectedRoute'
 import LegalGate from './components/layout/LegalGate'
 import AppShell from './components/layout/AppShell'
 import ErrorBoundary from './components/ErrorBoundary'
+import { CMSProvider } from './hooks/useCMS'
 
 // Auto-reload on chunk load failure (stale cache after deploy)
 function lazyRetry(fn) {
@@ -55,6 +56,7 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <FeatureFlagProvider>
+          <CMSProvider>
           <ToastProvider>
           <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -114,6 +116,7 @@ export default function App() {
           </Routes>
           </Suspense>
           </ToastProvider>
+          </CMSProvider>
         </FeatureFlagProvider>
       </AuthProvider>
     </ErrorBoundary>

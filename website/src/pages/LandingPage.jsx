@@ -109,6 +109,12 @@ export default function LandingPage() {
     setWelcomed(true)
   }
 
+  function handleLogoClick() {
+    sessionStorage.removeItem('ll-welcomed')
+    setWelcomed(false)
+    window.scrollTo({ top: 0 })
+  }
+
   function handleReturningUser() {
     localStorage.setItem('ll-has-account', '1')
     sessionStorage.setItem('ll-welcomed', '1')
@@ -132,7 +138,7 @@ export default function LandingPage() {
 
       {welcomed && (
         <>
-          <Nav />
+          <Nav onLogoClick={handleLogoClick} />
           <Hero industry={industry} onSelectIndustry={setIndustry} />
           <IndustrySelector selected={industry} onSelect={setIndustry} />
           <Ecosystem industry={industry} />
@@ -428,11 +434,11 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
 }
 
 /* ─── NAV ─── */
-function Nav() {
+function Nav({ onLogoClick }) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-bg-primary/80 backdrop-blur-lg border-b border-border/50">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <span className="font-mono font-bold text-accent text-base " style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</span>
+        <button onClick={onLogoClick} className="font-mono font-bold text-accent text-base cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</button>
         <div className="hidden md:flex items-center gap-8 text-sm text-text-secondary">
           <a href="#ecosystem" className="hover:text-text-primary transition-colors">Ecosystem</a>
           <a href="#modules" className="hover:text-text-primary transition-colors">Modules</a>

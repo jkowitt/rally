@@ -1,8 +1,10 @@
 import { useAuth } from '@/hooks/useAuth'
+import { useNavigate } from 'react-router-dom'
 import NotificationCenter from '../NotificationCenter'
 
 export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
   const { profile, signOut } = useAuth()
+  const navigate = useNavigate()
 
   function openSearch() {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))
@@ -21,7 +23,7 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
         </button>
 
         {/* Mobile logo */}
-        <span className="md:hidden font-mono font-bold text-accent text-xs" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</span>
+        <button onClick={() => navigate('/app')} className="md:hidden font-mono font-bold text-accent text-xs cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</button>
 
         {/* Desktop property info */}
         {profile?.properties?.name && (

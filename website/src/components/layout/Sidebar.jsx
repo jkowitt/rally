@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/hooks/useAuth'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
@@ -56,6 +56,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
   const moduleLabels = config.moduleLabels || {}
   const t = config.terminology || {}
   const navSections = getNavSections(t)
+  const navigate = useNavigate()
 
   const width = mobile ? 'w-[280px]' : collapsed ? 'w-16' : 'w-[220px]'
   const showLabels = mobile || !collapsed
@@ -65,7 +66,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
       {/* Logo */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-border">
         {showLabels && (
-          <span className="font-mono font-bold text-accent text-sm" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</span>
+          <button onClick={() => navigate('/app')} className="font-mono font-bold text-accent text-sm cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</button>
         )}
         <button
           onClick={onToggle}

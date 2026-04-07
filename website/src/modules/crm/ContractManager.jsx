@@ -132,6 +132,16 @@ export default function ContractManager() {
     enabled: !!propertyId,
   })
 
+  // Team profiles for assignment
+  const { data: teamProfiles } = useQuery({
+    queryKey: ['team-profiles-cm', propertyId],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('id, full_name, email, role').eq('property_id', propertyId)
+      return data || []
+    },
+    enabled: !!propertyId,
+  })
+
   // Fetch templates
   const { data: templates } = useQuery({
     queryKey: ['contract-templates', propertyId],
@@ -407,6 +417,15 @@ export default function ContractManager() {
               }
             }
           }}
+          teamProfiles={teamProfiles}
+          onAssign={async (contractId, userId) => {
+            const { error } = await supabase.from('contracts').update({ assigned_to: userId }).eq('id', contractId)
+            if (error) toast({ title: 'Error', description: error.message, type: 'error' })
+            else {
+              queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
+              toast({ title: userId ? 'Contract assigned' : 'Contract unassigned', type: 'success' })
+            }
+          }}
         />
       )}
 
@@ -550,7 +569,7 @@ function PDFViewerModal({ contract, onClose }) {
 }
 
 /* ============ Contract List ============ */
-function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpenEditor, onGenerateFulfillment, onStatusChange }) {
+function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpenEditor, onGenerateFulfillment, onStatusChange, teamProfiles, onAssign }) {
   if (isLoading) {
     return <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="skeleton h-20" />)}</div>
   }
@@ -577,6 +596,19 @@ function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpe
                 {contract.pdf_file_data && (
                   <span className="text-xs font-mono px-2 py-0.5 rounded bg-success/10 text-success">PDF Stored</span>
                 )}
+              </div>
+              {/* Assignment */}
+              <div className="mt-1">
+                <select
+                  value={contract.assigned_to || ''}
+                  onChange={(e) => onAssign?.(contract.id, e.target.value || null)}
+                  className="bg-bg-card border border-border rounded px-2 py-0.5 text-[10px] text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="">Unassigned</option>
+                  {(teamProfiles || []).map(u => (
+                    <option key={u.id} value={u.id}>{u.full_name || u.email}</option>
+                  ))}
+                </select>
               </div>
               <div className="flex gap-4 mt-1 text-xs text-text-secondary font-mono flex-wrap">
                 <span>${Number(contract.total_value || 0).toLocaleString()}</span>

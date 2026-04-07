@@ -163,6 +163,17 @@ export default function DealPipeline() {
     enabled: !!propertyId,
   })
 
+  // Team profiles for assignment display
+  const { data: teamUsers } = useQuery({
+    queryKey: ['team-users', propertyId],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('id, full_name, email').eq('property_id', propertyId)
+      return data || []
+    },
+    enabled: !!propertyId,
+  })
+  const userNameMap = (teamUsers || []).reduce((m, u) => { m[u.id] = u.full_name || u.email || u.id.slice(0, 6); return m }, {})
+
   // Auto-open deal from URL param (?deal=<id>) or filter by stage (?stage=<name>)
   useEffect(() => {
     const dealId = searchParams.get('deal')
@@ -904,6 +915,9 @@ export default function DealPipeline() {
                       )}
                       <EditableCell value={deal.brand_name} dealId={deal.id} field="brand_name" onSave={(v) => inlineUpdateMutation.mutate(v)} />
                     </div>
+                    {deal.assigned_to && userNameMap[deal.assigned_to] && (
+                      <div className="text-[9px] text-text-muted font-mono mt-0.5 pl-0.5">{userNameMap[deal.assigned_to]}</div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <EditableCell value={deal.sub_industry || category} dealId={deal.id} field="sub_industry" onSave={(v) => inlineUpdateMutation.mutate(v)} options={INDUSTRY_CATEGORIES} className="text-[11px] font-mono text-text-muted" />
@@ -1010,6 +1024,7 @@ export default function DealPipeline() {
           contacts={contactsByDeal[viewingDeal.id] || []}
           onClose={() => setViewingDeal(null)}
           onEdit={() => { setEditingDeal(viewingDeal); setShowForm(true); setViewingDeal(null) }}
+          userNameMap={userNameMap}
         />
       )}
 
@@ -1103,7 +1118,7 @@ function EditableCell({ value, dealId, field, onSave, className, format, type = 
 }
 
 /* ============ Deal Viewer (Read-Only) ============ */
-function DealViewer({ deal, contacts, onClose, onEdit }) {
+function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { profile } = useAuth()
@@ -1340,6 +1355,9 @@ function DealViewer({ deal, contacts, onClose, onEdit }) {
                 </div>
               )}
               {deal.date_added && <div className="text-xs text-text-secondary"><span className="text-text-muted">Added:</span> {deal.date_added}</div>}
+              {deal.assigned_to && (
+                <div className="text-xs text-text-secondary"><span className="text-text-muted">Assigned To:</span> <span className="text-accent">{userNameMap[deal.assigned_to] || deal.assigned_to.slice(0, 8)}</span></div>
+              )}
               {deal.last_contacted && <div className="text-xs text-text-secondary"><span className="text-text-muted">Last Contacted:</span> {deal.last_contacted}</div>}
             </div>
           </div>
@@ -1502,6 +1520,16 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
     enabled: !!propertyId,
   })
 
+  // Fetch team members for assignment dropdown
+  const { data: teamProfiles } = useQuery({
+    queryKey: ['team-profiles', propertyId],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('id, full_name, email, role').eq('property_id', propertyId)
+      return data || []
+    },
+    enabled: !!propertyId,
+  })
+
   // Fetch existing proposed assets for this deal
   const { data: existingDealAssets } = useQuery({
     queryKey: ['deal-assets', deal?.id],
@@ -1614,6 +1642,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
     annual_values: deal?.annual_values || {},
     renewal_date: deal?.renewal_date || '',
     logo_url: deal?.logo_url || '',
+    assigned_to: deal?.assigned_to || '',
     ...(deal?.id ? { id: deal.id } : {}),
   })
 
@@ -2343,6 +2372,19 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                     {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="text-xs text-text-muted">Assigned To</label>
+                <select
+                  value={form.assigned_to}
+                  onChange={(e) => setForm({ ...form, assigned_to: e.target.value || null })}
+                  className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="">Unassigned</option>
+                  {(teamProfiles || []).map(u => (
+                    <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                  ))}
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

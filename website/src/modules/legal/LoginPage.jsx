@@ -83,6 +83,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await signIn(email, password)
+      localStorage.setItem('ll-has-account', '1')
       navigate('/app', { replace: true })
     } catch (err) {
       setError(err.message)
@@ -145,6 +146,7 @@ export default function LoginPage() {
         options: { data: { full_name: fullName } },
       })
       if (authErr) throw authErr
+      localStorage.setItem('ll-has-account', '1')
 
       // Check if email confirmation is required
       if (authData.user && !authData.session) {

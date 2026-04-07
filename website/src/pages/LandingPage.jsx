@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 
@@ -120,20 +120,263 @@ const INDUSTRIES = [
 
 export default function LandingPage() {
   const [industry, setIndustry] = useState(INDUSTRIES[0])
+  const [welcomed, setWelcomed] = useState(() => {
+    // Skip gate if they've visited before in this browser session
+    return sessionStorage.getItem('ll-welcomed') === '1'
+  })
+  const hasAccount = localStorage.getItem('ll-has-account') === '1'
+
+  function handleNewUser() {
+    sessionStorage.setItem('ll-welcomed', '1')
+    setWelcomed(true)
+  }
+
+  function handleReturningUser() {
+    localStorage.setItem('ll-has-account', '1')
+    sessionStorage.setItem('ll-welcomed', '1')
+    // Navigate handled by Link in the gate
+  }
 
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary">
-      <Nav />
-      <Hero industry={industry} onSelectIndustry={setIndustry} />
-      <IndustrySelector selected={industry} onSelect={setIndustry} />
-      <Ecosystem industry={industry} />
-      <Modules />
-      <HowItWorks />
-      <AISection />
-      <WhyLoudLegacy />
-      <CTA industry={industry} />
-      <Footer />
+      <AnimatePresence>
+        {!welcomed && (
+          <WelcomeGate
+            hasAccount={hasAccount}
+            onNewUser={handleNewUser}
+            onReturningUser={handleReturningUser}
+            industries={INDUSTRIES}
+            selectedIndustry={industry}
+            onSelectIndustry={setIndustry}
+          />
+        )}
+      </AnimatePresence>
+
+      {welcomed && (
+        <>
+          <Nav />
+          <Hero industry={industry} onSelectIndustry={setIndustry} />
+          <IndustrySelector selected={industry} onSelect={setIndustry} />
+          <Ecosystem industry={industry} />
+          <Modules />
+          <HowItWorks />
+          <AISection />
+          <WhyLoudLegacy />
+          <CTA industry={industry} />
+          <Footer />
+        </>
+      )}
     </div>
+  )
+}
+
+/* ─── WELCOME GATE ─── */
+function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selectedIndustry, onSelectIndustry }) {
+  const [step, setStep] = useState(hasAccount ? 'returning' : 'choose') // choose | industry | returning
+  const navigate = useNavigate()
+
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.4 } }}
+      className="fixed inset-0 z-[100] bg-bg-primary flex items-center justify-center"
+    >
+      {/* Grid background */}
+      <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'linear-gradient(#E8B84B 1px, transparent 1px), linear-gradient(90deg, #E8B84B 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+
+      <div className="relative w-full max-w-lg mx-auto px-6">
+        <AnimatePresence mode="wait">
+          {/* Step 1: New or Returning */}
+          {step === 'choose' && (
+            <motion.div
+              key="choose"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.35 }}
+              className="text-center space-y-8"
+            >
+              <div>
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1, duration: 0.5 }}
+                  className="font-mono font-bold text-accent text-2xl inline-block"
+                  style={{ letterSpacing: '0.08em', wordSpacing: '-0.15em' }}
+                >
+                  LOUD LEGACY
+                </motion.span>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-text-secondary text-sm mt-3"
+                >
+                  The operating system for partnership sales
+                </motion.p>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="space-y-3"
+              >
+                <button
+                  onClick={() => setStep('industry')}
+                  className="w-full bg-accent text-bg-primary py-4 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                >
+                  I'm New Here — Show Me Around
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.setItem('ll-has-account', '1')
+                    onReturningUser()
+                    navigate('/login')
+                  }}
+                  className="w-full border border-border text-text-secondary py-4 rounded-lg text-sm font-medium hover:border-accent/50 hover:text-text-primary transition-colors"
+                >
+                  Welcome Back — Sign In
+                </button>
+              </motion.div>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="text-[11px] text-text-muted"
+              >
+                Free to start. No credit card required.
+              </motion.p>
+            </motion.div>
+          )}
+
+          {/* Step 1b: Returning user shortcut */}
+          {step === 'returning' && (
+            <motion.div
+              key="returning"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.35 }}
+              className="text-center space-y-8"
+            >
+              <div>
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1, duration: 0.5 }}
+                  className="font-mono font-bold text-accent text-2xl inline-block"
+                  style={{ letterSpacing: '0.08em', wordSpacing: '-0.15em' }}
+                >
+                  LOUD LEGACY
+                </motion.span>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-text-primary text-lg mt-4 font-medium"
+                >
+                  Welcome back.
+                </motion.p>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="space-y-3"
+              >
+                <Link
+                  to="/login"
+                  onClick={onReturningUser}
+                  className="block w-full bg-accent text-bg-primary py-4 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity text-center"
+                >
+                  Sign In to Your Account
+                </Link>
+                <button
+                  onClick={() => setStep('industry')}
+                  className="w-full border border-border text-text-secondary py-3 rounded-lg text-sm font-medium hover:border-accent/50 hover:text-text-primary transition-colors"
+                >
+                  I'm new — explore the platform
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Step 2: Industry Selection */}
+          {step === 'industry' && (
+            <motion.div
+              key="industry"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.35 }}
+              className="text-center space-y-6"
+            >
+              <div>
+                <motion.h2
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-xl font-semibold text-text-primary"
+                >
+                  What industry are you in?
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-text-secondary text-sm mt-2"
+                >
+                  We'll customize everything to fit your workflow
+                </motion.p>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="grid grid-cols-2 gap-3"
+              >
+                {industries.map((ind, i) => (
+                  <motion.button
+                    key={ind.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + i * 0.05 }}
+                    onClick={() => {
+                      onSelectIndustry(ind)
+                      localStorage.setItem('ll-has-account', '1')
+                      onNewUser()
+                    }}
+                    className={`flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all hover:border-accent/50 hover:bg-accent/5 ${
+                      selectedIndustry.id === ind.id ? 'border-accent bg-accent/5' : 'border-border'
+                    }`}
+                  >
+                    <span className="text-xl">{ind.icon}</span>
+                    <div>
+                      <div className="text-sm text-text-primary font-medium">{ind.label}</div>
+                      <div className="text-[10px] text-text-muted leading-tight mt-0.5">{ind.subtitle.split(',')[0]}</div>
+                    </div>
+                  </motion.button>
+                ))}
+              </motion.div>
+
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                onClick={() => setStep('choose')}
+                className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+              >
+                &larr; Go back
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
   )
 }
 

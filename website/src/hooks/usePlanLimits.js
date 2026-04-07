@@ -30,7 +30,7 @@ const PLAN_LIMITS = {
     newsletter_generate: 10,
     deals: 500,
     users: 5,
-    modules: ['crm', 'sportify'],
+    modules: ['crm'],
     features: {
       ai_insights: true,
       fulfillment_reports: true,

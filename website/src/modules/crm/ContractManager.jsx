@@ -1114,20 +1114,24 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
         setLoading(false)
         return
       }
-    } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+    } else if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
       setLoading(true)
       setStatus('Reading PDF — loading parser...')
+      console.log('PDF detected:', file.name, 'type:', file.type, 'size:', file.size)
       try {
         const arrayBuffer = await file.arrayBuffer()
+        console.log('PDF arrayBuffer size:', arrayBuffer.byteLength)
         setStatus('Reading PDF — extracting text...')
         extractedText = await extractPdfText(arrayBuffer)
+        console.log('PDF extracted text length:', extractedText.length, 'preview:', extractedText.slice(0, 200))
         if (!extractedText || extractedText.trim().length < 10) {
+          console.warn('PDF text too short, might be scanned/image PDF')
           setStatus('PDF appears to be scanned/image-based. Paste contract text below to analyze.')
           extractedText = ''
         }
       } catch (err) {
         console.error('PDF extraction failed:', err.message, err)
-        setStatus('PDF stored but text extraction failed: ' + (err.message || 'Unknown error'))
+        setStatus('PDF stored but extraction failed: ' + (err.message || 'Unknown error'))
       }
     } else {
       // Any other file type — try to read as text

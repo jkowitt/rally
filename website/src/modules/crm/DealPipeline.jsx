@@ -3503,31 +3503,60 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     const prospect = results[idx]
     if (!prospect) return
     setResearchingIdx(idx)
+
+    // Always charge a credit for non-enterprise/developer users
+    const isExempt = planLimits.plan === 'enterprise' || planLimits.plan === 'developer'
+    if (!isExempt) {
+      planLimits.trackUsage('contact_research')
+    }
+
     try {
+      const companyKey = prospect.company_name.trim().toLowerCase()
+
+      // Step 0: Check shared cache first (30-day TTL)
+      setStatus('Checking contact database...')
+      const { data: cached } = await supabase
+        .from('contact_research')
+        .select('*')
+        .ilike('company_name', companyKey)
+        .gt('expires_at', new Date().toISOString())
+        .order('fetched_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (cached?.data) {
+        setStatus(`Found cached contacts for ${prospect.company_name} (saves API tokens)`)
+        const cachedResearch = cached.data
+        cachedResearch._fromCache = true
+        setResearchedContacts(prev => ({ ...prev, [idx]: cachedResearch }))
+        setResearchingIdx(null)
+        return
+      }
+
+      // Step 1: Not cached — fetch fresh data
       let apolloData = null
       let contacts = []
       let source = 'claude'
 
-      // Step 1: Try Apollo for verified company data + contacts
       if (useApollo) {
         try {
           setStatus('Searching Apollo for verified contacts...')
           const apolloResult = await apolloEnrichCompany({
             company_name: prospect.company_name,
             domain: prospect.website,
-            property_id: propertyId,
+            property_id: effectivePropertyId,
           })
-          if (apolloResult?.data) {
-            apolloData = apolloResult.data
-          }
-          // Find people via Apollo
+          if (apolloResult?.data) apolloData = apolloResult.data
+
           const peopleResult = await import('@/lib/claude').then(m => m.apolloFindPeople({
             company_name: prospect.company_name,
-            property_id: propertyId,
+            property_id: effectivePropertyId,
           }))
           if (peopleResult?.people?.length > 0) {
             contacts = peopleResult.people.map(p => ({
               name: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+              first_name: p.first_name || '',
+              last_name: p.last_name || '',
               position: p.title || '',
               email: p.email || '',
               phone: p.phone || '',
@@ -3536,12 +3565,10 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
             }))
             source = 'apollo'
           }
-        } catch {
-          // Apollo failed — fall back to AI
-        }
+        } catch { /* Apollo failed — fall back to AI */ }
       }
 
-      // Step 2: Fall back to AI research if Apollo didn't return contacts
+      // Step 2: Fall back to AI if Apollo returned nothing
       if (contacts.length === 0) {
         setStatus('Researching contacts with AI...')
         const data = await researchContacts({
@@ -3551,36 +3578,43 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
         })
         if (data.research) {
           contacts = (data.research.contacts || []).map(c => ({ ...c, source: 'claude' }))
-          setResearchedContacts(prev => ({ ...prev, [idx]: data.research }))
-          setResearchingIdx(null)
-          return
+          source = 'claude'
         }
       }
 
-      // Step 3: Verify emails with Hunter if opted in
+      // Step 3: Verify emails with Hunter
       if (useHunter && contacts.length > 0) {
         setStatus('Verifying emails with Hunter...')
         for (let i = 0; i < contacts.length; i++) {
           if (contacts[i].email) {
             try {
-              const result = await hunterVerifyEmail({ email: contacts[i].email, property_id: propertyId })
+              const result = await hunterVerifyEmail({ email: contacts[i].email, property_id: effectivePropertyId })
               contacts[i].email_verified = result?.status || 'unknown'
-            } catch {
-              contacts[i].email_verified = 'unknown'
-            }
+            } catch { contacts[i].email_verified = 'unknown' }
           }
         }
       }
 
-      setResearchedContacts(prev => ({
-        ...prev,
-        [idx]: {
-          contacts,
+      const research = {
+        contacts,
+        source,
+        company_linkedin: apolloData?.linkedin_url || prospect.linkedin || null,
+        ...(apolloData ? { employees: apolloData.employees, revenue: apolloData.revenue, tech_stack: apolloData.tech_stack } : {}),
+      }
+
+      // Step 4: Store to shared cache for all users
+      try {
+        await supabase.from('contact_research').insert({
+          company_name: prospect.company_name,
           source,
-          company_linkedin: apolloData?.linkedin_url || prospect.linkedin || null,
-          ...(apolloData ? { employees: apolloData.employees, revenue: apolloData.revenue, tech_stack: apolloData.tech_stack } : {}),
-        }
-      }))
+          data: research,
+          property_id: effectivePropertyId,
+          fetched_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+        })
+      } catch { /* cache write failure is non-fatal */ }
+
+      setResearchedContacts(prev => ({ ...prev, [idx]: research }))
       setStatus(contacts.length ? `Found ${contacts.length} contacts${source === 'apollo' ? ' (Apollo verified)' : ''}` : 'No contacts found')
     } catch (e) {
       setResearchedContacts(prev => ({ ...prev, [idx]: { error: e.message, contacts: [] } }))
@@ -3952,6 +3986,9 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                         )}
                         {research.source === 'claude' && (
                           <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-bg-card text-text-muted">AI Researched</span>
+                        )}
+                        {research._fromCache && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent">Cached — no token used</span>
                         )}
                       </div>
                       <div className="space-y-2">

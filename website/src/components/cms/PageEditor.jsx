@@ -1,15 +1,185 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useCMS } from '@/hooks/useCMS'
-import { useToast } from '@/components/Toast'
 
-// Universal page editor — makes ALL text on the page editable in edit mode
-// Attaches click handlers to headings, paragraphs, spans, buttons, labels
-// Stores changes by generating a unique key from the element's path
+// Format toolbar that appears above the selected element
+function FormatToolbar({ target, onClose }) {
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const { setDraft, uploadImage } = useCMS()
+  const fileRef = useRef(null)
+
+  useEffect(() => {
+    if (!target) return
+    const rect = target.getBoundingClientRect()
+    setPos({ top: rect.top + window.scrollY - 44, left: Math.max(8, rect.left + rect.width / 2 - 200) })
+  }, [target])
+
+  if (!target) return null
+
+  const isImage = target.tagName?.toLowerCase() === 'img'
+  const computed = window.getComputedStyle(target)
+
+  function applyStyle(prop, value) {
+    target.style[prop] = value
+  }
+
+  function getElementKey(el) {
+    const parts = []
+    let node = el
+    while (node && node !== document.body) {
+      const tag = node.tagName?.toLowerCase()
+      if (!tag) break
+      const siblings = node.parentNode ? Array.from(node.parentNode.children).filter(c => c.tagName === node.tagName) : []
+      const idx = siblings.indexOf(node)
+      parts.unshift(`${tag}${siblings.length > 1 ? `[${idx}]` : ''}`)
+      node = node.parentNode
+    }
+    return `style:${window.location.pathname}:${parts.join('/')}`
+  }
+
+  function saveStyles() {
+    const key = getElementKey(target)
+    const styles = {}
+    if (target.style.fontSize) styles.fontSize = target.style.fontSize
+    if (target.style.color) styles.color = target.style.color
+    if (target.style.fontWeight) styles.fontWeight = target.style.fontWeight
+    if (target.style.fontStyle) styles.fontStyle = target.style.fontStyle
+    if (target.style.textAlign) styles.textAlign = target.style.textAlign
+    if (target.style.textDecoration) styles.textDecoration = target.style.textDecoration
+    if (target.style.width) styles.width = target.style.width
+    if (target.style.maxWidth) styles.maxWidth = target.style.maxWidth
+    if (target.style.opacity) styles.opacity = target.style.opacity
+    if (Object.keys(styles).length > 0) {
+      setDraft(key, JSON.stringify(styles), 'json')
+    }
+  }
+
+  async function handleImageReplace(e) {
+    const file = e.target.files?.[0]
+    if (!file || !isImage) return
+    try {
+      const media = await uploadImage(file)
+      target.src = media.file_data
+      const key = getElementKey(target) + ':src'
+      setDraft(key, media.file_data, 'image')
+    } catch (err) { console.error(err) }
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  return createPortal(
+    <div
+      className="fixed z-[9999] bg-bg-surface border border-accent/30 rounded-lg shadow-xl px-2 py-1.5 flex items-center gap-1 flex-wrap"
+      style={{ top: pos.top, left: pos.left, maxWidth: 420 }}
+    >
+      {!isImage ? (
+        <>
+          {/* Font size */}
+          <select
+            defaultValue={parseInt(computed.fontSize) || 14}
+            onChange={(e) => { applyStyle('fontSize', e.target.value + 'px'); saveStyles() }}
+            className="bg-bg-card border border-border rounded px-1.5 py-1 text-[10px] text-text-primary focus:outline-none w-14"
+          >
+            {[10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 72].map(s => (
+              <option key={s} value={s}>{s}px</option>
+            ))}
+          </select>
+
+          {/* Text color */}
+          <input
+            type="color"
+            defaultValue={rgbToHex(computed.color)}
+            onChange={(e) => { applyStyle('color', e.target.value); saveStyles() }}
+            className="w-6 h-6 rounded border border-border cursor-pointer"
+            title="Text color"
+          />
+
+          {/* Bold */}
+          <button
+            onClick={() => { applyStyle('fontWeight', computed.fontWeight === '700' || computed.fontWeight === 'bold' ? 'normal' : 'bold'); saveStyles() }}
+            className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold ${computed.fontWeight === '700' || computed.fontWeight === 'bold' ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-secondary'}`}
+            title="Bold"
+          >B</button>
+
+          {/* Italic */}
+          <button
+            onClick={() => { applyStyle('fontStyle', computed.fontStyle === 'italic' ? 'normal' : 'italic'); saveStyles() }}
+            className={`w-6 h-6 flex items-center justify-center rounded text-xs italic ${computed.fontStyle === 'italic' ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-secondary'}`}
+            title="Italic"
+          >I</button>
+
+          {/* Underline */}
+          <button
+            onClick={() => { applyStyle('textDecoration', computed.textDecoration.includes('underline') ? 'none' : 'underline'); saveStyles() }}
+            className={`w-6 h-6 flex items-center justify-center rounded text-xs underline ${computed.textDecoration.includes('underline') ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-secondary'}`}
+            title="Underline"
+          >U</button>
+
+          <div className="w-px h-5 bg-border mx-0.5" />
+
+          {/* Alignment */}
+          {['left', 'center', 'right'].map(align => (
+            <button
+              key={align}
+              onClick={() => { applyStyle('textAlign', align); saveStyles() }}
+              className={`w-6 h-6 flex items-center justify-center rounded text-[10px] ${computed.textAlign === align ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-secondary'}`}
+              title={`Align ${align}`}
+            >
+              {align === 'left' ? '≡' : align === 'center' ? '≡' : '≡'}
+            </button>
+          ))}
+        </>
+      ) : (
+        <>
+          {/* Image controls */}
+          <button onClick={() => fileRef.current?.click()} className="text-[10px] text-accent hover:underline px-2 py-1">Replace image</button>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleImageReplace} className="hidden" />
+          <div className="w-px h-5 bg-border mx-0.5" />
+          {/* Width control */}
+          <select
+            defaultValue=""
+            onChange={(e) => { if (e.target.value) { applyStyle('width', e.target.value); applyStyle('maxWidth', e.target.value); } else { target.style.width = ''; target.style.maxWidth = ''; } saveStyles() }}
+            className="bg-bg-card border border-border rounded px-1.5 py-1 text-[10px] text-text-primary focus:outline-none w-20"
+          >
+            <option value="">Auto</option>
+            <option value="50px">50px</option>
+            <option value="80px">80px</option>
+            <option value="120px">120px</option>
+            <option value="160px">160px</option>
+            <option value="200px">200px</option>
+            <option value="300px">300px</option>
+            <option value="400px">400px</option>
+            <option value="100%">Full width</option>
+            <option value="50%">50%</option>
+          </select>
+          {/* Opacity */}
+          <input
+            type="range" min="10" max="100" step="10"
+            defaultValue={Math.round(parseFloat(computed.opacity || 1) * 100)}
+            onChange={(e) => { applyStyle('opacity', e.target.value / 100); saveStyles() }}
+            className="w-16 accent-accent"
+            title="Opacity"
+          />
+        </>
+      )}
+
+      <div className="w-px h-5 bg-border mx-0.5" />
+      <button onClick={onClose} className="text-text-muted hover:text-text-primary text-xs px-1">✕</button>
+    </div>,
+    document.body
+  )
+}
+
+function rgbToHex(rgb) {
+  if (!rgb || rgb.startsWith('#')) return rgb || '#ffffff'
+  const match = rgb.match(/\d+/g)
+  if (!match || match.length < 3) return '#ffffff'
+  return '#' + match.slice(0, 3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('')
+}
 
 export default function PageEditor() {
-  const { editMode, setDraft, publishAll, saveDrafts, discardDrafts, hasUnsaved, drafts, content, getValue } = useCMS()
+  const { editMode, setDraft, content, getValue } = useCMS()
   const [activeEl, setActiveEl] = useState(null)
-  const overlayRef = useRef(null)
+  const [formatTarget, setFormatTarget] = useState(null)
 
   // Generate a stable key for an element based on its position in the DOM
   function getElementKey(el) {
@@ -27,18 +197,16 @@ export default function PageEditor() {
     return `page:${window.location.pathname}:${parts.join('/')}`
   }
 
-  // Check if element is editable
   function isEditableElement(el) {
     if (!el || !el.tagName) return false
     const tag = el.tagName.toLowerCase()
+    // Images are editable (resize, replace)
+    if (tag === 'img') return true
     const editableTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div', 'label', 'li', 'td', 'th']
     if (!editableTags.includes(tag)) return false
-    // Skip if it's an interactive element or has interactive children
     if (el.closest('button, a, input, select, textarea, [contenteditable]')) return false
-    // Skip if it's too small or has no text
     const text = el.innerText?.trim()
     if (!text || text.length < 2 || text.length > 500) return false
-    // Skip if it's inside a form or modal
     if (el.closest('form, [role="dialog"]')) return false
     return true
   }
@@ -51,21 +219,29 @@ export default function PageEditor() {
     e.preventDefault()
     e.stopPropagation()
 
+    const isImage = el.tagName.toLowerCase() === 'img'
+
+    // Show format toolbar for the element
+    setFormatTarget(el)
+    el.style.outline = '2px solid #E8B84B'
+    el.style.outlineOffset = '2px'
+    el.style.borderRadius = '4px'
+
+    if (isImage) {
+      setActiveEl(el)
+      return // images handled by FormatToolbar only
+    }
+
     const key = getElementKey(el)
     const originalText = el.innerText.trim()
 
-    // Check if we have a CMS override for this key
     const cmsValue = getValue(key, null)
     if (cmsValue) el.innerText = cmsValue
 
     el.contentEditable = 'true'
-    el.style.outline = '2px solid #E8B84B'
-    el.style.outlineOffset = '2px'
-    el.style.borderRadius = '4px'
     el.focus()
     setActiveEl(el)
 
-    // Select all text
     const range = document.createRange()
     range.selectNodeContents(el)
     const sel = window.getSelection()
@@ -74,9 +250,6 @@ export default function PageEditor() {
 
     function handleBlur() {
       el.contentEditable = 'false'
-      el.style.outline = ''
-      el.style.outlineOffset = ''
-      el.style.borderRadius = ''
       const newText = el.innerText.trim()
       if (newText !== originalText) {
         setDraft(key, newText, 'text')
@@ -137,5 +310,32 @@ export default function PageEditor() {
     // but handles static text well
   }, [content, editMode])
 
-  return null // This component has no visual output — it works via event listeners
+  function closeToolbar() {
+    if (formatTarget) {
+      formatTarget.style.outline = ''
+      formatTarget.style.outlineOffset = ''
+      formatTarget.style.borderRadius = ''
+    }
+    setFormatTarget(null)
+    setActiveEl(null)
+  }
+
+  // Close toolbar when clicking outside
+  useEffect(() => {
+    if (!formatTarget) return
+    function handleOutsideClick(e) {
+      if (formatTarget.contains(e.target)) return
+      if (e.target.closest('[class*="FormatToolbar"], [class*="z-\\[9999\\]"]')) return
+      // Don't close if clicking the toolbar itself
+      const toolbar = document.querySelector('[class*="z-\\[9999\\]"]')
+      if (toolbar?.contains(e.target)) return
+    }
+    // Use a timeout to avoid closing immediately
+    const timer = setTimeout(() => {
+      document.addEventListener('click', handleOutsideClick)
+    }, 100)
+    return () => { clearTimeout(timer); document.removeEventListener('click', handleOutsideClick) }
+  }, [formatTarget])
+
+  return <FormatToolbar target={formatTarget} onClose={closeToolbar} />
 }

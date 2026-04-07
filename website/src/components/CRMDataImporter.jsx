@@ -22,7 +22,7 @@ async function loadPdfjs() {
 
 async function extractPdfText(arrayBuffer) {
   const pdfjs = await loadPdfjs()
-  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
+  const pdf = await pdfjs.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false }).promise
   let text = ''
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)

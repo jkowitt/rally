@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-// Load pdfjs from CDN at runtime — avoids bundler issues on mobile
+// Load pdfjs from CDN at runtime — disable worker to avoid CSP issues
 let pdfjsLoaded = null
 async function loadPdfjsFromCDN() {
   if (pdfjsLoaded) return pdfjsLoaded
@@ -10,21 +10,28 @@ async function loadPdfjsFromCDN() {
     script.src = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'
     script.onload = () => {
       if (window.pdfjsLib) {
+        // Set worker source for PDF parsing
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
         pdfjsLoaded = window.pdfjsLib
         resolve(pdfjsLoaded)
       } else {
-        reject(new Error('pdfjs not available'))
+        reject(new Error('pdfjs not available after script load'))
       }
     }
-    script.onerror = () => reject(new Error('Failed to load pdfjs from CDN'))
+    script.onerror = () => reject(new Error('Failed to load PDF parser from CDN'))
     document.head.appendChild(script)
   })
 }
 
 async function extractPdfText(arrayBuffer) {
   const pdfjs = await loadPdfjsFromCDN()
-  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
+  const loadingTask = pdfjs.getDocument({
+    data: arrayBuffer,
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true,
+  })
+  const pdf = await loadingTask.promise
   let text = ''
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)

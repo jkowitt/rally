@@ -1141,10 +1141,17 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
         extractedText = await extractPdfText(arrayBuffer)
       } catch (err) {
         console.warn('PDF extraction error:', err)
+        setStatus('PDF stored. Text could not be extracted — paste contract text below to analyze.')
       }
     } else {
-      setStatus('Unsupported file type. Use .pdf, .docx, or .txt files.')
-      return
+      // Any other file type — try to read as text
+      setLoading(true)
+      setStatus('Reading file...')
+      try {
+        extractedText = await file.text()
+      } catch {
+        setStatus('File stored. Could not read text — paste contract text below to analyze.')
+      }
     }
 
     // Auto-analyze with AI if text was extracted
@@ -1160,11 +1167,11 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
         setStatus('Text extracted but AI analysis failed: ' + e.message)
       }
     } else if (pdfBase64) {
-      // PDF was stored but text couldn't be extracted (scanned PDF or mobile browser limitation)
-      setStatus('')
+      // File was stored but text couldn't be extracted (scanned PDF, image, etc)
+      setStatus('File stored successfully. Paste contract text below to analyze, or import as-is.')
       setPdfText('')
     } else {
-      setStatus('Could not read file.')
+      setStatus('File stored. Paste contract text below to analyze.')
     }
     setLoading(false)
   }
@@ -1362,7 +1369,7 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
           >
             Choose File (PDF or Word)
           </button>
-          <input ref={fileRef} type="file" accept=".pdf,.txt,.doc,.docx" onChange={handleFileUpload} className="hidden" />
+          <input ref={fileRef} type="file" onChange={handleFileUpload} className="hidden" />
           {pdfFileName && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-accent font-mono">{pdfFileName}</span>

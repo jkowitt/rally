@@ -336,6 +336,10 @@ export default function CRMDataImporter({ onClose, onImported }) {
   async function handleImport() {
     const data = getMappedRows()
     if (!data.length) return
+    if (!propertyId) {
+      toast({ title: 'No property linked', description: 'Your account needs a property before importing data.', type: 'error' })
+      return
+    }
     setImporting(true)
     const stats = { deals: 0, contacts: 0, activities: 0, skipped: 0 }
 

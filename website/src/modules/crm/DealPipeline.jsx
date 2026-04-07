@@ -1124,6 +1124,9 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   const { profile } = useAuth()
   const [shareCopied, setShareCopied] = useState(false)
   const [sharing, setSharing] = useState(false)
+  const [enrichingCompany, setEnrichingCompany] = useState(false)
+  const [verifyingEmail, setVerifyingEmail] = useState(null)
+  const queryClient = useQueryClient()
   const propertyId = deal.property_id
   const priorityColor = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
   const stageColor = {
@@ -1134,6 +1137,45 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
     'In Fulfillment': 'bg-success/10 text-success',
     Renewed: 'bg-success/10 text-success',
     Declined: 'bg-danger/10 text-danger',
+  }
+
+  async function handleEnrichCompany() {
+    setEnrichingCompany(true)
+    try {
+      const res = await apolloEnrichCompany({ company_name: deal.brand_name, domain: deal.website, property_id: propertyId })
+      if (res?.data) {
+        const d = res.data
+        const updates = {}
+        if (d.website && !deal.website) updates.website = d.website
+        if (d.linkedin_url && !deal.linkedin) updates.linkedin = d.linkedin_url
+        if (d.city && !deal.city) updates.city = d.city
+        if (d.state && !deal.state) updates.state = d.state
+        if (d.industry && !deal.sub_industry) updates.sub_industry = d.industry
+        if (d.estimated_num_employees) updates.employees = d.estimated_num_employees
+        if (d.annual_revenue) updates.revenue_thousands = Math.round(d.annual_revenue / 1000)
+        if (d.founded_year) updates.founded = d.founded_year
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('deals').update(updates).eq('id', deal.id)
+          queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+        }
+        toast({ title: 'Company enriched via Apollo', description: `${d.estimated_num_employees || '?'} employees, ${d.industry || 'unknown'}`, type: 'success' })
+      } else {
+        toast({ title: 'No data found', description: 'Apollo returned no results for this company', type: 'warning' })
+      }
+    } catch (e) { toast({ title: 'Enrichment failed', description: e.message, type: 'error' }) }
+    setEnrichingCompany(false)
+  }
+
+  async function handleVerifyEmail(contactId, email) {
+    setVerifyingEmail(contactId)
+    try {
+      const res = await hunterVerifyEmail({ email, property_id: propertyId })
+      const status = res?.status || res?.result || 'unknown'
+      await supabase.from('contacts').update({ email_verified: status, email_verified_at: new Date().toISOString() }).eq('id', contactId)
+      queryClient.invalidateQueries({ queryKey: ['contacts', propertyId] })
+      toast({ title: `Email ${status}`, description: email, type: status === 'verified' ? 'success' : 'warning' })
+    } catch (e) { toast({ title: 'Verification failed', description: e.message, type: 'error' }) }
+    setVerifyingEmail(null)
   }
 
   const handleShare = async () => {
@@ -1253,6 +1295,9 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
+            <button onClick={handleEnrichCompany} disabled={enrichingCompany} className="border border-border text-text-secondary px-2 py-1.5 rounded text-[10px] font-mono hover:border-accent/50 hover:text-accent disabled:opacity-50" title="Enrich company data with Apollo (1 token)">
+              {enrichingCompany ? '...' : '🔍 Enrich'}
+            </button>
             <button onClick={handleShare} disabled={sharing} className="border border-accent text-accent px-3 py-1.5 rounded text-xs font-medium hover:bg-accent/10 disabled:opacity-50">
               {sharing ? '...' : shareCopied ? 'Copied!' : 'Share'}
             </button>
@@ -1288,10 +1333,24 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-text-primary font-medium">{c.first_name} {c.last_name}</span>
                       {c.is_primary && <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-accent text-bg-primary">Primary</span>}
+                      {c.enriched_from === 'apollo' && <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-success/10 text-success">✓ Apollo</span>}
+                      {c.email_verified === 'verified' && <span className="text-[9px] font-mono text-success">✓ verified</span>}
+                      {c.email_verified === 'invalid' && <span className="text-[9px] font-mono text-danger">✗ invalid</span>}
+                      {c.email_verified === 'risky' && <span className="text-[9px] font-mono text-warning">⚠ risky</span>}
                     </div>
                     {c.position && <div className="text-xs text-text-secondary mt-0.5">{c.position}</div>}
-                    <div className="flex gap-3 mt-1.5 flex-wrap">
+                    <div className="flex gap-3 mt-1.5 flex-wrap items-center">
                       {c.email && <a href={`mailto:${c.email}`} className="text-xs text-accent hover:underline">{c.email}</a>}
+                      {c.email && c.id && !c.email_verified && (
+                        <button
+                          onClick={() => handleVerifyEmail(c.id, c.email)}
+                          disabled={verifyingEmail === c.id}
+                          className="text-[9px] font-mono text-text-muted hover:text-accent disabled:opacity-50"
+                          title="Verify email with Hunter (1 token)"
+                        >
+                          {verifyingEmail === c.id ? '...' : '✉️ verify'}
+                        </button>
+                      )}
                       {c.phone && <a href={`tel:${c.phone}`} className="text-xs text-accent hover:underline">{c.phone}</a>}
                       {c.linkedin && (
                         <a href={c.linkedin.startsWith('http') ? c.linkedin : `https://${c.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline">

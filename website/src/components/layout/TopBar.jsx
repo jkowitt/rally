@@ -2,6 +2,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import NotificationCenter from '../NotificationCenter'
 import { APIUsageCompact } from './../../components/APIUsageBanner'
+import { setQAIndustry } from '@/hooks/useIndustryConfig'
 
 export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
   const { profile, signOut } = useAuth()
@@ -59,6 +60,26 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
         <div className="hidden lg:block">
           <APIUsageCompact />
         </div>
+        {profile?.role === 'developer' && (
+          <select
+            defaultValue={localStorage.getItem('ll_qa_industry') || ''}
+            onChange={(e) => setQAIndustry(e.target.value || null)}
+            className="hidden md:block bg-bg-card border border-accent/30 rounded px-2 py-1 text-[10px] font-mono text-accent focus:outline-none focus:border-accent"
+            title="QA: Switch industry view"
+          >
+            <option value="">QA: Default</option>
+            <option value="college">Sports — College</option>
+            <option value="professional">Sports — Pro</option>
+            <option value="minor_league">Sports — Minor League</option>
+            <option value="agency">Agency</option>
+            <option value="entertainment">Entertainment</option>
+            <option value="conference">Conference</option>
+            <option value="nonprofit">Nonprofit</option>
+            <option value="media">Media</option>
+            <option value="realestate">Real Estate</option>
+            <option value="other">Other</option>
+          </select>
+        )}
         <NotificationCenter />
         <span className="hidden sm:inline text-sm text-text-secondary truncate max-w-[120px]">
           {profile?.full_name || profile?.id?.slice(0, 8)}

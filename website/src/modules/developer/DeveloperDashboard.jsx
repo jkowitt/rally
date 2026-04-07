@@ -255,6 +255,55 @@ export default function DeveloperDashboard() {
     },
   })
 
+  // Contact research cache analytics
+  const { data: contactCache } = useQuery({
+    queryKey: ['dev-contact-cache'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contact_research')
+        .select('company_name, source, fetched_at, expires_at, data')
+        .order('fetched_at', { ascending: false })
+        .limit(200)
+      if (error) return []
+      // Group by company and count pulls
+      const companies = {}
+      for (const row of (data || [])) {
+        const key = row.company_name.toLowerCase().trim()
+        if (!companies[key]) {
+          companies[key] = {
+            name: row.company_name,
+            source: row.source,
+            lastFetched: row.fetched_at,
+            expiresAt: row.expires_at,
+            contactCount: row.data?.contacts?.length || 0,
+            pullCount: 0,
+          }
+        }
+        companies[key].pullCount++
+      }
+      return Object.values(companies).sort((a, b) => b.pullCount - a.pullCount)
+    },
+  })
+
+  // Usage log per company (how many times searched across all users)
+  const { data: lookupCounts } = useQuery({
+    queryKey: ['dev-lookup-counts'],
+    queryFn: async () => {
+      const startOfMonth = new Date()
+      startOfMonth.setDate(1)
+      startOfMonth.setHours(0, 0, 0, 0)
+      const { data } = await supabase
+        .from('api_usage')
+        .select('endpoint, credits_used, called_at')
+        .in('service', ['apollo', 'hunter'])
+        .gte('called_at', startOfMonth.toISOString())
+      return {
+        total: (data || []).length,
+        credits: (data || []).reduce((s, r) => s + (r.credits_used || 1), 0),
+      }
+    },
+  })
+
   const assignPropertyMutation = useMutation({
     mutationFn: async ({ userId, propertyId }) => {
       const { error } = await supabase.from('profiles').update({ property_id: propertyId }).eq('id', userId)
@@ -286,6 +335,7 @@ export default function DeveloperDashboard() {
     { id: 'api', label: 'API Usage' },
     { id: 'health', label: `Code Health (${analysisReports?.length || 0})` },
     { id: 'suggestions', label: `Suggestions (${(suggestions || []).filter(s => s.status === 'new').length || 0})` },
+    { id: 'cache', label: `Contact Cache (${(contactCache || []).length})` },
     { id: 'custom', label: 'Custom Dashboards' },
   ]
 
@@ -1064,6 +1114,66 @@ export default function DeveloperDashboard() {
               No feature suggestions yet. Users can submit from the sidebar.
             </div>
           )}
+        </div>
+      )}
+
+      {/* CONTACT CACHE */}
+      {activeTab === 'cache' && (
+        <div className="space-y-4">
+          <Panel title="Contact Research Cache">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-text-muted">
+                Cached contact lookups shared across all users. 30-day TTL. {lookupCounts?.total || 0} API calls this month ({lookupCounts?.credits || 0} credits).
+              </p>
+              <span className="text-sm font-mono text-accent">{(contactCache || []).length} companies cached</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <th className="px-3 py-2 text-[10px] text-text-muted font-mono uppercase">Company</th>
+                    <th className="px-3 py-2 text-[10px] text-text-muted font-mono uppercase">Source</th>
+                    <th className="px-3 py-2 text-[10px] text-text-muted font-mono uppercase text-center">Contacts</th>
+                    <th className="px-3 py-2 text-[10px] text-text-muted font-mono uppercase text-center">Pulls</th>
+                    <th className="px-3 py-2 text-[10px] text-text-muted font-mono uppercase">Last Fetched</th>
+                    <th className="px-3 py-2 text-[10px] text-text-muted font-mono uppercase">Expires</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(contactCache || []).map((c, i) => {
+                    const isExpired = new Date(c.expiresAt) < new Date()
+                    return (
+                      <tr key={i} className={`border-b border-border last:border-0 ${isExpired ? 'opacity-40' : ''}`}>
+                        <td className="px-3 py-2 text-text-primary font-medium">{c.name}</td>
+                        <td className="px-3 py-2">
+                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                            c.source === 'apollo' ? 'bg-success/10 text-success' :
+                            c.source === 'hunter' ? 'bg-accent/10 text-accent' :
+                            'bg-bg-card text-text-muted'
+                          }`}>{c.source}</span>
+                        </td>
+                        <td className="px-3 py-2 text-center font-mono text-text-secondary">{c.contactCount}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`font-mono text-sm ${c.pullCount > 3 ? 'text-accent font-bold' : 'text-text-secondary'}`}>{c.pullCount}</span>
+                        </td>
+                        <td className="px-3 py-2 text-[10px] text-text-muted font-mono">{new Date(c.lastFetched).toLocaleDateString()}</td>
+                        <td className="px-3 py-2 text-[10px] font-mono">
+                          {isExpired
+                            ? <span className="text-danger">Expired</span>
+                            : <span className="text-text-muted">{Math.ceil((new Date(c.expiresAt) - new Date()) / 86400000)}d left</span>
+                          }
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {(!contactCache || contactCache.length === 0) && (
+                    <tr><td colSpan={6} className="px-3 py-8 text-center text-text-muted text-xs">No cached contact research yet. Lookups will appear here after users search for contacts.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
         </div>
       )}
 

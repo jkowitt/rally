@@ -229,7 +229,6 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                 <button
                   onClick={() => {
                     localStorage.setItem('ll-has-account', '1')
-                    onReturningUser()
                     navigate('/login')
                   }}
                   className="w-full border border-border text-text-secondary py-4 rounded-lg text-sm font-medium hover:border-accent/50 hover:text-text-primary transition-colors"
@@ -287,7 +286,6 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
               >
                 <Link
                   to="/login"
-                  onClick={onReturningUser}
                   className="block w-full bg-accent text-bg-primary py-4 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity text-center"
                 >
                   Sign In to Your Account

@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { supabase } from '@/lib/supabase'
+import { useNavigate } from 'react-router-dom'
 
 const PLANS = [
   { id: 'free', name: 'Free', price: '$0', period: '7-day trial', users: 3, features: ['CRM Pipeline (15 deals)', '3 prospect searches/mo', '3 contact researches/mo', '2 contract uploads/mo', 'Basic CSV export'] },
@@ -12,10 +13,14 @@ const PLANS = [
 ]
 
 export default function Settings() {
-  const { profile, fetchProfile } = useAuth()
+  const { profile, fetchProfile, signOut } = useAuth()
   const { toast } = useToast()
   const config = useIndustryConfig()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   const currentPlan = profile?.properties?.plan || 'free'
   const propertyId = profile?.property_id
@@ -184,6 +189,145 @@ export default function Settings() {
           />
           Confirm before click-to-call on mobile
         </label>
+      </div>
+
+      {/* Account Deletion — Danger Zone */}
+      <div className="bg-bg-surface border border-danger/30 rounded-lg p-4 sm:p-5">
+        <h2 className="text-sm font-mono text-danger uppercase mb-1">Danger Zone</h2>
+        <p className="text-xs text-text-muted mb-4">
+          These actions are permanent and cannot be easily undone.
+        </p>
+
+        {profile?.properties?.scheduled_deletion_at ? (
+          // Account is already scheduled for deletion — show revive option
+          <div className="space-y-3">
+            <div className="bg-danger/10 border border-danger/20 rounded-lg p-4">
+              <div className="text-sm text-danger font-medium">Account scheduled for deletion</div>
+              <p className="text-xs text-text-muted mt-1">
+                Your account will be permanently deleted on{' '}
+                <span className="text-text-primary font-mono">
+                  {new Date(profile.properties.scheduled_deletion_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </span>.
+                You have access until{' '}
+                <span className="text-text-primary font-mono">
+                  {profile.properties.access_until ? new Date(profile.properties.access_until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'the end of your billing cycle'}
+                </span>.
+              </p>
+              <p className="text-xs text-text-muted mt-2">Your data will be archived for 30 days after deletion. You can revive your account during that period.</p>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  await supabase.from('properties').update({
+                    scheduled_deletion_at: null,
+                    access_until: null,
+                    deletion_requested_by: null,
+                  }).eq('id', propertyId)
+                  fetchProfile(profile.id)
+                  toast({ title: 'Account revived!', description: 'Your account is active again.', type: 'success' })
+                } catch (e) {
+                  toast({ title: 'Error', description: e.message, type: 'error' })
+                }
+              }}
+              className="bg-success/10 border border-success/30 text-success px-4 py-2.5 rounded text-sm font-medium hover:bg-success/20 transition-colors"
+            >
+              Revive My Account
+            </button>
+          </div>
+        ) : !showDeleteConfirm ? (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="bg-bg-card border border-danger/30 text-danger px-4 py-2.5 rounded text-sm font-medium hover:bg-danger/10 transition-colors"
+          >
+            Cancel Account & Delete Data
+          </button>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-danger/5 border border-danger/20 rounded-lg p-4 space-y-3">
+              <div className="text-sm text-danger font-medium">Are you sure you want to cancel?</div>
+              <div className="space-y-2 text-xs text-text-secondary">
+                <div className="flex gap-2"><span className="text-danger shrink-0">1.</span> Your subscription (if any) will be cancelled immediately.</div>
+                <div className="flex gap-2"><span className="text-danger shrink-0">2.</span> You'll keep access through the end of your current billing cycle{currentPlan === 'free' ? ' (immediate for free plans)' : ''}.</div>
+                <div className="flex gap-2"><span className="text-danger shrink-0">3.</span> After access expires, your account is archived for 30 days.</div>
+                <div className="flex gap-2"><span className="text-danger shrink-0">4.</span> During the 30-day archive, you can sign in and click "Revive My Account" to restore everything.</div>
+                <div className="flex gap-2"><span className="text-danger shrink-0">5.</span> After 30 days, all data is permanently deleted.</div>
+              </div>
+              <div className="pt-2">
+                <label className="text-xs text-text-muted">Type <span className="text-danger font-mono">DELETE</span> to confirm</label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  className="w-full bg-bg-card border border-danger/30 rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-danger mt-1 font-mono"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  if (deleteConfirmText !== 'DELETE') return toast({ title: 'Type DELETE to confirm', type: 'warning' })
+                  setDeleting(true)
+                  try {
+                    // Calculate access end date (end of current billing cycle or immediate for free)
+                    const now = new Date()
+                    let accessUntil
+                    if (currentPlan === 'free') {
+                      accessUntil = now.toISOString()
+                    } else if (profile.properties?.plan_expires_at) {
+                      accessUntil = profile.properties.plan_expires_at
+                    } else {
+                      // Default: 30 days from now (one more billing cycle)
+                      accessUntil = new Date(now.getTime() + 30 * 86400000).toISOString()
+                    }
+                    // Schedule deletion 30 days after access ends
+                    const accessEnd = new Date(accessUntil)
+                    const deletionDate = new Date(accessEnd.getTime() + 30 * 86400000).toISOString()
+
+                    await supabase.from('properties').update({
+                      scheduled_deletion_at: deletionDate,
+                      access_until: accessUntil,
+                      deletion_requested_by: profile.id,
+                    }).eq('id', propertyId)
+
+                    // Cancel Stripe subscription if exists
+                    if (profile.properties?.stripe_subscription_id) {
+                      try {
+                        await supabase.functions.invoke('stripe-billing', {
+                          body: { action: 'cancel_subscription', property_id: propertyId },
+                        })
+                      } catch { /* Stripe may not be configured */ }
+                    }
+
+                    fetchProfile(profile.id)
+                    toast({ title: 'Account cancellation scheduled', description: `Access until ${new Date(accessUntil).toLocaleDateString()}. Data archived for 30 days after.`, type: 'warning' })
+                    setShowDeleteConfirm(false)
+                    setDeleteConfirmText('')
+
+                    // Sign out immediately for free plan
+                    if (currentPlan === 'free') {
+                      await signOut()
+                      navigate('/')
+                    }
+                  } catch (e) {
+                    toast({ title: 'Error', description: e.message, type: 'error' })
+                  }
+                  setDeleting(false)
+                }}
+                disabled={deleting || deleteConfirmText !== 'DELETE'}
+                className="bg-danger text-white px-4 py-2.5 rounded text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+              >
+                {deleting ? 'Processing...' : 'Confirm Cancellation'}
+              </button>
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText('') }}
+                className="text-text-muted text-sm hover:text-text-secondary"
+              >
+                Never mind
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

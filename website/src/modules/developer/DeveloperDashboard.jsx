@@ -195,6 +195,27 @@ export default function DeveloperDashboard() {
     onError: (e) => toast({ title: 'Error', description: e.message, type: 'error' }),
   })
 
+  // Overage pricing
+  const { data: overagePricing } = useQuery({
+    queryKey: ['dev-overage-pricing'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('overage_pricing').select('*').order('service')
+      if (error) return []
+      return data || []
+    },
+  })
+
+  const updateOverageMutation = useMutation({
+    mutationFn: async ({ id, updates }) => {
+      const { error } = await supabase.from('overage_pricing').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dev-overage-pricing'] })
+      toast({ title: 'Pricing updated', type: 'success' })
+    },
+  })
+
   async function runCodeAnalysis() {
     setRunningAnalysis(true)
     try {
@@ -849,6 +870,52 @@ export default function DeveloperDashboard() {
               <div className="text-xs text-text-muted py-4 text-center">No API usage in the last 30 days</div>
             )}
           </Panel>
+          <Panel title="Overage Pricing (Non-Enterprise)">
+            <p className="text-xs text-text-muted mb-3">Set included usage per plan and overage cost per additional request. Enterprise plans have unlimited usage at no extra charge.</p>
+            <div className="space-y-1">
+              <div className="hidden sm:grid sm:grid-cols-[1.5fr_0.8fr_0.8fr_0.5fr] gap-2 px-2 py-1 text-[10px] font-mono text-text-muted uppercase">
+                <span>Feature</span>
+                <span>Included/mo</span>
+                <span>Overage $/ea</span>
+                <span>Active</span>
+              </div>
+              {(overagePricing || []).map(item => (
+                <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[1.5fr_0.8fr_0.8fr_0.5fr] gap-2 items-center bg-bg-card border border-border rounded px-3 py-2">
+                  <span className="text-sm text-text-primary">{item.label || item.service}</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      value={item.included_qty}
+                      onChange={(e) => updateOverageMutation.mutate({ id: item.id, updates: { included_qty: parseInt(e.target.value) || 0 } })}
+                      className="w-16 bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary font-mono focus:outline-none focus:border-accent text-center"
+                    />
+                    <span className="text-[10px] text-text-muted">/mo</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-text-muted">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={(item.overage_price_cents / 100).toFixed(2)}
+                      onChange={(e) => updateOverageMutation.mutate({ id: item.id, updates: { overage_price_cents: Math.round(parseFloat(e.target.value) * 100) || 0 } })}
+                      className="w-16 bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary font-mono focus:outline-none focus:border-accent text-center"
+                    />
+                    <span className="text-[10px] text-text-muted">/ea</span>
+                  </div>
+                  <button
+                    onClick={() => updateOverageMutation.mutate({ id: item.id, updates: { active: !item.active } })}
+                    className={`text-[10px] font-mono px-2 py-1 rounded ${item.active ? 'bg-success/20 text-success' : 'bg-bg-surface text-text-muted'}`}
+                  >
+                    {item.active ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              ))}
+              {(!overagePricing || overagePricing.length === 0) && (
+                <div className="text-xs text-text-muted text-center py-4">Run migration 028 to enable overage pricing.</div>
+              )}
+            </div>
+          </Panel>
+
           <Panel title="Integration Status">
             <div className="space-y-2">
               {[

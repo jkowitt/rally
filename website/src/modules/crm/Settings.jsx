@@ -4,6 +4,8 @@ import { useToast } from '@/components/Toast'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { usePlanLimits } from '@/hooks/usePlanLimits'
 
 const PLANS = [
   { id: 'free', name: 'Free', price: '$0', period: '7-day trial', users: 3, features: ['CRM Pipeline (15 deals)', '3 prospect searches/mo', '3 contact researches/mo', '2 contract uploads/mo', 'Basic CSV export'] },
@@ -177,6 +179,9 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Usage & Overage */}
+      <UsageOverageSection propertyId={propertyId} currentPlan={currentPlan} />
+
       {/* Preferences */}
       <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
         <h2 className="text-sm font-mono text-text-muted uppercase mb-3">Preferences</h2>
@@ -329,6 +334,66 @@ export default function Settings() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function UsageOverageSection({ propertyId, currentPlan }) {
+  const planLimits = usePlanLimits()
+
+  const { data: overagePricing } = useQuery({
+    queryKey: ['overage-pricing'],
+    queryFn: async () => {
+      const { data } = await supabase.from('overage_pricing').select('*').eq('active', true)
+      return data || []
+    },
+  })
+
+  if (currentPlan === 'enterprise' || planLimits.plan === 'developer') return null
+  if (!overagePricing || overagePricing.length === 0) return null
+
+  const actionTypes = ['prospect_search', 'contact_research', 'contract_upload', 'ai_valuation', 'newsletter_generate']
+  const rows = actionTypes.map(action => {
+    const pricing = overagePricing.find(p => p.service === action)
+    if (!pricing) return null
+    const used = planLimits.getUsageCount(action)
+    const included = pricing.included_qty
+    const overage = Math.max(0, used - included)
+    const charge = overage * (pricing.overage_price_cents / 100)
+    return { action, label: pricing.label, used, included, overage, charge, price: pricing.overage_price_cents }
+  }).filter(Boolean)
+
+  const totalCharges = rows.reduce((s, r) => s + r.charge, 0)
+
+  return (
+    <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
+      <h2 className="text-sm font-mono text-text-muted uppercase mb-3">Usage This Month</h2>
+      <div className="space-y-2">
+        {rows.map(r => (
+          <div key={r.action} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+            <div>
+              <span className="text-sm text-text-primary">{r.label}</span>
+              <span className="text-xs text-text-muted ml-2">{r.used}/{r.included} included</span>
+            </div>
+            <div className="text-right">
+              {r.overage > 0 ? (
+                <div>
+                  <span className="text-xs font-mono text-warning">{r.overage} extra @ ${(r.price / 100).toFixed(2)}/ea</span>
+                  <span className="text-sm font-mono text-warning ml-2">${r.charge.toFixed(2)}</span>
+                </div>
+              ) : (
+                <span className="text-xs text-text-muted font-mono">{r.included - r.used} remaining</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      {totalCharges > 0 && (
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+          <span className="text-sm text-text-primary font-medium">Overage charges this month</span>
+          <span className="text-lg font-mono font-bold text-warning">${totalCharges.toFixed(2)}</span>
+        </div>
+      )}
     </div>
   )
 }

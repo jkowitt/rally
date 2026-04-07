@@ -166,6 +166,15 @@ export function usePlanLimits() {
     } catch (e) { console.warn('Usage tracking failed:', e) }
   }
 
+  function isOverage(actionType) {
+    if (isDeveloper || plan === 'enterprise') return false
+    return getUsageCount(actionType) >= getLimit(actionType)
+  }
+
+  function getOverageCount(actionType) {
+    return Math.max(0, getUsageCount(actionType) - getLimit(actionType))
+  }
+
   return {
     plan,
     limits,
@@ -178,6 +187,8 @@ export function usePlanLimits() {
     getUsageCount,
     getLimit,
     getRemaining,
+    isOverage,
+    getOverageCount,
   }
 }
 

@@ -1,0 +1,17 @@
+{
+  "name": "Loud Legacy",
+  "short_name": "LoudLegacy",
+  "description": "Sports business CRM — pipeline, contracts, assets, fulfillment, valuations",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#0D1117",
+  "theme_color": "#E8B84B",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

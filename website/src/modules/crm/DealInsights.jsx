@@ -4,6 +4,15 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { getDealInsights, getPipelineForecast, draftEmail } from '@/lib/claude'
 
+function aiErrorMessage(err, action) {
+  const msg = err?.message || ''
+  if (msg.includes('FunctionsFetchError') || msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('404') || msg.includes('not found'))
+    return `AI edge functions are not deployed yet. Deploy them in Supabase to ${action}.`
+  if (msg.includes('ANTHROPIC_API_KEY') || msg.includes('API key'))
+    return 'Anthropic API key is not configured. Set it in Supabase secrets.'
+  return msg || `Failed to ${action}. Please try again.`
+}
+
 const EMAIL_TYPES = ['Follow Up', 'Proposal', 'Thank You', 'Check In', 'Renewal']
 
 const STAGE_PROBABILITY = {
@@ -142,7 +151,7 @@ export default function DealInsights() {
       const result = await getPipelineForecast({ deals: activeDeals, historical_win_rate: historicalWinRate })
       setForecastData(result.forecast)
     } catch (err) {
-      setForecastError(err.message || 'Failed to generate forecast')
+      setForecastError(aiErrorMessage(err, 'generate forecast'))
     } finally {
       setForecastLoading(false)
     }
@@ -163,7 +172,7 @@ export default function DealInsights() {
       })
       setInsightsData(result.insights)
     } catch (err) {
-      setInsightsError(err.message || 'Failed to analyze deal')
+      setInsightsError(aiErrorMessage(err, 'analyze deal'))
     } finally {
       setInsightsLoading(false)
     }
@@ -183,7 +192,7 @@ export default function DealInsights() {
       const result = await draftEmail({ deal: selectedDeal, context, email_type: emailType })
       setEmailData(result.email)
     } catch (err) {
-      setEmailError(err.message || 'Failed to draft email')
+      setEmailError(aiErrorMessage(err, 'draft email'))
     } finally {
       setEmailLoading(false)
     }

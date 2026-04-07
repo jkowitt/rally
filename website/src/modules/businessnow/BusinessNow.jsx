@@ -73,7 +73,13 @@ export default function BusinessNow() {
       queryClient.invalidateQueries({ queryKey: ['intelligence', propertyId] })
       toast({ title: 'Daily briefing generated', type: 'success' })
     },
-    onError: (e) => toast({ title: 'Briefing failed', description: e.message, type: 'error' }),
+    onError: (e) => {
+      const msg = e?.message || ''
+      const description = (msg.includes('FunctionsFetchError') || msg.includes('Failed to fetch') || msg.includes('404'))
+        ? 'AI edge functions are not deployed yet. Deploy them in Supabase Dashboard.'
+        : (msg.includes('API key') ? 'Anthropic API key is not configured in Supabase secrets.' : msg || 'Please try again.')
+      toast({ title: 'Briefing failed', description, type: 'error' })
+    },
   })
 
   function dismissAlert(id) {

@@ -114,6 +114,7 @@ export default function TeamManager() {
       }
 
       // 3. Try to send invite email
+      let emailSent = true
       try {
         await supabase.functions.invoke('send-email', {
           body: {
@@ -134,16 +135,20 @@ export default function TeamManager() {
             </div>`,
           },
         })
-      } catch { /* email sending may not be configured */ }
+      } catch {
+        emailSent = false
+      }
 
-      return { invitation, existingUser: !!existingUser }
+      return { invitation, existingUser: !!existingUser, emailSent }
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['team-members'] })
       if (result.existingUser) {
         toast({ title: 'User added to team', description: `${inviteEmail} was already registered and has been added`, type: 'success' })
+      } else if (result.emailSent) {
+        toast({ title: 'Invitation emailed', description: `Invite sent to ${inviteEmail}`, type: 'success' })
       } else {
-        toast({ title: 'Invitation sent', description: `Invite link created for ${inviteEmail}`, type: 'success' })
+        toast({ title: 'Invite created', description: 'Email not configured — share the invite link manually', type: 'warning' })
       }
       setShowInvite(false)
       setInviteEmail('')

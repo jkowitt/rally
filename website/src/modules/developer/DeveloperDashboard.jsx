@@ -6,6 +6,7 @@ import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useToast } from '@/components/Toast'
 import { Navigate } from 'react-router-dom'
 import APIUsageBanner from '@/components/APIUsageBanner'
+import { logAudit } from '@/lib/audit'
 
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 const ROLES = ['developer', 'admin', 'rep']
@@ -234,6 +235,7 @@ export default function DeveloperDashboard() {
     mutationFn: async ({ userId, role }) => {
       const { error } = await supabase.from('profiles').update({ role }).eq('id', userId)
       if (error) throw error
+      logAudit({ action: 'role_change', entityType: 'profile', entityId: userId, changes: { role: { new: role } } })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dev-profiles'] })
@@ -247,6 +249,7 @@ export default function DeveloperDashboard() {
     mutationFn: async ({ id, updates }) => {
       const { error } = await supabase.from('properties').update(updates).eq('id', id)
       if (error) throw error
+      logAudit({ action: updates.plan ? 'plan_change' : 'update', entityType: 'property', entityId: id, changes: updates })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dev-properties'] })

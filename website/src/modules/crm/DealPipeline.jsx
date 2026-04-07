@@ -13,6 +13,8 @@ import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { isAIFeatureEnabled } from '@/lib/featureCheck'
 import { lazy, Suspense } from 'react'
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
+import { checkRateLimit } from '@/lib/rateLimit'
+import { sanitizeText } from '@/lib/sanitize'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
@@ -3466,6 +3468,10 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
 
   async function handleSearch() {
     if (!searchQuery.trim() && !searchCategory) return
+    if (!checkRateLimit('prospect_search', 10)) {
+      setStatus('Too many searches. Please wait a moment before trying again.')
+      return
+    }
     if (!isAIFeatureEnabled('ai_prospect_search')) {
       setStatus('Prospect search is currently disabled by the developer.')
       return
@@ -3482,8 +3488,8 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     setAddedIdxs(new Set())
     try {
       const data = await searchProspects({
-        query: searchQuery,
-        category: searchCategory,
+        query: sanitizeText(searchQuery),
+        category: sanitizeText(searchCategory),
         property_id: propertyId,
       })
       setResults(data.prospects || [])

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { logLogin, logAudit } from '@/lib/audit'
 
 const AuthContext = createContext(null)
 
@@ -81,9 +82,15 @@ export function AuthProvider({ children }) {
 
   async function signIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-    // Wait for profile to load before returning — prevents black screen flash
-    if (data?.user) await fetchProfile(data.user.id)
+    if (error) {
+      logLogin(null, email, false)
+      throw error
+    }
+    if (data?.user) {
+      await fetchProfile(data.user.id)
+      logLogin(data.user.id, email, true)
+      logAudit({ action: 'login', entityType: 'session', metadata: { user_agent: navigator.userAgent } })
+    }
   }
 
   async function signUp(email, password, fullName) {

@@ -4,10 +4,12 @@ import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import GlobalSearch from '../GlobalSearch'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
+import { useSessionTimeout } from '@/hooks/useSessionTimeout'
 
 const FeatureSuggestion = lazy(() => import('../FeatureSuggestion'))
 
 export default function AppShell({ children }) {
+  useSessionTimeout()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showSuggestion, setShowSuggestion] = useState(false)

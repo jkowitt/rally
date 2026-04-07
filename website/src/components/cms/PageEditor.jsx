@@ -18,9 +18,17 @@ function FormatToolbar({ target, onClose }) {
 
   const isImage = target.tagName?.toLowerCase() === 'img'
   const computed = window.getComputedStyle(target)
+  const [showSection, setShowSection] = useState(false)
+
+  // Find the nearest section/container parent
+  const section = target.closest('section, [class*="bg-bg"], [class*="rounded-lg"], [class*="border"]') || target.parentElement
 
   function applyStyle(prop, value) {
     target.style[prop] = value
+  }
+
+  function applySectionStyle(prop, value) {
+    if (section) section.style[prop] = value
   }
 
   function getElementKey(el) {
@@ -49,6 +57,24 @@ function FormatToolbar({ target, onClose }) {
     if (target.style.width) styles.width = target.style.width
     if (target.style.maxWidth) styles.maxWidth = target.style.maxWidth
     if (target.style.opacity) styles.opacity = target.style.opacity
+    if (Object.keys(styles).length > 0) {
+      setDraft(key, JSON.stringify(styles), 'json')
+    }
+  }
+
+  function saveSectionStyles() {
+    if (!section) return
+    const key = getElementKey(section) + ':section'
+    const styles = {}
+    if (section.style.backgroundColor) styles.backgroundColor = section.style.backgroundColor
+    if (section.style.padding) styles.padding = section.style.padding
+    if (section.style.paddingTop) styles.paddingTop = section.style.paddingTop
+    if (section.style.paddingBottom) styles.paddingBottom = section.style.paddingBottom
+    if (section.style.margin) styles.margin = section.style.margin
+    if (section.style.marginTop) styles.marginTop = section.style.marginTop
+    if (section.style.marginBottom) styles.marginBottom = section.style.marginBottom
+    if (section.style.borderRadius) styles.borderRadius = section.style.borderRadius
+    if (section.style.borderColor) styles.borderColor = section.style.borderColor
     if (Object.keys(styles).length > 0) {
       setDraft(key, JSON.stringify(styles), 'json')
     }
@@ -163,7 +189,135 @@ function FormatToolbar({ target, onClose }) {
       )}
 
       <div className="w-px h-5 bg-border mx-0.5" />
+
+      {/* Section/container controls toggle */}
+      <button
+        onClick={() => setShowSection(!showSection)}
+        className={`text-[10px] font-mono px-1.5 py-1 rounded ${showSection ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-secondary hover:text-text-primary'}`}
+        title="Edit section/container styles"
+      >
+        ◻ Section
+      </button>
+
       <button onClick={onClose} className="text-text-muted hover:text-text-primary text-xs px-1">✕</button>
+
+      {/* Section controls panel */}
+      {showSection && section && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-bg-surface border border-accent/30 rounded-lg shadow-xl p-2.5 flex items-center gap-2 flex-wrap">
+          <span className="text-[9px] text-text-muted font-mono uppercase">Section:</span>
+
+          {/* Background color */}
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] text-text-muted">BG</span>
+            <input
+              type="color"
+              defaultValue={rgbToHex(window.getComputedStyle(section).backgroundColor)}
+              onChange={(e) => { applySectionStyle('backgroundColor', e.target.value); saveSectionStyles() }}
+              className="w-5 h-5 rounded border border-border cursor-pointer"
+            />
+            <button
+              onClick={() => { section.style.backgroundColor = ''; saveSectionStyles() }}
+              className="text-[8px] text-text-muted hover:text-text-primary"
+              title="Reset background"
+            >×</button>
+          </div>
+
+          <div className="w-px h-4 bg-border" />
+
+          {/* Padding */}
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] text-text-muted">Pad</span>
+            <select
+              defaultValue=""
+              onChange={(e) => { applySectionStyle('padding', e.target.value); saveSectionStyles() }}
+              className="bg-bg-card border border-border rounded px-1 py-0.5 text-[9px] text-text-primary focus:outline-none w-14"
+            >
+              <option value="">—</option>
+              <option value="0px">0</option>
+              <option value="8px">8px</option>
+              <option value="16px">16px</option>
+              <option value="24px">24px</option>
+              <option value="32px">32px</option>
+              <option value="48px">48px</option>
+              <option value="64px">64px</option>
+              <option value="96px">96px</option>
+            </select>
+          </div>
+
+          {/* Top/Bottom padding */}
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] text-text-muted">↕</span>
+            <select
+              defaultValue=""
+              onChange={(e) => { applySectionStyle('paddingTop', e.target.value); applySectionStyle('paddingBottom', e.target.value); saveSectionStyles() }}
+              className="bg-bg-card border border-border rounded px-1 py-0.5 text-[9px] text-text-primary focus:outline-none w-14"
+            >
+              <option value="">—</option>
+              <option value="0px">0</option>
+              <option value="8px">8px</option>
+              <option value="16px">16px</option>
+              <option value="24px">24px</option>
+              <option value="32px">32px</option>
+              <option value="48px">48px</option>
+              <option value="64px">64px</option>
+              <option value="96px">96px</option>
+            </select>
+          </div>
+
+          <div className="w-px h-4 bg-border" />
+
+          {/* Margin top/bottom */}
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] text-text-muted">Margin ↕</span>
+            <select
+              defaultValue=""
+              onChange={(e) => { applySectionStyle('marginTop', e.target.value); applySectionStyle('marginBottom', e.target.value); saveSectionStyles() }}
+              className="bg-bg-card border border-border rounded px-1 py-0.5 text-[9px] text-text-primary focus:outline-none w-14"
+            >
+              <option value="">—</option>
+              <option value="0px">0</option>
+              <option value="8px">8px</option>
+              <option value="16px">16px</option>
+              <option value="24px">24px</option>
+              <option value="32px">32px</option>
+              <option value="48px">48px</option>
+              <option value="64px">64px</option>
+            </select>
+          </div>
+
+          <div className="w-px h-4 bg-border" />
+
+          {/* Border radius */}
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] text-text-muted">Radius</span>
+            <select
+              defaultValue=""
+              onChange={(e) => { applySectionStyle('borderRadius', e.target.value); saveSectionStyles() }}
+              className="bg-bg-card border border-border rounded px-1 py-0.5 text-[9px] text-text-primary focus:outline-none w-14"
+            >
+              <option value="">—</option>
+              <option value="0px">0</option>
+              <option value="4px">4px</option>
+              <option value="8px">8px</option>
+              <option value="12px">12px</option>
+              <option value="16px">16px</option>
+              <option value="24px">24px</option>
+              <option value="9999px">Pill</option>
+            </select>
+          </div>
+
+          {/* Border color */}
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] text-text-muted">Border</span>
+            <input
+              type="color"
+              defaultValue={rgbToHex(window.getComputedStyle(section).borderColor)}
+              onChange={(e) => { applySectionStyle('borderColor', e.target.value); applySectionStyle('borderWidth', '1px'); applySectionStyle('borderStyle', 'solid'); saveSectionStyles() }}
+              className="w-5 h-5 rounded border border-border cursor-pointer"
+            />
+          </div>
+        </div>
+      )}
     </div>,
     document.body
   )

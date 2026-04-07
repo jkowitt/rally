@@ -157,13 +157,13 @@ export default function ContractManager() {
         // Remove existing benefits for this contract and re-insert
         const { error: delErr } = await supabase.from('contract_benefits').delete().eq('contract_id', savedContract.id)
         if (delErr) syncErrors.push('Delete benefits: ' + delErr.message)
+        const VALID_FREQ = ['Per Game', 'Per Month', 'Per Season', 'One Time']
         const benefitRows = _benefits.map(b => ({
           contract_id: savedContract.id,
-          benefit_description: b.benefit_description,
+          benefit_description: b.benefit_description || 'Benefit',
           quantity: parseInt(b.quantity) || 1,
-          frequency: b.frequency || 'Per Season',
-          value: b.value ? Number(b.value) : null,
-          fulfillment_auto_generated: false,
+          frequency: VALID_FREQ.includes(b.frequency) ? b.frequency : 'Per Season',
+          value: b.value ? Number(String(b.value).replace(/[$,]/g, '')) : null,
         }))
         const { data: insertedBenefits, error: benErr } = await supabase.from('contract_benefits').insert(benefitRows).select()
         if (benErr) syncErrors.push('Insert benefits: ' + benErr.message)
@@ -1246,14 +1246,18 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       let fulfillmentCount = 0
 
       if (parsed?.benefits?.length > 0) {
-        const benefitRows = parsed.benefits.map((b) => ({
-          contract_id: contract.id,
-          benefit_description: b.description,
-          quantity: b.quantity || 1,
-          frequency: b.frequency || 'Per Season',
-          value: b.value || null,
-          fulfillment_auto_generated: false,
-        }))
+        const VALID_FREQ = ['Per Game', 'Per Month', 'Per Season', 'One Time']
+        const benefitRows = parsed.benefits.map((b) => {
+          const rawFreq = b.frequency || 'Per Season'
+          const frequency = VALID_FREQ.includes(rawFreq) ? rawFreq : 'Per Season'
+          return {
+            contract_id: contract.id,
+            benefit_description: b.description || b.benefit_description || b.name || 'Benefit',
+            quantity: parseInt(b.quantity) || 1,
+            frequency,
+            value: b.value ? Number(String(b.value).replace(/[$,]/g, '')) : null,
+          }
+        })
 
         const { data: insertedBenefits, error: benefitsErr } = await supabase.from('contract_benefits').insert(benefitRows).select()
         if (benefitsErr) {

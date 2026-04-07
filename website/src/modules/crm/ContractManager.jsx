@@ -1,29 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-// Load pdfjs from CDN at runtime
-let pdfjsLoaded = null
-async function loadPdfjsFromCDN() {
-  if (pdfjsLoaded) return pdfjsLoaded
-  if (window.pdfjsLib) { pdfjsLoaded = window.pdfjsLib; return pdfjsLoaded }
-
-  // Fetch the script content and inject it to avoid CSP issues
-  const response = await fetch('https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js')
-  const scriptText = await response.text()
-  const script = document.createElement('script')
-  script.textContent = scriptText
-  document.head.appendChild(script)
-
-  if (!window.pdfjsLib) throw new Error('pdfjs failed to initialize')
-
-  // Create a fake worker via blob URL to avoid loading external worker
-  const workerBlob = new Blob(['self.onmessage = function() {}'], { type: 'application/javascript' })
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(workerBlob)
-  pdfjsLoaded = window.pdfjsLib
-  return pdfjsLoaded
-}
+// PDF text extraction — use bundled pdfjs-dist (no CDN, no CSP issues)
+import * as pdfjsLib from 'pdfjs-dist'
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url'
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
 async function extractPdfText(arrayBuffer) {
-  const pdfjs = await loadPdfjsFromCDN()
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
   let text = ''
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)

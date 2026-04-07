@@ -3,26 +3,13 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 
-// PDF extraction (same as ContractManager)
-let pdfjsLoaded = null
-async function loadPdfjs() {
-  if (pdfjsLoaded) return pdfjsLoaded
-  if (window.pdfjsLib) { pdfjsLoaded = window.pdfjsLib; return pdfjsLoaded }
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script')
-    s.src = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'
-    s.onload = () => {
-      if (window.pdfjsLib) { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; pdfjsLoaded = window.pdfjsLib; resolve(pdfjsLoaded) }
-      else reject(new Error('pdfjs not available'))
-    }
-    s.onerror = () => reject(new Error('Failed to load pdfjs'))
-    document.head.appendChild(s)
-  })
-}
+// PDF extraction — use bundled pdfjs-dist
+import * as pdfjsImporter from 'pdfjs-dist'
+import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url'
+pdfjsImporter.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
 async function extractPdfText(arrayBuffer) {
-  const pdfjs = await loadPdfjs()
-  const pdf = await pdfjs.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false }).promise
+  const pdf = await pdfjsImporter.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
   let text = ''
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)

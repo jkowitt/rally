@@ -221,6 +221,59 @@ export default function TeamManager() {
         )}
       </div>
 
+      {/* Team Invite Link — shareable by admin */}
+      {isAdmin && team && profile?.properties?.team_invite_token && (
+        <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-mono text-text-muted uppercase tracking-wider">Team Invite Link</h3>
+            <span className="text-[10px] text-text-muted">Anyone with this link can join your team</span>
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={`${window.location.origin}/login?team=${profile.properties.team_invite_token}`}
+              readOnly
+              className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-xs text-text-primary font-mono focus:outline-none"
+              onClick={(e) => e.target.select()}
+            />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/login?team=${profile.properties.team_invite_token}`)
+                toast({ title: 'Team link copied!', type: 'success' })
+              }}
+              className="bg-accent text-bg-primary px-4 py-2 rounded text-xs font-medium hover:opacity-90 shrink-0"
+            >
+              Copy
+            </button>
+          </div>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-[10px] text-text-muted">New members join as:</span>
+            <select
+              value={profile.properties.team_invite_role || 'rep'}
+              onChange={async (e) => {
+                await supabase.from('properties').update({ team_invite_role: e.target.value }).eq('id', propertyId)
+                toast({ title: `Default role set to ${e.target.value}`, type: 'success' })
+              }}
+              className="bg-bg-card border border-border rounded px-2 py-1 text-[10px] text-text-primary focus:outline-none focus:border-accent"
+            >
+              <option value="rep">Rep</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button
+              onClick={async () => {
+                if (!confirm('Reset the team invite link? The old link will stop working.')) return
+                const newToken = crypto.randomUUID()
+                await supabase.from('properties').update({ team_invite_token: newToken }).eq('id', propertyId)
+                toast({ title: 'Link reset — old link is now invalid', type: 'success' })
+                window.location.reload()
+              }}
+              className="text-[10px] text-text-muted hover:text-danger transition-colors"
+            >
+              Reset link
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* No team yet */}
       {!team && (
         <div className="bg-bg-surface border border-border rounded-lg p-8 sm:p-12 text-center">

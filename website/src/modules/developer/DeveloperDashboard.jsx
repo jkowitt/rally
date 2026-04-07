@@ -18,6 +18,8 @@ export default function DeveloperDashboard() {
   const [editingUser, setEditingUser] = useState(null)
   const [showInvite, setShowInvite] = useState(false)
   const [runningAnalysis, setRunningAnalysis] = useState(false)
+  const [newLinkLabel, setNewLinkLabel] = useState('')
+  const [newLinkPlan, setNewLinkPlan] = useState('pro')
 
   if (!isDeveloper) return <Navigate to="/app" replace />
 
@@ -75,6 +77,44 @@ export default function DeveloperDashboard() {
     queryFn: async () => {
       const { data } = await supabase.from('feature_suggestions').select('*').order('created_at', { ascending: false })
       return data || []
+    },
+  })
+
+  // Premium invite links
+  const { data: premiumLinks } = useQuery({
+    queryKey: ['dev-premium-links'],
+    queryFn: async () => {
+      const { data } = await supabase.from('premium_invite_links').select('*, properties(name)').order('created_at', { ascending: false })
+      return data || []
+    },
+  })
+
+  const createPremiumLinkMutation = useMutation({
+    mutationFn: async ({ label, plan }) => {
+      const { data, error } = await supabase.from('premium_invite_links').insert({
+        label, plan, created_by: profile?.id,
+      }).select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['dev-premium-links'] })
+      const url = `${window.location.origin}/login?premium=${data.token}`
+      navigator.clipboard.writeText(url)
+      toast({ title: 'Premium link created & copied!', type: 'success' })
+      setNewLinkLabel('')
+    },
+    onError: (e) => toast({ title: 'Error', description: e.message, type: 'error' }),
+  })
+
+  const revokePremiumLinkMutation = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('premium_invite_links').update({ active: false }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dev-premium-links'] })
+      toast({ title: 'Link revoked', type: 'success' })
     },
   })
 
@@ -172,6 +212,7 @@ export default function DeveloperDashboard() {
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
+    { id: 'invites', label: `Invite Links (${premiumLinks?.filter(l => l.active && !l.claimed_by && new Date(l.expires_at) > new Date()).length || 0})` },
     { id: 'properties', label: `Properties (${properties?.length || 0})` },
     { id: 'users', label: `Users (${profiles?.length || 0})` },
     { id: 'flags', label: 'Feature Flags' },
@@ -322,6 +363,94 @@ export default function DeveloperDashboard() {
               ))}
               {invitations?.filter(i => !i.accepted).length === 0 && (
                 <div className="text-text-muted text-xs">No pending invitations</div>
+              )}
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {/* INVITE LINKS */}
+      {activeTab === 'invites' && (
+        <div className="space-y-4">
+          <Panel title="Generate Premium Access Link">
+            <p className="text-xs text-text-muted mb-3">
+              Create a link that gives a company premium plan access when they sign up. Links expire after 48 hours.
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              <input
+                type="text"
+                placeholder="Label (e.g. 'NIU Athletics pilot')"
+                value={newLinkLabel}
+                onChange={(e) => setNewLinkLabel(e.target.value)}
+                className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent min-w-[200px]"
+              />
+              <select
+                value={newLinkPlan}
+                onChange={(e) => setNewLinkPlan(e.target.value)}
+                className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+              >
+                <option value="starter">Starter</option>
+                <option value="pro">Pro</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+              <button
+                onClick={() => createPremiumLinkMutation.mutate({ label: newLinkLabel || 'Unnamed', plan: newLinkPlan })}
+                disabled={createPremiumLinkMutation.isPending}
+                className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50 shrink-0"
+              >
+                {createPremiumLinkMutation.isPending ? 'Creating...' : 'Generate & Copy Link'}
+              </button>
+            </div>
+          </Panel>
+
+          <Panel title={`All Links (${premiumLinks?.length || 0})`}>
+            <div className="space-y-2">
+              {premiumLinks?.map(link => {
+                const isExpired = new Date(link.expires_at) < new Date()
+                const isClaimed = !!link.claimed_by
+                const isActive = link.active && !isExpired && !isClaimed
+                const status = !link.active ? 'Revoked' : isClaimed ? 'Claimed' : isExpired ? 'Expired' : 'Active'
+                const statusColor = { Active: 'bg-success/10 text-success', Claimed: 'bg-accent/10 text-accent', Expired: 'bg-bg-card text-text-muted', Revoked: 'bg-danger/10 text-danger' }
+                const url = `${window.location.origin}/login?premium=${link.token}`
+                return (
+                  <div key={link.id} className={`bg-bg-card border rounded-lg px-4 py-3 ${isActive ? 'border-success/30' : 'border-border'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm text-text-primary font-medium">{link.label || 'Unnamed'}</span>
+                          <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${statusColor[status]}`}>{status}</span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent">{link.plan}</span>
+                        </div>
+                        <div className="text-[10px] text-text-muted mt-1 flex gap-3 flex-wrap">
+                          <span>Created {new Date(link.created_at).toLocaleDateString()}</span>
+                          <span>Expires {new Date(link.expires_at).toLocaleDateString()} {new Date(link.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          {isClaimed && link.properties?.name && <span>Claimed by: {link.properties.name}</span>}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        {isActive && (
+                          <>
+                            <button
+                              onClick={() => { navigator.clipboard.writeText(url); toast({ title: 'Link copied!', type: 'success' }) }}
+                              className="text-[10px] text-accent hover:underline font-mono"
+                            >
+                              Copy
+                            </button>
+                            <button
+                              onClick={() => { if (confirm('Revoke this link?')) revokePremiumLinkMutation.mutate(link.id) }}
+                              className="text-[10px] text-danger hover:underline font-mono"
+                            >
+                              Revoke
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              {(!premiumLinks || premiumLinks.length === 0) && (
+                <div className="text-text-muted text-xs text-center py-6">No invite links created yet.</div>
               )}
             </div>
           </Panel>

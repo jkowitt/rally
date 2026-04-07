@@ -24,11 +24,15 @@ export default function LoginPage() {
   const [searchParams] = useSearchParams()
   const inviteToken = searchParams.get('invite')
   const industryParam = searchParams.get('industry')
+  const premiumToken = searchParams.get('premium')
+  const teamToken = searchParams.get('team')
 
   // Map landing page industry IDs to property types
   const industryToType = { sports: 'college', entertainment: 'entertainment', conference: 'conference', nonprofit: 'nonprofit', media: 'media', realestate: 'realestate', agency: 'agency' }
 
-  const [mode, setMode] = useState(inviteToken ? 'invite' : 'signin') // signin | signup | invite | onboard | confirm
+  const [premiumLink, setPremiumLink] = useState(null)
+  const [teamInviteProperty, setTeamInviteProperty] = useState(null)
+  const [mode, setMode] = useState(inviteToken ? 'invite' : (premiumToken || teamToken) ? 'signup' : 'signin') // signin | signup | invite | onboard | confirm
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -57,6 +61,38 @@ export default function LoginPage() {
         })
     }
   }, [inviteToken])
+
+  // Premium invite link: validate token
+  useEffect(() => {
+    if (premiumToken) {
+      supabase.from('premium_invite_links').select('*').eq('token', premiumToken).eq('active', true).single()
+        .then(({ data, error: pErr }) => {
+          if (pErr || !data || data.claimed_by || new Date(data.expires_at) < new Date()) {
+            setError('This invite link is invalid or has expired. Contact the sender for a new one.')
+            setMode('signin')
+          } else {
+            setPremiumLink(data)
+            setMode('signup')
+          }
+        })
+    }
+  }, [premiumToken])
+
+  // Team invite link: validate token
+  useEffect(() => {
+    if (teamToken) {
+      supabase.from('properties').select('id, name, team_invite_role').eq('team_invite_token', teamToken).single()
+        .then(({ data, error: tErr }) => {
+          if (tErr || !data) {
+            setError('This team invite link is invalid.')
+            setMode('signin')
+          } else {
+            setTeamInviteProperty(data)
+            setMode('signup')
+          }
+        })
+    }
+  }, [teamToken])
 
   if (session && mode !== 'onboard') {
     navigate('/app', { replace: true })
@@ -111,6 +147,31 @@ export default function LoginPage() {
       return
     }
 
+    // Team invite link flow: join existing property
+    if (teamInviteProperty) {
+      setLoading(true)
+      try {
+        const { data: authData, error: authErr } = await supabase.auth.signUp({
+          email, password, options: { data: { full_name: fullName } },
+        })
+        if (authErr) throw authErr
+        if (authData.user && !authData.session) { setMode('confirm'); setLoading(false); return }
+        if (authData.user) {
+          await supabase.from('profiles').upsert({
+            id: authData.user.id, property_id: teamInviteProperty.id,
+            full_name: fullName, email,
+            role: email.toLowerCase() === 'jlkowitt25@gmail.com' ? 'developer' : (teamInviteProperty.team_invite_role || 'rep'),
+            onboarding_completed: true,
+          })
+          localStorage.setItem('ll-has-account', '1')
+          await fetchProfile(authData.user.id)
+          navigate('/app', { replace: true })
+        }
+      } catch (err) { setError(err.message) }
+      setLoading(false)
+      return
+    }
+
     // New user signup — single step
     if (!companyName) return setError('Company name is required')
     setLoading(true)
@@ -131,13 +192,14 @@ export default function LoginPage() {
       }
 
       if (authData.user) {
-        // 2. Create company/property
+        // 2. Create company/property (premium link upgrades plan)
+        const assignedPlan = premiumLink ? premiumLink.plan : 'free'
         const propertyData = {
           name: companyName,
-          plan: 'free',
+          plan: assignedPlan,
           billing_email: email,
           trial_started_at: new Date().toISOString(),
-          trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+          trial_ends_at: new Date(Date.now() + (premiumLink ? 30 : 7) * 86400000).toISOString(),
         }
         if (companyCity) propertyData.city = companyCity
         if (companyState) propertyData.state = companyState
@@ -150,6 +212,13 @@ export default function LoginPage() {
           property = p2
         } else { property = p1 }
         if (!property) throw new Error('Company creation failed')
+
+        // Mark premium link as claimed
+        if (premiumLink) {
+          await supabase.from('premium_invite_links').update({
+            claimed_by: authData.user.id, claimed_at: new Date().toISOString(), property_id: property.id,
+          }).eq('id', premiumLink.id)
+        }
 
         // 3. Create profile — first person at a company = admin (developer for jlkowitt25)
         const userRole = email.toLowerCase() === 'jlkowitt25@gmail.com' ? 'developer' : 'admin'
@@ -220,7 +289,7 @@ export default function LoginPage() {
             <button type="submit" disabled={loading} className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 disabled:opacity-50 text-sm">
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
-            <button type="button" onClick={() => { setMode('signup'); setError(''); setStep(1) }} className="w-full text-center text-text-muted text-xs hover:text-text-secondary">
+            <button type="button" onClick={() => { setMode('signup'); setError('') }} className="w-full text-center text-text-muted text-xs hover:text-text-secondary">
               Don't have an account? Sign up free
             </button>
           </form>
@@ -231,12 +300,26 @@ export default function LoginPage() {
           <form onSubmit={handleSignUp} className="bg-bg-surface border border-border rounded-lg p-5 sm:p-6 space-y-4">
             <div>
               <h2 className="text-lg font-semibold text-text-primary">
-                {invitation ? `Join ${invitation.properties?.name}` : 'Create Your Account'}
+                {invitation ? `Join ${invitation.properties?.name}` :
+                 teamInviteProperty ? `Join ${teamInviteProperty.name}` :
+                 premiumLink ? 'Claim Your Premium Access' : 'Create Your Account'}
               </h2>
               {invitation && (
                 <p className="text-xs text-text-muted mt-1">You've been invited as a {invitation.role}</p>
               )}
-              {!invitation && (
+              {teamInviteProperty && (
+                <p className="text-xs text-text-muted mt-1">Join <span className="text-accent">{teamInviteProperty.name}</span> as a {teamInviteProperty.team_invite_role || 'rep'}</p>
+              )}
+              {premiumLink && (
+                <div className="mt-2 bg-accent/10 border border-accent/20 rounded-lg px-3 py-2">
+                  <div className="text-[10px] font-mono text-accent uppercase">Premium Access Invite</div>
+                  <div className="text-xs text-text-secondary mt-0.5">
+                    You've been invited to try the <span className="text-accent font-medium">{premiumLink.plan}</span> plan free for 30 days.
+                    {premiumLink.label && <span className="text-text-muted"> ({premiumLink.label})</span>}
+                  </div>
+                </div>
+              )}
+              {!invitation && !premiumLink && !teamInviteProperty && (
                 <p className="text-xs text-text-muted mt-1">One form. Takes 30 seconds.</p>
               )}
             </div>
@@ -245,7 +328,7 @@ export default function LoginPage() {
             <input type="email" placeholder="Work Email *" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!!invitation} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-60" />
             <input type="password" placeholder="Password (6+ characters) *" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
 
-            {!invitation && (
+            {!invitation && !teamInviteProperty && (
               <>
                 <div className="border-t border-border pt-3">
                   <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">Your Company</div>

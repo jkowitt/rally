@@ -36,7 +36,7 @@ app.use((_req, res, next) => {
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
     "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.anthropic.com https://unpkg.com https://cdn.sheetjs.com",
-    "frame-src 'none'",
+    "frame-src 'self' https://*.supabase.co",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

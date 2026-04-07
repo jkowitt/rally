@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -10,17 +11,127 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
 }
 
+const INDUSTRIES = [
+  {
+    id: 'sports',
+    label: 'Sports',
+    icon: '🏟',
+    headline: 'Sports Partnerships',
+    subtitle: 'College athletics, professional teams, and minor league organizations',
+    description: 'AI-powered sponsorship CRM, verified contact intelligence, contract analysis, event operations, and media valuations — built for college athletics, professional teams, and sports agencies.',
+    deals: 'sponsorship deals',
+    assets: 'sponsorship assets',
+    cta: 'sports business',
+    modules: ['Pipeline', 'Contracts', 'Assets', 'Fulfillment', 'Events', 'VALORA', 'Newsletter'],
+    stats: [{ value: '22', label: 'Asset Categories' }, { value: 'AI', label: 'Powered Intelligence' }, { value: '∞', label: 'Scalable Pipeline' }],
+  },
+  {
+    id: 'entertainment',
+    label: 'Entertainment',
+    icon: '🎭',
+    headline: 'Venue Partnerships',
+    subtitle: 'Concert halls, theaters, arenas, and entertainment venues',
+    description: 'Manage venue sponsorships, naming rights, VIP packages, and partner activations — from prospect to fulfillment in one platform.',
+    deals: 'venue partnerships',
+    assets: 'venue packages',
+    cta: 'venue operation',
+    modules: ['Pipeline', 'Contracts', 'Packages', 'Fulfillment', 'Events', 'Valuations'],
+    stats: [{ value: '20+', label: 'Package Types' }, { value: 'AI', label: 'Contract Analysis' }, { value: '∞', label: 'Scalable Pipeline' }],
+  },
+  {
+    id: 'conference',
+    label: 'Conferences',
+    icon: '🎤',
+    headline: 'Exhibitor & Sponsor Sales',
+    subtitle: 'Trade shows, expos, summits, and industry conferences',
+    description: 'Track exhibitor pipelines, manage booth packages, automate sponsor contracts, and fulfill deliverables — no more spreadsheets.',
+    deals: 'exhibitor deals',
+    assets: 'booth & sponsorship packages',
+    cta: 'conference operation',
+    modules: ['Pipeline', 'Contracts', 'Booth Inventory', 'Fulfillment', 'Events', 'Newsletter'],
+    stats: [{ value: '15+', label: 'Package Types' }, { value: 'AI', label: 'Prospect Finder' }, { value: '∞', label: 'Exhibitor Pipeline' }],
+  },
+  {
+    id: 'nonprofit',
+    label: 'Nonprofits',
+    icon: '💛',
+    headline: 'Donor & Sponsor Management',
+    subtitle: 'Foundations, charities, and nonprofit organizations',
+    description: 'Manage corporate donors, track pledge fulfillment, generate impact reports, and grow your sponsorship revenue with AI-powered tools.',
+    deals: 'donor pledges',
+    assets: 'recognition benefits',
+    cta: 'nonprofit',
+    modules: ['Donor Pipeline', 'Pledge Contracts', 'Recognition Assets', 'Fulfillment', 'Events', 'Newsletter'],
+    stats: [{ value: '10+', label: 'Recognition Types' }, { value: 'AI', label: 'Donor Research' }, { value: '∞', label: 'Donor Pipeline' }],
+  },
+  {
+    id: 'media',
+    label: 'Media',
+    icon: '📡',
+    headline: 'Ad Sales Operations',
+    subtitle: 'Broadcast, digital, podcast, and media companies',
+    description: 'Manage ad inventory, track insertion orders, automate fulfillment verification, and forecast revenue across all channels.',
+    deals: 'ad campaigns',
+    assets: 'ad inventory',
+    cta: 'media sales',
+    modules: ['Sales Pipeline', 'Insertion Orders', 'Ad Inventory', 'Delivery Tracking', 'Analytics', 'Newsletter'],
+    stats: [{ value: '12+', label: 'Ad Formats' }, { value: 'AI', label: 'Revenue Forecast' }, { value: '∞', label: 'Campaign Pipeline' }],
+  },
+  {
+    id: 'esports',
+    label: 'Esports',
+    icon: '🎮',
+    headline: 'Brand Partnerships',
+    subtitle: 'Esports teams, leagues, and content creators',
+    description: 'Manage brand deals, track stream activations, fulfill sponsorship deliverables, and value your media exposure — purpose-built for esports.',
+    deals: 'brand deals',
+    assets: 'activation inventory',
+    cta: 'esports organization',
+    modules: ['Pipeline', 'Contracts', 'Activations', 'Fulfillment', 'Events', 'Valuations'],
+    stats: [{ value: '18+', label: 'Activation Types' }, { value: 'AI', label: 'Powered Intelligence' }, { value: '∞', label: 'Brand Pipeline' }],
+  },
+  {
+    id: 'realestate',
+    label: 'Real Estate',
+    icon: '🏢',
+    headline: 'Lease & Tenant Pipeline',
+    subtitle: 'Commercial real estate, property management, and brokerages',
+    description: 'Track tenant prospects, manage lease agreements, fulfill build-out commitments, and forecast occupancy revenue in one platform.',
+    deals: 'lease prospects',
+    assets: 'property units',
+    cta: 'real estate operation',
+    modules: ['Tenant Pipeline', 'Lease Contracts', 'Property Units', 'Build-Out Tracking', 'Analytics'],
+    stats: [{ value: '8+', label: 'Property Types' }, { value: 'AI', label: 'Market Analysis' }, { value: '∞', label: 'Tenant Pipeline' }],
+  },
+  {
+    id: 'agency',
+    label: 'Agencies',
+    icon: '📊',
+    headline: 'Client Pipeline Management',
+    subtitle: 'Marketing, PR, sports, and consulting agencies',
+    description: 'Manage client pipelines, track deliverables, automate contracts, and keep your team aligned — from pitch to fulfillment.',
+    deals: 'client engagements',
+    assets: 'service deliverables',
+    cta: 'agency',
+    modules: ['Client Pipeline', 'Contracts', 'Deliverables', 'Fulfillment', 'Team Management', 'Newsletter'],
+    stats: [{ value: '10+', label: 'Service Categories' }, { value: 'AI', label: 'Proposal Drafting' }, { value: '∞', label: 'Client Pipeline' }],
+  },
+]
+
 export default function LandingPage() {
+  const [industry, setIndustry] = useState(INDUSTRIES[0])
+
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary">
       <Nav />
-      <Hero />
-      <Ecosystem />
+      <Hero industry={industry} onSelectIndustry={setIndustry} />
+      <IndustrySelector selected={industry} onSelect={setIndustry} />
+      <Ecosystem industry={industry} />
       <Modules />
       <HowItWorks />
       <AISection />
       <WhyLoudLegacy />
-      <CTA />
+      <CTA industry={industry} />
       <Footer />
     </div>
   )
@@ -51,9 +162,9 @@ function Nav() {
 }
 
 /* ─── HERO ─── */
-function Hero() {
+function Hero({ industry }) {
   return (
-    <section className="pt-32 pb-20 px-6 relative overflow-hidden">
+    <section className="pt-32 pb-16 px-6 relative overflow-hidden">
       {/* Grid background */}
       <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#E8B84B 1px, transparent 1px), linear-gradient(90deg, #E8B84B 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
 
@@ -65,41 +176,57 @@ function Hero() {
       >
         <motion.div variants={fadeUp} className="inline-block mb-6">
           <span className="text-xs font-mono text-accent bg-accent/10 px-3 py-1.5 rounded-full tracking-wider uppercase">
-            Sports Business Operating Suite
+            {industry.id === 'sports' ? 'Sports Business Operating Suite' : `${industry.label} Operating Suite`}
           </span>
         </motion.div>
 
         <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl font-bold leading-[1.05] tracking-tight">
           The Operating System For{' '}
-          <span className="text-accent">Sports Partnerships</span>
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={industry.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="text-accent inline-block"
+            >
+              {industry.headline}
+            </motion.span>
+          </AnimatePresence>
         </motion.h1>
 
-        <motion.p variants={fadeUp} className="text-lg md:text-xl text-text-secondary mt-6 max-w-2xl mx-auto leading-relaxed">
-          AI-powered sponsorship CRM, verified contact intelligence, contract analysis, event operations, and media valuations — built for college athletics, professional teams, and sports agencies.
-        </motion.p>
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={industry.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="text-lg md:text-xl text-text-secondary mt-6 max-w-2xl mx-auto leading-relaxed"
+          >
+            {industry.description}
+          </motion.p>
+        </AnimatePresence>
 
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
           <Link
-            to="/login"
+            to={`/login?industry=${industry.id}`}
             className="bg-accent text-bg-primary px-8 py-3.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
           >
-            Get Started
+            Get Started Free
           </Link>
           <a
-            href="#ecosystem"
+            href="#industries"
             className="border border-border text-text-secondary px-8 py-3.5 rounded-lg text-sm font-medium hover:border-text-muted hover:text-text-primary transition-colors"
           >
-            Explore the Platform
+            See All Industries
           </a>
         </motion.div>
 
         {/* Stats bar */}
         <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 mt-16 max-w-lg mx-auto">
-          {[
-            { value: '4', label: 'Integrated Modules' },
-            { value: '22', label: 'Asset Categories' },
-            { value: 'AI', label: 'Powered Intelligence' },
-          ].map((stat) => (
+          {industry.stats.map((stat) => (
             <div key={stat.label}>
               <div className="text-2xl font-mono font-bold text-accent">{stat.value}</div>
               <div className="text-xs text-text-muted mt-0.5">{stat.label}</div>
@@ -111,15 +238,79 @@ function Hero() {
   )
 }
 
+/* ─── INDUSTRY SELECTOR ─── */
+function IndustrySelector({ selected, onSelect }) {
+  return (
+    <section id="industries" className="py-16 px-6 border-t border-border">
+      <div className="max-w-6xl mx-auto">
+        <SectionHeader
+          tag="Select Your Industry"
+          title="One platform. Every industry."
+          description="Loud Legacy adapts its terminology, asset categories, and workflows to your industry. Pick yours to see how it works for you."
+        />
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mt-12">
+          {INDUSTRIES.map((ind) => (
+            <button
+              key={ind.id}
+              onClick={() => { onSelect(ind); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+              className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all text-center ${
+                selected.id === ind.id
+                  ? 'bg-accent/10 border-accent text-accent'
+                  : 'bg-bg-surface border-border text-text-secondary hover:border-accent/30 hover:text-text-primary'
+              }`}
+            >
+              <span className="text-2xl">{ind.icon}</span>
+              <span className="text-xs font-mono">{ind.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Selected industry detail */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={selected.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="mt-8 bg-bg-surface border border-border rounded-lg p-6"
+          >
+            <div className="flex items-start gap-4">
+              <span className="text-3xl">{selected.icon}</span>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-text-primary">{selected.headline}</h3>
+                <p className="text-sm text-text-muted mt-1">{selected.subtitle}</p>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {selected.modules.map(m => (
+                    <span key={m} className="text-[10px] font-mono bg-bg-card border border-border px-2.5 py-1 rounded text-text-secondary">{m}</span>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <Link
+                    to={`/login?industry=${selected.id}`}
+                    className="inline-block bg-accent text-bg-primary px-6 py-2.5 rounded text-sm font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    Start Free — {selected.label}
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </section>
+  )
+}
+
 /* ─── ECOSYSTEM OVERVIEW ─── */
-function Ecosystem() {
+function Ecosystem({ industry }) {
   return (
     <section id="ecosystem" className="py-24 px-6 border-t border-border">
       <div className="max-w-6xl mx-auto">
         <SectionHeader
           tag="The Ecosystem"
           title="Four modules. One platform. Zero silos."
-          description="Every piece of your sports business operation—from sponsor prospecting to event execution to media valuation—lives in one connected system. Data flows between modules automatically so your team works from a single source of truth."
+          description={`Every piece of your ${industry.cta} operation—from prospecting to contract execution to fulfillment—lives in one connected system. Data flows between modules automatically so your team works from a single source of truth.`}
         />
 
         {/* Ecosystem diagram */}
@@ -447,7 +638,7 @@ function WhyLoudLegacy() {
 }
 
 /* ─── CTA ─── */
-function CTA() {
+function CTA({ industry }) {
   return (
     <section id="contact" className="py-24 px-6 bg-bg-surface border-t border-border">
       <motion.div
@@ -458,18 +649,18 @@ function CTA() {
         className="max-w-2xl mx-auto text-center"
       >
         <motion.h2 variants={fadeUp} className="text-3xl md:text-4xl font-bold text-text-primary">
-          Ready to modernize your sports business?
+          Ready to modernize your {industry.cta}?
         </motion.h2>
         <motion.p variants={fadeUp} className="text-text-secondary mt-4 leading-relaxed">
-          Loud Legacy is built for college athletic departments, professional sports teams, and minor league sports teams
-          who are ready to move beyond spreadsheets and disconnected tools.
+          Loud Legacy is built for teams who are ready to move beyond spreadsheets and disconnected tools.
+          Start free — no credit card required.
         </motion.p>
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
           <Link
-            to="/login"
+            to={`/login?industry=${industry.id}`}
             className="bg-accent text-bg-primary px-8 py-3.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
           >
-            Create Your Account
+            Create Your Free Account
           </Link>
           <a
             href="mailto:jason@loud-legacy.com"
@@ -496,7 +687,7 @@ function Footer() {
           <div className="md:col-span-2">
             <span className="font-mono font-bold text-accent text-sm " style={{letterSpacing:'0.08em',wordSpacing:'-0.15em'}}>LOUD LEGACY</span>
             <p className="text-text-secondary text-sm mt-3 max-w-md leading-relaxed">
-              The sports business operating suite for college athletic departments, professional sports teams, and minor league sports partnership sales teams.
+              The operating suite for partnership sales teams — sports, entertainment, conferences, nonprofits, media, and more.
             </p>
           </div>
           <div>

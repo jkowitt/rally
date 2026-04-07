@@ -34,6 +34,10 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const inviteToken = searchParams.get('invite')
+  const industryParam = searchParams.get('industry')
+
+  // Map landing page industry IDs to property types
+  const industryToType = { sports: 'college', entertainment: 'entertainment', conference: 'conference', nonprofit: 'nonprofit', media: 'media', esports: 'esports', realestate: 'realestate', agency: 'agency' }
 
   const [mode, setMode] = useState(inviteToken ? 'invite' : 'signin') // signin | signup | invite | onboard
   const [step, setStep] = useState(1) // signup: 1=account, 2=property, 3=team
@@ -46,7 +50,7 @@ export default function LoginPage() {
 
   // Property setup fields
   const [propertyName, setPropertyName] = useState('')
-  const [propertyType, setPropertyType] = useState('college')
+  const [propertyType, setPropertyType] = useState(industryToType[industryParam] || 'college')
   const [sport, setSport] = useState('')
   const [conference, setConference] = useState('')
   const [propertyCity, setPropertyCity] = useState('')

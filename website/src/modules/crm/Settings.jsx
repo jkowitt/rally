@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom'
 const PLANS = [
   { id: 'free', name: 'Free', price: '$0', period: '7-day trial', users: 3, features: ['CRM Pipeline (15 deals)', '3 prospect searches/mo', '3 contact researches/mo', '2 contract uploads/mo', 'Basic CSV export'] },
   { id: 'starter', name: 'Starter', price: '$49', period: '/month', users: 10, features: ['Everything in Free', '500 deals', '50 prospect searches/mo', '50 contact researches/mo', '25 contract uploads/mo', 'Events module', 'AI insights', 'Fulfillment reports', 'Team goals', 'Bulk import'] },
-  { id: 'pro', name: 'Pro', price: '$149', period: '/month', users: 'Unlimited', features: ['Everything in Starter', 'All modules', '200 prospect searches/mo', '200 contact researches/mo', 'Unlimited contracts', 'Verified contacts (Apollo)', 'Email verification (Hunter)', 'PowerPoint reports', 'Custom dashboard eligible', 'Priority support'], recommended: true },
+  { id: 'pro', name: 'Pro', price: '$149', period: '/month', users: 'Unlimited', features: ['Everything in Starter', 'All modules', '200 prospect searches/mo', '200 contact researches/mo', 'Unlimited contracts', 'Verified contacts', 'Email verification', 'PowerPoint reports', 'Custom dashboard eligible', 'Priority support'], recommended: true },
   { id: 'enterprise', name: 'Enterprise', price: 'Custom', period: '', users: 'Unlimited', features: ['Everything in Pro', 'Unlimited everything', 'White-label dashboard', 'Custom integrations', 'API access', 'Dedicated support', 'SLA guarantee'] },
 ]
 

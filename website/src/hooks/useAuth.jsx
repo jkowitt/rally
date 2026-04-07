@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*, properties(*)')
+        .select('*, properties!profiles_property_id_fkey(*)')
         .eq('id', userId)
         .maybeSingle()
 
@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
         }
         if (propertyId) profileData.property_id = propertyId
 
-        const { data: newProfile } = await supabase.from('profiles').upsert(profileData).select('*, properties(*)').maybeSingle()
+        const { data: newProfile } = await supabase.from('profiles').upsert(profileData).select('*, properties!profiles_property_id_fkey(*)').maybeSingle()
         setProfile(newProfile)
       } else {
         // Ensure developer email always has developer role

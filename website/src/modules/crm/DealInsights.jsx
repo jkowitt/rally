@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { getDealInsights, getPipelineForecast, draftEmail } from '@/lib/claude'
+import { isAIFeatureEnabled } from '@/lib/featureCheck'
 
 function aiErrorMessage(err, action) {
   const msg = err?.message || ''
@@ -143,6 +144,7 @@ export default function DealInsights() {
 
   // --- Handlers ---
   async function handleRunForecast() {
+    if (!isAIFeatureEnabled('ai_insights')) { setForecastError('AI Insights is currently disabled by the developer.'); return }
     setForecastLoading(true)
     setForecastError(null)
     setForecastData(null)
@@ -159,6 +161,7 @@ export default function DealInsights() {
 
   async function handleAnalyzeDeal() {
     if (!selectedDeal) return
+    if (!isAIFeatureEnabled('ai_insights')) { setInsightsError('AI Insights is currently disabled by the developer.'); return }
     setInsightsLoading(true)
     setInsightsError(null)
     setInsightsData(null)
@@ -180,6 +183,7 @@ export default function DealInsights() {
 
   async function handleDraftEmail() {
     if (!selectedDeal) return
+    if (!isAIFeatureEnabled('ai_insights')) { setEmailError('AI Insights is currently disabled by the developer.'); return }
     setEmailLoading(true)
     setEmailError(null)
     setEmailData(null)

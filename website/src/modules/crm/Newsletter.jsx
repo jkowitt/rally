@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { generateWeeklyNewsletter, generateAfternoonUpdate } from '@/lib/claude'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
+import { isAIFeatureEnabled } from '@/lib/featureCheck'
 
 function getMonday(date = new Date()) {
   const d = new Date(date)
@@ -163,6 +164,7 @@ export default function Newsletter() {
   // Mutations with progress tracking
   const weeklyMutation = useMutation({
     mutationFn: () => {
+      if (!isAIFeatureEnabled('ai_newsletter')) throw new Error('Newsletter generation is currently disabled by the developer.')
       startProgress('weekly')
       return generateWeeklyNewsletter({ property_id: propertyId })
     },
@@ -191,6 +193,7 @@ export default function Newsletter() {
 
   const afternoonMutation = useMutation({
     mutationFn: () => {
+      if (!isAIFeatureEnabled('ai_newsletter')) throw new Error('Newsletter generation is currently disabled by the developer.')
       startProgress('afternoon')
       return generateAfternoonUpdate({ property_id: propertyId })
     },

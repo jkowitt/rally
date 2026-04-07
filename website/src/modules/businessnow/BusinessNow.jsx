@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { isAIFeatureEnabled } from '@/lib/featureCheck'
 import { runDailyIntelligence } from '@/lib/claude'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 
@@ -68,7 +69,10 @@ export default function BusinessNow() {
   })
 
   const runBriefingMutation = useMutation({
-    mutationFn: () => runDailyIntelligence(propertyId),
+    mutationFn: () => {
+      if (!isAIFeatureEnabled('ai_daily_briefing')) throw new Error('Daily intelligence is currently disabled by the developer.')
+      return runDailyIntelligence(propertyId)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['intelligence', propertyId] })
       toast({ title: 'Daily briefing generated', type: 'success' })

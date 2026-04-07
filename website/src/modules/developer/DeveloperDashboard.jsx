@@ -752,30 +752,70 @@ export default function DeveloperDashboard() {
 
       {/* FLAGS */}
       {activeTab === 'flags' && (
-        <Panel title="Module Feature Flags">
-          <p className="text-xs text-text-muted mb-4">Toggle modules on/off globally. These control sidebar visibility for all users.</p>
-          <div className="space-y-3">
-            {Object.entries(flags).map(([module, enabled]) => (
-              <div key={module} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <div>
-                  <span className="text-sm text-text-primary font-mono capitalize">{module}</span>
-                  <span className="text-xs text-text-muted ml-2">
-                    {module === 'crm' ? 'Pipeline, contracts, assets, fulfillment' :
-                     module === 'sportify' ? 'Events, activations, run-of-show' :
-                     module === 'valora' ? 'AI media valuations' :
-                     module === 'businessnow' ? 'Intelligence, alerts, newsletter' : ''}
-                  </span>
+        <div className="space-y-4">
+          <Panel title="Module Visibility">
+            <p className="text-xs text-text-muted mb-4">Toggle entire sidebar modules on/off for all users.</p>
+            <div className="space-y-3">
+              {Object.entries(flags).map(([module, enabled]) => (
+                <div key={module} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                  <div>
+                    <span className="text-sm text-text-primary font-mono capitalize">{module}</span>
+                    <span className="text-xs text-text-muted ml-2">
+                      {module === 'crm' ? 'Pipeline, contracts, assets, fulfillment' :
+                       module === 'sportify' ? 'Events, activations, run-of-show' :
+                       module === 'valora' ? 'AI media valuations' :
+                       module === 'businessnow' ? 'Intelligence, alerts, newsletter' : ''}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => toggleFlag(module)}
+                    className={`px-4 py-1.5 rounded text-xs font-mono font-medium ${enabled ? 'bg-success/20 text-success border border-success/30' : 'bg-bg-card text-text-muted border border-border'}`}
+                  >
+                    {enabled ? 'ENABLED' : 'DISABLED'}
+                  </button>
                 </div>
-                <button
-                  onClick={() => toggleFlag(module)}
-                  className={`px-4 py-1.5 rounded text-xs font-mono font-medium ${enabled ? 'bg-success/20 text-success border border-success/30' : 'bg-bg-card text-text-muted border border-border'}`}
-                >
-                  {enabled ? 'ENABLED' : 'DISABLED'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </Panel>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="AI Feature Toggles">
+            <p className="text-xs text-text-muted mb-4">Disable individual AI features across the platform. Useful for maintenance or when edge functions are down.</p>
+            <div className="space-y-3">
+              {[
+                { key: 'ai_newsletter', label: 'Newsletter Generation', desc: 'AI-generated weekly/daily newsletters' },
+                { key: 'ai_insights', label: 'AI Deal Insights', desc: 'Pipeline forecasts, deal analysis, email drafting' },
+                { key: 'ai_prospect_search', label: 'Prospect Search', desc: 'AI-powered prospect and contact research' },
+                { key: 'ai_contract_analysis', label: 'Contract Analysis', desc: 'AI reads and extracts benefits from contracts' },
+                { key: 'ai_valuation', label: 'VALORA Valuations', desc: 'AI media value estimation' },
+                { key: 'ai_daily_briefing', label: 'Daily Intelligence', desc: 'BusinessNow AI briefing generation' },
+              ].map(feat => {
+                const isOn = localStorage.getItem(`ll_flag_${feat.key}`) !== 'off'
+                return (
+                  <div key={feat.key} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <div>
+                      <span className="text-sm text-text-primary">{feat.label}</span>
+                      <span className="text-xs text-text-muted ml-2">{feat.desc}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newVal = isOn ? 'off' : 'on'
+                        localStorage.setItem(`ll_flag_${feat.key}`, newVal)
+                        // Broadcast to other tabs
+                        window.dispatchEvent(new StorageEvent('storage', { key: `ll_flag_${feat.key}`, newValue: newVal }))
+                        toast({ title: `${feat.label}: ${newVal === 'off' ? 'DISABLED' : 'ENABLED'}`, type: newVal === 'off' ? 'warning' : 'success' })
+                        // Force re-render
+                        queryClient.invalidateQueries()
+                      }}
+                      className={`px-4 py-1.5 rounded text-xs font-mono font-medium ${isOn ? 'bg-success/20 text-success border border-success/30' : 'bg-danger/20 text-danger border border-danger/30'}`}
+                    >
+                      {isOn ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </Panel>
+        </div>
       )}
 
       {/* API USAGE */}

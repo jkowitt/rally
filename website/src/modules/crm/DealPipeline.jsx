@@ -10,6 +10,7 @@ import { usePlanLimits } from '@/hooks/usePlanLimits'
 import UpgradeGate, { UsageBadge } from '@/components/UpgradeGate'
 import CSVImportWizard from '@/components/CSVImportWizard'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
+import { isAIFeatureEnabled } from '@/lib/featureCheck'
 import { lazy, Suspense } from 'react'
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 
@@ -3347,6 +3348,10 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
 
   async function handleSearch() {
     if (!searchQuery.trim() && !searchCategory) return
+    if (!isAIFeatureEnabled('ai_prospect_search')) {
+      setStatus('Prospect search is currently disabled by the developer.')
+      return
+    }
     if (!planLimits.canUse('prospect_search')) {
       setStatus('Prospect search limit reached. Upgrade your plan for more searches.')
       return

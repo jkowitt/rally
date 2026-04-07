@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { isAIFeatureEnabled } from '@/lib/featureCheck'
 import { runValuation } from '@/lib/claude'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
@@ -62,7 +63,10 @@ export default function ValuationEngine() {
   })
 
   const valuationMutation = useMutation({
-    mutationFn: async (params) => runValuation({ ...params, property_id: propertyId }),
+    mutationFn: async (params) => {
+      if (!isAIFeatureEnabled('ai_valuation')) throw new Error('Valuations are currently disabled by the developer.')
+      return runValuation({ ...params, property_id: propertyId })
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['valuations', propertyId] })
       setShowForm(false)

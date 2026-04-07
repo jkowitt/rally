@@ -56,6 +56,7 @@ import {
   generateFulfillment,
 } from '@/lib/claude'
 import jsPDF from 'jspdf'
+import { isAIFeatureEnabled } from '@/lib/featureCheck'
 
 /* Guess asset category from benefit description */
 function guessAssetCategory(description) {
@@ -1200,6 +1201,11 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
     // Auto-analyze with AI if text was extracted
     if (extractedText.length > 20) {
       setPdfText(extractedText)
+      if (!isAIFeatureEnabled('ai_contract_analysis')) {
+        setStatus('Contract text extracted. AI analysis is currently disabled by the developer.')
+        setLoading(false)
+        return
+      }
       setStatus('AI is analyzing the contract...')
       try {
         const result = await parsePdfText(extractedText)

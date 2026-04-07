@@ -3387,6 +3387,8 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   const [researchedContacts, setResearchedContacts] = useState({}) // { idx: { contacts, company_linkedin, ... } }
   const [addingIdx, setAddingIdx] = useState(null)
   const [addedIdxs, setAddedIdxs] = useState(new Set())
+  const [useApollo, setUseApollo] = useState(true)
+  const [useHunter, setUseHunter] = useState(true)
 
   async function handleSearch() {
     if (!searchQuery.trim() && !searchCategory) return
@@ -3441,12 +3443,84 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     if (!prospect) return
     setResearchingIdx(idx)
     try {
-      const data = await researchContacts({
-        company_name: prospect.company_name,
-        category: prospect.category || prospect.sub_industry,
-        website: prospect.website,
-      })
-      setResearchedContacts(prev => ({ ...prev, [idx]: data.research }))
+      let apolloData = null
+      let contacts = []
+      let source = 'claude'
+
+      // Step 1: Try Apollo for verified company data + contacts
+      if (useApollo) {
+        try {
+          setStatus('Searching Apollo for verified contacts...')
+          const apolloResult = await apolloEnrichCompany({
+            company_name: prospect.company_name,
+            domain: prospect.website,
+            property_id: propertyId,
+          })
+          if (apolloResult?.data) {
+            apolloData = apolloResult.data
+          }
+          // Find people via Apollo
+          const peopleResult = await import('@/lib/claude').then(m => m.apolloFindPeople({
+            company_name: prospect.company_name,
+            property_id: propertyId,
+          }))
+          if (peopleResult?.people?.length > 0) {
+            contacts = peopleResult.people.map(p => ({
+              name: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+              position: p.title || '',
+              email: p.email || '',
+              phone: p.phone || '',
+              linkedin: p.linkedin_url || '',
+              source: 'apollo',
+            }))
+            source = 'apollo'
+          }
+        } catch {
+          // Apollo failed — fall back to AI
+        }
+      }
+
+      // Step 2: Fall back to AI research if Apollo didn't return contacts
+      if (contacts.length === 0) {
+        setStatus('Researching contacts with AI...')
+        const data = await researchContacts({
+          company_name: prospect.company_name,
+          category: prospect.category || prospect.sub_industry,
+          website: prospect.website,
+        })
+        if (data.research) {
+          contacts = (data.research.contacts || []).map(c => ({ ...c, source: 'claude' }))
+          setResearchedContacts(prev => ({ ...prev, [idx]: data.research }))
+          setResearchingIdx(null)
+          return
+        }
+      }
+
+      // Step 3: Verify emails with Hunter if opted in
+      if (useHunter && contacts.length > 0) {
+        setStatus('Verifying emails with Hunter...')
+        for (let i = 0; i < contacts.length; i++) {
+          if (contacts[i].email) {
+            try {
+              const result = await hunterVerifyEmail({ email: contacts[i].email, property_id: propertyId })
+              contacts[i].email_verified = result?.status || 'unknown'
+            } catch {
+              contacts[i].email_verified = 'unknown'
+            }
+          }
+        }
+      }
+
+      setResearchedContacts(prev => ({
+        ...prev,
+        [idx]: {
+          contacts,
+          source,
+          company_linkedin: apolloData?.linkedin_url || prospect.linkedin || null,
+          ...(apolloData ? { employees: apolloData.employees, revenue: apolloData.revenue, tech_stack: apolloData.tech_stack } : {}),
+        }
+      }))
+      setStatus(contacts.length ? `Found ${contacts.length} contacts${source === 'apollo' ? ' (Apollo verified)' : ''}` : 'No contacts found')
     } catch (e) {
       setResearchedContacts(prev => ({ ...prev, [idx]: { error: e.message, contacts: [] } }))
     } finally {
@@ -3639,6 +3713,20 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
               AI Suggestions
             </button>
           </div>
+
+          {/* Data Source Toggles */}
+          <div className="flex items-center gap-4 flex-wrap mt-3 pt-3 border-t border-border">
+            <span className="text-[10px] text-text-muted font-mono uppercase">Data sources:</span>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={useApollo} onChange={(e) => setUseApollo(e.target.checked)} className="accent-accent w-3 h-3" />
+              <span className={`text-[11px] font-mono ${useApollo ? 'text-accent' : 'text-text-muted'}`}>🔍 Apollo (verified)</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={useHunter} onChange={(e) => setUseHunter(e.target.checked)} className="accent-accent w-3 h-3" />
+              <span className={`text-[11px] font-mono ${useHunter ? 'text-accent' : 'text-text-muted'}`}>✉️ Hunter (email verify)</span>
+            </label>
+            <span className="text-[9px] text-text-muted">1 token per use</span>
+          </div>
         </div>
 
         {/* Search Controls */}
@@ -3793,8 +3881,16 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                   {/* Researched Contacts */}
                   {research && !research.error && research.contacts?.length > 0 && (
                     <div className="border-t border-border bg-bg-surface/50 p-3 sm:p-4">
-                      <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">
-                        Top {research.contacts.length} Contacts
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+                          Top {research.contacts.length} Contacts
+                        </span>
+                        {research.source === 'apollo' && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-success/10 text-success border border-success/30">✓ Apollo Verified</span>
+                        )}
+                        {research.source === 'claude' && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-bg-card text-text-muted">AI Researched</span>
+                        )}
                       </div>
                       <div className="space-y-2">
                         {research.contacts.map((contact, ci) => (
@@ -3812,10 +3908,24 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                                 </span>
                               </div>
                               <div className="flex gap-2 mt-1 text-[11px] text-text-muted font-mono flex-wrap">
-                                {contact.email_pattern && <span className="break-all">{contact.email_pattern}</span>}
+                                {contact.email && (
+                                  <span className="break-all flex items-center gap-1">
+                                    {contact.email}
+                                    {contact.email_verified === 'verified' && <span className="text-success" title="Email verified">✓</span>}
+                                    {contact.email_verified === 'invalid' && <span className="text-danger" title="Invalid email">✗</span>}
+                                    {contact.email_verified === 'risky' && <span className="text-warning" title="Risky email">⚠</span>}
+                                  </span>
+                                )}
+                                {!contact.email && contact.email_pattern && <span className="break-all">{contact.email_pattern}</span>}
+                                {contact.phone && <span>{contact.phone}</span>}
                                 {contact.linkedin_url && (
                                   <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-medium">
-                                    Find on LinkedIn &rarr;
+                                    LinkedIn &rarr;
+                                  </a>
+                                )}
+                                {!contact.linkedin_url && contact.linkedin && (
+                                  <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-medium">
+                                    LinkedIn &rarr;
                                   </a>
                                 )}
                               </div>

@@ -1146,7 +1146,8 @@ function DealViewer({ deal, contacts, onClose, onEdit }) {
   const { data: dealContracts } = useQuery({
     queryKey: ['deal-contracts', deal.id],
     queryFn: async () => {
-      const { data } = await supabase.from('contracts').select('id, brand_name, status, signed, effective_date, expiration_date, total_value, contract_benefits(*)').eq('deal_id', deal.id)
+      const { data, error } = await supabase.from('contracts').select('id, brand_name, status, signed, effective_date, expiration_date, total_value, contract_benefits(*)').eq('deal_id', deal.id)
+      if (error) console.warn('Deal contracts query error:', error.message)
       return data || []
     },
     enabled: !!deal.id,
@@ -1154,43 +1155,55 @@ function DealViewer({ deal, contacts, onClose, onEdit }) {
 
   // Fetch assets linked via deal_assets OR sourced from this deal's contracts
   const { data: dealAssets } = useQuery({
-    queryKey: ['deal-assets-viewer', deal.id],
+    queryKey: ['deal-assets-viewer', deal.id, dealContracts],
     queryFn: async () => {
-      // Get assets from deal_assets join table
-      const { data: fromDealAssets } = await supabase.from('deal_assets').select('*, assets(id, name, category, base_price, quantity)').eq('deal_id', deal.id)
-      // Get assets auto-created from contracts linked to this deal
-      const contractIds = (dealContracts || []).map(c => c.id).filter(Boolean)
-      let fromContracts = []
-      if (contractIds.length > 0) {
-        const { data } = await supabase.from('assets').select('id, name, category, base_price, quantity, from_contract, source_contract_id').in('source_contract_id', contractIds)
-        fromContracts = data || []
-      }
-      // Merge, dedupe by asset id
       const allAssets = []
       const seen = new Set()
+      // Get assets from deal_assets join table
+      const { data: fromDealAssets } = await supabase.from('deal_assets').select('*, assets(id, name, category, base_price, quantity)').eq('deal_id', deal.id)
       for (const da of (fromDealAssets || [])) {
         if (da.assets && !seen.has(da.assets.id)) {
           seen.add(da.assets.id)
           allAssets.push({ ...da.assets, proposed_price: da.custom_price, is_proposed: da.is_proposed })
         }
       }
-      for (const a of fromContracts) {
-        if (!seen.has(a.id)) {
-          seen.add(a.id)
-          allAssets.push(a)
+      // Get assets auto-created from contracts linked to this deal
+      const contractIds = (dealContracts || []).map(c => c.id).filter(Boolean)
+      if (contractIds.length > 0) {
+        const { data: fromContracts } = await supabase.from('assets').select('id, name, category, base_price, quantity, from_contract, source_contract_id').in('source_contract_id', contractIds)
+        for (const a of (fromContracts || [])) {
+          if (!seen.has(a.id)) { seen.add(a.id); allAssets.push(a) }
+        }
+      }
+      // Also get assets by property that are from any contract (fallback)
+      if (allAssets.length === 0 && deal.property_id) {
+        const { data: propAssets } = await supabase.from('assets').select('id, name, category, base_price, quantity, from_contract, source_contract_id').eq('property_id', deal.property_id).eq('from_contract', true).limit(50)
+        for (const a of (propAssets || [])) {
+          if (!seen.has(a.id)) { seen.add(a.id); allAssets.push(a) }
         }
       }
       return allAssets
     },
-    enabled: !!deal.id && dealContracts !== undefined,
+    enabled: !!deal.id,
   })
 
-  // Fetch fulfillment records for this deal
+  // Fetch fulfillment records for this deal (or by contract if deal_id is null)
   const { data: dealFulfillment } = useQuery({
-    queryKey: ['deal-fulfillment', deal.id],
+    queryKey: ['deal-fulfillment', deal.id, dealContracts],
     queryFn: async () => {
-      const { data } = await supabase.from('fulfillment_records').select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_benefits(benefit_description)').eq('deal_id', deal.id).order('scheduled_date')
-      return data || []
+      // First try by deal_id
+      const { data: byDeal } = await supabase.from('fulfillment_records').select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_id, contract_benefits(benefit_description)').eq('deal_id', deal.id).order('scheduled_date')
+      let records = byDeal || []
+      // Also get fulfillment records linked to this deal's contracts (for deal-less records)
+      const contractIds = (dealContracts || []).map(c => c.id).filter(Boolean)
+      if (contractIds.length > 0) {
+        const { data: byContract } = await supabase.from('fulfillment_records').select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_id, contract_benefits(benefit_description)').in('contract_id', contractIds).order('scheduled_date')
+        const existingIds = new Set(records.map(r => r.id))
+        for (const r of (byContract || [])) {
+          if (!existingIds.has(r.id)) records.push(r)
+        }
+      }
+      return records
     },
     enabled: !!deal.id,
   })

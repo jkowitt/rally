@@ -422,6 +422,9 @@ export default function ContractManager() {
             queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
             queryClient.invalidateQueries({ queryKey: ['contract-templates', propertyId] })
             queryClient.invalidateQueries({ queryKey: ['deals-list', propertyId] })
+            queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
+            queryClient.invalidateQueries({ queryKey: ['fulfillment-records'] })
+            queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
             setView('list')
           }}
         />

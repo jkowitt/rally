@@ -8,10 +8,10 @@ import { useQuery } from '@tanstack/react-query'
 import { usePlanLimits } from '@/hooks/usePlanLimits'
 
 const PLANS = [
-  { id: 'free', name: 'Free', price: '$0', period: '7-day trial', users: 3, features: ['CRM Pipeline (15 deals)', '3 prospect searches/mo', '2 contract uploads/mo', 'Basic CSV export', 'No verified contact lookups'] },
-  { id: 'starter', name: 'Starter', price: '$49', period: '/month', users: 10, features: ['Everything in Free', '500 deals', '50 prospect searches/mo', '40 verified contact lookups/mo', '25 contract uploads/mo', 'Events module', 'AI insights', 'Fulfillment reports', 'Team goals', 'Bulk import'] },
-  { id: 'pro', name: 'Pro', price: '$149', period: '/month', users: 'Unlimited', features: ['Everything in Starter', 'All modules', '200 prospect searches/mo', '160 verified contact lookups/mo', 'Unlimited contracts', 'Verified contacts', 'Email verification', 'PowerPoint reports', 'Custom dashboard eligible', 'Priority support'], recommended: true },
-  { id: 'enterprise', name: 'Enterprise', price: 'Custom', period: '', users: 'Unlimited', features: ['Everything in Pro', 'Unlimited everything', 'White-label dashboard', 'Custom integrations', 'API access', 'Dedicated support', 'SLA guarantee'] },
+  { id: 'free', name: 'Free', price: '$0', period: '7-day trial', users: 2, features: ['CRM Pipeline (15 deals)', '3 prospect searches/mo', '2 contract uploads/mo', 'Basic CSV export', 'No verified contact lookups'] },
+  { id: 'starter', name: 'Starter', price: '$39', period: '/month', users: 5, features: ['Everything in Free', '500 deals', '50 prospect searches/mo', '40 verified contact lookups/mo', '25 contract uploads/mo', 'Events module', 'AI insights', 'Fulfillment reports', 'Team goals', 'Bulk import'] },
+  { id: 'pro', name: 'Pro', price: '$99', period: '/month', users: 15, features: ['Everything in Starter', 'All modules', '200 prospect searches/mo', '160 verified contact lookups/mo', 'Unlimited contracts', 'Verified contacts', 'Email verification', 'PowerPoint reports', 'Custom dashboard eligible', 'Priority support'], recommended: true },
+  { id: 'enterprise', name: 'Enterprise', price: 'Custom', period: '', users: 'Unlimited', features: ['Everything in Pro', 'Unlimited everything', 'Unlimited users', 'White-label dashboard', 'Custom integrations', 'API access', 'Dedicated support', 'SLA guarantee'] },
 ]
 
 export default function Settings() {

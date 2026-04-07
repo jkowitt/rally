@@ -11,7 +11,7 @@ const PLAN_LIMITS = {
     ai_valuation: 0,
     newsletter_generate: 1,
     deals: 15,
-    users: 3,
+    users: 2,
     modules: ['crm'],
     features: {
       ai_insights: false,
@@ -29,7 +29,7 @@ const PLAN_LIMITS = {
     ai_valuation: 25,
     newsletter_generate: 10,
     deals: 500,
-    users: 10,
+    users: 5,
     modules: ['crm', 'sportify'],
     features: {
       ai_insights: true,
@@ -43,11 +43,11 @@ const PLAN_LIMITS = {
   pro: {
     prospect_search: 200,
     contact_research: 160,
-    contract_upload: 999,
+    contract_upload: 999999,
     ai_valuation: 200,
-    newsletter_generate: 999,
+    newsletter_generate: 999999,
     deals: 999999,
-    users: 999,
+    users: 15,
     modules: ['crm', 'sportify', 'valora', 'businessnow'],
     features: {
       ai_insights: true,

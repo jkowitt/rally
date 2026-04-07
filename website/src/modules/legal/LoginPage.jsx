@@ -393,7 +393,7 @@ export default function LoginPage() {
             </div>
             <div className="bg-bg-card border border-accent/20 rounded-lg p-3 text-left">
               <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1">Your Plan</div>
-              <div className="text-sm text-text-primary font-medium">Free Plan — 3 team members</div>
+              <div className="text-sm text-text-primary font-medium">Free Plan — 2 team members</div>
               <div className="text-xs text-text-muted mt-0.5">Upgrade anytime for unlimited users and premium features</div>
             </div>
             <button onClick={handleFinishOnboarding} className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 text-sm">

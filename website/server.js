@@ -30,12 +30,12 @@ app.use((_req, res, next) => {
   // Content Security Policy
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.sheetjs.com",
-    "worker-src 'self' blob: https://unpkg.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.sheetjs.com https://cdn.jsdelivr.net",
+    "worker-src 'self' blob: https://unpkg.com https://cdn.jsdelivr.net",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.anthropic.com https://unpkg.com https://cdn.sheetjs.com",
+    "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.anthropic.com https://unpkg.com https://cdn.sheetjs.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com",
     "frame-src 'self' https://*.supabase.co",
     "object-src 'none'",
     "base-uri 'self'",

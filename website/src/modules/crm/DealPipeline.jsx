@@ -3435,7 +3435,9 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
 
 /* ============ Prospect Finder - AI-Powered Prospect Search & Discovery ============ */
 function ProspectFinder({ propertyId, onClose, onAdded }) {
+  const { profile } = useAuth()
   const planLimits = usePlanLimits()
+  const effectivePropertyId = propertyId || profile?.property_id
   const [tab, setTab] = useState('search') // search | suggestions
   const [searchQuery, setSearchQuery] = useState('')
   const [searchCategory, setSearchCategory] = useState('')
@@ -3646,8 +3648,9 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
       const primaryContact = research?.contacts?.[0]
 
       // Create the deal
+      if (!effectivePropertyId) throw new Error('No company linked to your account. Go to Settings to set up your property.')
       const dealRow = {
-        property_id: propertyId,
+        property_id: effectivePropertyId,
         brand_name: prospect.company_name,
         stage: 'Prospect',
         priority: prospect.priority || 'Medium',
@@ -3712,7 +3715,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   async function insertContacts(dealId, prospect, research) {
     try {
       const contactRows = research.contacts.slice(0, 3).map((c, i) => ({
-        property_id: propertyId,
+        property_id: effectivePropertyId,
         deal_id: dealId,
         first_name: c.first_name || '',
         last_name: c.last_name || null,

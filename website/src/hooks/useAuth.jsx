@@ -28,37 +28,53 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function fetchProfile(userId) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*, properties(*)')
-      .eq('id', userId)
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, properties(*)')
+        .eq('id', userId)
+        .maybeSingle()
 
-    if (!data) {
-      // Profile doesn't exist yet — first login after email confirmation
-      // Create a minimal profile so the user can access the onboarding flow
-      const { data: { user } } = await supabase.auth.getUser()
-      const email = user?.email || ''
-      const role = email.toLowerCase() === 'jlkowitt25@gmail.com' ? 'developer' : 'admin'
-      const { data: newProfile } = await supabase.from('profiles').upsert({
-        id: userId,
-        full_name: user?.user_metadata?.full_name || '',
-        email,
-        role,
-        onboarding_completed: false,
-      }).select('*, properties(*)').single()
-      setProfile(newProfile)
-    } else {
-      // Ensure developer email always has developer role
-      const { data: { user } } = await supabase.auth.getUser()
-      const authEmail = user?.email?.toLowerCase() || ''
-      const profileEmail = (data.email || '').toLowerCase()
-      if ((profileEmail === 'jlkowitt25@gmail.com' || authEmail === 'jlkowitt25@gmail.com') && data.role !== 'developer') {
-        await supabase.from('profiles').update({ role: 'developer', email: 'jlkowitt25@gmail.com' }).eq('id', userId)
-        data.role = 'developer'
-        data.email = 'jlkowitt25@gmail.com'
+      if (error) console.warn('Profile fetch error:', error.message)
+
+      if (!data) {
+        // Profile doesn't exist yet — create one
+        const { data: { user } } = await supabase.auth.getUser()
+        const email = user?.email || ''
+        const role = email.toLowerCase() === 'jlkowitt25@gmail.com' ? 'developer' : 'admin'
+
+        // Try to find or create a default property
+        let propertyId = null
+        const { data: existingProps } = await supabase.from('properties').select('id').limit(1)
+        if (existingProps?.length > 0) {
+          propertyId = existingProps[0].id
+        }
+
+        const profileData = {
+          id: userId,
+          full_name: user?.user_metadata?.full_name || '',
+          email,
+          role,
+          onboarding_completed: false,
+        }
+        if (propertyId) profileData.property_id = propertyId
+
+        const { data: newProfile } = await supabase.from('profiles').upsert(profileData).select('*, properties(*)').maybeSingle()
+        setProfile(newProfile)
+      } else {
+        // Ensure developer email always has developer role
+        const { data: { user } } = await supabase.auth.getUser()
+        const authEmail = user?.email?.toLowerCase() || ''
+        const profileEmail = (data.email || '').toLowerCase()
+        if ((profileEmail === 'jlkowitt25@gmail.com' || authEmail === 'jlkowitt25@gmail.com') && data.role !== 'developer') {
+          await supabase.from('profiles').update({ role: 'developer', email: 'jlkowitt25@gmail.com' }).eq('id', userId)
+          data.role = 'developer'
+          data.email = 'jlkowitt25@gmail.com'
+        }
+        setProfile(data)
       }
-      setProfile(data)
+    } catch (err) {
+      console.error('fetchProfile failed:', err)
     }
     setLoading(false)
   }

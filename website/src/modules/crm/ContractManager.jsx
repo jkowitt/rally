@@ -1070,13 +1070,13 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
 
     setPdfFileName(file.name)
 
-    // Read as base64 for storage
-    const reader = new FileReader()
-    reader.onload = () => {
-      const base64 = reader.result.split(',')[1] // Remove data:...;base64, prefix
-      setPdfBase64(base64)
-    }
-    reader.readAsDataURL(file)
+    // Read as base64 for storage — wait for it to complete
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result.split(',')[1])
+      reader.readAsDataURL(file)
+    })
+    setPdfBase64(base64)
 
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       const text = await file.text()

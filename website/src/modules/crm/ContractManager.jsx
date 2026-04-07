@@ -4,15 +4,45 @@ import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url'
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
-async function extractPdfText(arrayBuffer) {
+async function extractPdfText(arrayBuffer, onStatus) {
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
   let text = ''
+
+  // First try: extract embedded text
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const content = await page.getTextContent()
     text += content.items.map(item => item.str).join(' ') + '\n\n'
   }
-  return text.trim()
+
+  if (text.trim().length > 20) return text.trim()
+
+  // Fallback: OCR scanned pages via Tesseract.js
+  if (onStatus) onStatus('Scanned PDF detected — running OCR...')
+  try {
+    const { createWorker } = await import('tesseract.js')
+    const worker = await createWorker('eng')
+    let ocrText = ''
+
+    for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+      if (onStatus) onStatus(`OCR: reading page ${i} of ${Math.min(pdf.numPages, 10)}...`)
+      const page = await pdf.getPage(i)
+      const viewport = page.getViewport({ scale: 2 })
+      const canvas = document.createElement('canvas')
+      canvas.width = viewport.width
+      canvas.height = viewport.height
+      const ctx = canvas.getContext('2d')
+      await page.render({ canvasContext: ctx, viewport }).promise
+      const { data } = await worker.recognize(canvas)
+      ocrText += data.text + '\n\n'
+    }
+
+    await worker.terminate()
+    return ocrText.trim()
+  } catch (err) {
+    console.warn('OCR failed:', err.message)
+    return text.trim() // return whatever we got from text extraction
+  }
 }
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -1122,13 +1152,8 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
         const arrayBuffer = await file.arrayBuffer()
         console.log('PDF arrayBuffer size:', arrayBuffer.byteLength)
         setStatus('Reading PDF — extracting text...')
-        extractedText = await extractPdfText(arrayBuffer)
+        extractedText = await extractPdfText(arrayBuffer, (msg) => setStatus(msg))
         console.log('PDF extracted text length:', extractedText.length, 'preview:', extractedText.slice(0, 200))
-        if (!extractedText || extractedText.trim().length < 10) {
-          console.warn('PDF text too short, might be scanned/image PDF')
-          setStatus('PDF appears to be scanned/image-based. Paste contract text below to analyze.')
-          extractedText = ''
-        }
       } catch (err) {
         console.error('PDF extraction failed:', err.message, err)
         setStatus('PDF stored but extraction failed: ' + (err.message || 'Unknown error'))

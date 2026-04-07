@@ -1355,24 +1355,35 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       }
 
       // Calculate multi-year revenue and update deal
-      if (dealId && parsed?.effective_date && parsed?.expiration_date) {
+      if (dealId) {
         try {
-          const startYear = parseInt(parsed.effective_date.slice(0, 4))
-          const endYear = parseInt(parsed.expiration_date.slice(0, 4))
-          const years = endYear - startYear + 1
-          const isMultiYear = years > 1
-          const totalValue = Number(parsed.total_value) || 0
-          const annualValue = years > 0 ? Math.round(totalValue / years) : totalValue
-          const annualValues = {}
-          for (let y = startYear; y <= endYear; y++) {
-            annualValues[y] = annualValue
+          const updates = {}
+          if (parsed?.effective_date && parsed?.expiration_date) {
+            const startYear = parseInt(parsed.effective_date.slice(0, 4))
+            const endYear = parseInt(parsed.expiration_date.slice(0, 4))
+            const years = endYear - startYear + 1
+            updates.is_multi_year = years > 1
+            updates.deal_years = years
+            updates.renewal_date = parsed.expiration_date
+
+            // Use AI-returned annual_values if available, else calculate evenly
+            if (parsed.annual_values && typeof parsed.annual_values === 'object' && Object.keys(parsed.annual_values).length > 0) {
+              updates.annual_values = parsed.annual_values
+            } else {
+              const totalValue = Number(parsed.total_value) || 0
+              const annualValue = years > 0 ? Math.round(totalValue / years) : totalValue
+              const annualValues = {}
+              for (let y = startYear; y <= endYear; y++) {
+                annualValues[y] = annualValue
+              }
+              updates.annual_values = annualValues
+            }
           }
-          await supabase.from('deals').update({
-            is_multi_year: isMultiYear,
-            deal_years: years,
-            annual_values: annualValues,
-            renewal_date: parsed.expiration_date,
-          }).eq('id', dealId)
+          if (parsed?.effective_date) updates.start_date = parsed.effective_date
+          if (parsed?.expiration_date) updates.end_date = parsed.expiration_date
+          if (Object.keys(updates).length > 0) {
+            await supabase.from('deals').update(updates).eq('id', dealId)
+          }
         } catch { /* columns may not exist */ }
       }
 

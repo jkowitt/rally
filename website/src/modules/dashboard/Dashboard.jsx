@@ -204,15 +204,23 @@ export default function Dashboard() {
   const revenueByYear = useMemo(() => {
     const years = [currentYear, currentYear + 1, currentYear + 2]
     return years.map(year => {
-      const dealsInYear = activeDeals.filter(d => {
-        const sd = d.start_date ? new Date(d.start_date).getFullYear() : null
-        return sd === year
-      })
-      return {
-        year,
-        revenue: dealsInYear.reduce((s, d) => s + (Number(d.value) || 0), 0),
-        count: dealsInYear.length,
+      let revenue = 0
+      let count = 0
+      for (const d of activeDeals) {
+        // Use annual_values if available (multi-year deals)
+        if (d.annual_values && d.annual_values[year]) {
+          revenue += Number(d.annual_values[year]) || 0
+          count++
+        } else {
+          // Fallback: use total value if start_date falls in this year
+          const sd = d.start_date ? new Date(d.start_date).getFullYear() : null
+          if (sd === year) {
+            revenue += Number(d.value) || 0
+            count++
+          }
+        }
       }
+      return { year, revenue, count }
     })
   }, [activeDeals, currentYear])
 

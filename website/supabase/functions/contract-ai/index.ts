@@ -131,7 +131,7 @@ async function editContract(body: any): Promise<any> {
 }
 
 async function parsePdfText(body: any): Promise<any> {
-  const prompt = 'Parse this contract and return a JSON object with: brand_name, contact_name, contact_email, contact_phone, contact_position, contact_company, contract_number, effective_date (YYYY-MM-DD), expiration_date (YYYY-MM-DD), total_value (number), benefits (array of {description, category, quantity, frequency, value}), summary. Return ONLY valid JSON.\n\nContract:\n---\n' + body.pdf_text + '\n---';
+  const prompt = 'Parse this contract and return a JSON object with these fields:\n- brand_name: company/brand name\n- contact_name: primary contact full name\n- contact_email\n- contact_phone\n- contact_position: title/role\n- contact_company\n- contract_number\n- effective_date (YYYY-MM-DD)\n- expiration_date (YYYY-MM-DD)\n- total_value: total contract value as number\n- annual_values: object with year keys and annual value, e.g. {"2025": 50000, "2026": 55000}. Calculate from total_value divided across years, or use per-year values if specified in the contract.\n- benefits: array of {description, category, quantity, frequency, value}\n- summary: 2-3 sentence summary\n\nReturn ONLY valid JSON.\n\nContract:\n---\n' + body.pdf_text + '\n---';
   const text = await callClaude(prompt, 2048);
   const parsed = extractJSON(text);
   return { parsed: parsed };

@@ -918,6 +918,18 @@ export default function DealPipeline() {
                   </td>
                   <td className="px-4 py-3 font-mono">
                     <EditableCell value={deal.value} dealId={deal.id} field="value" type="number" onSave={(v) => inlineUpdateMutation.mutate(v)} className="text-accent" format={(v) => v ? `$${Number(v).toLocaleString()}` : '—'} />
+                    {deal.annual_values && Object.keys(deal.annual_values).length > 1 && (
+                      <div className="flex gap-1 mt-0.5 flex-wrap">
+                        {Object.entries(deal.annual_values).map(([yr, val]) => (
+                          <span key={yr} className="text-[9px] font-mono text-text-muted" title={`${yr}: $${Number(val).toLocaleString()}`}>
+                            {yr.slice(2)}:${(Number(val)/1000).toFixed(0)}K
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {deal.is_multi_year && deal.deal_years > 1 && (
+                      <span className="text-[9px] font-mono text-accent/60">{deal.deal_years}yr</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <EditableCell value={deal.stage} dealId={deal.id} field="stage" onSave={(v) => inlineUpdateMutation.mutate(v)} options={ALL_STAGES} className="text-xs font-mono bg-bg-card px-2 py-0.5 rounded text-text-secondary" />

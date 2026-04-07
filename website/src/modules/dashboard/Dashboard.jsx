@@ -194,10 +194,11 @@ export default function Dashboard() {
   const avgDealSize = activeDeals.length ? totalPipeline / activeDeals.length : 0
 
   // Win rate breakdown
+  const underContract = [...(stageCounts['Contracted'] || []), ...(stageCounts['In Fulfillment'] || []), ...(stageCounts['Renewed'] || [])]
   const prospectsToContracted = stageCounts.prospects.length
-    ? Math.round((stageCounts.underContract.length / (stageCounts.prospects.length + stageCounts.underContract.length)) * 100) : 0
+    ? Math.round((underContract.length / (stageCounts.prospects.length + underContract.length)) * 100) : 0
   const meetingsToContracted = stageCounts.hasMeeting.length
-    ? Math.round((stageCounts.underContract.length / (stageCounts.hasMeeting.length + stageCounts.underContract.length)) * 100) : 0
+    ? Math.round((underContract.length / (stageCounts.hasMeeting.length + underContract.length)) * 100) : 0
 
   // Revenue by year
   const revenueByYear = useMemo(() => {
@@ -355,7 +356,7 @@ export default function Dashboard() {
             <div className="text-[10px] text-text-muted uppercase tracking-wider font-mono">Prospects to Contracted</div>
             <div className="text-2xl sm:text-3xl font-semibold font-mono text-accent mt-1">{prospectsToContracted}%</div>
             <div className="text-[10px] text-text-secondary mt-1">
-              {stageCounts.underContract.length} contracted / {stageCounts.prospects.length + stageCounts.underContract.length} total prospects
+              {underContract.length} contracted / {stageCounts.prospects.length + underContract.length} total prospects
             </div>
             <div className="w-full bg-bg-card rounded-full h-1.5 mt-2">
               <div className="bg-accent h-1.5 rounded-full transition-all" style={{ width: `${Math.min(prospectsToContracted, 100)}%` }} />
@@ -365,7 +366,7 @@ export default function Dashboard() {
             <div className="text-[10px] text-text-muted uppercase tracking-wider font-mono">Meetings to Contracted</div>
             <div className="text-2xl sm:text-3xl font-semibold font-mono text-success mt-1">{meetingsToContracted}%</div>
             <div className="text-[10px] text-text-secondary mt-1">
-              {stageCounts.underContract.length} contracted / {stageCounts.hasMeeting.length + stageCounts.underContract.length} with meetings
+              {underContract.length} contracted / {stageCounts.hasMeeting.length + underContract.length} with meetings
             </div>
             <div className="w-full bg-bg-card rounded-full h-1.5 mt-2">
               <div className="bg-success h-1.5 rounded-full transition-all" style={{ width: `${Math.min(meetingsToContracted, 100)}%` }} />

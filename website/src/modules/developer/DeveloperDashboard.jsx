@@ -556,6 +556,10 @@ export default function DeveloperDashboard() {
           {properties?.map(p => {
             const propUsers = (profiles || []).filter(pr => pr.property_id === p.id)
             const unassignedUsers = (profiles || []).filter(pr => !pr.property_id)
+            const trialEnds = p.trial_ends_at ? new Date(p.trial_ends_at) : null
+            const trialDaysLeft = trialEnds ? Math.max(0, Math.ceil((trialEnds - new Date()) / 86400000)) : null
+            const trialExpired = trialDaysLeft !== null && trialDaysLeft <= 0
+            const trialActive = trialDaysLeft !== null && trialDaysLeft > 0
             return (
             <div key={p.id} className="bg-bg-surface border border-border rounded-lg p-4">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
@@ -569,6 +573,12 @@ export default function DeveloperDashboard() {
                       p.plan === 'starter' ? 'bg-warning/20 text-warning' :
                       'bg-bg-card text-text-muted'
                     }`}>{p.plan || 'free'}</span>
+                    {trialActive && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent">{trialDaysLeft}d trial left</span>
+                    )}
+                    {trialExpired && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-danger/10 text-danger">Trial expired</span>
+                    )}
                   </div>
                   <div className="flex gap-3 mt-1 text-xs text-text-muted font-mono flex-wrap">
                     {p.city && <span>{p.city}{p.state ? `, ${p.state}` : ''}</span>}
@@ -576,6 +586,7 @@ export default function DeveloperDashboard() {
                     {p.billing_email && <span>{p.billing_email}</span>}
                     <span>{propUsers.length} user{propUsers.length !== 1 ? 's' : ''}</span>
                     <span className="text-[9px]">ID: {p.id.slice(0, 8)}</span>
+                    {trialEnds && <span className="text-[9px]">Trial ends: {trialEnds.toLocaleDateString()}</span>}
                   </div>
                   {/* Users at this company */}
                   <div className="flex gap-1 mt-1.5 flex-wrap">
@@ -611,6 +622,49 @@ export default function DeveloperDashboard() {
                       <option value="realestate">Real Estate</option>
                       <option value="other">Other</option>
                     </select>
+                  </div>
+                  {/* Trial days control */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-text-muted shrink-0">Trial:</span>
+                    {[7, 14, 30, 60, 90].map(days => (
+                      <button
+                        key={days}
+                        onClick={() => {
+                          const newEnd = new Date(Date.now() + days * 86400000).toISOString()
+                          updatePropertyMutation.mutate({ id: p.id, updates: { trial_ends_at: newEnd, trial_started_at: p.trial_started_at || new Date().toISOString() } })
+                        }}
+                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
+                          trialDaysLeft !== null && Math.abs(trialDaysLeft - days) < 2
+                            ? 'border-accent bg-accent/10 text-accent'
+                            : 'border-border text-text-muted hover:border-accent/50 hover:text-text-primary'
+                        }`}
+                      >
+                        {days}d
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const custom = prompt('Set trial days from today:', '30')
+                        if (custom && !isNaN(custom)) {
+                          const newEnd = new Date(Date.now() + Number(custom) * 86400000).toISOString()
+                          updatePropertyMutation.mutate({ id: p.id, updates: { trial_ends_at: newEnd, trial_started_at: p.trial_started_at || new Date().toISOString() } })
+                        }
+                      }}
+                      className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-border text-text-muted hover:border-accent/50 hover:text-text-primary"
+                    >
+                      Custom
+                    </button>
+                    {trialActive && (
+                      <button
+                        onClick={() => {
+                          if (!confirm(`End trial for "${p.name}" immediately?`)) return
+                          updatePropertyMutation.mutate({ id: p.id, updates: { trial_ends_at: new Date().toISOString() } })
+                        }}
+                        className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-danger/30 text-danger hover:bg-danger/10"
+                      >
+                        End trial
+                      </button>
+                    )}
                   </div>
                   {/* Assign user to this property */}
                   <select

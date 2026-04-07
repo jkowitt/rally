@@ -82,11 +82,12 @@ export default function DeveloperDashboard() {
     },
   })
 
-  // Premium invite links
+  // Premium invite links (table may not exist if migration 025 hasn't run)
   const { data: premiumLinks } = useQuery({
     queryKey: ['dev-premium-links'],
     queryFn: async () => {
-      const { data } = await supabase.from('premium_invite_links').select('*, properties(name)').order('created_at', { ascending: false })
+      const { data, error } = await supabase.from('premium_invite_links').select('*, properties(name)').order('created_at', { ascending: false })
+      if (error) return [] // table may not exist yet
       return data || []
     },
   })
@@ -214,7 +215,7 @@ export default function DeveloperDashboard() {
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
-    { id: 'invites', label: `Invite Links (${premiumLinks?.filter(l => l.active && !l.claimed_by && new Date(l.expires_at) > new Date()).length || 0})` },
+    { id: 'invites', label: `Invite Links (${(premiumLinks || []).filter(l => l.active && !l.claimed_by && new Date(l.expires_at) > new Date()).length})` },
     { id: 'properties', label: `Properties (${properties?.length || 0})` },
     { id: 'users', label: `Users (${profiles?.length || 0})` },
     { id: 'flags', label: 'Feature Flags' },

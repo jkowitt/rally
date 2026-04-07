@@ -1135,13 +1135,18 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
       }
     } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
       setLoading(true)
-      setStatus('Reading PDF...')
+      setStatus('Reading PDF — loading parser...')
       try {
         const arrayBuffer = await file.arrayBuffer()
+        setStatus('Reading PDF — extracting text...')
         extractedText = await extractPdfText(arrayBuffer)
+        if (!extractedText || extractedText.trim().length < 10) {
+          setStatus('PDF appears to be scanned/image-based. Paste contract text below to analyze.')
+          extractedText = ''
+        }
       } catch (err) {
-        console.warn('PDF extraction error:', err)
-        setStatus('PDF stored. Text could not be extracted — paste contract text below to analyze.')
+        console.error('PDF extraction failed:', err.message, err)
+        setStatus('PDF stored but text extraction failed: ' + (err.message || 'Unknown error'))
       }
     } else {
       // Any other file type — try to read as text

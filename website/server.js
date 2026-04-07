@@ -30,12 +30,12 @@ app.use((_req, res, next) => {
   // Content Security Policy
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.sheetjs.com",
     "worker-src 'self' blob: https://unpkg.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.anthropic.com",
+    "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.anthropic.com https://unpkg.com https://cdn.sheetjs.com",
     "frame-src 'none'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -43,9 +43,9 @@ app.use((_req, res, next) => {
     "upgrade-insecure-requests",
   ].join('; '))
 
-  // Prevent MIME type confusion attacks
+  // Allow cross-origin resources (needed for CDN-loaded pdfjs worker)
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
-  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
 
   next()
 })

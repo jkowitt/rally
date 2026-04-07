@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import NotificationCenter from '../NotificationCenter'
+import { APIUsageCompact } from './../../components/APIUsageBanner'
 
 export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
   const { profile, signOut } = useAuth()
@@ -55,6 +56,9 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
           ⌕
         </button>
 
+        <div className="hidden lg:block">
+          <APIUsageCompact />
+        </div>
         <NotificationCenter />
         <span className="hidden sm:inline text-sm text-text-secondary truncate max-w-[120px]">
           {profile?.full_name || profile?.id?.slice(0, 8)}

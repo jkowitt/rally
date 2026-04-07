@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useToast } from '@/components/Toast'
 import { Navigate } from 'react-router-dom'
+import APIUsageBanner from '@/components/APIUsageBanner'
 
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 const ROLES = ['developer', 'admin', 'rep']
@@ -293,6 +294,9 @@ export default function DeveloperDashboard() {
         <StatCard label="Admins" value={(profiles || []).filter(p => p.role === 'admin').length || 0} color="text-warning" />
         <StatCard label="Pending Invites" value={(invitations || []).filter(i => !i.accepted).length || 0} color="text-text-muted" />
       </div>
+
+      {/* API Usage Banner */}
+      <APIUsageBanner />
 
       {/* Tabs */}
       <div className="flex gap-1 bg-bg-card rounded-lg p-1 overflow-x-auto">

@@ -10,6 +10,8 @@ import { usePlanLimits } from '@/hooks/usePlanLimits'
 import UpgradeGate, { UsageBadge } from '@/components/UpgradeGate'
 import CSVImportWizard from '@/components/CSVImportWizard'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
+import { lazy, Suspense } from 'react'
+const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
@@ -129,6 +131,7 @@ export default function DealPipeline() {
   const [viewingDeal, setViewingDeal] = useState(null)
   const [columnFilters, setColumnFilters] = useState({})
   const [showColumnFilters, setShowColumnFilters] = useState(false)
+  const [showCRMImporter, setShowCRMImporter] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const { data: deals, isLoading } = useQuery({
@@ -615,6 +618,14 @@ export default function DealPipeline() {
           >
             CSV Import
           </button>
+          {(profile?.role === 'developer' || profile?.role === 'admin') && (
+            <button
+              onClick={() => setShowCRMImporter(true)}
+              className="bg-accent/10 border border-accent/30 text-accent px-3 py-2 rounded text-sm font-medium hover:bg-accent/20 transition-colors"
+            >
+              Full Import
+            </button>
+          )}
           <button
             onClick={() => { setEditingDeal(null); setShowForm(true) }}
             className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90"
@@ -998,6 +1009,20 @@ export default function DealPipeline() {
             setShowCSVImport(false)
           }}
         />
+      )}
+
+      {showCRMImporter && (
+        <Suspense fallback={null}>
+          <CRMDataImporter
+            onClose={() => setShowCRMImporter(false)}
+            onImported={(count) => {
+              queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
+              queryClient.invalidateQueries({ queryKey: ['contacts', propertyId] })
+              toast({ title: `${count} records imported`, type: 'success' })
+              setShowCRMImporter(false)
+            }}
+          />
+        </Suspense>
       )}
     </div>
   )

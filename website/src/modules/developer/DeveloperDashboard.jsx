@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -6,6 +6,7 @@ import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useToast } from '@/components/Toast'
 import { Navigate } from 'react-router-dom'
 
+const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 const ROLES = ['developer', 'admin', 'rep']
 const PLANS = ['free', 'starter', 'pro', 'enterprise']
 
@@ -20,6 +21,7 @@ export default function DeveloperDashboard() {
   const [runningAnalysis, setRunningAnalysis] = useState(false)
   const [newLinkLabel, setNewLinkLabel] = useState('')
   const [newLinkPlan, setNewLinkPlan] = useState('pro')
+  const [showCRMImporter, setShowCRMImporter] = useState(false)
 
   if (!isDeveloper) return <Navigate to="/app" replace />
 
@@ -233,6 +235,12 @@ export default function DeveloperDashboard() {
             Full platform control &middot; {properties?.length || 0} properties &middot; {profiles?.length || 0} users
           </p>
         </div>
+        <button
+          onClick={() => setShowCRMImporter(true)}
+          className="bg-accent/10 border border-accent/30 text-accent px-4 py-2 rounded text-sm font-medium hover:bg-accent/20 transition-colors"
+        >
+          Import CRM Data
+        </button>
       </div>
 
       {/* Stats */}
@@ -832,6 +840,20 @@ export default function DeveloperDashboard() {
             </div>
           )}
         </div>
+      )}
+
+      {/* CRM Data Importer Modal */}
+      {showCRMImporter && (
+        <Suspense fallback={null}>
+          <CRMDataImporter
+            onClose={() => setShowCRMImporter(false)}
+            onImported={(count) => {
+              queryClient.invalidateQueries()
+              toast({ title: `${count} records imported`, type: 'success' })
+              setShowCRMImporter(false)
+            }}
+          />
+        </Suspense>
       )}
     </div>
   )

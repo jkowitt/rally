@@ -22,6 +22,12 @@ export default function DeveloperDashboard() {
   const [newLinkLabel, setNewLinkLabel] = useState('')
   const [newLinkPlan, setNewLinkPlan] = useState('pro')
   const [showCRMImporter, setShowCRMImporter] = useState(false)
+  const [showCreateProperty, setShowCreateProperty] = useState(false)
+  const [newPropName, setNewPropName] = useState('')
+  const [newPropType, setNewPropType] = useState('college')
+  const [newPropCity, setNewPropCity] = useState('')
+  const [newPropState, setNewPropState] = useState('')
+  const [newPropPlan, setNewPropPlan] = useState('free')
 
   if (!isDeveloper) return <Navigate to="/app" replace />
 
@@ -150,6 +156,42 @@ export default function DeveloperDashboard() {
       queryClient.invalidateQueries({ queryKey: ['dev-custom-requests'] })
       toast({ title: 'Request updated', type: 'success' })
     },
+  })
+
+  const createPropertyMutation = useMutation({
+    mutationFn: async ({ name, type, city, state, plan }) => {
+      const { data, error } = await supabase.from('properties').insert({
+        name, type, city: city || null, state: state || null, plan,
+        trial_started_at: new Date().toISOString(),
+        trial_ends_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+      }).select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['dev-properties'] })
+      toast({ title: `Property "${data.name}" created`, type: 'success' })
+      setShowCreateProperty(false)
+      setNewPropName('')
+      setNewPropCity('')
+      setNewPropState('')
+    },
+    onError: (e) => toast({ title: 'Error', description: e.message, type: 'error' }),
+  })
+
+  const deletePropertyMutation = useMutation({
+    mutationFn: async (id) => {
+      // Unlink users first
+      await supabase.from('profiles').update({ property_id: null }).eq('property_id', id)
+      const { error } = await supabase.from('properties').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dev-properties'] })
+      queryClient.invalidateQueries({ queryKey: ['dev-profiles'] })
+      toast({ title: 'Property deleted', type: 'success' })
+    },
+    onError: (e) => toast({ title: 'Error', description: e.message, type: 'error' }),
   })
 
   async function runCodeAnalysis() {
@@ -469,9 +511,54 @@ export default function DeveloperDashboard() {
       {/* PROPERTIES */}
       {activeTab === 'properties' && (
         <div className="space-y-3">
-          {properties?.map(p => (
+          {/* Create Property */}
+          {showCreateProperty ? (
+            <div className="bg-bg-surface border border-accent/30 rounded-lg p-4 space-y-3">
+              <h3 className="text-sm font-medium text-text-primary">Create New Property / Company</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input type="text" placeholder="Company Name *" value={newPropName} onChange={(e) => setNewPropName(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" autoFocus />
+                <select value={newPropType} onChange={(e) => setNewPropType(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
+                  <option value="college">College Athletics</option>
+                  <option value="professional">Professional Team</option>
+                  <option value="minor_league">Minor League</option>
+                  <option value="agency">Agency</option>
+                  <option value="entertainment">Entertainment</option>
+                  <option value="conference">Conference</option>
+                  <option value="nonprofit">Nonprofit</option>
+                  <option value="media">Media</option>
+                  <option value="realestate">Real Estate</option>
+                  <option value="other">Other</option>
+                </select>
+                <input placeholder="City" value={newPropCity} onChange={(e) => setNewPropCity(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+                <input placeholder="State" value={newPropState} onChange={(e) => setNewPropState(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+                <select value={newPropPlan} onChange={(e) => setNewPropPlan(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
+                  {PLANS.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { if (!newPropName.trim()) return; createPropertyMutation.mutate({ name: newPropName.trim(), type: newPropType, city: newPropCity, state: newPropState, plan: newPropPlan }) }}
+                  disabled={!newPropName.trim() || createPropertyMutation.isPending}
+                  className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                >
+                  {createPropertyMutation.isPending ? 'Creating...' : 'Create Property'}
+                </button>
+                <button onClick={() => setShowCreateProperty(false)} className="text-text-muted text-sm hover:text-text-secondary">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowCreateProperty(true)} className="bg-accent/10 border border-accent/30 text-accent px-4 py-2 rounded text-sm font-medium hover:bg-accent/20 transition-colors">
+              + Create Property
+            </button>
+          )}
+
+          {/* Property List */}
+          {properties?.map(p => {
+            const propUsers = (profiles || []).filter(pr => pr.property_id === p.id)
+            const unassignedUsers = (profiles || []).filter(pr => !pr.property_id)
+            return (
             <div key={p.id} className="bg-bg-surface border border-border rounded-lg p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium text-text-primary">{p.name}</span>
@@ -487,29 +574,68 @@ export default function DeveloperDashboard() {
                     {p.city && <span>{p.city}{p.state ? `, ${p.state}` : ''}</span>}
                     {p.sport && <span>{p.sport}</span>}
                     {p.billing_email && <span>{p.billing_email}</span>}
-                    <span>{(profiles || []).filter(pr => pr.property_id === p.id).length || 0} users</span>
+                    <span>{propUsers.length} user{propUsers.length !== 1 ? 's' : ''}</span>
+                    <span className="text-[9px]">ID: {p.id.slice(0, 8)}</span>
                   </div>
                   {/* Users at this company */}
                   <div className="flex gap-1 mt-1.5 flex-wrap">
-                    {(profiles || []).filter(pr => pr.property_id === p.id).map(u => (
+                    {propUsers.map(u => (
                       <span key={u.id} className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${roleColor[u.role] || 'bg-bg-card text-text-muted'}`}>
                         {u.full_name || u.email || u.id.slice(0, 6)} ({u.role})
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div className="flex flex-col gap-2 shrink-0">
+                  <div className="flex gap-2">
+                    <select
+                      value={p.plan || 'free'}
+                      onChange={(e) => updatePropertyMutation.mutate({ id: p.id, updates: { plan: e.target.value } })}
+                      className="bg-bg-card border border-border rounded px-2 py-1 text-[10px] text-text-primary focus:outline-none focus:border-accent"
+                    >
+                      {PLANS.map(plan => <option key={plan} value={plan}>{plan}</option>)}
+                    </select>
+                    <select
+                      value={p.type || 'college'}
+                      onChange={(e) => updatePropertyMutation.mutate({ id: p.id, updates: { type: e.target.value } })}
+                      className="bg-bg-card border border-border rounded px-2 py-1 text-[10px] text-text-primary focus:outline-none focus:border-accent"
+                    >
+                      <option value="college">College</option>
+                      <option value="professional">Professional</option>
+                      <option value="minor_league">Minor League</option>
+                      <option value="agency">Agency</option>
+                      <option value="entertainment">Entertainment</option>
+                      <option value="conference">Conference</option>
+                      <option value="nonprofit">Nonprofit</option>
+                      <option value="media">Media</option>
+                      <option value="realestate">Real Estate</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  {/* Assign user to this property */}
                   <select
-                    value={p.plan || 'free'}
-                    onChange={(e) => updatePropertyMutation.mutate({ id: p.id, updates: { plan: e.target.value } })}
-                    className="bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent"
+                    value=""
+                    onChange={(e) => { if (e.target.value) assignPropertyMutation.mutate({ userId: e.target.value, propertyId: p.id }) }}
+                    className="bg-bg-card border border-border rounded px-2 py-1 text-[10px] text-text-primary focus:outline-none focus:border-accent"
                   >
-                    {PLANS.map(plan => <option key={plan} value={plan}>{plan}</option>)}
+                    <option value="">+ Assign user...</option>
+                    {(profiles || []).filter(pr => pr.property_id !== p.id).map(u => (
+                      <option key={u.id} value={u.id}>{u.full_name || u.email || u.id.slice(0, 8)} {u.properties?.name ? `(${u.properties.name})` : '(unassigned)'}</option>
+                    ))}
                   </select>
+                  {propUsers.length === 0 && (
+                    <button
+                      onClick={() => { if (confirm(`Delete "${p.name}"? This cannot be undone.`)) deletePropertyMutation.mutate(p.id) }}
+                      className="text-[10px] text-danger hover:underline text-right"
+                    >
+                      Delete property
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

@@ -94,6 +94,19 @@ const INDUSTRIES = [
     modules: ['Tenant Pipeline', 'Lease Contracts', 'Property Units', 'Build-Out Tracking', 'Analytics'],
     stats: [{ value: '8+', label: 'Property Types' }, { value: 'AI', label: 'Market Analysis' }, { value: '∞', label: 'Tenant Pipeline' }],
   },
+  {
+    id: 'other',
+    label: 'Other',
+    icon: '🔧',
+    headline: 'Your Sales Pipeline',
+    subtitle: 'Any business that sells packages, services, or deliverables',
+    description: 'Pipeline management, contract tracking, deliverable fulfillment, and AI-powered tools — configured to fit your business.',
+    deals: 'deals',
+    assets: 'deliverables',
+    cta: 'business',
+    modules: ['Pipeline', 'Contracts', 'Deliverables', 'Fulfillment', 'Team Management', 'Newsletter'],
+    stats: [{ value: '20+', label: 'Asset Categories' }, { value: 'AI', label: 'Powered Intelligence' }, { value: '∞', label: 'Scalable Pipeline' }],
+  },
 ]
 
 export default function LandingPage() {

@@ -100,11 +100,40 @@ async function callClaude(prompt: string, maxTokens: number): Promise<string> {
 }
 
 function extractJSON(text: string): any {
-  const objMatch = text.match(/\{[\s\S]*\}/);
-  if (objMatch) return JSON.parse(objMatch[0]);
-  const arrMatch = text.match(/\[[\s\S]*\]/);
-  if (arrMatch) return JSON.parse(arrMatch[0]);
-  return JSON.parse(text);
+  // Try direct parse first
+  try { return JSON.parse(text); } catch {}
+
+  // Strip markdown code fences
+  let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+  // Try parsing cleaned text
+  try { return JSON.parse(cleaned); } catch {}
+
+  // Find the outermost JSON object
+  const objStart = cleaned.indexOf('{');
+  const objEnd = cleaned.lastIndexOf('}');
+  if (objStart !== -1 && objEnd > objStart) {
+    try { return JSON.parse(cleaned.slice(objStart, objEnd + 1)); } catch {}
+  }
+
+  // Find the outermost JSON array
+  const arrStart = cleaned.indexOf('[');
+  const arrEnd = cleaned.lastIndexOf(']');
+  if (arrStart !== -1 && arrEnd > arrStart) {
+    try { return JSON.parse(cleaned.slice(arrStart, arrEnd + 1)); } catch {}
+  }
+
+  // Last resort: try to fix common issues
+  if (objStart !== -1 && objEnd > objStart) {
+    let attempt = cleaned.slice(objStart, objEnd + 1);
+    // Fix trailing commas
+    attempt = attempt.replace(/,\s*([}\]])/g, '$1');
+    // Fix single quotes
+    attempt = attempt.replace(/'/g, '"');
+    try { return JSON.parse(attempt); } catch {}
+  }
+
+  throw new Error("Could not extract JSON from AI response");
 }
 
 async function generateContract(sb: any, body: any): Promise<any> {

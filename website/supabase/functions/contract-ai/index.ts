@@ -323,33 +323,19 @@ async function searchProspects(supabase: any, body: any) {
     existingBrands = (deals || []).map((d: any) => (d.brand_name || "").toLowerCase());
   }
 
-  const prompt = `You are a sports sponsorship sales intelligence expert. A sales rep is searching for potential sponsor prospects.
+  const prompt = `Find 8 real companies matching: "${query}". ${category ? `Industry: ${category}.` : ""} ${existingBrands.length > 0 ? `Exclude: ${existingBrands.slice(0, 20).join(", ")}.` : ""}
 
-Search Query: "${query}"
-${category ? `Category Filter: ${category}` : ""}
+Return a JSON array of objects with these fields:
+company_name, category, sub_industry, estimated_sponsorship_budget, why_good_fit, headquarters_city, headquarters_state, website, priority (High/Medium/Low)
 
-Generate 10-15 real, well-known companies that match this search and would be strong candidates for sports sponsorship deals. Focus on companies that are known to invest in sports marketing, local community partnerships, or brand activations.
+Return ONLY a JSON array, no other text.`;
 
-${existingBrands.length > 0 ? `IMPORTANT: Exclude these companies that are already in their pipeline: ${existingBrands.slice(0, 50).join(", ")}` : ""}
-
-For each prospect, provide:
-- company_name: Official company name
-- category: One of [Automotive, Banking & Financial Services, Beverage & Alcohol, Consumer Packaged Goods, Education, Energy & Utilities, Entertainment & Media, Fashion & Apparel, Food & Quick Serve Restaurants, Gaming & Esports, Healthcare, Hospitality & Travel, Insurance, Real Estate & Construction, Retail, Sports & Fitness, Technology & Software, Telecommunications, Transportation & Logistics, Misc]
-- sub_industry: More specific industry
-- estimated_sponsorship_budget: Rough annual sports sponsorship budget range (e.g. "$50K-$200K")
-- sponsorship_track_record: Brief note on their sports sponsorship history
-- why_good_fit: 1 sentence on why they'd be a good sponsorship prospect
-- headquarters_city: City name
-- headquarters_state: State abbreviation
-- website: Company website URL
-- linkedin_url: Company LinkedIn page URL (use format https://linkedin.com/company/company-name)
-- estimated_revenue: Revenue range
-- estimated_employees: Employee count range
-
-Return JSON array. Return ONLY valid JSON.`;
-
-  const text = await callClaude(prompt, 4096);
-  return { prospects: extractJSON(text) };
+  const text = await callClaude(prompt, 2048);
+  try {
+    return { prospects: extractJSON(text) };
+  } catch {
+    return { prospects: [] };
+  }
 }
 
 async function suggestProspects(supabase: any, body: any) {
@@ -419,43 +405,18 @@ async function researchContacts(body: any) {
   const category = body.category || "";
   const website = body.website || "";
 
-  const prompt = `You are a B2B sales research assistant specializing in sports sponsorship. Research the top 3 decision-makers at this company who would be involved in sponsorship decisions.
+  const prompt = `Find the top 3 decision-makers at ${companyName}${category ? ` (${category})` : ""} for sponsorship/partnership outreach.
 
-Company: ${companyName}
-Industry: ${category}
-${website ? `Website: ${website}` : ""}
+Return JSON: {"contacts":[{"first_name":"","last_name":"","position":"","email_pattern":"first.last@company.com","linkedin_url":"https://linkedin.com/in/name","why_target":""}],"company_linkedin":""}
 
-Find the 3 most relevant contacts for a sports sponsorship sales outreach. Prioritize:
-1. VP/Director of Marketing, Brand Marketing, or Sponsorships
-2. CMO or Head of Marketing
-3. VP of Partnerships, Community Relations, or Corporate Affairs
+Return ONLY valid JSON, no other text.`;
 
-For each contact provide:
-- first_name: First name
-- last_name: Last name
-- position: Their title/role
-- email_pattern: Most likely email format (e.g. "first.last@company.com" or "flast@company.com")
-- linkedin_url: Their LinkedIn profile URL (use format https://linkedin.com/in/firstname-lastname)
-- why_target: 1 sentence on why they're the right person to contact
-- outreach_tip: 1 sentence suggestion for how to approach them
-
-Also provide:
-- company_linkedin: Company LinkedIn URL
-- company_phone: Main company phone (general number)
-- company_address: Headquarters address
-
-Return JSON:
-{
-  "contacts": [{ first_name, last_name, position, email_pattern, linkedin_url, why_target, outreach_tip }],
-  "company_linkedin": "string",
-  "company_phone": "string",
-  "company_address": "string"
-}
-
-Return ONLY valid JSON.`;
-
-  const text = await callClaude(prompt, 2048);
-  return { research: extractJSON(text) };
+  const text = await callClaude(prompt, 1024);
+  try {
+    return { research: extractJSON(text) };
+  } catch {
+    return { research: { contacts: [] } };
+  }
 }
 
 // ============ NEWSLETTER ============

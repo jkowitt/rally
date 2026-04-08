@@ -58,7 +58,49 @@ export async function editContractText({ contract_text, instructions }) {
 }
 
 export async function parsePdfText(pdf_text) {
-  return invokeEdgeFunction('contract-ai', { action: 'parse_pdf_text', pdf_text })
+  // Try direct parse action first
+  try {
+    const result = await invokeEdgeFunction('contract-ai', { action: 'parse_pdf_text', pdf_text })
+    if (result?.parsed) return result
+  } catch (e) {
+    console.warn('parse_pdf_text failed, using fallback:', e.message)
+  }
+
+  // Fallback: use edit_contract to parse the contract
+  const template = `{
+  "brand_name": "",
+  "contact_name": "",
+  "contact_email": "",
+  "contact_phone": "",
+  "contact_position": "",
+  "contact_company": "",
+  "contract_number": "",
+  "effective_date": "YYYY-MM-DD",
+  "expiration_date": "YYYY-MM-DD",
+  "total_value": 0,
+  "annual_values": {},
+  "benefits": [{"description": "", "category": "", "quantity": 1, "frequency": "Per Season", "value": 0}],
+  "summary": ""
+}`
+
+  const data = await invokeEdgeFunction('contract-ai', {
+    action: 'edit_contract',
+    contract_text: template,
+    instructions: `Fill in this JSON template with data extracted from the following contract. Use real values from the contract text. For benefits, list every sponsorship asset, deliverable, or benefit mentioned. For annual_values, calculate per-year revenue if multi-year. Return ONLY valid JSON.\n\nContract text:\n${pdf_text.slice(0, 4000)}`,
+  })
+
+  // The edit_contract response has the filled-in JSON as contract_text
+  try {
+    const text = data.contract_text || ''
+    const jsonStart = text.indexOf('{')
+    const jsonEnd = text.lastIndexOf('}')
+    if (jsonStart !== -1 && jsonEnd > jsonStart) {
+      const parsed = JSON.parse(text.slice(jsonStart, jsonEnd + 1))
+      return { parsed }
+    }
+  } catch {}
+
+  throw new Error('Could not parse contract data')
 }
 
 export async function summarizeContract(contract_text) {
@@ -172,9 +214,9 @@ function tryParseJSON(text) {
 export async function searchProspects({ query, category, property_id }) {
   try {
     const result = await invokeEdgeFunction('contract-ai', { action: 'search_prospects', query, category, property_id })
-    if (result?.prospects) return result
+    if (result?.prospects?.length > 0) return result
   } catch (e) {
-    if (!e.message?.includes('Unknown action')) throw e
+    console.warn('search_prospects failed, using fallback:', e.message)
   }
 
   // Fallback: use edit_contract with a prospect list document
@@ -222,9 +264,9 @@ export async function searchProspects({ query, category, property_id }) {
 export async function suggestProspects({ property_id }) {
   try {
     const result = await invokeEdgeFunction('contract-ai', { action: 'suggest_prospects', property_id })
-    if (result?.suggestions) return result
+    if (result?.suggestions?.length > 0) return result
   } catch (e) {
-    if (!e.message?.includes('Unknown action')) throw e
+    console.warn('suggest_prospects failed, using fallback:', e.message)
   }
 
   let dealContext = ''
@@ -311,7 +353,7 @@ export async function researchContacts({ company_name, category, website, proper
     const result = await invokeEdgeFunction('contract-ai', { action: 'research_contacts', company_name, category, website })
     if (result?.research) return { ...result, research: { ...result.research, source: 'claude' } }
   } catch (e) {
-    if (!e.message?.includes('Unknown action')) throw e
+    console.warn('research_contacts failed, using fallback:', e.message)
   }
 
   // Fallback: use edit_contract. The key is giving Claude a realistic document

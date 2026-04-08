@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useToast } from '@/components/Toast'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import APIUsageBanner from '@/components/APIUsageBanner'
 import { logAudit } from '@/lib/audit'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line } from 'recharts'
@@ -381,6 +381,7 @@ export default function DeveloperDashboard() {
     { id: 'health', label: `Code Health (${analysisReports?.length || 0})` },
     { id: 'suggestions', label: `Suggestions (${(suggestions || []).filter(s => s.status === 'new').length || 0})` },
     { id: 'analytics', label: 'Analytics' },
+    { id: 'qa', label: 'QA Hub' },
     { id: 'cache', label: `Contact Cache (${(contactCache || []).length})` },
     { id: 'custom', label: 'Custom Dashboards' },
   ]
@@ -1163,6 +1164,11 @@ export default function DeveloperDashboard() {
         </div>
       )}
 
+      {/* QA HUB */}
+      {activeTab === 'qa' && (
+        <QAHub properties={properties} profiles={profiles} />
+      )}
+
       {/* ANALYTICS */}
       {activeTab === 'analytics' && (
         <AnalyticsTab
@@ -1317,6 +1323,262 @@ export default function DeveloperDashboard() {
           />
         </Suspense>
       )}
+    </div>
+  )
+}
+
+// ─── QA Hub ───
+
+const QA_PAGES = [
+  { path: '/', label: 'Landing Page', public: true },
+  { path: '/login', label: 'Login / Signup', public: true },
+  { path: '/app', label: 'Dashboard' },
+  { path: '/app/crm/pipeline', label: 'Deal Pipeline' },
+  { path: '/app/crm/contracts', label: 'Contracts' },
+  { path: '/app/crm/assets', label: 'Asset Catalog' },
+  { path: '/app/crm/fulfillment', label: 'Fulfillment Tracker' },
+  { path: '/app/crm/activities', label: 'Activity Timeline' },
+  { path: '/app/crm/tasks', label: 'Task Manager' },
+  { path: '/app/crm/insights', label: 'AI Insights' },
+  { path: '/app/crm/newsletter', label: 'Newsletter' },
+  { path: '/app/crm/team', label: 'Team Manager' },
+  { path: '/app/crm/declined', label: 'Declined Deals' },
+  { path: '/app/sportify/events', label: 'Events (Sportify)' },
+  { path: '/app/valora', label: 'VALORA Valuations' },
+  { path: '/app/businessnow', label: 'BusinessNow Intelligence' },
+  { path: '/app/settings', label: 'Settings' },
+  { path: '/app/help', label: 'Help Center' },
+  { path: '/app/custom-dashboard', label: 'Custom Dashboard Request' },
+  { path: '/app/developer', label: 'Developer Dashboard' },
+]
+
+const QA_CHECKS = [
+  { id: 'db_profiles', label: 'Profiles table', check: async (sb) => { const { count } = await sb.from('profiles').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_properties', label: 'Properties table', check: async (sb) => { const { count } = await sb.from('properties').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_deals', label: 'Deals table', check: async (sb) => { const { count } = await sb.from('deals').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_contracts', label: 'Contracts table', check: async (sb) => { const { count } = await sb.from('contracts').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_assets', label: 'Assets table', check: async (sb) => { const { count } = await sb.from('assets').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_contacts', label: 'Contacts table', check: async (sb) => { const { count } = await sb.from('contacts').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_fulfillment', label: 'Fulfillment records', check: async (sb) => { const { count } = await sb.from('fulfillment_records').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_events', label: 'Events table', check: async (sb) => { const { count } = await sb.from('events').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_teams', label: 'Teams table', check: async (sb) => { const { count } = await sb.from('teams').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_feature_flags', label: 'Feature flags', check: async (sb) => { const { data } = await sb.from('feature_flags').select('module, enabled'); return { ok: !!data, detail: data ? data.map(f => `${f.module}:${f.enabled ? 'ON' : 'OFF'}`).join(', ') : 'table missing' } } },
+  { id: 'db_newsletters', label: 'Newsletters table', check: async (sb) => { const { count } = await sb.from('newsletters').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_audit', label: 'Audit log', check: async (sb) => { const { count } = await sb.from('audit_log').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_login_history', label: 'Login history', check: async (sb) => { const { count } = await sb.from('login_history').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_valuations', label: 'Valuations + training data', check: async (sb) => { const { count: v } = await sb.from('valuations').select('*', { count: 'exact', head: true }); const { count: t } = await sb.from('valuation_training_data').select('*', { count: 'exact', head: true }); return { ok: v !== null && t !== null, detail: `${v} valuations, ${t} training rows` } } },
+  { id: 'db_usage', label: 'Usage tracker', check: async (sb) => { const { count } = await sb.from('usage_tracker').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} rows` } } },
+  { id: 'db_cms', label: 'CMS content', check: async (sb) => { const { count } = await sb.from('ui_content').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} entries` } } },
+  { id: 'db_premium_links', label: 'Premium invite links', check: async (sb) => { const { count } = await sb.from('premium_invite_links').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} links` } } },
+  { id: 'db_sponsor_portal', label: 'Sponsor portal links', check: async (sb) => { const { count } = await sb.from('sponsor_portal_links').select('*', { count: 'exact', head: true }); return { ok: count !== null, detail: `${count} links` } } },
+  { id: 'auth_session', label: 'Auth session', check: async (sb) => { const { data } = await sb.auth.getSession(); return { ok: !!data.session, detail: data.session ? `Expires ${new Date(data.session.expires_at * 1000).toLocaleString()}` : 'No session' } } },
+  { id: 'edge_fn', label: 'Edge function (contract-ai)', check: async (sb) => { try { const { data, error } = await sb.functions.invoke('contract-ai', { body: { action: 'ping' } }); return { ok: !error, detail: error ? error.message : 'Reachable' } } catch (e) { return { ok: false, detail: e.message } } } },
+]
+
+function QAHub({ properties, profiles }) {
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const [healthResults, setHealthResults] = useState({})
+  const [running, setRunning] = useState(false)
+  const [pageTests, setPageTests] = useState({})
+  const [testingPage, setTestingPage] = useState(null)
+  const [errorLog, setErrorLog] = useState([])
+
+  // Capture client-side errors
+  useEffect(() => {
+    function captureError(event) {
+      setErrorLog(prev => [{
+        message: event.message || event.reason?.message || 'Unknown error',
+        source: event.filename || event.reason?.stack?.split('\n')[1] || '',
+        time: new Date().toLocaleTimeString(),
+      }, ...prev].slice(0, 50))
+    }
+    window.addEventListener('error', captureError)
+    window.addEventListener('unhandledrejection', captureError)
+    return () => {
+      window.removeEventListener('error', captureError)
+      window.removeEventListener('unhandledrejection', captureError)
+    }
+  }, [])
+
+  async function runAllHealthChecks() {
+    setRunning(true)
+    const results = {}
+    for (const check of QA_CHECKS) {
+      try {
+        results[check.id] = await check.check(supabase)
+      } catch (e) {
+        results[check.id] = { ok: false, detail: e.message }
+      }
+    }
+    setHealthResults(results)
+    setRunning(false)
+    const passed = Object.values(results).filter(r => r.ok).length
+    toast({ title: `Health check: ${passed}/${QA_CHECKS.length} passed`, type: passed === QA_CHECKS.length ? 'success' : 'warning' })
+  }
+
+  function testPage(path) {
+    setTestingPage(path)
+    const start = performance.now()
+    // Navigate to the page, measure load time
+    const iframe = document.createElement('iframe')
+    iframe.style.display = 'none'
+    iframe.src = path
+    iframe.onload = () => {
+      const loadTime = Math.round(performance.now() - start)
+      setPageTests(prev => ({ ...prev, [path]: { ok: true, loadTime, tested: new Date().toLocaleTimeString() } }))
+      document.body.removeChild(iframe)
+      setTestingPage(null)
+    }
+    iframe.onerror = () => {
+      setPageTests(prev => ({ ...prev, [path]: { ok: false, loadTime: 0, tested: new Date().toLocaleTimeString(), error: 'Failed to load' } }))
+      document.body.removeChild(iframe)
+      setTestingPage(null)
+    }
+    document.body.appendChild(iframe)
+    // Timeout after 10s
+    setTimeout(() => {
+      if (testingPage === path) {
+        setPageTests(prev => ({ ...prev, [path]: { ok: false, loadTime: 10000, tested: new Date().toLocaleTimeString(), error: 'Timeout (10s)' } }))
+        try { document.body.removeChild(iframe) } catch {}
+        setTestingPage(null)
+      }
+    }, 10000)
+  }
+
+  async function testAllPages() {
+    for (const page of QA_PAGES) {
+      testPage(page.path)
+      await new Promise(r => setTimeout(r, 2000)) // 2s between tests
+    }
+  }
+
+  const passedHealth = Object.values(healthResults).filter(r => r.ok).length
+  const totalHealth = Object.keys(healthResults).length
+  const passedPages = Object.values(pageTests).filter(r => r.ok).length
+  const totalPages = Object.keys(pageTests).length
+
+  return (
+    <div className="space-y-4">
+      {/* QA Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <MiniKPI label="Health Checks" value={totalHealth > 0 ? `${passedHealth}/${totalHealth}` : '—'} sub={totalHealth > 0 ? (passedHealth === totalHealth ? 'All passing' : `${totalHealth - passedHealth} failing`) : 'Not run yet'} accent={passedHealth === totalHealth && totalHealth > 0} />
+        <MiniKPI label="Page Tests" value={totalPages > 0 ? `${passedPages}/${totalPages}` : '—'} sub={totalPages > 0 ? `Avg ${Math.round(Object.values(pageTests).reduce((s, r) => s + (r.loadTime || 0), 0) / totalPages)}ms` : 'Not run yet'} />
+        <MiniKPI label="Client Errors" value={errorLog.length} sub={errorLog.length > 0 ? `Last: ${errorLog[0]?.time}` : 'No errors captured'} />
+        <MiniKPI label="Total Pages" value={QA_PAGES.length} sub={`${QA_PAGES.filter(p => p.public).length} public`} />
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2 flex-wrap">
+        <button onClick={runAllHealthChecks} disabled={running} className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50">
+          {running ? 'Running...' : 'Run Health Checks'}
+        </button>
+        <button onClick={testAllPages} disabled={!!testingPage} className="bg-bg-surface border border-border text-text-secondary px-4 py-2 rounded text-sm font-medium hover:text-text-primary disabled:opacity-50">
+          {testingPage ? `Testing ${testingPage}...` : 'Test All Pages'}
+        </button>
+        <button onClick={() => setErrorLog([])} className="text-xs text-text-muted hover:text-text-primary border border-border rounded px-3 py-2">
+          Clear Error Log
+        </button>
+      </div>
+
+      {/* Health Checks */}
+      <Panel title={`Database & Service Health (${totalHealth > 0 ? `${passedHealth}/${totalHealth}` : 'not run'})`}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+          {QA_CHECKS.map(check => {
+            const result = healthResults[check.id]
+            return (
+              <div key={check.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-bg-card">
+                <span className="text-xs text-text-primary">{check.label}</span>
+                {result ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] text-text-muted font-mono truncate max-w-[150px]">{result.detail}</span>
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${result.ok ? 'bg-success' : 'bg-danger'}`} />
+                  </div>
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-bg-card" />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </Panel>
+
+      {/* Page Testing */}
+      <Panel title="Page Load Testing">
+        <div className="space-y-1">
+          {QA_PAGES.map(page => {
+            const result = pageTests[page.path]
+            const isTesting = testingPage === page.path
+            return (
+              <div key={page.path} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-bg-card group">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${result ? (result.ok ? 'bg-success' : 'bg-danger') : 'bg-bg-card'} ${isTesting ? 'animate-pulse bg-accent' : ''}`} />
+                  <span className="text-xs text-text-primary truncate">{page.label}</span>
+                  <span className="text-[9px] text-text-muted font-mono">{page.path}</span>
+                  {page.public && <span className="text-[8px] font-mono text-text-muted bg-bg-card px-1 py-0.5 rounded">public</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  {result && (
+                    <>
+                      <span className={`text-[10px] font-mono ${result.loadTime > 3000 ? 'text-danger' : result.loadTime > 1000 ? 'text-warning' : 'text-success'}`}>
+                        {result.loadTime}ms
+                      </span>
+                      {result.error && <span className="text-[9px] text-danger">{result.error}</span>}
+                    </>
+                  )}
+                  <button
+                    onClick={() => navigate(page.path)}
+                    className="text-[9px] text-accent hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    Visit
+                  </button>
+                  <button
+                    onClick={() => testPage(page.path)}
+                    disabled={isTesting}
+                    className="text-[9px] text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-30"
+                  >
+                    Test
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </Panel>
+
+      {/* Error Log */}
+      <Panel title={`Client Error Log (${errorLog.length})`}>
+        {errorLog.length > 0 ? (
+          <div className="space-y-1 max-h-[250px] overflow-y-auto">
+            {errorLog.map((err, i) => (
+              <div key={i} className="flex items-start gap-2 py-1.5 border-b border-border last:border-0">
+                <span className="text-[9px] font-mono text-danger bg-danger/10 px-1.5 py-0.5 rounded shrink-0">{err.time}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] text-text-primary truncate">{err.message}</div>
+                  {err.source && <div className="text-[9px] text-text-muted truncate">{err.source}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-xs text-text-muted text-center py-6">No errors captured. Errors will appear here in real-time as they occur.</div>
+        )}
+      </Panel>
+
+      {/* Environment Info */}
+      <Panel title="Environment">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+          <div><span className="text-text-muted">URL:</span> <span className="text-text-primary font-mono">{window.location.origin}</span></div>
+          <div><span className="text-text-muted">Browser:</span> <span className="text-text-primary font-mono">{navigator.userAgent.split(' ').pop()}</span></div>
+          <div><span className="text-text-muted">Screen:</span> <span className="text-text-primary font-mono">{window.innerWidth}x{window.innerHeight}</span></div>
+          <div><span className="text-text-muted">Device Pixel Ratio:</span> <span className="text-text-primary font-mono">{window.devicePixelRatio}x</span></div>
+          <div><span className="text-text-muted">Online:</span> <span className={`font-mono ${navigator.onLine ? 'text-success' : 'text-danger'}`}>{navigator.onLine ? 'Yes' : 'No'}</span></div>
+          <div><span className="text-text-muted">Properties:</span> <span className="text-text-primary font-mono">{(properties || []).length}</span></div>
+          <div><span className="text-text-muted">Users:</span> <span className="text-text-primary font-mono">{(profiles || []).length}</span></div>
+          <div><span className="text-text-muted">LocalStorage:</span> <span className="text-text-primary font-mono">{Object.keys(localStorage).length} keys</span></div>
+          <div><span className="text-text-muted">Session:</span> <span className="text-text-primary font-mono">{Object.keys(sessionStorage).length} keys</span></div>
+        </div>
+      </Panel>
     </div>
   )
 }

@@ -8,56 +8,56 @@ function getNavSections(t, propertyType) {
 
   // Nonprofit modules
   if (propertyType === 'nonprofit') {
-    industryItems.push({ to: '/app/industry/impact', label: 'Impact Metrics', icon: '💛' })
-    industryItems.push({ to: '/app/industry/grants', label: 'Grant Tracker', icon: '📋' })
-    industryItems.push({ to: '/app/industry/donor-portal', label: 'Donor Portal', icon: '🔗' })
+    industryItems.push({ to: '/app/industry/impact', label: 'Impact Metrics' })
+    industryItems.push({ to: '/app/industry/grants', label: 'Grant Tracker' })
+    industryItems.push({ to: '/app/industry/donor-portal', label: 'Donor Portal' })
   }
   // Media modules
   if (propertyType === 'media') {
-    industryItems.push({ to: '/app/industry/campaigns', label: 'Campaigns', icon: '📅' })
-    industryItems.push({ to: '/app/industry/audience', label: 'Audience', icon: '📊' })
-    industryItems.push({ to: '/app/industry/media-kit', label: 'Media Kit', icon: '📰' })
+    industryItems.push({ to: '/app/industry/campaigns', label: 'Campaigns' })
+    industryItems.push({ to: '/app/industry/audience', label: 'Audience' })
+    industryItems.push({ to: '/app/industry/media-kit', label: 'Media Kit' })
   }
   // Real estate modules
   if (propertyType === 'realestate') {
-    industryItems.push({ to: '/app/industry/occupancy', label: 'Occupancy', icon: '🏢' })
-    industryItems.push({ to: '/app/industry/brokers', label: 'Brokers', icon: '🤝' })
+    industryItems.push({ to: '/app/industry/occupancy', label: 'Occupancy' })
+    industryItems.push({ to: '/app/industry/brokers', label: 'Brokers' })
   }
   // Entertainment modules
   if (propertyType === 'entertainment') {
-    industryItems.push({ to: '/app/industry/bookings', label: 'Bookings', icon: '🎭' })
+    industryItems.push({ to: '/app/industry/bookings', label: 'Bookings' })
   }
   // Conference modules
   if (propertyType === 'conference') {
-    industryItems.push({ to: '/app/industry/attendees', label: 'Attendees', icon: '🎫' })
+    industryItems.push({ to: '/app/industry/attendees', label: 'Attendees' })
   }
   // Agency modules
   if (propertyType === 'agency') {
-    industryItems.push({ to: '/app/industry/commissions', label: 'Commissions', icon: '💰' })
-    industryItems.push({ to: '/app/industry/multi-property', label: 'All Properties', icon: '🏗' })
+    industryItems.push({ to: '/app/industry/commissions', label: 'Commissions' })
+    industryItems.push({ to: '/app/industry/multi-property', label: 'All Properties' })
   }
 
   return [
   {
     label: 'Overview',
     items: [
-      { to: '/app', label: 'Dashboard', icon: '◉' },
+      { to: '/app', label: 'Dashboard' },
     ],
   },
   {
     label: 'Legacy CRM',
     flag: 'crm',
     items: [
-      { to: '/app/crm/assets', label: t?.asset ? `${t.asset}s` : 'Assets', icon: '▣' },
-      { to: '/app/crm/pipeline', label: `${t?.deal || 'Deal'} Pipeline`, icon: '▤' },
-      { to: '/app/crm/contracts', label: 'Contracts', icon: '▥' },
-      { to: '/app/crm/fulfillment', label: t?.fulfillment || 'Fulfillment', icon: '▦' },
-      { to: '/app/crm/activities', label: 'Activities', icon: '◎' },
-      { to: '/app/crm/tasks', label: 'Tasks', icon: '☐' },
-      { to: '/app/crm/insights', label: 'AI Insights', icon: '✦' },
-      { to: '/app/crm/newsletter', label: 'Newsletter', icon: '▧' },
-      { to: '/app/crm/team', label: 'Team', icon: '◐' },
-      { to: '/app/crm/automations', label: 'Automations', icon: '⚡' },
+      { to: '/app/crm/assets', label: t?.asset ? `${t.asset}s` : 'Assets' },
+      { to: '/app/crm/pipeline', label: `${t?.deal || 'Deal'} Pipeline` },
+      { to: '/app/crm/contracts', label: 'Contracts' },
+      { to: '/app/crm/fulfillment', label: t?.fulfillment || 'Fulfillment' },
+      { to: '/app/crm/activities', label: 'Activities' },
+      { to: '/app/crm/tasks', label: 'Tasks' },
+      { to: '/app/crm/insights', label: 'AI Insights' },
+      { to: '/app/crm/newsletter', label: 'Newsletter' },
+      { to: '/app/crm/team', label: 'Team' },
+      { to: '/app/crm/automations', label: 'Automations' },
       ...industryItems,
     ],
   },
@@ -65,21 +65,21 @@ function getNavSections(t, propertyType) {
     label: 'Sportify',
     flag: 'sportify',
     items: [
-      { to: '/app/sportify/events', label: 'Events', icon: '◈' },
+      { to: '/app/sportify/events', label: 'Events' },
     ],
   },
   {
     label: 'VALORA',
     flag: 'valora',
     items: [
-      { to: '/app/valora', label: 'Valuations', icon: '◇' },
+      { to: '/app/valora', label: 'Valuations' },
     ],
   },
   {
     label: 'Business Now',
     flag: 'businessnow',
     items: [
-      { to: '/app/businessnow', label: 'Intelligence', icon: '◆' },
+      { to: '/app/businessnow', label: 'Intelligence' },
     ],
   },
 ]}
@@ -141,7 +141,6 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
                     } ${!showLabels ? 'justify-center' : ''}`
                   }
                 >
-                  <span className="text-base">{item.icon}</span>
                   {showLabels && <span>{item.label}</span>}
                 </NavLink>
               ))}
@@ -167,7 +166,6 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
                 } ${!showLabels ? 'justify-center' : ''}`
               }
             >
-              <span className="text-base">✗</span>
               {showLabels && <span>Declined</span>}
             </NavLink>
           </div>
@@ -191,7 +189,6 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
                 } ${!showLabels ? 'justify-center' : ''}`
               }
             >
-              <span className="text-base">⚙</span>
               {showLabels && <span>Dev Tools</span>}
             </NavLink>
           </div>
@@ -206,7 +203,6 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
               } ${!showLabels ? 'justify-center' : ''}`
             }
           >
-            <span className="text-base">⚙</span>
             {showLabels && <span>Settings</span>}
           </NavLink>
           <NavLink
@@ -217,7 +213,6 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
               } ${!showLabels ? 'justify-center' : ''}`
             }
           >
-            <span className="text-base">🎨</span>
             {showLabels && <span>Custom Dashboard</span>}
           </NavLink>
         </div>

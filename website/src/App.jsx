@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import { FeatureFlagProvider } from './hooks/useFeatureFlags'
@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { CMSProvider } from './hooks/useCMS'
 import CMSToolbar from './components/cms/CMSToolbar'
 import PageEditor from './components/cms/PageEditor'
+import PWAInstallPrompt from './components/PWAInstallPrompt'
 
 // Auto-reload on chunk load failure (stale cache after deploy)
 function lazyRetry(fn) {
@@ -34,6 +35,7 @@ const TaskManager = lazyRetry(() => import('./modules/crm/TaskManager'))
 const DealInsights = lazyRetry(() => import('./modules/crm/DealInsights'))
 const Newsletter = lazyRetry(() => import('./modules/crm/Newsletter'))
 const TeamManager = lazyRetry(() => import('./modules/crm/TeamManager'))
+const Automations = lazyRetry(() => import('./modules/crm/Automations'))
 const EventManager = lazyRetry(() => import('./modules/sportify/EventManager'))
 const EventDetail = lazyRetry(() => import('./modules/sportify/EventDetail'))
 const ValuationEngine = lazyRetry(() => import('./modules/valora/ValuationEngine'))
@@ -54,6 +56,13 @@ function PageLoader() {
 }
 
 export default function App() {
+  // Register service worker for PWA
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    }
+  }, [])
+
   return (
     <ErrorBoundary>
       <AuthProvider>
@@ -90,6 +99,7 @@ export default function App() {
                             <Route path="/crm/insights" element={<DealInsights />} />
                             <Route path="/crm/newsletter" element={<Newsletter />} />
                             <Route path="/crm/team" element={<TeamManager />} />
+                            <Route path="/crm/automations" element={<Automations />} />
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/help" element={<HelpCenter />} />
                             <Route path="/custom-dashboard" element={<CustomDashboardRequest />} />
@@ -118,6 +128,7 @@ export default function App() {
           </Routes>
           <CMSToolbar />
           <PageEditor />
+          <PWAInstallPrompt />
           </Suspense>
           </ToastProvider>
           </CMSProvider>

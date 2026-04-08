@@ -15,6 +15,7 @@ import { lazy, Suspense } from 'react'
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 import { checkRateLimit } from '@/lib/rateLimit'
 import { sanitizeText } from '@/lib/sanitize'
+import { runAutomations } from '@/lib/automations'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
@@ -219,6 +220,8 @@ export default function DealPipeline() {
           created_by: profile?.id,
         })
       } catch (e) { console.warn(e) }
+      // Fire automations
+      runAutomations(propertyId, 'deal_stage_change', { deal_id: id, from_stage: oldStage, to_stage: stage })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
@@ -284,6 +287,8 @@ export default function DealPipeline() {
         const { data, error } = await supabase.from('deals').insert({ ...payload, property_id: propertyId }).select('id').single()
         if (error) throw error
         dealId = data.id
+        // Fire automation for new deal
+        runAutomations(propertyId, 'deal_created', { deal_id: dealId, brand_name: payload.brand_name, stage: payload.stage })
       }
 
       // Save contacts to contacts table (if migration has been run)

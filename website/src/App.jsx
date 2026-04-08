@@ -40,6 +40,19 @@ const EventManager = lazyRetry(() => import('./modules/sportify/EventManager'))
 const EventDetail = lazyRetry(() => import('./modules/sportify/EventDetail'))
 const ValuationEngine = lazyRetry(() => import('./modules/valora/ValuationEngine'))
 const BusinessNow = lazyRetry(() => import('./modules/businessnow/BusinessNow'))
+// Industry-specific modules
+const ImpactMetrics = lazyRetry(() => import('./modules/industry/ImpactMetrics'))
+const GrantTracker = lazyRetry(() => import('./modules/industry/GrantTracker'))
+const DonorPortal = lazyRetry(() => import('./modules/industry/DonorPortal'))
+const CampaignCalendar = lazyRetry(() => import('./modules/industry/CampaignCalendar'))
+const AudienceAnalytics = lazyRetry(() => import('./modules/industry/AudienceAnalytics'))
+const MediaKitBuilder = lazyRetry(() => import('./modules/industry/MediaKitBuilder'))
+const OccupancyDashboard = lazyRetry(() => import('./modules/industry/OccupancyDashboard'))
+const BrokerNetwork = lazyRetry(() => import('./modules/industry/BrokerNetwork'))
+const BookingCalendar = lazyRetry(() => import('./modules/industry/BookingCalendar'))
+const CommissionTracker = lazyRetry(() => import('./modules/industry/CommissionTracker'))
+const AttendeeAnalytics = lazyRetry(() => import('./modules/industry/AttendeeAnalytics'))
+const MultiPropertyView = lazyRetry(() => import('./modules/industry/MultiPropertyView'))
 const Settings = lazyRetry(() => import('./modules/crm/Settings'))
 const HelpCenter = lazyRetry(() => import('./modules/crm/HelpCenter'))
 const CustomDashboardRequest = lazyRetry(() => import('./modules/crm/CustomDashboardRequest'))
@@ -100,6 +113,19 @@ export default function App() {
                             <Route path="/crm/newsletter" element={<Newsletter />} />
                             <Route path="/crm/team" element={<TeamManager />} />
                             <Route path="/crm/automations" element={<Automations />} />
+                            {/* Industry-specific modules */}
+                            <Route path="/industry/impact" element={<ImpactMetrics />} />
+                            <Route path="/industry/grants" element={<GrantTracker />} />
+                            <Route path="/industry/donor-portal" element={<DonorPortal />} />
+                            <Route path="/industry/campaigns" element={<CampaignCalendar />} />
+                            <Route path="/industry/audience" element={<AudienceAnalytics />} />
+                            <Route path="/industry/media-kit" element={<MediaKitBuilder />} />
+                            <Route path="/industry/occupancy" element={<OccupancyDashboard />} />
+                            <Route path="/industry/brokers" element={<BrokerNetwork />} />
+                            <Route path="/industry/bookings" element={<BookingCalendar />} />
+                            <Route path="/industry/commissions" element={<CommissionTracker />} />
+                            <Route path="/industry/attendees" element={<AttendeeAnalytics />} />
+                            <Route path="/industry/multi-property" element={<MultiPropertyView />} />
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/help" element={<HelpCenter />} />
                             <Route path="/custom-dashboard" element={<CustomDashboardRequest />} />

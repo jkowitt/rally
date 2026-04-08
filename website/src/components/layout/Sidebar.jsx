@@ -3,7 +3,40 @@ import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/hooks/useAuth'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 
-function getNavSections(t) {
+function getNavSections(t, propertyType) {
+  const industryItems = []
+
+  // Nonprofit modules
+  if (propertyType === 'nonprofit') {
+    industryItems.push({ to: '/app/industry/impact', label: 'Impact Metrics', icon: '💛' })
+    industryItems.push({ to: '/app/industry/grants', label: 'Grant Tracker', icon: '📋' })
+    industryItems.push({ to: '/app/industry/donor-portal', label: 'Donor Portal', icon: '🔗' })
+  }
+  // Media modules
+  if (propertyType === 'media') {
+    industryItems.push({ to: '/app/industry/campaigns', label: 'Campaigns', icon: '📅' })
+    industryItems.push({ to: '/app/industry/audience', label: 'Audience', icon: '📊' })
+    industryItems.push({ to: '/app/industry/media-kit', label: 'Media Kit', icon: '📰' })
+  }
+  // Real estate modules
+  if (propertyType === 'realestate') {
+    industryItems.push({ to: '/app/industry/occupancy', label: 'Occupancy', icon: '🏢' })
+    industryItems.push({ to: '/app/industry/brokers', label: 'Brokers', icon: '🤝' })
+  }
+  // Entertainment modules
+  if (propertyType === 'entertainment') {
+    industryItems.push({ to: '/app/industry/bookings', label: 'Bookings', icon: '🎭' })
+  }
+  // Conference modules
+  if (propertyType === 'conference') {
+    industryItems.push({ to: '/app/industry/attendees', label: 'Attendees', icon: '🎫' })
+  }
+  // Agency modules
+  if (propertyType === 'agency') {
+    industryItems.push({ to: '/app/industry/commissions', label: 'Commissions', icon: '💰' })
+    industryItems.push({ to: '/app/industry/multi-property', label: 'All Properties', icon: '🏗' })
+  }
+
   return [
   {
     label: 'Overview',
@@ -25,6 +58,7 @@ function getNavSections(t) {
       { to: '/app/crm/newsletter', label: 'Newsletter', icon: '▧' },
       { to: '/app/crm/team', label: 'Team', icon: '◐' },
       { to: '/app/crm/automations', label: 'Automations', icon: '⚡' },
+      ...industryItems,
     ],
   },
   {
@@ -52,11 +86,13 @@ function getNavSections(t) {
 
 export default function Sidebar({ collapsed, onToggle, mobile }) {
   const { flags } = useFeatureFlags()
-  const { isDeveloper } = useAuth()
+  const { isDeveloper, profile } = useAuth()
   const config = useIndustryConfig()
   const moduleLabels = config.moduleLabels || {}
   const t = config.terminology || {}
-  const navSections = getNavSections(t)
+  const qaOverride = typeof window !== 'undefined' ? localStorage.getItem('ll_qa_industry') : null
+  const propertyType = (isDeveloper && qaOverride) ? qaOverride : (profile?.properties?.type || 'other')
+  const navSections = getNavSections(t, propertyType)
   const navigate = useNavigate()
 
   const width = mobile ? 'w-[280px]' : collapsed ? 'w-16' : 'w-[220px]'

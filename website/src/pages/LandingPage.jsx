@@ -156,7 +156,7 @@ export default function LandingPage() {
           <Hero industry={industry} onSelectIndustry={setIndustry} />
           <IndustrySelector selected={industry} onSelect={setIndustry} />
           <Ecosystem industry={industry} />
-          <Modules />
+          <Modules industry={industry} />
           <HowItWorks />
           <AISection />
           <WhyLoudLegacy />
@@ -674,63 +674,157 @@ function Ecosystem({ industry }) {
 }
 
 /* ─── MODULE DEEP DIVES ─── */
-function Modules() {
+function Modules({ industry }) {
+  const id = industry?.id || 'sports'
+
+  // Industry-specific module content
+  const CRM_FEATURES = {
+    sports: [
+      { title: 'Smart Prospecting', desc: 'AI-powered prospect search discovers sponsors by industry, brand, or keyword. Verified decision-maker contacts with LinkedIn profiles.' },
+      { title: 'Deal Pipeline', desc: 'Drag-and-drop Kanban board tracks deals from Prospect to Renewed. Multi-year revenue tracking and stage-by-stage forecasting.' },
+      { title: 'Contract Intelligence', desc: 'Upload PDF or Word contracts — AI extracts benefits, revenue, and contact info. Auto-creates assets and fulfillment records.' },
+      { title: 'Asset Catalog', desc: '22 sponsorship asset categories with real-time inventory. Every asset linked to deals and fulfillment tracking.' },
+      { title: 'Fulfillment Tracker', desc: 'Contracted benefits auto-populate. Mark delivered, upload proof photos, track overdue items.' },
+      { title: 'Verified Contacts', desc: 'Real executive contacts with email verification and enriched company data. One click to verify.' },
+    ],
+    entertainment: [
+      { title: 'Partner Prospecting', desc: 'AI finds brands that sponsor venues, concerts, and live events. Verified contacts at target companies.' },
+      { title: 'Partnership Pipeline', desc: 'Track venue partnerships from lead to renewal. Manage VIP packages, naming rights, and activations.' },
+      { title: 'Contract Intelligence', desc: 'Upload partnership agreements — AI extracts deliverables and auto-creates tracking records.' },
+      { title: 'Package Catalog', desc: '20 venue package types from stage banners to VIP lounges. Price and track availability.' },
+      { title: 'Delivery Tracker', desc: 'Track every deliverable per partner. Upload proof photos, mark delivered, generate reports.' },
+      { title: 'Verified Contacts', desc: 'Real decision-makers at brands with email verification. One click to verify.' },
+    ],
+    conference: [
+      { title: 'Exhibitor Prospecting', desc: 'AI finds companies that exhibit at trade shows and sponsor conferences. Verified contacts at target companies.' },
+      { title: 'Exhibitor Pipeline', desc: 'Track exhibitor deals from lead to signed. Manage booth packages, speaking slots, and sponsorships.' },
+      { title: 'Contract Intelligence', desc: 'Upload exhibitor agreements — AI extracts packages and creates fulfillment records automatically.' },
+      { title: 'Package Catalog', desc: '20 exhibitor package types from booth space to keynote sponsorships. Real-time availability.' },
+      { title: 'Delivery Tracker', desc: 'Track every exhibitor deliverable. Badge branding, booth setup, WiFi sponsorship — all tracked.' },
+      { title: 'Verified Contacts', desc: 'Real marketing directors and event managers at target companies. Email verified.' },
+    ],
+    nonprofit: [
+      { title: 'Donor Prospecting', desc: 'AI finds corporations with active CSR programs and community giving budgets. Verified contacts.' },
+      { title: 'Donor Pipeline', desc: 'Track corporate partnerships from prospect to pledge to renewal. Multi-year giving tracked.' },
+      { title: 'Pledge Agreements', desc: 'Upload pledge agreements — AI extracts recognition benefits and creates tracking records.' },
+      { title: 'Recognition Catalog', desc: '16 recognition types from title sponsorship to scholarship naming. Track what\'s committed.' },
+      { title: 'Recognition Tracker', desc: 'Track every donor recognition deliverable. Annual reports, event signage, website logos — all tracked.' },
+      { title: 'Verified Contacts', desc: 'Real CSR directors and foundation managers at target companies. Email verified.' },
+    ],
+    media: [
+      { title: 'Advertiser Prospecting', desc: 'AI finds brands buying advertising and sponsored content. Verified contacts at agencies and brands.' },
+      { title: 'Campaign Pipeline', desc: 'Track ad campaigns from pitch to insertion order to delivery. Multi-channel revenue tracking.' },
+      { title: 'Insertion Orders', desc: 'Upload IO documents — AI extracts placements, dates, and rates. Auto-creates delivery records.' },
+      { title: 'Ad Inventory', desc: '16 ad placement types from display ads to podcast sponsorships. Price and track availability.' },
+      { title: 'Delivery Tracking', desc: 'Track impression delivery per campaign. Display, video, audio, native — all in one view.' },
+      { title: 'Verified Contacts', desc: 'Real media buyers and brand managers at target companies. Email verified.' },
+    ],
+    realestate: [
+      { title: 'Tenant Prospecting', desc: 'AI finds businesses looking for commercial space. Verified contacts at target companies.' },
+      { title: 'Lease Pipeline', desc: 'Track tenant prospects from inquiry to signed lease. Multi-year lease revenue tracked.' },
+      { title: 'Lease Agreements', desc: 'Upload lease documents — AI extracts terms, rates, and build-out requirements.' },
+      { title: 'Property Units', desc: '16 unit types from office suites to retail space. Track availability and pricing.' },
+      { title: 'Build-Out Tracker', desc: 'Track every tenant build-out milestone. Inspections, completions, and handoffs.' },
+      { title: 'Verified Contacts', desc: 'Real commercial real estate decision-makers. Email verified.' },
+    ],
+    other: [
+      { title: 'Smart Prospecting', desc: 'AI finds companies matching your target profile. Verified decision-maker contacts.' },
+      { title: 'Deal Pipeline', desc: 'Track deals from prospect to close to fulfillment. Multi-year revenue tracking.' },
+      { title: 'Contract Intelligence', desc: 'Upload contracts — AI extracts deliverables and creates tracking records.' },
+      { title: 'Deliverable Catalog', desc: 'Organize your service offerings. Price and track availability.' },
+      { title: 'Fulfillment Tracker', desc: 'Track every deliverable per client. Mark delivered, upload proof, generate reports.' },
+      { title: 'Verified Contacts', desc: 'Real decision-makers at target companies. Email verified.' },
+    ],
+  }
+
+  const VALORA_FEATURE = {
+    sports: { name: 'VALORA', tagline: 'Know what your inventory is worth', features: [
+      { title: 'AI Media Valuation', desc: 'Calculate estimated media value from broadcast data, audience metrics, and market benchmarks.' },
+      { title: 'Market Position', desc: 'Every asset classified as below, fair, or above market value.' },
+      { title: 'Pricing Intelligence', desc: 'Historical pricing data with AI recommendations on when to raise prices.' },
+    ]},
+    entertainment: { name: 'ValueIQ', tagline: 'Price your partnerships accurately', features: [
+      { title: 'Attendance-Based Valuation', desc: 'Calculate partnership value from event attendance, dwell time, and impressions per person.' },
+      { title: 'Market Position', desc: 'Compare your pricing to venue industry benchmarks.' },
+    ]},
+    conference: { name: 'ValueIQ', tagline: 'Price exhibitor packages right', features: [
+      { title: 'Lead Value Model', desc: 'Calculate sponsorship value from registrations, booth visits, and average lead value.' },
+      { title: 'Market Benchmarks', desc: 'Compare your exhibitor pricing to industry standards.' },
+    ]},
+    media: { name: 'AdPriceIQ', tagline: 'Optimize your ad rates', features: [
+      { title: 'CPM/CPC Analysis', desc: 'Calculate ad value from impressions, click-through rates, and placement premiums.' },
+      { title: 'Rate Optimization', desc: 'AI recommendations on pricing by placement, format, and audience.' },
+    ]},
+    realestate: { name: 'MarketValue', tagline: 'Price your spaces competitively', features: [
+      { title: 'Lease Valuation', desc: 'Calculate annual lease value from square footage, market rates, and occupancy.' },
+      { title: 'Market Comparison', desc: 'Compare your rates to local commercial real estate benchmarks.' },
+    ]},
+  }
+
+  const EVENTS_FEATURE = {
+    sports: { name: 'Sportify', tagline: 'Event operations, elevated', features: [
+      { title: 'Event Command Center', desc: 'Grid and calendar views for every game day, tournament, and banquet.' },
+      { title: 'Game Day Checklist', desc: 'Sponsor activation checklist with status tracking and proof photo uploads.' },
+      { title: 'Run of Show', desc: 'Minute-by-minute event schedule with completion tracking.' },
+    ]},
+    entertainment: { name: 'VenueOps', tagline: 'Run flawless events', features: [
+      { title: 'Event Manager', desc: 'Concerts, festivals, comedy shows, theater — all tracked with vendor and activation management.' },
+      { title: 'Activation Checklist', desc: 'Partner setup tracking with proof photos and status updates.' },
+    ]},
+    conference: { name: 'EventOps', tagline: 'Conference operations simplified', features: [
+      { title: 'Event Manager', desc: 'Conferences, trade shows, summits, workshops — schedule, vendors, and logistics in one place.' },
+      { title: 'Exhibitor Setup Tracking', desc: 'Track every booth, sponsorship activation, and deliverable on event day.' },
+    ]},
+    nonprofit: { name: 'Programs', tagline: 'Manage your events and programs', features: [
+      { title: 'Event Manager', desc: 'Galas, fundraisers, golf tournaments, charity runs — all tracked with vendor management.' },
+      { title: 'Donor Activation Tracking', desc: 'Track sponsor recognition at events with proof photos.' },
+    ]},
+  }
+
+  // Build modules list based on industry
+  const crmFeatures = CRM_FEATURES[id] || CRM_FEATURES.other
+  const terminology = industry?.deals || 'deals'
+
   const modules = [
     {
       id: 'crm',
       name: 'Legacy CRM',
-      tagline: 'From prospect to renewal in one view',
-      features: [
-        { title: 'Smart Prospecting', desc: 'AI-powered prospect search discovers new sponsors by industry, brand, or keyword. Decision-maker contacts with LinkedIn profiles researched automatically.' },
-        { title: 'Deal Pipeline', desc: 'Drag-and-drop Kanban board tracks deals from Prospect to Renewed. Multi-year revenue tracking, win rate analytics, and stage-by-stage forecasting.' },
-        { title: 'Contract Intelligence', desc: 'Upload PDF or Word contracts and AI instantly extracts benefits, revenue, and contact info. Create contracts from templates with guided field entry.' },
-        { title: 'Asset Catalog', desc: '22 sponsorship asset categories with real-time inventory. See what\'s sold, being pitched, and available at a glance. Every asset linked to deals and fulfillment.' },
-        { title: 'Fulfillment Tracker', desc: 'Contracted benefits auto-populate for tracking. Mark delivered, add proof, generate recap reports. Know exactly where you stand with every sponsor.' },
-        { title: 'Contact Intelligence', desc: 'Verified executive contacts with email validation, LinkedIn profiles, and enriched company data. Integrated with leading data providers for 95%+ accuracy.' },
-      ],
-    },
-    {
-      id: 'sportify',
-      name: 'Sportify',
-      tagline: 'Event operations, elevated',
-      features: [
-        { title: 'Event Command Center', desc: 'Grid and calendar views for every game day, tournament, banquet, and clinic. Days-until countdowns, sponsor logos, and progress tracking at a glance.' },
-        { title: 'Run of Show', desc: 'Minute-by-minute event schedule with time, duration, owner, and completion tracking. Your entire event timeline in one place.' },
-        { title: 'Sponsor Activations', desc: 'Track every sponsor setup with status, location, and proof of delivery. Link activations to deals and bulk-mark complete after events.' },
-        { title: 'Attendance & Broadcast', desc: 'Expected vs actual attendance with capacity utilization. Broadcast channel, viewership tracking, and direct links to media valuations.' },
-      ],
-    },
-    {
-      id: 'valora',
-      name: 'VALORA',
-      tagline: 'Know what your inventory is worth',
-      features: [
-        { title: 'AI Media Valuation', desc: 'Calculate estimated media value from broadcast data, audience metrics, and market benchmarks. Every valuation includes AI reasoning and confidence levels.' },
-        { title: 'Market Position Analysis', desc: 'Every asset automatically classified as below, fair, or above market value. See where you\'re leaving money on the table.' },
-        { title: 'Pricing Intelligence', desc: 'Historical pricing data per asset category with trend analysis. AI-generated recommendations tell you when to raise prices and by how much.' },
-        { title: 'Deal-Linked Valuations', desc: 'Valuations tied to specific sponsors show company size, revenue, and industry context — helping you price assets relative to what each brand can invest.' },
-      ],
-    },
-    {
-      id: 'businessnow',
-      name: 'Business Now',
-      tagline: 'Your real-time business command center',
-      features: [
-        { title: 'Live Pipeline Alerts', desc: 'Real-time monitoring flags stale deals, hot opportunities, expiring contracts, and overdue tasks. Actionable alerts, not noise.' },
-        { title: 'AI Daily Briefings', desc: 'Morning intelligence report analyzes your entire pipeline and delivers prioritized recommendations. Know exactly what to focus on today.' },
-        { title: 'Sports Business Newsletter', desc: 'Auto-generated weekly digest and daily afternoon highlights covering deals, trends, and market intelligence from the sports business world.' },
-        { title: 'Team Performance', desc: 'Revenue goals, activity tracking, and deal analytics per team member. Admins see the full picture. Reps see their targets and progress.' },
-      ],
+      tagline: `From prospect to renewal in one view`,
+      features: crmFeatures,
     },
   ]
+
+  // Add events module if relevant
+  const eventsModule = EVENTS_FEATURE[id]
+  if (eventsModule) {
+    modules.push({ id: 'events', ...eventsModule })
+  }
+
+  // Add valuation module if relevant (not for nonprofit or other)
+  const valoraModule = VALORA_FEATURE[id]
+  if (valoraModule) {
+    modules.push({ id: 'valora', ...valoraModule })
+  }
+
+  // Always add Business Intelligence
+  modules.push({
+    id: 'businessnow',
+    name: 'Business Now',
+    tagline: 'Your real-time business command center',
+    features: [
+      { title: 'Live Pipeline Alerts', desc: 'Real-time monitoring flags stale deals, expiring contracts, and overdue tasks.' },
+      { title: 'AI Daily Briefings', desc: 'Morning intelligence report analyzes your pipeline and delivers prioritized recommendations.' },
+      { title: 'Industry Newsletter', desc: `Auto-generated weekly digest covering ${industry?.deals || 'deal'} trends and market intelligence.` },
+    ],
+  })
 
   return (
     <section id="modules" className="py-24 px-6 bg-bg-surface border-t border-border">
       <div className="max-w-6xl mx-auto">
         <SectionHeader
           tag="Deep Dive"
-          title="Everything your partnership team needs"
-          description="Each module is purpose-built for sports business operations. Here's what's inside."
+          title={`Everything your ${industry?.cta || 'revenue'} team needs`}
+          description={`Each module is purpose-built for ${industry?.label?.toLowerCase() || 'your industry'}. Here's what's inside.`}
         />
 
         <div className="mt-16 space-y-20">

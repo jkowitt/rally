@@ -4,14 +4,20 @@ import { Navigate } from 'react-router-dom'
 import RevenuePipeline from './RevenuePipeline'
 import GoalTracker from './GoalTracker'
 import FinanceDashboard from './FinanceDashboard'
+import FinancialProjections from './FinancialProjections'
+import AdSpendManager from './AdSpendManager'
+import ReportBuilder from './ReportBuilder'
 import ConnectionManager from './ConnectionManager'
 import ClaudeTerminal from './ClaudeTerminal'
 import RoadmapTracker from './RoadmapTracker'
 
 const TABS = [
   { id: 'pipeline', label: 'Revenue Pipeline' },
+  { id: 'projections', label: '5-Year Projections' },
+  { id: 'ads', label: 'Ad Spend' },
   { id: 'goals', label: 'Goals' },
   { id: 'finance', label: 'Finance' },
+  { id: 'reports', label: 'Reports' },
   { id: 'connections', label: 'Connections' },
   { id: 'roadmap', label: 'Roadmap' },
   { id: 'claude', label: 'Claude Code' },
@@ -45,8 +51,11 @@ export default function BusinessOps() {
       </div>
 
       {tab === 'pipeline' && <RevenuePipeline />}
+      {tab === 'projections' && <FinancialProjections />}
+      {tab === 'ads' && <AdSpendManager />}
       {tab === 'goals' && <GoalTracker />}
       {tab === 'finance' && <FinanceDashboard />}
+      {tab === 'reports' && <ReportBuilder />}
       {tab === 'connections' && <ConnectionManager />}
       {tab === 'roadmap' && <RoadmapTracker />}
       {tab === 'claude' && <ClaudeTerminal />}

@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast'
 import { Navigate } from 'react-router-dom'
 import APIUsageBanner from '@/components/APIUsageBanner'
 import { logAudit } from '@/lib/audit'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line } from 'recharts'
 
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 const ROLES = ['developer', 'admin', 'rep']
@@ -307,6 +308,47 @@ export default function DeveloperDashboard() {
     },
   })
 
+  // ─── Analytics queries ───
+  const { data: allDeals } = useQuery({
+    queryKey: ['dev-all-deals'],
+    queryFn: async () => {
+      const { data } = await supabase.from('deals').select('id, brand_name, value, stage, property_id, created_at, assigned_to, is_multi_year, annual_values').order('created_at', { ascending: false })
+      return data || []
+    },
+  })
+
+  const { data: allContracts } = useQuery({
+    queryKey: ['dev-all-contracts'],
+    queryFn: async () => {
+      const { data } = await supabase.from('contracts').select('id, brand_name, total_value, status, signed, property_id, created_at').order('created_at', { ascending: false })
+      return data || []
+    },
+  })
+
+  const { data: loginLogs } = useQuery({
+    queryKey: ['dev-login-history'],
+    queryFn: async () => {
+      const { data } = await supabase.from('login_history').select('*').order('login_at', { ascending: false }).limit(200)
+      return data || []
+    },
+  })
+
+  const { data: auditLogs } = useQuery({
+    queryKey: ['dev-audit-logs'],
+    queryFn: async () => {
+      const { data } = await supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(100)
+      return data || []
+    },
+  })
+
+  const { data: allAssets } = useQuery({
+    queryKey: ['dev-all-assets'],
+    queryFn: async () => {
+      const { data } = await supabase.from('assets').select('id, name, category, base_price, quantity, property_id, from_contract, active')
+      return data || []
+    },
+  })
+
   const assignPropertyMutation = useMutation({
     mutationFn: async ({ userId, propertyId }) => {
       const { error } = await supabase.from('profiles').update({ property_id: propertyId }).eq('id', userId)
@@ -338,6 +380,7 @@ export default function DeveloperDashboard() {
     { id: 'api', label: 'API Usage' },
     { id: 'health', label: `Code Health (${analysisReports?.length || 0})` },
     { id: 'suggestions', label: `Suggestions (${(suggestions || []).filter(s => s.status === 'new').length || 0})` },
+    { id: 'analytics', label: 'Analytics' },
     { id: 'cache', label: `Contact Cache (${(contactCache || []).length})` },
     { id: 'custom', label: 'Custom Dashboards' },
   ]
@@ -1120,6 +1163,20 @@ export default function DeveloperDashboard() {
         </div>
       )}
 
+      {/* ANALYTICS */}
+      {activeTab === 'analytics' && (
+        <AnalyticsTab
+          profiles={profiles}
+          properties={properties}
+          deals={allDeals}
+          contracts={allContracts}
+          assets={allAssets}
+          loginLogs={loginLogs}
+          auditLogs={auditLogs}
+          apiUsage={apiUsage}
+        />
+      )}
+
       {/* CONTACT CACHE */}
       {activeTab === 'cache' && (
         <div className="space-y-4">
@@ -1260,6 +1317,331 @@ export default function DeveloperDashboard() {
           />
         </Suspense>
       )}
+    </div>
+  )
+}
+
+const CHART_COLORS = ['#E8B84B', '#52C48A', '#E05252', '#8B92A8', '#9E7D2F', '#5BA3E0']
+const STAGE_ORDER = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed', 'Declined']
+
+function AnalyticsTab({ profiles, properties, deals, contracts, assets, loginLogs, auditLogs, apiUsage }) {
+  const now = new Date()
+  const currentYear = now.getFullYear()
+
+  // ─── Signup growth (last 30 days) ───
+  const signupsByDay = (() => {
+    const days = []
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now)
+      d.setDate(d.getDate() - i)
+      const key = d.toISOString().slice(0, 10)
+      const count = (profiles || []).filter(p => p.created_at?.slice(0, 10) === key).length
+      days.push({ date: key.slice(5), count })
+    }
+    return days
+  })()
+  const totalSignups = (profiles || []).length
+  const signupsThisWeek = (profiles || []).filter(p => {
+    const d = new Date(p.created_at)
+    return (now - d) < 7 * 86400000
+  }).length
+
+  // ─── Deals by stage ───
+  const dealsByStage = STAGE_ORDER.map(stage => ({
+    stage: stage.replace('Proposal Sent', 'Proposal').replace('In Fulfillment', 'Fulfillment'),
+    count: (deals || []).filter(d => (d.stage || 'Prospect') === stage).length,
+    value: (deals || []).filter(d => (d.stage || 'Prospect') === stage).reduce((s, d) => s + (Number(d.value) || 0), 0),
+  })).filter(d => d.count > 0)
+
+  // ─── Revenue metrics ───
+  const totalPipeline = (deals || []).filter(d => d.stage !== 'Declined').reduce((s, d) => s + (Number(d.value) || 0), 0)
+  const contractedValue = (deals || []).filter(d => ['Contracted', 'In Fulfillment', 'Renewed'].includes(d.stage)).reduce((s, d) => s + (Number(d.value) || 0), 0)
+  const signedContracts = (contracts || []).filter(c => c.signed).length
+  const totalContractValue = (contracts || []).reduce((s, c) => s + (Number(c.total_value) || 0), 0)
+
+  // ─── Revenue by property ───
+  const revenueByProperty = (properties || []).map(p => {
+    const propDeals = (deals || []).filter(d => d.property_id === p.id && d.stage !== 'Declined')
+    return {
+      name: p.name?.length > 15 ? p.name.slice(0, 15) + '...' : p.name,
+      pipeline: propDeals.reduce((s, d) => s + (Number(d.value) || 0), 0),
+      contracted: propDeals.filter(d => ['Contracted', 'In Fulfillment', 'Renewed'].includes(d.stage)).reduce((s, d) => s + (Number(d.value) || 0), 0),
+      deals: propDeals.length,
+    }
+  }).filter(p => p.deals > 0).sort((a, b) => b.pipeline - a.pipeline).slice(0, 10)
+
+  // ─── Revenue by year (all properties combined) ───
+  const revenueByYear = [currentYear, currentYear + 1, currentYear + 2].map(year => {
+    let revenue = 0
+    for (const d of (deals || []).filter(d => d.stage !== 'Declined')) {
+      if (d.annual_values && d.annual_values[year]) {
+        revenue += Number(d.annual_values[year]) || 0
+      } else {
+        const sd = d.start_date ? new Date(d.start_date).getFullYear() : null
+        if (sd === year) revenue += Number(d.value) || 0
+      }
+    }
+    return { year: String(year), revenue }
+  })
+
+  // ─── Users by role ───
+  const usersByRole = ['developer', 'admin', 'rep', 'disabled'].map(role => ({
+    name: role, value: (profiles || []).filter(p => p.role === role).length,
+  })).filter(r => r.value > 0)
+
+  // ─── Properties by plan ───
+  const propertiesByPlan = ['free', 'starter', 'pro', 'enterprise'].map(plan => ({
+    name: plan, value: (properties || []).filter(p => (p.plan || 'free') === plan).length,
+  })).filter(p => p.value > 0)
+
+  // ─── Properties by type ───
+  const propertiesByType = (() => {
+    const counts = {}
+    for (const p of (properties || [])) {
+      const t = p.type || 'other'
+      counts[t] = (counts[t] || 0) + 1
+    }
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+  })()
+
+  // ─── Login activity (last 14 days) ───
+  const loginsByDay = (() => {
+    const days = []
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now)
+      d.setDate(d.getDate() - i)
+      const key = d.toISOString().slice(0, 10)
+      const count = (loginLogs || []).filter(l => l.login_at?.slice(0, 10) === key && l.success).length
+      const failed = (loginLogs || []).filter(l => l.login_at?.slice(0, 10) === key && !l.success).length
+      days.push({ date: key.slice(5), logins: count, failed })
+    }
+    return days
+  })()
+
+  // ─── Asset inventory ───
+  const assetsByCategory = (() => {
+    const counts = {}
+    for (const a of (assets || []).filter(a => a.active)) {
+      counts[a.category] = (counts[a.category] || 0) + 1
+    }
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10)
+  })()
+  const totalAssets = (assets || []).filter(a => a.active).length
+  const contractAssets = (assets || []).filter(a => a.from_contract).length
+
+  // ─── Deal conversion rate ───
+  const totalDeals = (deals || []).length
+  const wonDeals = (deals || []).filter(d => ['Contracted', 'In Fulfillment', 'Renewed'].includes(d.stage)).length
+  const lostDeals = (deals || []).filter(d => d.stage === 'Declined').length
+  const winRate = totalDeals > 0 ? Math.round((wonDeals / totalDeals) * 100) : 0
+
+  function fmtMoney(v) {
+    if (v >= 1000000) return `$${(v / 1000000).toFixed(1)}M`
+    if (v >= 1000) return `$${(v / 1000).toFixed(0)}K`
+    return `$${Math.round(v)}`
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+        <MiniKPI label="Total Users" value={totalSignups} sub={`+${signupsThisWeek} this week`} />
+        <MiniKPI label="Properties" value={(properties || []).length} sub={`${propertiesByPlan.find(p => p.name === 'free')?.value || 0} free`} />
+        <MiniKPI label="Total Deals" value={totalDeals} sub={`${winRate}% win rate`} accent />
+        <MiniKPI label="Pipeline" value={fmtMoney(totalPipeline)} sub={`${(deals || []).filter(d => d.stage !== 'Declined').length} active`} accent />
+        <MiniKPI label="Contracted" value={fmtMoney(contractedValue)} sub={`${wonDeals} deals won`} />
+        <MiniKPI label="Contracts" value={(contracts || []).length} sub={`${signedContracts} signed`} />
+      </div>
+
+      {/* Row 1: Signup Growth + Login Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-bg-surface border border-border rounded-lg p-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase mb-3">User Signups (30 days)</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart data={signupsByDay}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1E2435" />
+              <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#8B92A8' }} />
+              <YAxis tick={{ fontSize: 10, fill: '#8B92A8' }} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: '#141820', border: '1px solid #1E2435', borderRadius: 6, fontSize: 12 }} />
+              <Area type="monotone" dataKey="count" fill="#E8B84B" fillOpacity={0.2} stroke="#E8B84B" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-bg-surface border border-border rounded-lg p-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase mb-3">Login Activity (14 days)</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={loginsByDay}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1E2435" />
+              <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#8B92A8' }} />
+              <YAxis tick={{ fontSize: 10, fill: '#8B92A8' }} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: '#141820', border: '1px solid #1E2435', borderRadius: 6, fontSize: 12 }} />
+              <Bar dataKey="logins" fill="#52C48A" radius={[2, 2, 0, 0]} name="Successful" />
+              <Bar dataKey="failed" fill="#E05252" radius={[2, 2, 0, 0]} name="Failed" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Row 2: Pipeline + Revenue by Property */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-bg-surface border border-border rounded-lg p-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase mb-3">Deals by Stage (all properties)</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={dealsByStage}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1E2435" />
+              <XAxis dataKey="stage" tick={{ fontSize: 9, fill: '#8B92A8' }} />
+              <YAxis tick={{ fontSize: 10, fill: '#8B92A8' }} />
+              <Tooltip contentStyle={{ background: '#141820', border: '1px solid #1E2435', borderRadius: 6, fontSize: 12 }} formatter={(v) => [`$${Number(v).toLocaleString()}`, 'Value']} />
+              <Bar dataKey="value" fill="#E8B84B" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-bg-surface border border-border rounded-lg p-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase mb-3">Revenue by Property (top 10)</h3>
+          {revenueByProperty.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={revenueByProperty} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E2435" />
+                <XAxis type="number" tick={{ fontSize: 9, fill: '#8B92A8' }} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 9, fill: '#8B92A8' }} width={100} />
+                <Tooltip contentStyle={{ background: '#141820', border: '1px solid #1E2435', borderRadius: 6, fontSize: 12 }} formatter={(v) => [`$${Number(v).toLocaleString()}`]} />
+                <Bar dataKey="pipeline" fill="#E8B84B" radius={[0, 4, 4, 0]} name="Pipeline" />
+                <Bar dataKey="contracted" fill="#52C48A" radius={[0, 4, 4, 0]} name="Contracted" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-text-muted text-xs text-center py-16">No deal data yet</div>
+          )}
+        </div>
+      </div>
+
+      {/* Row 3: Revenue by Year + Conversion Funnel */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {revenueByYear.map(ry => (
+          <div key={ry.year} className="bg-bg-surface border border-border rounded-lg p-4 text-center">
+            <div className="text-[10px] text-text-muted font-mono uppercase">{ry.year}</div>
+            <div className="text-2xl font-bold font-mono text-accent mt-1">{fmtMoney(ry.revenue)}</div>
+            <div className="text-[10px] text-text-muted">projected revenue</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Row 4: Pie Charts */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-bg-surface border border-border rounded-lg p-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase mb-2">Users by Role</h3>
+          <ResponsiveContainer width="100%" height={150}>
+            <PieChart>
+              <Pie data={usersByRole} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={{ fontSize: 9, fill: '#8B92A8' }}>
+                {usersByRole.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              </Pie>
+              <Tooltip contentStyle={{ background: '#141820', border: '1px solid #1E2435', borderRadius: 6, fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-bg-surface border border-border rounded-lg p-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase mb-2">Properties by Plan</h3>
+          <ResponsiveContainer width="100%" height={150}>
+            <PieChart>
+              <Pie data={propertiesByPlan} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={{ fontSize: 9, fill: '#8B92A8' }}>
+                {propertiesByPlan.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              </Pie>
+              <Tooltip contentStyle={{ background: '#141820', border: '1px solid #1E2435', borderRadius: 6, fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-bg-surface border border-border rounded-lg p-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase mb-2">Properties by Industry</h3>
+          <ResponsiveContainer width="100%" height={150}>
+            <PieChart>
+              <Pie data={propertiesByType} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={{ fontSize: 9, fill: '#8B92A8' }}>
+                {propertiesByType.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              </Pie>
+              <Tooltip contentStyle={{ background: '#141820', border: '1px solid #1E2435', borderRadius: 6, fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-bg-surface border border-border rounded-lg p-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase mb-2">Win / Loss</h3>
+          <ResponsiveContainer width="100%" height={150}>
+            <PieChart>
+              <Pie data={[{ name: 'Won', value: wonDeals }, { name: 'Lost', value: lostDeals }, { name: 'Open', value: totalDeals - wonDeals - lostDeals }]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={{ fontSize: 9, fill: '#8B92A8' }}>
+                <Cell fill="#52C48A" />
+                <Cell fill="#E05252" />
+                <Cell fill="#8B92A8" />
+              </Pie>
+              <Tooltip contentStyle={{ background: '#141820', border: '1px solid #1E2435', borderRadius: 6, fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Row 5: Asset Inventory + Recent Audit Log */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-bg-surface border border-border rounded-lg p-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase mb-2">Assets by Category (top 10) — {totalAssets} total, {contractAssets} from contracts</h3>
+          {assetsByCategory.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={assetsByCategory} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E2435" />
+                <XAxis type="number" tick={{ fontSize: 9, fill: '#8B92A8' }} allowDecimals={false} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 8, fill: '#8B92A8' }} width={90} />
+                <Tooltip contentStyle={{ background: '#141820', border: '1px solid #1E2435', borderRadius: 6, fontSize: 12 }} />
+                <Bar dataKey="value" fill="#E8B84B" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-text-muted text-xs text-center py-16">No assets yet</div>
+          )}
+        </div>
+
+        <div className="bg-bg-surface border border-border rounded-lg p-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase mb-2">Recent Audit Log</h3>
+          <div className="space-y-1.5 max-h-[220px] overflow-y-auto">
+            {(auditLogs || []).slice(0, 20).map(log => (
+              <div key={log.id} className="flex items-start gap-2 py-1 border-b border-border last:border-0">
+                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                  log.action === 'login' ? 'bg-success/10 text-success' :
+                  log.action === 'role_change' ? 'bg-warning/10 text-warning' :
+                  log.action === 'plan_change' ? 'bg-accent/10 text-accent' :
+                  log.action === 'delete' ? 'bg-danger/10 text-danger' :
+                  'bg-bg-card text-text-muted'
+                }`}>{log.action}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] text-text-secondary truncate">{log.entity_type} {log.entity_name || ''}</div>
+                  <div className="text-[9px] text-text-muted">{log.user_email} · {new Date(log.created_at).toLocaleString()}</div>
+                </div>
+              </div>
+            ))}
+            {(!auditLogs || auditLogs.length === 0) && (
+              <div className="text-text-muted text-xs text-center py-8">No audit logs yet. Actions will appear here as users interact with the platform.</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 6: API Usage + Quick Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <MiniKPI label="Total Assets" value={totalAssets} sub={`${contractAssets} from contracts`} />
+        <MiniKPI label="Signed Contracts" value={signedContracts} sub={fmtMoney(totalContractValue)} />
+        <MiniKPI label="Login Events" value={(loginLogs || []).length} sub={`${(loginLogs || []).filter(l => !l.success).length} failed`} />
+        <MiniKPI label="Audit Events" value={(auditLogs || []).length} sub="all time" />
+      </div>
+    </div>
+  )
+}
+
+function MiniKPI({ label, value, sub, accent }) {
+  return (
+    <div className="bg-bg-surface border border-border rounded-lg p-3">
+      <div className="text-[9px] text-text-muted font-mono uppercase">{label}</div>
+      <div className={`text-lg font-semibold font-mono mt-0.5 ${accent ? 'text-accent' : 'text-text-primary'}`}>{value}</div>
+      {sub && <div className="text-[9px] text-text-muted mt-0.5">{sub}</div>}
     </div>
   )
 }

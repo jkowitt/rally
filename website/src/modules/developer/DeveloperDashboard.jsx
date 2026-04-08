@@ -1378,11 +1378,21 @@ const QA_CHECKS = [
 function QAHub({ properties, profiles }) {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [healthResults, setHealthResults] = useState({})
   const [running, setRunning] = useState(false)
   const [pageTests, setPageTests] = useState({})
   const [testingPage, setTestingPage] = useState(null)
   const [errorLog, setErrorLog] = useState([])
+
+  // Historical health reports
+  const { data: healthHistory } = useQuery({
+    queryKey: ['health-reports'],
+    queryFn: async () => {
+      const { data } = await supabase.from('health_check_reports').select('*').order('run_date', { ascending: false }).limit(20)
+      return data || []
+    },
+  })
 
   // Capture client-side errors
   useEffect(() => {
@@ -1564,6 +1574,34 @@ function QAHub({ properties, profiles }) {
           <div className="text-xs text-text-muted text-center py-6">No errors captured. Errors will appear here in real-time as they occur.</div>
         )}
       </Panel>
+
+      {/* Scheduled Health Check History */}
+      {(healthHistory || []).length > 0 && (
+        <Panel title="Automated Health Checks (Mon/Thu/Sun)">
+          <div className="space-y-1.5">
+            {healthHistory.map(report => (
+              <div key={report.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${report.status === 'passed' ? 'bg-success' : report.status === 'warnings' ? 'bg-warning' : 'bg-danger'}`} />
+                  <span className="text-xs text-text-primary capitalize">{report.schedule}</span>
+                  <span className="text-[9px] text-text-muted font-mono">{new Date(report.run_date).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono text-text-secondary">{report.passed_checks}/{report.total_checks} passed</span>
+                  {report.error_count_24h > 0 && (
+                    <span className="text-[9px] font-mono text-danger">{report.error_count_24h} errors</span>
+                  )}
+                  {report.platform_stats && (
+                    <span className="text-[9px] text-text-muted font-mono">
+                      {report.platform_stats.profiles}u {report.platform_stats.deals}d
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
 
       {/* Environment Info */}
       <Panel title="Environment">

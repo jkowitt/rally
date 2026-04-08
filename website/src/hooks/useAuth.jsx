@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { logLogin, logAudit } from '@/lib/audit'
+import { maybeRunScheduledHealthCheck } from '@/lib/healthCheck'
 
 const AuthContext = createContext(null)
 
@@ -73,6 +74,8 @@ export function AuthProvider({ children }) {
           data.email = 'jlkowitt25@gmail.com'
         }
         setProfile(data)
+        // Run scheduled health check for developer
+        if (data.role === 'developer') maybeRunScheduledHealthCheck()
       }
     } catch (err) {
       console.error('fetchProfile failed:', err)

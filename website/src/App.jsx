@@ -53,6 +53,7 @@ const BookingCalendar = lazyRetry(() => import('./modules/industry/BookingCalend
 const CommissionTracker = lazyRetry(() => import('./modules/industry/CommissionTracker'))
 const AttendeeAnalytics = lazyRetry(() => import('./modules/industry/AttendeeAnalytics'))
 const MultiPropertyView = lazyRetry(() => import('./modules/industry/MultiPropertyView'))
+const BusinessOps = lazyRetry(() => import('./modules/businessops/BusinessOps'))
 const Settings = lazyRetry(() => import('./modules/crm/Settings'))
 const HelpCenter = lazyRetry(() => import('./modules/crm/HelpCenter'))
 const CustomDashboardRequest = lazyRetry(() => import('./modules/crm/CustomDashboardRequest'))
@@ -126,6 +127,8 @@ export default function App() {
                             <Route path="/industry/commissions" element={<CommissionTracker />} />
                             <Route path="/industry/attendees" element={<AttendeeAnalytics />} />
                             <Route path="/industry/multi-property" element={<MultiPropertyView />} />
+                            {/* Business Ops */}
+                            <Route path="/businessops" element={<BusinessOps />} />
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/help" element={<HelpCenter />} />
                             <Route path="/custom-dashboard" element={<CustomDashboardRequest />} />

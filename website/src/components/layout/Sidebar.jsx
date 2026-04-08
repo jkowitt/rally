@@ -171,14 +171,26 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
           </div>
         )}
 
-        {/* Developer section */}
+        {/* Business Ops + Developer section */}
         {isDeveloper && (
           <div className="mb-4">
             {!collapsed && (
               <div className="px-4 mb-1 text-[10px] uppercase tracking-widest text-text-muted font-mono">
-                Developer
+                Internal
               </div>
             )}
+            <NavLink
+              to="/app/businessops"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
+                  isActive
+                    ? 'text-accent bg-accent/5 border-r-2 border-accent'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
+                } ${!showLabels ? 'justify-center' : ''}`
+              }
+            >
+              {showLabels && <span>Business Ops</span>}
+            </NavLink>
             <NavLink
               to="/app/developer"
               className={({ isActive }) =>

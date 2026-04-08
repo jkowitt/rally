@@ -1,0 +1,55 @@
+import { useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
+import { Navigate } from 'react-router-dom'
+import RevenuePipeline from './RevenuePipeline'
+import GoalTracker from './GoalTracker'
+import FinanceDashboard from './FinanceDashboard'
+import ConnectionManager from './ConnectionManager'
+import ClaudeTerminal from './ClaudeTerminal'
+import RoadmapTracker from './RoadmapTracker'
+
+const TABS = [
+  { id: 'pipeline', label: 'Revenue Pipeline' },
+  { id: 'goals', label: 'Goals' },
+  { id: 'finance', label: 'Finance' },
+  { id: 'connections', label: 'Connections' },
+  { id: 'roadmap', label: 'Roadmap' },
+  { id: 'claude', label: 'Claude Code' },
+]
+
+export default function BusinessOps() {
+  const { profile } = useAuth()
+  const [tab, setTab] = useState('pipeline')
+
+  // Only developer and businessops can access
+  const hasAccess = profile?.role === 'developer' || profile?.role === 'businessops'
+  if (!hasAccess) return <Navigate to="/app" replace />
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <div>
+        <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Business Ops</h1>
+        <p className="text-text-secondary text-xs sm:text-sm mt-1">Internal operations for Loud Legacy</p>
+      </div>
+
+      <div className="flex gap-1 bg-bg-card rounded-lg p-1 overflow-x-auto">
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-4 py-1.5 rounded text-sm font-medium transition-colors whitespace-nowrap ${tab === t.id ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'pipeline' && <RevenuePipeline />}
+      {tab === 'goals' && <GoalTracker />}
+      {tab === 'finance' && <FinanceDashboard />}
+      {tab === 'connections' && <ConnectionManager />}
+      {tab === 'roadmap' && <RoadmapTracker />}
+      {tab === 'claude' && <ClaudeTerminal />}
+    </div>
+  )
+}

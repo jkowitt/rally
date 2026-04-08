@@ -10,6 +10,8 @@ import ReportBuilder from './ReportBuilder'
 import ConnectionManager from './ConnectionManager'
 import ClaudeTerminal from './ClaudeTerminal'
 import RoadmapTracker from './RoadmapTracker'
+import QATickets from './QATickets'
+import Accounting from './Accounting'
 
 const TABS = [
   { id: 'pipeline', label: 'Revenue Pipeline' },
@@ -17,7 +19,9 @@ const TABS = [
   { id: 'ads', label: 'Ad Spend' },
   { id: 'goals', label: 'Goals' },
   { id: 'finance', label: 'Finance' },
+  { id: 'accounting', label: 'Accounting' },
   { id: 'reports', label: 'Reports' },
+  { id: 'qa', label: 'QA Tickets' },
   { id: 'connections', label: 'Connections' },
   { id: 'roadmap', label: 'Roadmap' },
   { id: 'claude', label: 'Claude Code' },
@@ -56,6 +60,8 @@ export default function BusinessOps() {
       {tab === 'goals' && <GoalTracker />}
       {tab === 'finance' && <FinanceDashboard />}
       {tab === 'reports' && <ReportBuilder />}
+      {tab === 'accounting' && <Accounting />}
+      {tab === 'qa' && <QATickets />}
       {tab === 'connections' && <ConnectionManager />}
       {tab === 'roadmap' && <RoadmapTracker />}
       {tab === 'claude' && <ClaudeTerminal />}

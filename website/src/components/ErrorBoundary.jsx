@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import { supabase } from '@/lib/supabase'
+import { createErrorTicket } from '@/lib/qaTickets'
 
 // Known error patterns and their user-friendly messages + recovery actions
 const ERROR_MAP = [
@@ -44,6 +45,8 @@ async function logErrorToServer(error, errorInfo) {
         },
       })
     }
+    // Auto-create QA ticket
+    createErrorTicket(error, { page: window.location.href })
   } catch { /* logging should never fail the app */ }
 }
 

@@ -3468,8 +3468,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   const [researchedContacts, setResearchedContacts] = useState({}) // { idx: { contacts, company_linkedin, ... } }
   const [addingIdx, setAddingIdx] = useState(null)
   const [addedIdxs, setAddedIdxs] = useState(new Set())
-  const [useApollo, setUseApollo] = useState(true)
-  const [useHunter, setUseHunter] = useState(true)
+  const [useVerified, setUseVerified] = useState(true)
 
   async function handleSearch() {
     if (!searchQuery.trim() && !searchCategory) return
@@ -3569,7 +3568,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
       let contacts = []
       let source = 'claude'
 
-      if (useApollo) {
+      if (useVerified) {
         try {
           setStatus('Searching Apollo for verified contacts...')
           const apolloResult = await apolloEnrichCompany({
@@ -3614,7 +3613,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
       }
 
       // Step 3: Verify emails with Hunter
-      if (useHunter && contacts.length > 0) {
+      if (useVerified && contacts.length > 0) {
         setStatus('Verifying emails with Hunter...')
         for (let i = 0; i < contacts.length; i++) {
           if (contacts[i].email) {
@@ -3841,18 +3840,13 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
             </button>
           </div>
 
-          {/* Data Source Toggles */}
-          <div className="flex items-center gap-4 flex-wrap mt-3 pt-3 border-t border-border">
-            <span className="text-[10px] text-text-muted font-mono uppercase">Data sources:</span>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={useApollo} onChange={(e) => setUseApollo(e.target.checked)} className="accent-accent w-3 h-3" />
-              <span className={`text-[11px] font-mono ${useApollo ? 'text-accent' : 'text-text-muted'}`}>🔍 Apollo (verified)</span>
+          {/* Verified Contact Toggle */}
+          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={useVerified} onChange={(e) => setUseVerified(e.target.checked)} className="accent-accent w-3.5 h-3.5" />
+              <span className={`text-xs font-mono ${useVerified ? 'text-accent' : 'text-text-muted'}`}>✓ Verified contacts</span>
             </label>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={useHunter} onChange={(e) => setUseHunter(e.target.checked)} className="accent-accent w-3 h-3" />
-              <span className={`text-[11px] font-mono ${useHunter ? 'text-accent' : 'text-text-muted'}`}>✉️ Hunter (email verify)</span>
-            </label>
-            <span className="text-[9px] text-text-muted">1 token per use</span>
+            <span className="text-[9px] text-text-muted">1 credit per lookup</span>
           </div>
         </div>
 

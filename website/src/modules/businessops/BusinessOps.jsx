@@ -13,9 +13,11 @@ import ClaudeTerminal from './ClaudeTerminal'
 import RoadmapTracker from './RoadmapTracker'
 import QATickets from './QATickets'
 import Accounting from './Accounting'
+import MarketingHub from './MarketingHub'
 
 const TABS = [
   { id: 'pipeline', label: 'Revenue Pipeline' },
+  { id: 'marketing', label: 'Marketing' },
   { id: 'projections', label: '5-Year Projections' },
   { id: 'ads', label: 'Ad Spend' },
   { id: 'goals', label: 'Goals' },
@@ -62,6 +64,7 @@ export default function BusinessOps() {
       </div>
 
       {tab === 'pipeline' && <RevenuePipeline />}
+      {tab === 'marketing' && <MarketingHub />}
       {tab === 'projections' && <FinancialProjections />}
       {tab === 'ads' && <AdSpendManager />}
       {tab === 'goals' && <GoalTracker />}

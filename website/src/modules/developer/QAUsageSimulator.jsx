@@ -94,7 +94,7 @@ export default function QAUsageSimulator() {
     const totalRecords = vol.deals + vol.contacts + vol.contracts + vol.assets + vol.fulfillment + vol.activities + vol.tasks + vol.events + vol.users + vol.usage_prospect + vol.usage_research + vol.usage_upload + vol.usage_valuation + vol.usage_newsletter
     if (!confirm(`This will create ~${totalRecords.toLocaleString()} records simulating ${capacityPct}% of the ${simPlan} plan. Continue?`)) return
     setLoading(true)
-    const counts = { deals: 0, contacts: 0, contracts: 0, assets: 0, fulfillment: 0, activities: 0, tasks: 0, events: 0, users: 0, usage: 0 }
+    const counts = { deals: 0, contacts: 0, contracts: 0, benefits: 0, assets: 0, fulfillment: 0, activities: 0, tasks: 0, events: 0, users: 0, usage: 0 }
 
     try {
       // 1. Create QA property with plan
@@ -221,6 +221,28 @@ export default function QAUsageSimulator() {
         }))
         const { data: contracts } = await supabase.from('contracts').insert(contractRows).select()
         counts.contracts = contracts?.length || 0
+
+        // 6b. Contract benefits — link to assets
+        setProgress('Creating contract benefits...')
+        const benefitFreqs = ['Per Game', 'Per Month', 'Per Season', 'One Time']
+        const benefitDescs = ['LED signage during games', 'Social media mentions', 'Jersey logo placement', 'PA announcements', 'Naming rights display', 'Digital banner ads', 'Activation booth space', 'Halftime feature', 'Pre-game presentation', 'Radio read sponsorship']
+        const benefitRows = (contracts || []).flatMap(c => {
+          return Array.from({ length: randInt(2, 6) }, () => {
+            const asset = rand(assets || [])
+            return {
+              contract_id: c.id,
+              asset_id: asset?.id || null,
+              benefit_description: rand(benefitDescs),
+              quantity: randInt(1, 10),
+              frequency: rand(benefitFreqs),
+              value: randInt(500, 25000),
+            }
+          })
+        })
+        for (let i = 0; i < benefitRows.length; i += 50) {
+          await supabase.from('contract_benefits').insert(benefitRows.slice(i, i + 50))
+        }
+        counts.benefits = benefitRows.length
 
         // 7. Fulfillment records
         setProgress(`Creating fulfillment records...`)
@@ -373,9 +395,16 @@ export default function QAUsageSimulator() {
 
         if (dealIds.length > 0) {
           setProgress('Removing fulfillment & contracts...')
-          // Batch delete fulfillment in chunks
+          // Batch delete fulfillment, benefits, contracts in chunks
           for (let i = 0; i < dealIds.length; i += 50) {
             await supabase.from('fulfillment_records').delete().in('deal_id', dealIds.slice(i, i + 50))
+          }
+          // Delete benefits via contract_ids
+          const { data: contractIds } = await supabase.from('contracts').select('id').eq('property_id', pid)
+          if (contractIds?.length) {
+            for (let i = 0; i < contractIds.length; i += 50) {
+              await supabase.from('contract_benefits').delete().in('contract_id', contractIds.slice(i, i + 50).map(c => c.id))
+            }
           }
           for (let i = 0; i < dealIds.length; i += 50) {
             await supabase.from('contracts').delete().in('deal_id', dealIds.slice(i, i + 50))
@@ -457,6 +486,7 @@ export default function QAUsageSimulator() {
           { label: 'Deals', count: stats?.deals ?? vol.deals },
           { label: 'Contacts', count: stats?.contacts ?? vol.contacts },
           { label: 'Contracts', count: stats?.contracts ?? vol.contracts },
+          { label: 'Benefits', count: stats?.benefits ?? Math.round(vol.contracts * 4) },
           { label: 'Assets', count: stats?.assets ?? vol.assets },
           { label: 'Fulfillment', count: stats?.fulfillment ?? vol.fulfillment },
           { label: 'Activities', count: stats?.activities ?? vol.activities },

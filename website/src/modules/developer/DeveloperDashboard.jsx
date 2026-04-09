@@ -1557,35 +1557,22 @@ function QAHub({ properties, profiles }) {
             const result = pageTests[page.path]
             const isTesting = testingPage === page.path
             return (
-              <div key={page.path} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-bg-card group">
+              <div key={page.path} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-bg-card gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${result ? (result.ok ? 'bg-success' : 'bg-danger') : 'bg-bg-card'} ${isTesting ? 'animate-pulse bg-accent' : ''}`} />
                   <span className="text-xs text-text-primary truncate">{page.label}</span>
-                  <span className="text-[9px] text-text-muted font-mono">{page.path}</span>
-                  {page.public && <span className="text-[8px] font-mono text-text-muted bg-bg-card px-1 py-0.5 rounded">public</span>}
+                  <span className="text-[9px] text-text-muted font-mono hidden sm:inline">{page.path}</span>
+                  {page.public && <span className="text-[8px] font-mono text-text-muted bg-bg-card px-1 py-0.5 rounded hidden sm:inline">public</span>}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {result && (
-                    <>
-                      <span className={`text-[10px] font-mono ${result.loadTime > 3000 ? 'text-danger' : result.loadTime > 1000 ? 'text-warning' : 'text-success'}`}>
-                        {result.loadTime}ms
-                      </span>
-                      {result.error && <span className="text-[9px] text-danger">{result.error}</span>}
-                    </>
+                    <span className={`text-[10px] font-mono ${result.loadTime > 3000 ? 'text-danger' : result.loadTime > 1000 ? 'text-warning' : 'text-success'}`}>
+                      {result.loadTime}ms
+                    </span>
                   )}
-                  <button
-                    onClick={() => navigate(page.path)}
-                    className="text-[9px] text-accent hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    Visit
-                  </button>
-                  <button
-                    onClick={() => testPage(page.path)}
-                    disabled={isTesting}
-                    className="text-[9px] text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-30"
-                  >
-                    Test
-                  </button>
+                  {result?.error && <span className="text-[9px] text-danger hidden sm:inline">{result.error}</span>}
+                  <button onClick={() => navigate(page.path)} className="text-[9px] text-accent hover:underline">Go</button>
+                  <button onClick={() => testPage(page.path)} disabled={isTesting} className="text-[9px] text-text-muted hover:text-text-primary disabled:opacity-30">Test</button>
                 </div>
               </div>
             )
@@ -1617,19 +1604,20 @@ function QAHub({ properties, profiles }) {
         <Panel title="Automated Health Checks (Mon/Thu/Sun)">
           <div className="space-y-1.5">
             {healthHistory.map(report => (
-              <div key={report.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${report.status === 'passed' ? 'bg-success' : report.status === 'warnings' ? 'bg-warning' : 'bg-danger'}`} />
+              <div key={report.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0 gap-2 flex-wrap">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${report.status === 'passed' ? 'bg-success' : report.status === 'warnings' ? 'bg-warning' : 'bg-danger'}`} />
                   <span className="text-xs text-text-primary capitalize">{report.schedule}</span>
-                  <span className="text-[9px] text-text-muted font-mono">{new Date(report.run_date).toLocaleString()}</span>
+                  <span className="text-[9px] text-text-muted font-mono hidden sm:inline">{new Date(report.run_date).toLocaleString()}</span>
+                  <span className="text-[9px] text-text-muted font-mono sm:hidden">{new Date(report.run_date).toLocaleDateString()}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-mono text-text-secondary">{report.passed_checks}/{report.total_checks} passed</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-mono text-text-secondary">{report.passed_checks}/{report.total_checks}</span>
                   {report.error_count_24h > 0 && (
-                    <span className="text-[9px] font-mono text-danger">{report.error_count_24h} errors</span>
+                    <span className="text-[9px] font-mono text-danger">{report.error_count_24h}err</span>
                   )}
                   {report.platform_stats && (
-                    <span className="text-[9px] text-text-muted font-mono">
+                    <span className="text-[9px] text-text-muted font-mono hidden sm:inline">
                       {report.platform_stats.profiles}u {report.platform_stats.deals}d
                     </span>
                   )}

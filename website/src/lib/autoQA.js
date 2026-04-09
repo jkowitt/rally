@@ -116,9 +116,7 @@ export async function runFullAutoQA(schedule = 'manual') {
       autoFixes.push({ table: 'tasks', action: 'Set completed_at on Done tasks', count: doneTasks.length })
     }
 
-    // Fix 5: Orphaned fulfillment records (deal deleted but records remain)
-    const { data: orphanedFulfillment } = await supabase.rpc('check_orphans_fulfillment').catch(() => ({ data: null }))
-    // Can't easily check FK orphans without RPC, so skip if not available
+    // Fix 5: Orphaned fulfillment records — skip (FK constraints handle this)
 
     // Fix 6: QA tickets stuck in 'open' for 30+ days → mark as stale
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()

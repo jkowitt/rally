@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import ClaudeAssistant from '@/components/ClaudeAssistant'
 
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
+const QATestSuite = lazy(() => import('./QATestSuite'))
 const ROLES = ['developer', 'admin', 'rep']
 const PLANS = ['free', 'starter', 'pro', 'enterprise']
 
@@ -1171,9 +1172,16 @@ export default function DeveloperDashboard() {
         </div>
       )}
 
-      {/* QA HUB */}
+      {/* QA TEST SUITE */}
       {activeTab === 'qa' && (
-        <QAHub properties={properties} profiles={profiles} />
+        <div className="space-y-6">
+          <Panel title="QA Test Suite">
+            <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading test suite...</div>}>
+              <QATestSuite profiles={profiles} />
+            </Suspense>
+          </Panel>
+          <QAHub properties={properties} profiles={profiles} />
+        </div>
       )}
 
       {/* ANALYTICS */}

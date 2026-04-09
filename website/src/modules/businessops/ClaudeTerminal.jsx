@@ -184,14 +184,80 @@ If the request is a question, answer it directly. If it's a code change, show th
     }
   }
 
+  // Edit a file: read → Claude modifies → confirm → write
+  async function editFile(path, instructions) {
+    setHistory(prev => [...prev, { role: 'system', content: `Editing ${path}...` }])
+    setGenerating(true)
+
+    // Read the file
+    const token = await getGitHubToken()
+    if (!token) { setGenerating(false); return }
+    let fileContent = ''
+    try {
+      const resp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
+      })
+      if (!resp.ok) throw new Error(`File not found: ${path}`)
+      const data = await resp.json()
+      fileContent = atob(data.content)
+    } catch (err) {
+      setHistory(prev => [...prev, { role: 'assistant', content: `Error reading ${path}: ${err.message}` }])
+      setGenerating(false)
+      return
+    }
+
+    setHistory(prev => [...prev, { role: 'system', content: `Read ${fileContent.length} chars. Sending to Claude...` }])
+
+    // Send to Claude with the file content and instructions
+    try {
+      const { data, error } = await supabase.functions.invoke('contract-ai', {
+        body: {
+          action: 'edit_contract',
+          contract_text: fileContent,
+          instructions: `Edit this file (${path}). ${instructions}\n\nReturn the COMPLETE updated file content. Do not truncate or summarize — return every line.`,
+        },
+      })
+      if (error) throw error
+      const newContent = data?.contract_text || ''
+      if (!newContent || newContent.length < 10) throw new Error('Claude returned empty content')
+
+      // Show what changed
+      const oldLines = fileContent.split('\n').length
+      const newLines = newContent.split('\n').length
+      setHistory(prev => [...prev, {
+        role: 'assistant',
+        content: `📝 Edit ready for ${path}\n\nOriginal: ${oldLines} lines (${fileContent.length} chars)\nModified: ${newLines} lines (${newContent.length} chars)\nDiff: ${newLines - oldLines > 0 ? '+' : ''}${newLines - oldLines} lines\n\nType /deploy to commit this change, or /preview to see the full file.`
+      }])
+
+      // Store the new content for /deploy
+      window.__pendingEdit = { path, content: newContent, original: fileContent }
+
+      await supabase.from('biz_code_sessions').insert({
+        prompt: `[edit] ${path}: ${instructions}`, response: `${oldLines}→${newLines} lines`, status: 'review', created_by: profile?.id,
+      })
+      queryClient.invalidateQueries({ queryKey: ['biz-code-sessions'] })
+    } catch (err) {
+      setHistory(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])
+    }
+    setGenerating(false)
+  }
+
   // Handle special commands
   function handleCommand(input) {
     const trimmed = input.trim()
     if (trimmed.startsWith('/read ')) { readFile(trimmed.slice(6).trim()); return true }
+    if (trimmed.startsWith('/edit ')) {
+      const rest = trimmed.slice(5).trim()
+      const spaceIdx = rest.indexOf(' ')
+      if (spaceIdx === -1) { toast({ title: 'Usage: /edit filepath instructions', type: 'warning' }); return true }
+      const path = rest.slice(0, spaceIdx).trim()
+      const instructions = rest.slice(spaceIdx + 1).trim()
+      editFile(path, instructions)
+      return true
+    }
     if (trimmed.startsWith('/write ')) {
       const parts = trimmed.slice(7).split(' ')
       const path = parts[0]
-      // Content comes from the last Claude response
       const lastResponse = history.filter(h => h.role === 'assistant').pop()?.content || ''
       if (!path) { toast({ title: 'Usage: /write filepath', type: 'warning' }); return true }
       if (confirm(`Commit changes to ${path} on main? This will deploy immediately.`)) {
@@ -199,11 +265,27 @@ If the request is a question, answer it directly. If it's a code change, show th
       }
       return true
     }
-    if (trimmed.startsWith('/ls') || trimmed.startsWith('/list')) { listFiles(trimmed.split(' ')[1] || ''); return true }
     if (trimmed === '/deploy') {
-      toast({ title: 'Use /write <filepath> to deploy a specific file', type: 'warning' })
+      if (window.__pendingEdit) {
+        const { path, content } = window.__pendingEdit
+        if (confirm(`Deploy changes to ${path}? This commits to main and auto-deploys.`)) {
+          writeFile(path, content, `Claude Code: edit ${path}`)
+          window.__pendingEdit = null
+        }
+      } else {
+        toast({ title: 'No pending edit. Use /edit filepath instructions first.', type: 'warning' })
+      }
       return true
     }
+    if (trimmed === '/preview') {
+      if (window.__pendingEdit) {
+        setHistory(prev => [...prev, { role: 'assistant', content: `📄 Preview of ${window.__pendingEdit.path}:\n\n${window.__pendingEdit.content.slice(0, 4000)}${window.__pendingEdit.content.length > 4000 ? '\n...(truncated)' : ''}` }])
+      } else {
+        toast({ title: 'No pending edit to preview.', type: 'warning' })
+      }
+      return true
+    }
+    if (trimmed.startsWith('/ls') || trimmed.startsWith('/list')) { listFiles(trimmed.split(' ')[1] || ''); return true }
     return false
   }
 
@@ -257,12 +339,15 @@ If the request is a question, answer it directly. If it's a code change, show th
         <div ref={outputRef} className="p-4 max-h-[500px] overflow-y-auto bg-[#0a0e14] font-mono text-sm space-y-3">
           {history.length === 0 && !generating && (
             <div className="text-text-muted">
-              <p>Claude Code Terminal — write prompts, generate and deploy code.</p>
+              <p>Claude Code Terminal — edit any file on the site and deploy.</p>
               <p className="mt-2 text-accent">Commands:</p>
-              <p className="text-text-secondary text-xs">/ls [path] — list files in directory</p>
-              <p className="text-text-secondary text-xs">/read [filepath] — read a file from the repo</p>
-              <p className="text-text-secondary text-xs">/write [filepath] — commit the last Claude response as a file (deploys to production)</p>
-              <p className="mt-1 text-text-secondary text-xs">Or type a natural language request and Claude will generate the code.</p>
+              <p className="text-text-secondary text-xs">/ls [path] — browse the codebase</p>
+              <p className="text-text-secondary text-xs">/read [filepath] — read a file</p>
+              <p className="text-text-secondary text-xs">/edit [filepath] [instructions] — Claude edits the file for you</p>
+              <p className="text-text-secondary text-xs">/preview — see the pending edit</p>
+              <p className="text-text-secondary text-xs">/deploy — commit the edit to main (auto-deploys)</p>
+              <p className="text-text-secondary text-xs">/write [filepath] — commit the last response as a file</p>
+              <p className="mt-1 text-text-secondary text-xs">Or type any request and Claude will generate code suggestions.</p>
             </div>
           )}
           {history.map((msg, i) => (

@@ -53,6 +53,8 @@ Deno.serve(async (req: Request) => {
       result = await researchContacts(body);
     } else if (action === "code_assistant") {
       result = await codeAssistant(body);
+    } else if (action === "smart_match_assets") {
+      result = await smartMatchAssets(supabaseClient, body);
     } else if (action === "generate_weekly_newsletter") {
       result = await generateWeeklyNewsletter(supabaseClient, body);
     } else if (action === "generate_afternoon_update") {
@@ -705,4 +707,159 @@ Return ONLY valid JSON.`;
   });
 
   return { update: parsed };
+}
+
+// ============ SMART ASSET MATCHING ============
+
+async function smartMatchAssets(supabase: any, body: any): Promise<any> {
+  const propertyId = body.property_id;
+  const contractId = body.contract_id;
+  const benefits = body.benefits || [];
+
+  if (!propertyId || benefits.length === 0) {
+    return { matches: [], error: "No benefits to match" };
+  }
+
+  // Get existing assets for the property
+  const { data: assets } = await supabase
+    .from("assets")
+    .select("id, name, category, description, base_price, quantity")
+    .eq("property_id", propertyId)
+    .eq("active", true);
+
+  // Get past match history for learning
+  const { data: history } = await supabase
+    .from("asset_match_history")
+    .select("benefit_text, matched_asset_id, matched_asset_name, matched_category, confidence, approved")
+    .eq("property_id", propertyId)
+    .eq("approved", true)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  const assetList = (assets || []).map((a: any) =>
+    `ID: ${a.id} | Name: ${a.name} | Category: ${a.category} | Price: $${a.base_price || 0} | Qty: ${a.quantity}`
+  ).join("\n");
+
+  const historyList = (history || []).slice(0, 50).map((h: any) =>
+    `"${h.benefit_text}" → "${h.matched_asset_name}" (${h.matched_category}) [confidence: ${h.confidence}]`
+  ).join("\n");
+
+  const benefitList = benefits.map((b: any, i: number) =>
+    `${i + 1}. "${b.benefit_description}" (qty: ${b.quantity}, freq: ${b.frequency}, value: $${b.value || 0})`
+  ).join("\n");
+
+  const prompt = `You are an expert at matching sponsorship contract benefits to existing asset inventory. A sports/entertainment property has uploaded a contract and extracted these benefits. Match each benefit to the BEST existing asset, or mark it as "new" if no match exists.
+
+EXISTING ASSETS (match to these by ID):
+${assetList || "No existing assets"}
+
+PAST SUCCESSFUL MATCHES (learn from these patterns):
+${historyList || "No history yet — this is the first match"}
+
+CONTRACT BENEFITS TO MATCH:
+${benefitList}
+
+MATCHING RULES:
+1. Match by MEANING, not exact text. "LED board signage" and "Electronic display sponsorship" are the same thing.
+2. "PA announcement" and "Public address read" are the same thing.
+3. "Social media post" includes Instagram, Facebook, Twitter mentions.
+4. If the benefit clearly matches an existing asset, set confidence HIGH (0.85-1.0).
+5. If it's a partial match or you're unsure, set confidence MEDIUM (0.5-0.84).
+6. If there's no reasonable match, set confidence LOW (0.0-0.49) and suggest creating a new asset.
+7. Learn from PAST MATCHES — if a similar benefit was matched before, follow that pattern.
+8. Consider category alignment: LED Board benefits match LED Board assets, etc.
+
+Return a JSON array. For EACH benefit (same order):
+[
+  {
+    "benefit_index": 0,
+    "matched_asset_id": "uuid-or-null",
+    "matched_asset_name": "name-or-null",
+    "suggested_category": "category name",
+    "confidence": 0.0-1.0,
+    "reasoning": "1 sentence why",
+    "alternatives": [{"asset_id": "uuid", "name": "name", "confidence": 0.7}],
+    "is_new": false
+  }
+]
+
+Return ONLY valid JSON array.`;
+
+  const text = await callClaudeAdvanced(
+    "You are a sponsorship asset matching specialist. Match contract benefits to existing asset inventory with high accuracy. Learn from past matches to improve.",
+    [{ role: "user", content: prompt }],
+    4096,
+  );
+
+  let matches: any[] = [];
+  try {
+    matches = extractJSON(text);
+  } catch {
+    matches = benefits.map((_: any, i: number) => ({
+      benefit_index: i,
+      matched_asset_id: null,
+      confidence: 0,
+      reasoning: "Could not parse AI response",
+      is_new: true,
+    }));
+  }
+
+  // Process matches: auto-match high confidence, queue low confidence
+  const AUTO_THRESHOLD = 0.80;
+  const results: any[] = [];
+
+  for (let i = 0; i < benefits.length; i++) {
+    const benefit = benefits[i];
+    const match = matches[i] || { confidence: 0, is_new: true };
+    const conf = match.confidence || 0;
+
+    if (conf >= AUTO_THRESHOLD && match.matched_asset_id) {
+      // HIGH confidence: auto-match
+      // Update benefit with asset_id
+      if (benefit.id) {
+        await supabase.from("contract_benefits").update({
+          asset_id: match.matched_asset_id,
+        }).eq("id", benefit.id);
+      }
+
+      // Log to history for learning
+      await supabase.from("asset_match_history").insert({
+        property_id: propertyId,
+        benefit_text: benefit.benefit_description,
+        matched_asset_id: match.matched_asset_id,
+        matched_asset_name: match.matched_asset_name,
+        matched_category: match.suggested_category,
+        confidence: conf,
+        was_auto: true,
+        approved: true,
+      });
+
+      results.push({ ...match, status: "auto_matched", benefit_description: benefit.benefit_description });
+    } else {
+      // LOW/MEDIUM confidence: queue for approval
+      await supabase.from("asset_match_queue").insert({
+        contract_id: contractId,
+        benefit_id: benefit.id || null,
+        benefit_text: benefit.benefit_description,
+        suggested_asset_id: match.matched_asset_id || null,
+        suggested_asset_name: match.matched_asset_name || null,
+        suggested_category: match.suggested_category || null,
+        confidence: conf,
+        alternative_assets: match.alternatives || [],
+        status: "pending",
+      });
+
+      results.push({ ...match, status: "needs_approval", benefit_description: benefit.benefit_description });
+    }
+  }
+
+  const autoMatched = results.filter(r => r.status === "auto_matched").length;
+  const needsApproval = results.filter(r => r.status === "needs_approval").length;
+
+  return {
+    matches: results,
+    auto_matched: autoMatched,
+    needs_approval: needsApproval,
+    total: results.length,
+  };
 }

@@ -51,6 +51,8 @@ Deno.serve(async (req: Request) => {
       result = await suggestProspects(supabaseClient, body);
     } else if (action === "research_contacts") {
       result = await researchContacts(body);
+    } else if (action === "code_assistant") {
+      result = await codeAssistant(body);
     } else if (action === "generate_weekly_newsletter") {
       result = await generateWeeklyNewsletter(supabaseClient, body);
     } else if (action === "generate_afternoon_update") {
@@ -134,6 +136,130 @@ function extractJSON(text: string): any {
   }
 
   throw new Error("Could not extract JSON from AI response");
+}
+
+// Advanced Claude call with system prompt and multi-turn conversation
+async function callClaudeAdvanced(
+  systemPrompt: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number,
+): Promise<string> {
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
+
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: messages,
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error("Claude API error " + resp.status + ": " + errText);
+  }
+
+  const data = await resp.json();
+  return data.content?.[0]?.text || "";
+}
+
+const CODE_SYSTEM_PROMPT = `You are a senior full-stack developer and AI coding assistant for the Loud Legacy CRM platform. You have deep expertise in the entire codebase and tech stack.
+
+## Tech Stack
+- React 18 with lazy loading (React.lazy + Suspense)
+- Vite build system
+- Tailwind CSS v4 with custom design tokens
+- Supabase (PostgreSQL + Auth + Edge Functions + Row Level Security)
+- TanStack Query (@tanstack/react-query) for server state
+- Recharts for data visualization
+- pdfjs-dist v3.11.174 (bundled) for PDF extraction
+- Tesseract.js for OCR
+- mammoth.js for Word docs
+- @hello-pangea/dnd for drag-and-drop
+- pptxgenjs for PowerPoint generation
+- DOMPurify for XSS sanitization
+
+## Design System
+- Dark theme: bg-bg-primary (#0a0e14), bg-bg-surface (#111827), bg-bg-card (#1a2332)
+- Gold accent: text-accent (#E8B84B)
+- Text: text-text-primary (#e5e7eb), text-text-secondary (#9ca3af), text-text-muted (#6b7280)
+- Border: border-border (#1f2937)
+- Status colors: text-success (#22c55e), text-warning (#eab308), text-danger (#ef4444)
+- Font: system fonts, mono for code/terminal
+
+## Code Conventions
+- Functional components with hooks
+- Named exports: export default function ComponentName()
+- Supabase client from @/lib/supabase
+- Auth from @/hooks/useAuth (provides profile with role, property_id)
+- Feature flags from @/hooks/useFeatureFlags
+- Industry config from @/hooks/useIndustryConfig
+- Toast notifications from @/components/Toast
+- Use .maybeSingle() instead of .single() for queries that may return 0 rows
+- Use (array || []) pattern before .filter/.map/.length to prevent crashes
+- All files under website/src/
+
+## File Structure
+- website/src/modules/ — Feature modules (crm/, businessops/, developer/)
+- website/src/components/ — Shared components (layout/, ErrorBoundary, Toast, etc.)
+- website/src/hooks/ — Custom hooks (useAuth, useCMS, useFeatureFlags, etc.)
+- website/src/lib/ — Utilities (supabase.js, claude.js, automations.js, industryConfig.js)
+- website/src/pages/ — Route pages
+- website/supabase/functions/ — Edge functions
+- website/supabase/migrations/ — Database migrations
+
+## Role Hierarchy
+developer > businessops > admin > rep > disabled
+
+## Instructions
+When asked to write or modify code:
+1. Show the EXACT file path
+2. Show the exact code to find (old) and replace with (new)
+3. If creating a new file, show the complete file content
+4. For database changes, provide SQL migrations
+5. Explain your reasoning briefly
+6. Consider error handling, null safety, and mobile responsiveness
+7. Follow existing patterns in the codebase
+8. Never truncate code — show complete implementations
+
+When asked questions:
+- Be precise and reference specific files/functions
+- Provide actionable answers with code examples
+- Consider the full context of the platform`;
+
+async function codeAssistant(body: any): Promise<any> {
+  const messages: Array<{ role: string; content: string }> = [];
+
+  // Add conversation history if provided
+  if (body.conversation && Array.isArray(body.conversation)) {
+    for (const msg of body.conversation.slice(-10)) {
+      if (msg.role === "user" || msg.role === "assistant") {
+        messages.push({ role: msg.role, content: msg.content.slice(0, 4000) });
+      }
+    }
+  }
+
+  // Build the user message with any file context
+  let userContent = body.prompt || body.instructions || "";
+  if (body.file_context) {
+    userContent = `File: ${body.file_path || "unknown"}\n\`\`\`\n${body.file_context.slice(0, 12000)}\n\`\`\`\n\n${userContent}`;
+  }
+  if (body.page_context) {
+    userContent = `${body.page_context}\n\n${userContent}`;
+  }
+
+  messages.push({ role: "user", content: userContent });
+
+  const text = await callClaudeAdvanced(CODE_SYSTEM_PROMPT, messages, 8192);
+  return { response: text };
 }
 
 async function generateContract(sb: any, body: any): Promise<any> {

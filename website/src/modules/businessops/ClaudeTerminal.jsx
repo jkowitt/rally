@@ -41,37 +41,42 @@ export default function ClaudeTerminal() {
     setPrompt('')
     setGenerating(true)
 
-    // Build conversation context from history
-    const contextMsgs = history.slice(-6).map(h => `${h.role === 'user' ? 'USER' : 'CLAUDE'}: ${h.content.slice(0, 500)}`).join('\n\n')
-
     const { data: session } = await supabase.from('biz_code_sessions').insert({
       prompt: userMsg, status: 'generating', created_by: profile?.id,
     }).select().single()
 
     try {
+      // Build conversation history for multi-turn context
+      const conversation = history.slice(-10).filter(h => h.role === 'user' || h.role === 'assistant').map(h => ({
+        role: h.role, content: h.content,
+      }))
+
+      let response
+      // Try code_assistant first (Sonnet with system prompt), fall back to edit_contract
       const { data, error } = await supabase.functions.invoke('contract-ai', {
         body: {
-          action: 'edit_contract',
-          contract_text: `You are a senior full-stack developer working on the Loud Legacy CRM platform.
-
-Tech stack: React 18, Vite, Tailwind CSS v4, Supabase (PostgreSQL + Auth + Edge Functions), Recharts, pdfjs-dist.
-Dark theme with gold accent (#E8B84B). Files start with website/src/.
-
-${contextMsgs ? `Previous conversation:\n${contextMsgs}\n\n` : ''}Current request:`,
-          instructions: `${userMsg}
-
-Respond with actionable code. For each change:
-1. File path (e.g. website/src/modules/crm/DealPipeline.jsx)
-2. What to find (old code)
-3. What to replace with (new code)
-4. SQL migration if needed
-
-If the request is a question, answer it directly. If it's a code change, show the exact diff.`,
+          action: 'code_assistant',
+          prompt: userMsg,
+          conversation,
+          page_context: `Current page: ${window.location.pathname}`,
         },
       })
 
-      if (error) throw error
-      const response = data?.contract_text || data?.text || JSON.stringify(data)
+      if (error || data?.error?.includes('Unknown action')) {
+        // Fallback to edit_contract if code_assistant not deployed yet
+        const contextMsgs = history.slice(-6).map(h => `${h.role === 'user' ? 'USER' : 'CLAUDE'}: ${h.content.slice(0, 500)}`).join('\n\n')
+        const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
+          body: {
+            action: 'edit_contract',
+            contract_text: `You are a senior full-stack developer working on the Loud Legacy CRM platform.\nTech stack: React 18, Vite, Tailwind CSS v4, Supabase, Recharts.\n${contextMsgs ? `Previous conversation:\n${contextMsgs}\n\n` : ''}Current request:`,
+            instructions: userMsg,
+          },
+        })
+        if (fbErr) throw fbErr
+        response = fb?.contract_text || fb?.text || JSON.stringify(fb)
+      } else {
+        response = data?.response || data?.contract_text || data?.text || JSON.stringify(data)
+      }
       setHistory(prev => [...prev, { role: 'assistant', content: response }])
 
       await supabase.from('biz_code_sessions').update({ response, status: 'review' }).eq('id', session.id)
@@ -210,15 +215,29 @@ If the request is a question, answer it directly. If it's a code change, show th
 
     // Send to Claude with the file content and instructions
     try {
+      let newContent = ''
       const { data, error } = await supabase.functions.invoke('contract-ai', {
         body: {
-          action: 'edit_contract',
-          contract_text: fileContent,
-          instructions: `Edit this file (${path}). ${instructions}\n\nReturn the COMPLETE updated file content. Do not truncate or summarize — return every line.`,
+          action: 'code_assistant',
+          prompt: `Edit this file: ${instructions}\n\nReturn the COMPLETE updated file content. Do not truncate or summarize — return every line of the file.`,
+          file_context: fileContent,
+          file_path: path,
         },
       })
-      if (error) throw error
-      const newContent = data?.contract_text || ''
+      if (!error && !data?.error?.includes('Unknown action')) {
+        newContent = data?.response || data?.contract_text || ''
+      } else {
+        // Fallback to edit_contract
+        const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
+          body: {
+            action: 'edit_contract',
+            contract_text: fileContent,
+            instructions: `Edit this file (${path}). ${instructions}\n\nReturn the COMPLETE updated file content. Do not truncate or summarize — return every line.`,
+          },
+        })
+        if (fbErr) throw fbErr
+        newContent = fb?.contract_text || ''
+      }
       if (!newContent || newContent.length < 10) throw new Error('Claude returned empty content')
 
       // Show what changed

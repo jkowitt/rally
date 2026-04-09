@@ -38,15 +38,48 @@ export default function ClaudeAssistant() {
     const contextMsgs = messages.slice(-4).map(m => `${m.role === 'user' ? 'USER' : 'CLAUDE'}: ${m.content.slice(0, 300)}`).join('\n')
 
     try {
-      const { data, error } = await supabase.functions.invoke('contract-ai', {
-        body: {
-          action: 'edit_contract',
-          contract_text: `${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `\nConversation:\n${contextMsgs}\n` : ''}`,
-          instructions: userMsg,
-        },
-      })
-      if (error) throw error
-      const response = data?.contract_text || data?.text || JSON.stringify(data)
+      // Use code_assistant for code/qa modes, edit_contract for ask/report
+      const useCodeAssistant = mode === 'code' || mode === 'qa'
+      const conversation = messages.slice(-8).filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({
+        role: m.role, content: m.content,
+      }))
+
+      let response
+      if (useCodeAssistant) {
+        // Try code_assistant (Sonnet with system prompt), fall back to edit_contract
+        const { data, error } = await supabase.functions.invoke('contract-ai', {
+          body: {
+            action: 'code_assistant',
+            prompt: `[${mode.toUpperCase()} MODE] ${userMsg}`,
+            conversation,
+            page_context: `${pageContext}\n${modeInstructions[mode]}`,
+          },
+        })
+        if (!error && !data?.error?.includes('Unknown action')) {
+          response = data?.response || data?.text || JSON.stringify(data)
+        } else {
+          // Fallback
+          const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
+            body: {
+              action: 'edit_contract',
+              contract_text: `${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `\nConversation:\n${contextMsgs}\n` : ''}`,
+              instructions: userMsg,
+            },
+          })
+          if (fbErr) throw fbErr
+          response = fb?.contract_text || fb?.text || JSON.stringify(fb)
+        }
+      } else {
+        const { data, error } = await supabase.functions.invoke('contract-ai', {
+          body: {
+            action: 'edit_contract',
+            contract_text: `${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `\nConversation:\n${contextMsgs}\n` : ''}`,
+            instructions: userMsg,
+          },
+        })
+        if (error) throw error
+        response = data?.contract_text || data?.text || JSON.stringify(data)
+      }
       setMessages(prev => [...prev, { role: 'assistant', content: response }])
 
       // Save to session history

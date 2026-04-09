@@ -43,7 +43,13 @@ export default function BusinessOps() {
         <p className="text-text-secondary text-xs sm:text-sm mt-1">Internal operations for Loud Legacy</p>
       </div>
 
-      <div className="flex gap-1 bg-bg-card rounded-lg p-1 overflow-x-auto">
+      {/* Mobile: dropdown, Desktop: tabs */}
+      <div className="sm:hidden">
+        <select value={tab} onChange={e => setTab(e.target.value)} className="w-full bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
+          {TABS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
+      </div>
+      <div className="hidden sm:flex gap-1 bg-bg-card rounded-lg p-1 overflow-x-auto">
         {TABS.map(t => (
           <button
             key={t.id}

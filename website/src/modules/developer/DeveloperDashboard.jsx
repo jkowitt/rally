@@ -418,7 +418,13 @@ export default function DeveloperDashboard() {
       <APIUsageBanner />
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-bg-card rounded-lg p-1 overflow-x-auto">
+      {/* Mobile: dropdown, Desktop: tabs */}
+      <div className="sm:hidden">
+        <select value={activeTab} onChange={e => setActiveTab(e.target.value)} className="w-full bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
+          {tabs.map(tab => <option key={tab.id} value={tab.id}>{tab.label}</option>)}
+        </select>
+      </div>
+      <div className="hidden sm:flex gap-1 bg-bg-card rounded-lg p-1 overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}

@@ -17,9 +17,9 @@ export default function CMSToolbar() {
     return (
       <button
         onClick={() => setEditMode(true)}
-        className="fixed bottom-4 right-4 z-50 bg-accent text-bg-primary px-4 py-2.5 rounded-full shadow-lg text-xs font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
+        className="fixed top-16 right-4 z-50 bg-accent text-bg-primary px-3 py-1.5 rounded shadow-lg text-[10px] font-mono font-medium hover:opacity-90 transition-opacity"
       >
-        <span>✏️</span> Edit Mode
+        Edit Mode
       </button>
     )
   }

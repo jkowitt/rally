@@ -155,7 +155,7 @@ async function callClaudeAdvanced(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-opus-4-20250514",
       max_tokens: maxTokens,
       system: systemPrompt,
       messages: messages,

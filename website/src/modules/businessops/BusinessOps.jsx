@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { Navigate } from 'react-router-dom'
+import ClaudeAssistant from '@/components/ClaudeAssistant'
 import RevenuePipeline from './RevenuePipeline'
 import GoalTracker from './GoalTracker'
 import FinanceDashboard from './FinanceDashboard'
@@ -65,6 +66,7 @@ export default function BusinessOps() {
       {tab === 'connections' && <ConnectionManager />}
       {tab === 'roadmap' && <RoadmapTracker />}
       {tab === 'claude' && <ClaudeTerminal />}
+      <ClaudeAssistant />
     </div>
   )
 }

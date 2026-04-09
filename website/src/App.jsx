@@ -11,6 +11,7 @@ import { CMSProvider } from './hooks/useCMS'
 import CMSToolbar from './components/cms/CMSToolbar'
 import PageEditor from './components/cms/PageEditor'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import ClaudeAssistant from './components/ClaudeAssistant'
 
 // Auto-reload on chunk load failure (stale cache after deploy)
 function lazyRetry(fn) {
@@ -158,6 +159,7 @@ export default function App() {
           <CMSToolbar />
           <PageEditor />
           <PWAInstallPrompt />
+          <ClaudeAssistant />
           </Suspense>
           </ToastProvider>
           </CMSProvider>

@@ -400,8 +400,8 @@ Respond with EXACTLY this JSON format (no other text):
       {view === 'cases' && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-text-muted">Filter:</span>
-            <div className="flex gap-1 flex-wrap">
+            <span className="text-xs text-text-muted shrink-0">Filter:</span>
+            <div className="flex gap-1 flex-wrap overflow-x-auto">
               {MODULES.map(m => (
                 <button key={m.id} onClick={() => setModuleFilter(m.id)} className={`text-[10px] px-2 py-1 rounded ${moduleFilter === m.id ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-secondary hover:text-text-primary'}`}>
                   {m.label} {m.id !== 'all' && moduleStats[m.id] ? `(${moduleStats[m.id].total})` : ''}

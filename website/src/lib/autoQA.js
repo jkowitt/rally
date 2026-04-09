@@ -270,6 +270,30 @@ FEATURE SUGGESTIONS:
       completed_at: new Date().toISOString(),
     }).eq('id', report.id)
 
+    // ═══════════════════════════════════════
+    // PHASE 6: Log auto-fixes to change log
+    // ═══════════════════════════════════════
+    if (autoFixes.length > 0) {
+      await supabase.from('change_log').insert({
+        title: `Auto QA: ${autoFixes.length} fixes applied`,
+        description: autoFixes.map(f => `${f.table}: ${f.action} (${f.count} records)`).join('\n'),
+        category: 'bugfix',
+        module: 'platform',
+        source: 'auto_fix',
+        qa_report_id: report.id,
+      }).catch(() => {}) // non-blocking
+    }
+
+    // Log the QA run itself
+    await supabase.from('change_log').insert({
+      title: `Auto QA Report: Health ${avgScore}/100`,
+      description: `${schedule} run — ${results.passed}/${results.total} checks passed, ${autoFixes.length} auto-fixes applied.\n\n${claudeAnalysis.summary || ''}`,
+      category: 'qa',
+      module: 'platform',
+      source: 'auto_qa',
+      qa_report_id: report.id,
+    }).catch(() => {})
+
     return report.id
   } catch (err) {
     await supabase.from('qa_auto_reports').update({

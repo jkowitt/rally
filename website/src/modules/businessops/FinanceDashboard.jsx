@@ -40,12 +40,12 @@ export default function FinanceDashboard() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="bg-bg-surface border border-border rounded-lg p-4 text-center"><div className="text-[10px] text-text-muted font-mono">Live MRR</div><div className="text-xl font-bold font-mono text-accent mt-1">${autoRevenue?.mrr?.toLocaleString() || 0}</div></div>
-        <div className="bg-bg-surface border border-border rounded-lg p-4 text-center"><div className="text-[10px] text-text-muted font-mono">Live ARR</div><div className="text-xl font-bold font-mono text-accent mt-1">${autoRevenue?.arr?.toLocaleString() || 0}</div></div>
-        <div className="bg-bg-surface border border-border rounded-lg p-4 text-center"><div className="text-[10px] text-text-muted font-mono">Recorded Revenue</div><div className="text-xl font-bold font-mono text-success mt-1">${totalRevenue.toLocaleString()}</div></div>
-        <div className="bg-bg-surface border border-border rounded-lg p-4 text-center"><div className="text-[10px] text-text-muted font-mono">Expenses</div><div className="text-xl font-bold font-mono text-danger mt-1">${totalExpenses.toLocaleString()}</div></div>
-        <div className="bg-bg-surface border border-border rounded-lg p-4 text-center"><div className="text-[10px] text-text-muted font-mono">Profit/Loss</div><div className={`text-xl font-bold font-mono mt-1 ${profit >= 0 ? 'text-success' : 'text-danger'}`}>${profit.toLocaleString()}</div></div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+        <div className="bg-bg-surface border border-border rounded-lg p-3 sm:p-4 text-center"><div className="text-[10px] text-text-muted font-mono">Live MRR</div><div className="text-xl font-bold font-mono text-accent mt-1">${autoRevenue?.mrr?.toLocaleString() || 0}</div></div>
+        <div className="bg-bg-surface border border-border rounded-lg p-3 sm:p-4 text-center"><div className="text-[10px] text-text-muted font-mono">Live ARR</div><div className="text-xl font-bold font-mono text-accent mt-1">${autoRevenue?.arr?.toLocaleString() || 0}</div></div>
+        <div className="bg-bg-surface border border-border rounded-lg p-3 sm:p-4 text-center"><div className="text-[10px] text-text-muted font-mono">Recorded Revenue</div><div className="text-xl font-bold font-mono text-success mt-1">${totalRevenue.toLocaleString()}</div></div>
+        <div className="bg-bg-surface border border-border rounded-lg p-3 sm:p-4 text-center"><div className="text-[10px] text-text-muted font-mono">Expenses</div><div className="text-xl font-bold font-mono text-danger mt-1">${totalExpenses.toLocaleString()}</div></div>
+        <div className="bg-bg-surface border border-border rounded-lg p-3 sm:p-4 text-center"><div className="text-[10px] text-text-muted font-mono">Profit/Loss</div><div className={`text-xl font-bold font-mono mt-1 ${profit >= 0 ? 'text-success' : 'text-danger'}`}>${profit.toLocaleString()}</div></div>
       </div>
 
       <div className="flex justify-between items-center">

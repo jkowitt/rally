@@ -144,12 +144,12 @@ Use real numbers from the platform data above. Be specific and actionable.`,
           <h3 className="text-sm font-medium text-text-primary">Generate AI Report</h3>
           <div className="flex gap-2 flex-wrap mb-2">
             {TEMPLATES.map((t, i) => (
-              <button key={i} onClick={() => setForm({ ...form, title: t.title, prompt: t.prompt })} className="text-[10px] bg-bg-card border border-border text-text-secondary px-2 py-1 rounded hover:border-accent/50">{t.title}</button>
+              <button key={i} onClick={() => setForm({ ...form, title: t.title, prompt: t.prompt })} className="text-[10px] bg-bg-card border border-border text-text-secondary px-2 py-1 rounded hover:border-accent/50 w-full sm:w-auto">{t.title}</button>
             ))}
           </div>
           <input placeholder="Report Title *" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
           <textarea placeholder="What should this report cover? Claude will use live platform data." value={form.prompt} onChange={e => setForm({ ...form, prompt: e.target.value })} rows={3} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={generateReport} disabled={generating || !form.title} className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50">{generating ? 'Generating...' : 'Generate with Claude'}</button>
             <button onClick={() => setShowCreate(false)} className="text-text-muted text-sm">Cancel</button>
           </div>
@@ -164,7 +164,7 @@ Use real numbers from the platform data above. Be specific and actionable.`,
               <h3 className="text-lg font-semibold text-text-primary">{viewingReport.title}</h3>
               <span className="text-[10px] text-text-muted font-mono">{new Date(viewingReport.created_at).toLocaleString()}</span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button onClick={() => updateMutation.mutate({ id: viewingReport.id, updates: { pinned: !viewingReport.pinned } })} className={`text-[10px] font-mono px-2 py-1 rounded ${viewingReport.pinned ? 'bg-accent/10 text-accent' : 'bg-bg-card text-text-muted'}`}>{viewingReport.pinned ? 'Unpin' : 'Pin'}</button>
               <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(viewingReport.id) }} className="text-[10px] text-danger hover:underline">Delete</button>
               <button onClick={() => setViewingReport(null)} className="text-text-muted hover:text-text-primary">Close</button>
@@ -174,7 +174,7 @@ Use real numbers from the platform data above. Be specific and actionable.`,
             value={editingContent}
             onChange={e => setEditingContent(e.target.value)}
             onBlur={() => { if (editingContent !== viewingReport.content) updateMutation.mutate({ id: viewingReport.id, updates: { content: editingContent } }) }}
-            className="w-full bg-bg-card border border-border rounded p-4 text-sm text-text-primary font-mono leading-relaxed focus:outline-none focus:border-accent min-h-[400px]"
+            className="w-full bg-bg-card border border-border rounded p-4 text-sm text-text-primary font-mono leading-relaxed focus:outline-none focus:border-accent min-h-[200px] sm:min-h-[400px]"
           />
         </div>
       )}

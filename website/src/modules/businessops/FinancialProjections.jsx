@@ -181,7 +181,7 @@ export default function FinancialProjections() {
   return (
     <div className="space-y-4">
       {/* 5-Year Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
         {projection.years.map(y => (
           <div key={y.year} className={`bg-bg-surface border rounded-lg p-3 text-center ${y.year <= 2 ? 'border-accent/30' : 'border-border'}`}>
             <div className="text-[10px] text-text-muted font-mono">Year {y.year}</div>
@@ -232,7 +232,7 @@ export default function FinancialProjections() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <SliderInput label="Organic Growth %/mo" value={assumptions.organic_growth_rate} onChange={v => updateAssumption('organic_growth_rate', v)} min={0} max={30} />
           <SliderInput label="Churn Rate %/mo" value={assumptions.churn_rate} onChange={v => updateAssumption('churn_rate', v)} min={0} max={20} />
           <SliderInput label="Free → Starter %" value={assumptions.free_to_starter} onChange={v => updateAssumption('free_to_starter', v)} min={0} max={30} />
@@ -242,7 +242,7 @@ export default function FinancialProjections() {
           <SliderInput label="Enterprise Price $" value={assumptions.enterprise_price} onChange={v => updateAssumption('enterprise_price', v)} min={99} max={999} step={25} />
           <SliderInput label="Starting Users" value={assumptions.current_users} onChange={v => updateAssumption('current_users', v)} min={1} max={100} />
 
-          <div className="sm:col-span-3 md:col-span-4 border-t border-border pt-3 mt-1">
+          <div className="sm:col-span-2 md:col-span-4 border-t border-border pt-3 mt-1">
             <div className="text-[10px] font-mono text-accent uppercase mb-2">Advertising</div>
           </div>
           <SliderInput label="Ad Spend $/mo" value={assumptions.monthly_ad_spend} onChange={v => updateAssumption('monthly_ad_spend', v)} min={0} max={10000} step={100} />
@@ -250,7 +250,7 @@ export default function FinancialProjections() {
           <SliderInput label="CTR %" value={assumptions.click_through_rate} onChange={v => updateAssumption('click_through_rate', v)} min={0.5} max={10} step={0.5} />
           <SliderInput label="Landing Conv %" value={assumptions.landing_page_conversion} onChange={v => updateAssumption('landing_page_conversion', v)} min={1} max={20} />
 
-          <div className="sm:col-span-3 md:col-span-4 border-t border-border pt-3 mt-1">
+          <div className="sm:col-span-2 md:col-span-4 border-t border-border pt-3 mt-1">
             <div className="text-[10px] font-mono text-accent uppercase mb-2">Costs</div>
           </div>
           <SliderInput label="Hosting $/mo" value={assumptions.hosting_monthly} onChange={v => updateAssumption('hosting_monthly', v)} min={0} max={500} step={5} />
@@ -318,7 +318,7 @@ function SliderInput({ label, value, onChange, min, max, step = 1 }) {
         <span className="text-text-muted">{label}</span>
         <span className="text-accent font-mono">{value}</span>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(e.target.value)} className="w-full accent-accent h-1" />
+      <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(e.target.value)} className="w-full accent-accent h-3 cursor-pointer touch-manipulation" />
     </div>
   )
 }

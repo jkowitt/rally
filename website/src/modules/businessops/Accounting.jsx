@@ -116,7 +116,7 @@ export default function Accounting() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
         <div className="bg-bg-surface border border-border rounded-lg p-3 text-center"><div className="text-[9px] text-text-muted font-mono">Total Revenue</div><div className="text-xl font-bold font-mono text-success mt-0.5">${totalRevenue.toLocaleString()}</div></div>
         <div className="bg-bg-surface border border-border rounded-lg p-3 text-center"><div className="text-[9px] text-text-muted font-mono">Refunds</div><div className="text-xl font-bold font-mono text-danger mt-0.5">${totalRefunds.toLocaleString()}</div></div>
         <div className="bg-bg-surface border border-border rounded-lg p-3 text-center"><div className="text-[9px] text-text-muted font-mono">Net Revenue</div><div className="text-xl font-bold font-mono text-accent mt-0.5">${netRevenue.toLocaleString()}</div></div>
@@ -197,7 +197,7 @@ export default function Accounting() {
       {tab === 'invoices' && (
         <>
           {viewingInvoice ? (
-            <div className="bg-bg-surface border border-border rounded-lg p-6">
+            <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-6 overflow-x-auto">
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h2 className="text-lg font-bold text-text-primary">{viewingInvoice.invoice_number}</h2>
@@ -212,19 +212,21 @@ export default function Accounting() {
                   {viewingInvoice.due_date && <p className="text-xs text-text-muted">Due: {viewingInvoice.due_date}</p>}
                 </div>
               </div>
-              <table className="w-full text-sm mb-4">
-                <thead><tr className="border-b border-border"><th className="py-2 text-left text-text-muted text-xs">Description</th><th className="py-2 text-right text-text-muted text-xs">Qty</th><th className="py-2 text-right text-text-muted text-xs">Price</th><th className="py-2 text-right text-text-muted text-xs">Amount</th></tr></thead>
-                <tbody>
-                  {(viewingInvoice.line_items || []).map((item, i) => (
-                    <tr key={i} className="border-b border-border last:border-0">
-                      <td className="py-2 text-text-primary">{item.description}</td>
-                      <td className="py-2 text-right font-mono text-text-muted">{item.quantity}</td>
-                      <td className="py-2 text-right font-mono text-text-muted">${Number(item.unit_price).toLocaleString()}</td>
-                      <td className="py-2 text-right font-mono text-accent">${Number(item.amount).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm mb-4">
+                  <thead><tr className="border-b border-border"><th className="py-2 text-left text-text-muted text-xs">Description</th><th className="py-2 text-right text-text-muted text-xs">Qty</th><th className="py-2 text-right text-text-muted text-xs">Price</th><th className="py-2 text-right text-text-muted text-xs">Amount</th></tr></thead>
+                  <tbody>
+                    {(viewingInvoice.line_items || []).map((item, i) => (
+                      <tr key={i} className="border-b border-border last:border-0">
+                        <td className="py-2 text-text-primary">{item.description}</td>
+                        <td className="py-2 text-right font-mono text-text-muted">{item.quantity}</td>
+                        <td className="py-2 text-right font-mono text-text-muted">${Number(item.unit_price).toLocaleString()}</td>
+                        <td className="py-2 text-right font-mono text-accent">${Number(item.amount).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <div className="border-t border-border pt-3 flex justify-between">
                 <button onClick={() => setViewingInvoice(null)} className="text-text-muted text-sm hover:text-text-secondary">Back to list</button>
                 <div className="text-right">

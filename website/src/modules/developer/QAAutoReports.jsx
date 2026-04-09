@@ -143,7 +143,7 @@ export default function QAAutoReports() {
                 {Object.keys(scores).length > 0 && (
                   <div className="p-4 border-b border-border">
                     <h5 className="text-[10px] text-text-muted uppercase tracking-wider mb-2">Module Health</h5>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                       {Object.entries(scores).map(([mod, score]) => (
                         <div key={mod} className="flex items-center justify-between bg-bg-card rounded p-2">
                           <span className="text-[10px] text-text-secondary capitalize">{mod}</span>
@@ -175,7 +175,7 @@ export default function QAAutoReports() {
                 {Object.keys(stats).length > 0 && (
                   <div className="p-4 border-b border-border">
                     <h5 className="text-[10px] text-text-muted uppercase tracking-wider mb-2">Platform Snapshot</h5>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
                       {Object.entries(stats).map(([table, count]) => (
                         <div key={table} className="text-center bg-bg-card rounded p-1.5">
                           <div className="text-xs font-bold text-text-primary">{(count || 0).toLocaleString()}</div>
@@ -198,7 +198,7 @@ export default function QAAutoReports() {
                         {copiedId === report.id ? 'Copied!' : 'Copy All'}
                       </button>
                     </div>
-                    <pre className="bg-[#0a0e14] rounded-lg p-4 text-[11px] text-text-primary font-mono whitespace-pre-wrap overflow-x-auto max-h-[400px] overflow-y-auto leading-relaxed border border-accent/20">
+                    <pre className="bg-[#0a0e14] rounded-lg p-4 text-[10px] sm:text-[11px] text-text-primary font-mono whitespace-pre-wrap overflow-x-auto max-h-[400px] overflow-y-auto leading-relaxed border border-accent/20">
                       {report.claude_code_instructions}
                     </pre>
                   </div>

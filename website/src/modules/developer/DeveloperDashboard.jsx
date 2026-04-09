@@ -14,6 +14,7 @@ const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 const QATestSuite = lazy(() => import('./QATestSuite'))
 const QAUsageSimulator = lazy(() => import('./QAUsageSimulator'))
 const QAAutoReports = lazy(() => import('./QAAutoReports'))
+const ChangeLog = lazy(() => import('./ChangeLog'))
 const ROLES = ['developer', 'admin', 'rep']
 const PLANS = ['free', 'starter', 'pro', 'enterprise']
 
@@ -386,6 +387,7 @@ export default function DeveloperDashboard() {
     { id: 'suggestions', label: `Suggestions (${(suggestions || []).filter(s => s.status === 'new').length || 0})` },
     { id: 'analytics', label: 'Analytics' },
     { id: 'qa', label: 'QA Hub' },
+    { id: 'changelog', label: 'Change Log' },
     { id: 'cache', label: `Contact Cache (${(contactCache || []).length})` },
     { id: 'custom', label: 'Custom Dashboards' },
   ]
@@ -565,7 +567,7 @@ export default function DeveloperDashboard() {
                 placeholder="Label (e.g. 'NIU Athletics pilot')"
                 value={newLinkLabel}
                 onChange={(e) => setNewLinkLabel(e.target.value)}
-                className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent min-w-[200px]"
+                className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent min-w-0 sm:min-w-[200px]"
               />
               <select
                 value={newLinkPlan}
@@ -979,15 +981,16 @@ export default function DeveloperDashboard() {
           </Panel>
           <Panel title="Overage Pricing (Non-Enterprise)">
             <p className="text-xs text-text-muted mb-3">Set included usage per plan and overage cost per additional request. Enterprise plans have unlimited usage at no extra charge.</p>
-            <div className="space-y-1">
-              <div className="hidden sm:grid sm:grid-cols-[1.5fr_0.8fr_0.8fr_0.5fr] gap-2 px-2 py-1 text-[10px] font-mono text-text-muted uppercase">
+            <div className="overflow-x-auto">
+            <div className="space-y-1 min-w-[600px]">
+              <div className="grid grid-cols-[1.5fr_0.8fr_0.8fr_0.5fr] gap-2 px-2 py-1 text-[10px] font-mono text-text-muted uppercase">
                 <span>Feature</span>
                 <span>Included/mo</span>
                 <span>Overage $/ea</span>
                 <span>Active</span>
               </div>
               {(overagePricing || []).map(item => (
-                <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[1.5fr_0.8fr_0.8fr_0.5fr] gap-2 items-center bg-bg-card border border-border rounded px-3 py-2">
+                <div key={item.id} className="grid grid-cols-[1.5fr_0.8fr_0.8fr_0.5fr] gap-2 items-center bg-bg-card border border-border rounded px-3 py-2">
                   <span className="text-sm text-text-primary">{item.label || item.service}</span>
                   <div className="flex items-center gap-1">
                     <input
@@ -1020,6 +1023,7 @@ export default function DeveloperDashboard() {
               {(!overagePricing || overagePricing.length === 0) && (
                 <div className="text-xs text-text-muted text-center py-4">Run migration 028 to enable overage pricing.</div>
               )}
+            </div>
             </div>
           </Panel>
 
@@ -1190,6 +1194,15 @@ export default function DeveloperDashboard() {
           </Panel>
           <QAHub properties={properties} profiles={profiles} />
         </div>
+      )}
+
+      {/* CHANGE LOG */}
+      {activeTab === 'changelog' && (
+        <Panel title="Change Log">
+          <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading...</div>}>
+            <ChangeLog />
+          </Suspense>
+        </Panel>
       )}
 
       {/* ANALYTICS */}

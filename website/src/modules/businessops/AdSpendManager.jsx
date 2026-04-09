@@ -64,9 +64,9 @@ export default function AdSpendManager() {
       </div>
 
       {byChannel.length > 0 && (
-        <div className="bg-bg-surface border border-border rounded-lg p-4">
+        <div className="bg-bg-surface border border-border rounded-lg p-4 overflow-x-auto">
           <h3 className="text-xs font-mono text-text-muted uppercase mb-3">Spend by Channel</h3>
-          <ResponsiveContainer width="100%" height={160}>
+          <ResponsiveContainer width="100%" height={160} minWidth={300}>
             <BarChart data={byChannel}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1E2435" />
               <XAxis dataKey="channel" tick={{ fontSize: 9, fill: '#8B92A8' }} />
@@ -94,7 +94,7 @@ export default function AdSpendManager() {
             <input type="number" placeholder="Impressions" value={form.impressions} onChange={e => setForm({ ...form, impressions: e.target.value })} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
             <input type="number" placeholder="Signups" value={form.signups} onChange={e => setForm({ ...form, signups: e.target.value })} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={() => addMutation.mutate()} disabled={!form.name} className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50">Add</button>
             <button onClick={() => setShowAdd(false)} className="text-text-muted text-sm">Cancel</button>
           </div>

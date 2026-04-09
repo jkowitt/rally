@@ -327,15 +327,22 @@ Respond with EXACTLY this JSON format (no other text):
 
   const activeRun = (testRuns || []).find(r => r.id === activeRunId)
 
+  const tabItems = [
+    { id: 'runs', label: `Test Runs (${(testRuns || []).length})` },
+    { id: 'cases', label: `Test Cases (${(testCases || []).length})` },
+    ...(activeRunId ? [{ id: 'active', label: activeRun?.name || 'Active Run' }] : []),
+  ]
+
   return (
     <div className="space-y-4">
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-bg-card rounded-lg p-1 flex-wrap">
-        {[
-          { id: 'runs', label: `Test Runs (${(testRuns || []).length})` },
-          { id: 'cases', label: `Test Cases (${(testCases || []).length})` },
-          ...(activeRunId ? [{ id: 'active', label: activeRun?.name || 'Active Run' }] : []),
-        ].map(t => (
+      {/* Tab bar — mobile dropdown, desktop buttons */}
+      <div className="sm:hidden">
+        <select value={view} onChange={e => setView(e.target.value)} className="w-full bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
+          {tabItems.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
+      </div>
+      <div className="hidden sm:flex gap-1 bg-bg-card rounded-lg p-1 flex-wrap">
+        {tabItems.map(t => (
           <button key={t.id} onClick={() => setView(t.id)} className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${view === t.id ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}>{t.label}</button>
         ))}
       </div>
@@ -399,9 +406,15 @@ Respond with EXACTLY this JSON format (no other text):
       {/* TEST CASES VIEW */}
       {view === 'cases' && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* Module filter — mobile dropdown, desktop buttons */}
+          <div className="sm:hidden">
+            <select value={moduleFilter} onChange={e => setModuleFilter(e.target.value)} className="w-full bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary">
+              {MODULES.map(m => <option key={m.id} value={m.id}>{m.label} {m.id !== 'all' && moduleStats[m.id] ? `(${moduleStats[m.id].total})` : ''}</option>)}
+            </select>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 flex-wrap">
             <span className="text-xs text-text-muted shrink-0">Filter:</span>
-            <div className="flex gap-1 flex-wrap overflow-x-auto">
+            <div className="flex gap-1 flex-wrap">
               {MODULES.map(m => (
                 <button key={m.id} onClick={() => setModuleFilter(m.id)} className={`text-[10px] px-2 py-1 rounded ${moduleFilter === m.id ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-secondary hover:text-text-primary'}`}>
                   {m.label} {m.id !== 'all' && moduleStats[m.id] ? `(${moduleStats[m.id].total})` : ''}

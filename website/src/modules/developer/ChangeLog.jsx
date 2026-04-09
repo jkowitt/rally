@@ -118,8 +118,13 @@ export default function ChangeLog() {
         <button onClick={() => setShowAdd(!showAdd)} className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium shrink-0">{showAdd ? 'Cancel' : 'Log Change'}</button>
       </div>
 
-      {/* Category filter */}
-      <div className="flex gap-1 overflow-x-auto pb-1">
+      {/* Category filter — mobile dropdown, desktop buttons */}
+      <div className="sm:hidden">
+        <select value={filter} onChange={e => setFilter(e.target.value)} className="w-full bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary">
+          {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label} {c.id !== 'all' && categoryCounts[c.id] ? `(${categoryCounts[c.id]})` : ''}</option>)}
+        </select>
+      </div>
+      <div className="hidden sm:flex gap-1 overflow-x-auto pb-1">
         {CATEGORIES.map(c => (
           <button key={c.id} onClick={() => setFilter(c.id)} className={`text-[10px] px-2 py-1 rounded whitespace-nowrap shrink-0 ${filter === c.id ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-secondary hover:text-text-primary'}`}>
             {c.label} {c.id !== 'all' && categoryCounts[c.id] ? `(${categoryCounts[c.id]})` : ''}

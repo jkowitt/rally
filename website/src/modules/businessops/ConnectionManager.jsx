@@ -34,8 +34,8 @@ export default function ConnectionManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="flex gap-1 flex-wrap">
+      <div className="flex justify-between items-center gap-2 flex-wrap">
+        <div className="flex gap-1 flex-wrap overflow-x-auto">
           <button onClick={() => setFilter('')} className={`px-2 py-1 rounded text-[11px] font-mono ${!filter ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-muted'}`}>All ({(connections || []).length})</button>
           {CATEGORIES.map(cat => byCategory[cat] > 0 && (
             <button key={cat} onClick={() => setFilter(filter === cat ? '' : cat)} className={`px-2 py-1 rounded text-[11px] font-mono capitalize ${filter === cat ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-muted'}`}>{cat} ({byCategory[cat]})</button>

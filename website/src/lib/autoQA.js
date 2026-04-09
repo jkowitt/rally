@@ -75,19 +75,20 @@ export async function runFullAutoQA(schedule = 'manual') {
     }
 
     // ═══════════════════════════════════════
-    // PHASE 2: Auto-fix common issues
+    // PHASE 2: Auto-fix common issues (all wrapped in try/catch)
     // ═══════════════════════════════════════
+    let nullStageCount = 0
+    let missingBrandCount = 0
 
-    // Fix 1: Deals with null stage → default to 'Prospect'
     try {
       const { data: nullStageDeals } = await supabase.from('deals').select('id').is('stage', null)
       if (nullStageDeals?.length > 0) {
+        nullStageCount = nullStageDeals.length
         const { error } = await supabase.from('deals').update({ stage: 'Prospect' }).is('stage', null)
-        if (!error) autoFixes.push({ table: 'deals', action: 'Set null stage to Prospect', count: nullStageDeals.length })
+        if (!error) autoFixes.push({ table: 'deals', action: 'Set null stage to Prospect', count: nullStageCount })
       }
     } catch {}
 
-    // Fix 2: Deals with null priority → default to 'Medium'
     try {
       const { data: nullPriorityDeals } = await supabase.from('deals').select('id').is('priority', null)
       if (nullPriorityDeals?.length > 0) {
@@ -96,56 +97,57 @@ export async function runFullAutoQA(schedule = 'manual') {
       }
     } catch {}
 
-    // Fix 3: Contracts missing brand_name — copy from linked deal
-    const { data: missingBrandContracts } = await supabase.from('contracts').select('id, deal_id').is('brand_name', null)
-    if (missingBrandContracts?.length > 0) {
-      let fixed = 0
-      for (const c of missingBrandContracts) {
-        if (c.deal_id) {
-          const { data: deal } = await supabase.from('deals').select('brand_name').eq('id', c.deal_id).maybeSingle()
-          if (deal?.brand_name) {
-            await supabase.from('contracts').update({ brand_name: deal.brand_name }).eq('id', c.id)
-            fixed++
+    try {
+      const { data: missingBrandContracts } = await supabase.from('contracts').select('id, deal_id').is('brand_name', null)
+      if (missingBrandContracts?.length > 0) {
+        let fixed = 0
+        for (const c of missingBrandContracts) {
+          if (c.deal_id) {
+            const { data: deal } = await supabase.from('deals').select('brand_name').eq('id', c.deal_id).maybeSingle()
+            if (deal?.brand_name) {
+              await supabase.from('contracts').update({ brand_name: deal.brand_name }).eq('id', c.id)
+              fixed++
+            }
           }
         }
+        missingBrandCount = missingBrandContracts.length - fixed
+        if (fixed > 0) autoFixes.push({ table: 'contracts', action: 'Copied missing brand_name from deal', count: fixed })
       }
-      if (fixed > 0) autoFixes.push({ table: 'contracts', action: 'Copied missing brand_name from deal', count: fixed })
-    }
+    } catch {}
 
-    // Fix 4: Tasks with status 'Done' but no completed_at
-    const { data: doneTasks } = await supabase.from('tasks').select('id').eq('status', 'Done').is('completed_at', null)
-    if (doneTasks?.length > 0) {
-      await supabase.from('tasks').update({ completed_at: new Date().toISOString() }).eq('status', 'Done').is('completed_at', null)
-      autoFixes.push({ table: 'tasks', action: 'Set completed_at on Done tasks', count: doneTasks.length })
-    }
+    try {
+      const { data: doneTasks } = await supabase.from('tasks').select('id').eq('status', 'Done').is('completed_at', null)
+      if (doneTasks?.length > 0) {
+        await supabase.from('tasks').update({ completed_at: new Date().toISOString() }).eq('status', 'Done').is('completed_at', null)
+        autoFixes.push({ table: 'tasks', action: 'Set completed_at on Done tasks', count: doneTasks.length })
+      }
+    } catch {}
 
     // Fix 5: Orphaned fulfillment records — skip (FK constraints handle this)
 
-    // Fix 6: QA tickets stuck in 'open' for 30+ days → mark as stale
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
-    const { data: staleTickets } = await supabase.from('qa_tickets').select('id').eq('status', 'open').lte('created_at', thirtyDaysAgo)
-    if (staleTickets?.length > 0) {
-      for (const t of staleTickets) {
-        await supabase.from('qa_tickets').update({
-          resolution_notes: 'Auto-marked stale (open 30+ days). Review or close.',
-        }).eq('id', t.id)
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
+      const { data: staleTickets } = await supabase.from('qa_tickets').select('id').eq('status', 'open').lte('created_at', thirtyDaysAgo)
+      if (staleTickets?.length > 0) {
+        for (const t of staleTickets) {
+          await supabase.from('qa_tickets').update({
+            resolution_notes: 'Auto-marked stale (open 30+ days). Review or close.',
+          }).eq('id', t.id)
+        }
+        autoFixes.push({ table: 'qa_tickets', action: 'Flagged stale tickets (30+ days open)', count: staleTickets.length })
       }
-      autoFixes.push({ table: 'qa_tickets', action: 'Flagged stale tickets (30+ days open)', count: staleTickets.length })
-    }
+    } catch {}
 
-    // Fix 7: Feature flags — ensure all 4 exist
-    const { data: flags } = await supabase.from('feature_flags').select('module')
-    const existingModules = new Set((flags || []).map(f => f.module))
-    const requiredModules = ['crm', 'sportify', 'valora', 'businessnow']
-    const missingFlags = requiredModules.filter(m => !existingModules.has(m))
-    if (missingFlags.length > 0) {
-      await supabase.from('feature_flags').insert(missingFlags.map(m => ({ module: m, enabled: m === 'crm' })))
-      autoFixes.push({ table: 'feature_flags', action: 'Created missing feature flags', count: missingFlags.length })
-    }
-
-    // Fix 8: Profiles without email — try to fill from auth
-    const { data: noEmailProfiles } = await supabase.from('profiles').select('id').is('email', null).limit(50)
-    // Can't access auth.users from client, so skip
+    try {
+      const { data: flags } = await supabase.from('feature_flags').select('module')
+      const existingModules = new Set((flags || []).map(f => f.module))
+      const requiredModules = ['crm', 'sportify', 'valora', 'businessnow']
+      const missingFlags = requiredModules.filter(m => !existingModules.has(m))
+      if (missingFlags.length > 0) {
+        await supabase.from('feature_flags').insert(missingFlags.map(m => ({ module: m, enabled: m === 'crm' })))
+        autoFixes.push({ table: 'feature_flags', action: 'Created missing feature flags', count: missingFlags.length })
+      }
+    } catch {}
 
     // ═══════════════════════════════════════
     // PHASE 3: Module-level QA scoring
@@ -162,13 +164,13 @@ export async function runFullAutoQA(schedule = 'manual') {
     // Score each module based on data health
     moduleScores.pipeline = scoreModule(dealCount, [
       dealCount > 0,
-      (nullStageDeals?.length || 0) === 0,
+      nullStageCount === 0,
       contactCount > 0,
       activityCount > 0,
     ])
     moduleScores.contracts = scoreModule(contractCount, [
       contractCount > 0 || dealCount === 0,
-      (missingBrandContracts?.length || 0) === 0,
+      missingBrandCount === 0,
       fulfillmentCount > 0 || contractCount === 0,
     ])
     moduleScores.assets = scoreModule(assetCount, [assetCount > 0 || dealCount === 0])
@@ -292,26 +294,26 @@ FEATURE SUGGESTIONS:
     // ═══════════════════════════════════════
     // PHASE 6: Log auto-fixes to change log
     // ═══════════════════════════════════════
-    if (autoFixes.length > 0) {
+    try {
+      if (autoFixes.length > 0) {
+        await supabase.from('change_log').insert({
+          title: `Auto QA: ${autoFixes.length} fixes applied`,
+          description: autoFixes.map(f => `${f.table}: ${f.action} (${f.count} records)`).join('\n'),
+          category: 'bugfix',
+          module: 'platform',
+          source: 'auto_fix',
+          qa_report_id: report.id,
+        })
+      }
       await supabase.from('change_log').insert({
-        title: `Auto QA: ${autoFixes.length} fixes applied`,
-        description: autoFixes.map(f => `${f.table}: ${f.action} (${f.count} records)`).join('\n'),
-        category: 'bugfix',
+        title: `Auto QA Report: Health ${avgScore}/100`,
+        description: `${schedule} run — ${results.passed}/${results.total} checks passed, ${autoFixes.length} auto-fixes applied.\n\n${claudeAnalysis.summary || ''}`,
+        category: 'qa',
         module: 'platform',
-        source: 'auto_fix',
+        source: 'auto_qa',
         qa_report_id: report.id,
-      }).catch(() => {}) // non-blocking
-    }
-
-    // Log the QA run itself
-    await supabase.from('change_log').insert({
-      title: `Auto QA Report: Health ${avgScore}/100`,
-      description: `${schedule} run — ${results.passed}/${results.total} checks passed, ${autoFixes.length} auto-fixes applied.\n\n${claudeAnalysis.summary || ''}`,
-      category: 'qa',
-      module: 'platform',
-      source: 'auto_qa',
-      qa_report_id: report.id,
-    }).catch(() => {})
+      })
+    } catch {} // non-blocking — change_log may not exist
 
     return report.id
   } catch (err) {

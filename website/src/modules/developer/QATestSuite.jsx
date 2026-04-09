@@ -497,7 +497,7 @@ Respond with EXACTLY this JSON format (no other text):
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-bg-surface rounded p-2">
                 <div className="text-[9px] text-[#7c3aed] font-mono uppercase mb-1">Claude</div>
-                <div className="grid grid-cols-4 gap-1 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 text-center">
                   <MiniStat label="Passed" value={runStats.claude_passed} color="text-success" />
                   <MiniStat label="Failed" value={runStats.claude_failed} color="text-danger" />
                   <MiniStat label="Review" value={runStats.claude_review} color="text-warning" />
@@ -506,7 +506,7 @@ Respond with EXACTLY this JSON format (no other text):
               </div>
               <div className="bg-bg-surface rounded p-2">
                 <div className="text-[9px] text-accent font-mono uppercase mb-1">Manual</div>
-                <div className="grid grid-cols-4 gap-1 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 text-center">
                   <MiniStat label="Passed" value={runStats.passed} color="text-success" />
                   <MiniStat label="Failed" value={runStats.failed} color="text-danger" />
                   <MiniStat label="Blocked" value={runStats.blocked} color="text-warning" />

@@ -89,14 +89,34 @@ If the request is a question, answer it directly. If it's a code change, show th
     toast({ title: 'Copied to clipboard', type: 'success' })
   }
 
+  // Get GitHub token from ui_content table
+  async function getGitHubToken() {
+    const { data } = await supabase.from('ui_content').select('value').eq('key', 'github_token').maybeSingle()
+    if (!data?.value) {
+      toast({ title: 'GitHub token not set', description: 'Go to Dev Tools > Feature Flags and set your GitHub token', type: 'error' })
+      return null
+    }
+    return data.value
+  }
+
+  const GITHUB_OWNER = 'jkowitt'
+  const GITHUB_REPO = 'rally'
+  const GITHUB_BRANCH = 'main'
+
   // Read a file from the repo
   async function readFile(path) {
     setHistory(prev => [...prev, { role: 'system', content: `Reading ${path}...` }])
+    const token = await getGitHubToken()
+    if (!token) return null
     try {
-      const { data, error } = await supabase.functions.invoke('github-code', { body: { action: 'read_file', path } })
-      if (error || data?.error) throw new Error(data?.error || error.message)
-      setHistory(prev => [...prev, { role: 'assistant', content: `📄 ${path} (${data.content.length} chars):\n\n${data.content.slice(0, 3000)}${data.content.length > 3000 ? '\n...(truncated)' : ''}` }])
-      return data
+      const resp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
+      })
+      if (!resp.ok) throw new Error(`File not found: ${path}`)
+      const data = await resp.json()
+      const content = atob(data.content)
+      setHistory(prev => [...prev, { role: 'assistant', content: `📄 ${path} (${content.length} chars):\n\n${content.slice(0, 3000)}${content.length > 3000 ? '\n...(truncated)' : ''}` }])
+      return { content, sha: data.sha }
     } catch (err) {
       setHistory(prev => [...prev, { role: 'assistant', content: `Error reading ${path}: ${err.message}` }])
       return null
@@ -106,20 +126,40 @@ If the request is a question, answer it directly. If it's a code change, show th
   // Write a file to the repo (commits directly to main)
   async function writeFile(path, content, message) {
     setHistory(prev => [...prev, { role: 'system', content: `Writing ${path}...` }])
+    const token = await getGitHubToken()
+    if (!token) return null
     try {
-      const { data, error } = await supabase.functions.invoke('github-code', {
-        body: { action: 'write_file', path, content, message: message || `Claude Code: update ${path}` }
+      // Get current SHA
+      let sha = null
+      try {
+        const getResp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
+        })
+        if (getResp.ok) { const d = await getResp.json(); sha = d.sha }
+      } catch {}
+
+      const payload = {
+        message: message || `Claude Code: update ${path}`,
+        content: btoa(unescape(encodeURIComponent(content))),
+        branch: GITHUB_BRANCH,
+      }
+      if (sha) payload.sha = sha
+
+      const resp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
-      if (error || data?.error) throw new Error(data?.error || error.message)
-      setHistory(prev => [...prev, { role: 'assistant', content: `✅ Committed to main: ${path}\nCommit: ${data.commit_sha?.slice(0, 7)}\nRailway will auto-deploy.` }])
+      if (!resp.ok) throw new Error(`GitHub API error ${resp.status}`)
+      const result = await resp.json()
+      setHistory(prev => [...prev, { role: 'assistant', content: `✅ Committed to main: ${path}\nCommit: ${result.commit?.sha?.slice(0, 7)}\nRailway will auto-deploy.` }])
       toast({ title: `Deployed: ${path}`, type: 'success' })
 
-      // Log the deployment
       await supabase.from('biz_code_sessions').insert({
-        prompt: `[deploy] ${path}`, response: `Committed ${data.commit_sha}`, status: 'deployed', created_by: profile?.id,
+        prompt: `[deploy] ${path}`, response: `Committed ${result.commit?.sha}`, status: 'deployed', created_by: profile?.id,
       })
       queryClient.invalidateQueries({ queryKey: ['biz-code-sessions'] })
-      return data
+      return result
     } catch (err) {
       setHistory(prev => [...prev, { role: 'assistant', content: `❌ Deploy failed: ${err.message}` }])
       toast({ title: 'Deploy failed', description: err.message, type: 'error' })
@@ -129,10 +169,15 @@ If the request is a question, answer it directly. If it's a code change, show th
 
   // List files in a directory
   async function listFiles(path) {
+    const token = await getGitHubToken()
+    if (!token) return
     try {
-      const { data, error } = await supabase.functions.invoke('github-code', { body: { action: 'list_files', path } })
-      if (error || data?.error) throw new Error(data?.error || error.message)
-      const listing = (data.files || []).map(f => `${f.type === 'dir' ? '📁' : '📄'} ${f.path}`).join('\n')
+      const resp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path || 'website/src'}?ref=${GITHUB_BRANCH}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
+      })
+      if (!resp.ok) throw new Error('Could not list files')
+      const data = await resp.json()
+      const listing = (Array.isArray(data) ? data : []).map(f => `${f.type === 'dir' ? '📁' : '📄'} ${f.path}`).join('\n')
       setHistory(prev => [...prev, { role: 'assistant', content: `Files in ${path || 'website/src'}:\n${listing}` }])
     } catch (err) {
       setHistory(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])

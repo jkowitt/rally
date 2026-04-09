@@ -12,6 +12,7 @@ import ClaudeAssistant from '@/components/ClaudeAssistant'
 
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 const QATestSuite = lazy(() => import('./QATestSuite'))
+const QAUsageSimulator = lazy(() => import('./QAUsageSimulator'))
 const ROLES = ['developer', 'admin', 'rep']
 const PLANS = ['free', 'starter', 'pro', 'enterprise']
 
@@ -1175,6 +1176,9 @@ export default function DeveloperDashboard() {
       {/* QA TEST SUITE */}
       {activeTab === 'qa' && (
         <div className="space-y-6">
+          <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading simulator...</div>}>
+            <QAUsageSimulator />
+          </Suspense>
           <Panel title="QA Test Suite">
             <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading test suite...</div>}>
               <QATestSuite profiles={profiles} />

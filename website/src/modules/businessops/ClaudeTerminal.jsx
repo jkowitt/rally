@@ -9,8 +9,10 @@ const QUICK_PROMPTS = [
   { label: 'Add CSV export', prompt: 'Add a CSV export button to the pipeline table view that exports all visible deals with their current column values.' },
   { label: 'Audit security', prompt: 'Audit the codebase for security vulnerabilities: XSS, injection, exposed secrets, missing auth checks. List findings with severity.' },
   { label: 'Optimize performance', prompt: 'Identify the top 5 performance bottlenecks in the React codebase and suggest specific optimizations.' },
-  { label: 'Add new feature', prompt: '' },
-  { label: 'Fix a bug', prompt: '' },
+  { label: 'List files', prompt: '/ls website/src/modules' },
+  { label: 'Read file', prompt: '/read ' },
+  { label: 'Add feature', prompt: '' },
+  { label: 'Fix bug', prompt: '' },
 ]
 
 export default function ClaudeTerminal() {
@@ -87,6 +89,88 @@ If the request is a question, answer it directly. If it's a code change, show th
     toast({ title: 'Copied to clipboard', type: 'success' })
   }
 
+  // Read a file from the repo
+  async function readFile(path) {
+    setHistory(prev => [...prev, { role: 'system', content: `Reading ${path}...` }])
+    try {
+      const { data, error } = await supabase.functions.invoke('github-code', { body: { action: 'read_file', path } })
+      if (error || data?.error) throw new Error(data?.error || error.message)
+      setHistory(prev => [...prev, { role: 'assistant', content: `📄 ${path} (${data.content.length} chars):\n\n${data.content.slice(0, 3000)}${data.content.length > 3000 ? '\n...(truncated)' : ''}` }])
+      return data
+    } catch (err) {
+      setHistory(prev => [...prev, { role: 'assistant', content: `Error reading ${path}: ${err.message}` }])
+      return null
+    }
+  }
+
+  // Write a file to the repo (commits directly to main)
+  async function writeFile(path, content, message) {
+    setHistory(prev => [...prev, { role: 'system', content: `Writing ${path}...` }])
+    try {
+      const { data, error } = await supabase.functions.invoke('github-code', {
+        body: { action: 'write_file', path, content, message: message || `Claude Code: update ${path}` }
+      })
+      if (error || data?.error) throw new Error(data?.error || error.message)
+      setHistory(prev => [...prev, { role: 'assistant', content: `✅ Committed to main: ${path}\nCommit: ${data.commit_sha?.slice(0, 7)}\nRailway will auto-deploy.` }])
+      toast({ title: `Deployed: ${path}`, type: 'success' })
+
+      // Log the deployment
+      await supabase.from('biz_code_sessions').insert({
+        prompt: `[deploy] ${path}`, response: `Committed ${data.commit_sha}`, status: 'deployed', created_by: profile?.id,
+      })
+      queryClient.invalidateQueries({ queryKey: ['biz-code-sessions'] })
+      return data
+    } catch (err) {
+      setHistory(prev => [...prev, { role: 'assistant', content: `❌ Deploy failed: ${err.message}` }])
+      toast({ title: 'Deploy failed', description: err.message, type: 'error' })
+      return null
+    }
+  }
+
+  // List files in a directory
+  async function listFiles(path) {
+    try {
+      const { data, error } = await supabase.functions.invoke('github-code', { body: { action: 'list_files', path } })
+      if (error || data?.error) throw new Error(data?.error || error.message)
+      const listing = (data.files || []).map(f => `${f.type === 'dir' ? '📁' : '📄'} ${f.path}`).join('\n')
+      setHistory(prev => [...prev, { role: 'assistant', content: `Files in ${path || 'website/src'}:\n${listing}` }])
+    } catch (err) {
+      setHistory(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])
+    }
+  }
+
+  // Handle special commands
+  function handleCommand(input) {
+    const trimmed = input.trim()
+    if (trimmed.startsWith('/read ')) { readFile(trimmed.slice(6).trim()); return true }
+    if (trimmed.startsWith('/write ')) {
+      const parts = trimmed.slice(7).split(' ')
+      const path = parts[0]
+      // Content comes from the last Claude response
+      const lastResponse = history.filter(h => h.role === 'assistant').pop()?.content || ''
+      if (!path) { toast({ title: 'Usage: /write filepath', type: 'warning' }); return true }
+      if (confirm(`Commit changes to ${path} on main? This will deploy immediately.`)) {
+        writeFile(path, lastResponse, `Claude Code: update ${path}`)
+      }
+      return true
+    }
+    if (trimmed.startsWith('/ls') || trimmed.startsWith('/list')) { listFiles(trimmed.split(' ')[1] || ''); return true }
+    if (trimmed === '/deploy') {
+      toast({ title: 'Use /write <filepath> to deploy a specific file', type: 'warning' })
+      return true
+    }
+    return false
+  }
+
+  // Override handleSubmit to check for commands first
+  const origSubmit = handleSubmit
+  handleSubmit = async function(e) {
+    e?.preventDefault()
+    if (!prompt.trim() || generating) return
+    if (handleCommand(prompt)) { setPrompt(''); return }
+    return origSubmit(e)
+  }
+
   async function updateSessionStatus(id, status) {
     await supabase.from('biz_code_sessions').update({ status }).eq('id', id)
     queryClient.invalidateQueries({ queryKey: ['biz-code-sessions'] })
@@ -128,9 +212,12 @@ If the request is a question, answer it directly. If it's a code change, show th
         <div ref={outputRef} className="p-4 max-h-[500px] overflow-y-auto bg-[#0a0e14] font-mono text-sm space-y-3">
           {history.length === 0 && !generating && (
             <div className="text-text-muted">
-              <p>Claude Code Terminal — write prompts, get code changes.</p>
-              <p className="mt-2 text-accent">Try a quick prompt above, or type your own request below.</p>
-              <p className="mt-1 text-text-secondary text-xs">Conversation history is maintained — Claude remembers context from previous messages in this session.</p>
+              <p>Claude Code Terminal — write prompts, generate and deploy code.</p>
+              <p className="mt-2 text-accent">Commands:</p>
+              <p className="text-text-secondary text-xs">/ls [path] — list files in directory</p>
+              <p className="text-text-secondary text-xs">/read [filepath] — read a file from the repo</p>
+              <p className="text-text-secondary text-xs">/write [filepath] — commit the last Claude response as a file (deploys to production)</p>
+              <p className="mt-1 text-text-secondary text-xs">Or type a natural language request and Claude will generate the code.</p>
             </div>
           )}
           {history.map((msg, i) => (

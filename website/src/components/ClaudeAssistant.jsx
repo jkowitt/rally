@@ -55,7 +55,7 @@ export default function ClaudeAssistant() {
             page_context: `${pageContext}\n${modeInstructions[mode]}`,
           },
         })
-        if (!error && !data?.error?.includes('Unknown action')) {
+        if (!error && !(typeof data?.error === 'string' && data.error.includes('Unknown action'))) {
           response = data?.response || data?.text || JSON.stringify(data)
         } else {
           // Fallback

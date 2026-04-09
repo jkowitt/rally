@@ -115,29 +115,59 @@ export async function generateFulfillment({ contract_id, deal_id, start_date, en
   return invokeEdgeFunction('contract-ai', { action: 'generate_fulfillment', contract_id, deal_id, start_date, end_date })
 }
 
-// CRM AI functions
+// CRM AI functions — all wrapped with try/catch to prevent page crashes
 export async function getDealInsights({ deal, activities, tasks, contracts }) {
-  return invokeEdgeFunction('contract-ai', { action: 'deal_insights', deal, activities, tasks, contracts })
+  try {
+    return await invokeEdgeFunction('contract-ai', { action: 'deal_insights', deal, activities, tasks, contracts })
+  } catch (e) {
+    console.warn('getDealInsights failed:', e.message)
+    return { insights: { health_score: 5, next_best_actions: ['AI temporarily unavailable — follow up manually'], risk_factors: [], opportunities: [], coaching_tip: 'Check back later for AI insights.' } }
+  }
 }
 
 export async function getPipelineForecast({ deals, historical_win_rate }) {
-  return invokeEdgeFunction('contract-ai', { action: 'pipeline_forecast', deals, historical_win_rate })
+  try {
+    return await invokeEdgeFunction('contract-ai', { action: 'pipeline_forecast', deals, historical_win_rate })
+  } catch (e) {
+    console.warn('getPipelineForecast failed:', e.message)
+    return { forecast: { summary: 'AI forecast temporarily unavailable.', pipeline_health: 'Unknown', recommendations: ['Try again later'] } }
+  }
 }
 
 export async function draftEmail({ deal, context, email_type }) {
-  return invokeEdgeFunction('contract-ai', { action: 'draft_email', deal, context, email_type })
+  try {
+    return await invokeEdgeFunction('contract-ai', { action: 'draft_email', deal, context, email_type })
+  } catch (e) {
+    console.warn('draftEmail failed:', e.message)
+    return { email: { subject: `Follow up — ${deal?.brand_name || 'Sponsorship'}`, body: 'AI drafting temporarily unavailable. Please write your email manually.', tone: 'professional' } }
+  }
 }
 
 export async function analyzeLostDeal({ deal, activities }) {
-  return invokeEdgeFunction('contract-ai', { action: 'analyze_lost_deal', deal, activities })
+  try {
+    return await invokeEdgeFunction('contract-ai', { action: 'analyze_lost_deal', deal, activities })
+  } catch (e) {
+    console.warn('analyzeLostDeal failed:', e.message)
+    return { analysis: { likely_reasons: ['AI analysis temporarily unavailable'], lessons_learned: 'Try running this analysis again later.' } }
+  }
 }
 
 export async function enrichContact({ name, company, position }) {
-  return invokeEdgeFunction('contract-ai', { action: 'enrich_contact', name, company, position })
+  try {
+    return await invokeEdgeFunction('contract-ai', { action: 'enrich_contact', name, company, position })
+  } catch (e) {
+    console.warn('enrichContact failed:', e.message)
+    return { enrichment: { industry: 'Unknown', conversation_starters: ['AI enrichment temporarily unavailable'] } }
+  }
 }
 
 export async function generateMeetingNotes({ deal, attendees, agenda, raw_notes }) {
-  return invokeEdgeFunction('contract-ai', { action: 'meeting_notes', deal, attendees, agenda, raw_notes })
+  try {
+    return await invokeEdgeFunction('contract-ai', { action: 'meeting_notes', deal, attendees, agenda, raw_notes })
+  } catch (e) {
+    console.warn('generateMeetingNotes failed:', e.message)
+    return { notes: { summary: 'AI notes temporarily unavailable.', action_items: [], sentiment: 'Neutral' } }
+  }
 }
 
 // Email sending

@@ -62,7 +62,7 @@ export default function ClaudeTerminal() {
         },
       })
 
-      if (error || data?.error?.includes('Unknown action')) {
+      if (error || (typeof data?.error === 'string' && data.error.includes('Unknown action'))) {
         // Fallback to edit_contract if code_assistant not deployed yet
         const contextMsgs = history.slice(-6).map(h => `${h.role === 'user' ? 'USER' : 'CLAUDE'}: ${h.content.slice(0, 500)}`).join('\n\n')
         const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
@@ -224,7 +224,7 @@ export default function ClaudeTerminal() {
           file_path: path,
         },
       })
-      if (!error && !data?.error?.includes('Unknown action')) {
+      if (!error && !(typeof data?.error === 'string' && data.error.includes('Unknown action'))) {
         newContent = data?.response || data?.contract_text || ''
       } else {
         // Fallback to edit_contract

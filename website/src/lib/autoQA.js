@@ -12,9 +12,8 @@ export async function maybeRunScheduledQA() {
     const day = now.getDay()
     if (!SCHEDULE_DAYS.includes(day)) return false
 
-    // Convert to ET
-    const etTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
-    const etHour = etTime.getHours()
+    // Convert to ET using reliable Intl formatter
+    const etHour = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }).format(now), 10)
     // Run between 1am-2am ET
     if (etHour !== TARGET_HOUR_ET) return false
 
@@ -80,18 +79,22 @@ export async function runFullAutoQA(schedule = 'manual') {
     // ═══════════════════════════════════════
 
     // Fix 1: Deals with null stage → default to 'Prospect'
-    const { data: nullStageDeals } = await supabase.from('deals').select('id').is('stage', null)
-    if (nullStageDeals?.length > 0) {
-      await supabase.from('deals').update({ stage: 'Prospect' }).is('stage', null)
-      autoFixes.push({ table: 'deals', action: 'Set null stage to Prospect', count: nullStageDeals.length })
-    }
+    try {
+      const { data: nullStageDeals } = await supabase.from('deals').select('id').is('stage', null)
+      if (nullStageDeals?.length > 0) {
+        const { error } = await supabase.from('deals').update({ stage: 'Prospect' }).is('stage', null)
+        if (!error) autoFixes.push({ table: 'deals', action: 'Set null stage to Prospect', count: nullStageDeals.length })
+      }
+    } catch {}
 
     // Fix 2: Deals with null priority → default to 'Medium'
-    const { data: nullPriorityDeals } = await supabase.from('deals').select('id').is('priority', null)
-    if (nullPriorityDeals?.length > 0) {
-      await supabase.from('deals').update({ priority: 'Medium' }).is('priority', null)
-      autoFixes.push({ table: 'deals', action: 'Set null priority to Medium', count: nullPriorityDeals.length })
-    }
+    try {
+      const { data: nullPriorityDeals } = await supabase.from('deals').select('id').is('priority', null)
+      if (nullPriorityDeals?.length > 0) {
+        const { error } = await supabase.from('deals').update({ priority: 'Medium' }).is('priority', null)
+        if (!error) autoFixes.push({ table: 'deals', action: 'Set null priority to Medium', count: nullPriorityDeals.length })
+      }
+    } catch {}
 
     // Fix 3: Contracts missing brand_name — copy from linked deal
     const { data: missingBrandContracts } = await supabase.from('contracts').select('id, deal_id').is('brand_name', null)
@@ -170,12 +173,27 @@ export async function runFullAutoQA(schedule = 'manual') {
     ])
     moduleScores.assets = scoreModule(assetCount, [assetCount > 0 || dealCount === 0])
     moduleScores.fulfillment = scoreModule(fulfillmentCount, [fulfillmentCount > 0 || contractCount === 0])
-    moduleScores.dashboard = 90 // Always works if data exists
+    moduleScores.dashboard = scoreModule(dealCount, [dealCount > 0, results.failed < 3])
     moduleScores.team = scoreModule(platformStats.profiles || 0, [(platformStats.profiles || 0) > 0])
-    moduleScores.auth = 95 // Hard to test from here
     moduleScores.events = scoreModule(eventCount, [eventCount >= 0])
-    moduleScores.ai = 85 // Dependent on edge function
-    moduleScores.global = 90
+
+    // Test AI by actually pinging the edge function
+    let aiWorking = false
+    try {
+      const { error: aiErr } = await supabase.functions.invoke('contract-ai', { body: { action: 'summarize_contract', contract_text: 'test' } })
+      aiWorking = !aiErr
+    } catch {}
+    moduleScores.ai = aiWorking ? 90 : 30
+
+    // Auth check
+    let authWorking = false
+    try {
+      const { data: sess } = await supabase.auth.getSession()
+      authWorking = !!sess?.session
+    } catch {}
+    moduleScores.auth = authWorking ? 95 : 40
+
+    moduleScores.global = scoreModule(results.passed, [results.failed === 0, results.passed > 10])
 
     const avgScore = Math.round(Object.values(moduleScores).reduce((a, b) => a + b, 0) / Object.keys(moduleScores).length)
 
@@ -186,7 +204,7 @@ export async function runFullAutoQA(schedule = 'manual') {
     let claudeCodeInstructions = ''
 
     try {
-      const { data: aiData } = await supabase.functions.invoke('contract-ai', {
+      const { data: aiData, error: aiInvokeErr } = await supabase.functions.invoke('contract-ai', {
         body: {
           action: 'code_assistant',
           prompt: `You are performing an automated QA audit of the Loud Legacy CRM platform. Based on the current state:
@@ -232,6 +250,7 @@ FEATURE SUGGESTIONS:
         },
       })
 
+      if (aiInvokeErr) throw aiInvokeErr
       const response = aiData?.response || aiData?.contract_text || ''
       claudeCodeInstructions = response
 

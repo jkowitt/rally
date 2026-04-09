@@ -106,17 +106,17 @@ function MobileBottomNav() {
   const path = location.pathname
 
   const tabs = [
-    { to: '/app', icon: '◉', label: 'Home', exact: true },
+    { to: '/app', label: 'Home', exact: true },
     ...(flags.crm ? [
-      { to: '/app/crm/pipeline', icon: '▤', label: 'Pipeline' },
-      { to: '/app/crm/contracts', icon: '▥', label: 'Contracts' },
-      { to: '/app/crm/newsletter', icon: '▧', label: 'News' },
-      { to: '/app/crm/assets', icon: '▣', label: 'Assets' },
+      { to: '/app/crm/pipeline', label: 'Pipeline' },
+      { to: '/app/crm/contracts', label: 'Contracts' },
+      { to: '/app/crm/team', label: 'Team' },
+      { to: '/app/settings', label: 'Settings' },
     ] : []),
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-bg-surface border-t border-border flex items-center justify-around py-1.5 safe-pb z-40 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 bg-bg-surface border-t border-border flex items-center justify-around py-2 safe-pb z-40 md:hidden">
       {tabs.map(tab => {
         const isActive = tab.exact ? (path === '/app' || path === '/app/') : path.startsWith(tab.to)
         return (
@@ -124,12 +124,11 @@ function MobileBottomNav() {
             key={tab.to}
             to={tab.to}
             end={tab.exact}
-            className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-[48px] ${
-              isActive ? 'text-accent' : 'text-text-muted active:text-text-secondary'
+            className={`px-3 py-1.5 rounded text-[10px] font-mono transition-colors ${
+              isActive ? 'text-accent bg-accent/5' : 'text-text-muted active:text-text-secondary'
             }`}
           >
-            <span className="text-base leading-none">{tab.icon}</span>
-            <span className="text-[9px] font-mono leading-none">{tab.label}</span>
+            {tab.label}
           </NavLink>
         )
       })}

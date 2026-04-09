@@ -336,7 +336,7 @@ If the request is a question, answer it directly. If it's a code change, show th
         </div>
 
         {/* Output */}
-        <div ref={outputRef} className="p-4 max-h-[500px] overflow-y-auto bg-[#0a0e14] font-mono text-sm space-y-3">
+        <div ref={outputRef} className="p-3 sm:p-4 max-h-[60vh] sm:max-h-[500px] overflow-y-auto bg-[#0a0e14] font-mono text-xs sm:text-sm space-y-3">
           {history.length === 0 && !generating && (
             <div className="text-text-muted">
               <p>Claude Code Terminal — edit any file on the site and deploy.</p>

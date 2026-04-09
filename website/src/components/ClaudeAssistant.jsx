@@ -67,20 +67,20 @@ export default function ClaudeAssistant() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 z-40 bg-accent/90 text-bg-primary w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:bg-accent transition-colors text-lg font-bold"
-        title="Claude Assistant"
+        className="fixed bottom-14 right-3 z-40 bg-accent text-bg-primary px-3 py-2 rounded-full shadow-lg flex items-center gap-1.5 hover:opacity-90 transition-opacity text-xs font-mono font-medium md:bottom-4 md:right-4"
+        title="Legacy Helper"
       >
-        AI
+        LH
       </button>
     )
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-96 max-h-[600px] bg-bg-surface border border-accent/30 rounded-lg shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 sm:inset-auto sm:bottom-4 sm:right-4 z-50 sm:w-96 sm:max-h-[600px] bg-bg-surface sm:border sm:border-accent/30 sm:rounded-lg shadow-2xl flex flex-col overflow-hidden">
       {/* Header */}
       <div className="px-3 py-2 bg-bg-card border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-accent font-bold">Claude AI</span>
+          <span className="text-xs font-mono text-accent font-bold">Legacy Helper</span>
           <div className="flex gap-0.5">
             {[
               { id: 'ask', label: 'Ask' },

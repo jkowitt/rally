@@ -39,8 +39,51 @@ export default function QATaskManager() {
   const { data: tasks } = useQuery({
     queryKey: ['qa-task-summary'],
     queryFn: async () => {
-      const { data } = await supabase.from('qa_task_summary').select('*').order('module').order('priority')
-      return data || []
+      // Fetch test cases, attempts, and completions in parallel — aggregate client-side
+      const [casesRes, attemptsRes, completionsRes] = await Promise.all([
+        supabase.from('qa_test_cases').select('*').order('module').order('priority'),
+        supabase.from('qa_test_attempts').select('test_case_id, attempt_type, result, attempted_at'),
+        supabase.from('qa_test_completions').select('*'),
+      ])
+      const cases = casesRes.data || []
+      const attempts = attemptsRes.data || []
+      const completions = completionsRes.data || []
+
+      // Build lookup maps
+      const attemptsByCase = {}
+      attempts.forEach(a => {
+        if (!attemptsByCase[a.test_case_id]) attemptsByCase[a.test_case_id] = []
+        attemptsByCase[a.test_case_id].push(a)
+      })
+      const completionsByCase = {}
+      completions.forEach(c => { completionsByCase[c.test_case_id] = c })
+
+      // Aggregate
+      return cases.map(tc => {
+        const caseAttempts = attemptsByCase[tc.id] || []
+        const passed = caseAttempts.filter(a => a.result === 'passed').length
+        const failed = caseAttempts.filter(a => a.result === 'failed').length
+        const total = caseAttempts.length
+        const lastAttempted = caseAttempts.length ? caseAttempts.reduce((max, a) => a.attempted_at > max ? a.attempted_at : max, caseAttempts[0].attempted_at) : null
+        const claudeAttempts = caseAttempts.filter(a => a.attempt_type === 'auto_claude')
+        const lastAutoChecked = claudeAttempts.length ? claudeAttempts.reduce((max, a) => a.attempted_at > max ? a.attempted_at : max, claudeAttempts[0].attempted_at) : null
+        const comp = completionsByCase[tc.id]
+        const targetPassCount = tc.target_pass_count || 5
+        return {
+          ...tc,
+          target_pass_count: targetPassCount,
+          total_attempts: total,
+          passed_attempts: passed,
+          failed_attempts: failed,
+          performance_score: total > 0 ? Math.round((passed / total) * 100) : 0,
+          last_attempted: lastAttempted,
+          last_auto_checked: lastAutoChecked,
+          dev_completed: comp?.completed || false,
+          dev_completed_at: comp?.completed_at || null,
+          dev_notes: comp?.notes || null,
+          target_met: passed >= targetPassCount,
+        }
+      })
     },
   })
 

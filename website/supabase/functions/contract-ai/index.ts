@@ -549,63 +549,171 @@ Return ONLY valid JSON, no other text.`;
 
 // ============ NEWSLETTER ============
 
+const INDUSTRY_CONFIG: any = {
+  sports: {
+    name: "The Sports Business Weekly",
+    afternoonName: "Sports Afternoon Access",
+    audience: "sports sponsorship and partnership professionals",
+    sources: "SportBusiness Journal, Sports Business Daily, Front Office Sports, Forbes Sports Money, ESPN, The Athletic, Sportico, IEG/Sponsorship.com, Nielsen Sports, Ad Age, CNBC Sports",
+    focus: "sponsorship deals, media rights, NIL, athlete partnerships, sports marketing, fan engagement, broadcast valuations",
+    headlineDesc: "biggest sports business story",
+    trendsDesc: "sports sponsorship (shifting budgets, new categories, NIL impact)",
+    techDesc: "sports business (AI, streaming, fan engagement, ticketing, measurement)",
+    brandDesc: "sports marketing strategy",
+    categories: "NFL, NBA, MLB, NHL, NCAA, soccer, esports, Olympics",
+  },
+  nonprofit: {
+    name: "The Nonprofit Impact Weekly",
+    afternoonName: "Nonprofit Afternoon Access",
+    audience: "nonprofit development officers, fundraisers, and grant managers",
+    sources: "Chronicle of Philanthropy, Nonprofit Quarterly, Inside Philanthropy, Philanthropy News Digest, Stanford Social Innovation Review, Candid, GuideStar, NonProfit PRO, Fast Company Impact",
+    focus: "grant funding, major donor cultivation, impact measurement, fundraising campaigns, corporate giving, donor retention",
+    headlineDesc: "biggest nonprofit/philanthropy story",
+    trendsDesc: "nonprofit fundraising (donor behavior, grant trends, giving circles)",
+    techDesc: "nonprofits (donor CRM, payment platforms, impact tracking, AI fundraising)",
+    brandDesc: "corporate-nonprofit partnership",
+    categories: "foundations, community orgs, international NGOs, social enterprises, advocacy groups",
+  },
+  conference: {
+    name: "The Conference Business Weekly",
+    afternoonName: "Conference Afternoon Access",
+    audience: "conference organizers, event marketers, and sponsorship managers",
+    sources: "BizBash, PCMA Convene, Trade Show News Network, Skift Meetings, Event Marketer, MeetingsNet, Northstar Meetings Group, Cvent Blog, EventMB",
+    focus: "conference sponsorships, trade show ROI, attendee engagement, hybrid events, sponsor activations, exhibitor experience",
+    headlineDesc: "biggest conference/events story",
+    trendsDesc: "events industry (attendance, sponsorship spend, format changes)",
+    techDesc: "events (event tech, engagement platforms, hybrid delivery, AI networking)",
+    brandDesc: "B2B event activation strategy",
+    categories: "trade shows, conferences, summits, expos, user conferences, industry conventions",
+  },
+  media: {
+    name: "The Media Business Weekly",
+    afternoonName: "Media Afternoon Access",
+    audience: "media publishers, broadcasters, and ad sales professionals",
+    sources: "Digiday, AdWeek, Ad Age, Variety, The Hollywood Reporter, Nieman Lab, Axios Media Trends, Press Gazette, Media Post, MarketingBrew",
+    focus: "advertising, audience measurement, publisher revenue, content monetization, branded content, programmatic ads",
+    headlineDesc: "biggest media/publishing story",
+    trendsDesc: "media industry (ad spend, audience trends, platform shifts)",
+    techDesc: "media (AI content, measurement, attribution, CTV, addressable advertising)",
+    brandDesc: "brand media strategy",
+    categories: "digital publishers, broadcast, streaming, print, podcasts, newsletters",
+  },
+  realestate: {
+    name: "The Real Estate Partnerships Weekly",
+    afternoonName: "Real Estate Afternoon Access",
+    audience: "commercial real estate developers, property managers, and brokers",
+    sources: "CoStar, Bisnow, Commercial Observer, The Real Deal, GlobeSt, NAIOP, CBRE Insights, JLL Research, Cushman & Wakefield",
+    focus: "commercial leasing, tenant partnerships, mixed-use development, retail anchors, office space, multifamily",
+    headlineDesc: "biggest commercial real estate story",
+    trendsDesc: "real estate partnerships (tenant trends, occupancy, lease structures)",
+    techDesc: "real estate (proptech, smart buildings, tenant experience platforms)",
+    brandDesc: "retail/restaurant tenant strategy",
+    categories: "retail, office, multifamily, industrial, mixed-use, hospitality",
+  },
+  entertainment: {
+    name: "The Entertainment Business Weekly",
+    afternoonName: "Entertainment Afternoon Access",
+    audience: "venue operators, talent bookers, and entertainment sponsorship managers",
+    sources: "Pollstar, Billboard, Variety, The Hollywood Reporter, Venues Now, IQ Magazine, Music Business Worldwide, Amplify",
+    focus: "live events, venue sponsorships, talent partnerships, festival activations, brand integrations, ticketing",
+    headlineDesc: "biggest live entertainment story",
+    trendsDesc: "entertainment industry (touring, venue economics, sponsor spend)",
+    techDesc: "entertainment (ticketing tech, fan experience, streaming integrations)",
+    brandDesc: "brand-artist partnership",
+    categories: "concerts, festivals, venues, touring, theatre, nightlife, theme parks",
+  },
+}
+
+function getIndustryKey(industryInput: string): string {
+  const map: any = {
+    sports: 'sports',
+    college: 'sports',
+    professional: 'sports',
+    minor_league: 'sports',
+    nonprofit: 'nonprofit',
+    foundation: 'nonprofit',
+    charity: 'nonprofit',
+    conference: 'conference',
+    events: 'conference',
+    tradeshow: 'conference',
+    media: 'media',
+    publisher: 'media',
+    broadcast: 'media',
+    realestate: 'realestate',
+    real_estate: 'realestate',
+    commercial: 'realestate',
+    entertainment: 'entertainment',
+    venue: 'entertainment',
+    music: 'entertainment',
+  }
+  return map[industryInput?.toLowerCase()] || 'sports'
+}
+
 async function generateWeeklyNewsletter(supabase: any, body: any) {
   const propertyId = body.property_id;
+  const industry = getIndustryKey(body.industry || 'sports');
+  const cfg = INDUSTRY_CONFIG[industry] || INDUSTRY_CONFIG.sports;
 
   const today = new Date();
   const monday = new Date(today);
   monday.setDate(today.getDate() - today.getDay() + 1);
   const weekOf = monday.toISOString().split("T")[0];
 
-  // Check if this week's newsletter already exists globally
+  // Check if this industry's weekly newsletter already exists for this week
   const { data: existing } = await supabase
     .from("newsletters")
     .select("*")
     .eq("type", "weekly_digest")
     .eq("week_of", weekOf)
+    .eq("industry", industry)
     .limit(1);
 
   if (existing?.length > 0) {
     return { newsletter: existing[0] };
   }
 
-  const prompt = `You are the editor of "The Sports Business Weekly," a premium newsletter for sports sponsorship and partnership professionals. Write the weekly edition for the week of ${weekOf}.
+  const prompt = `You are the editor of "${cfg.name}," a premium weekly newsletter for ${cfg.audience}. Write the edition for the week of ${weekOf}.
 
-Write a comprehensive, well-structured newsletter covering:
+Summarize the most important stories and developments from THIS WEEK (${weekOf} onward) in the ${industry} industry. Pull from recent real articles and news events from your knowledge. Focus on: ${cfg.focus}.
 
-1. **HEADLINE STORY** — The biggest sports business story this week (major deal, partnership, or market shift)
-2. **DEALS & PARTNERSHIPS** — 3-4 notable sponsorship deals or partnership announcements
-3. **MARKET TRENDS** — 2-3 emerging trends in sports sponsorship (data-driven insights, shifting budgets, new categories)
-4. **TECHNOLOGY & INNOVATION** — 1-2 tech developments impacting sports business (AI, streaming, fan engagement, measurement)
-5. **BRAND SPOTLIGHT** — Deep dive on one brand's sports marketing strategy and what others can learn
-6. **NUMBERS THAT MATTER** — 3-4 key stats or data points from the sports business world
-7. **LOOKING AHEAD** — What to watch for next week (upcoming events, earnings, announcements)
-8. **ACTIONABLE TAKEAWAY** — One specific thing a sponsorship sales professional should do this week
+Cover these sectors: ${cfg.categories}.
+
+Structure the newsletter with these sections:
+
+1. **HEADLINE STORY** — The ${cfg.headlineDesc} of the week. Summarize it in 2-3 paragraphs with specific names, numbers, and quotes if available.
+2. **DEALS & PARTNERSHIPS** — 3-4 notable deals, partnerships, or announcements from this week. Include dollar amounts where known.
+3. **MARKET TRENDS** — 2-3 emerging trends in ${cfg.trendsDesc}. Data-driven insights.
+4. **TECHNOLOGY & INNOVATION** — 1-2 tech developments impacting ${cfg.techDesc}.
+5. **SPOTLIGHT** — Deep dive on one organization's ${cfg.brandDesc} and what others can learn.
+6. **NUMBERS THAT MATTER** — 3-4 key stats or data points from the ${industry} world this week.
+7. **LOOKING AHEAD** — What to watch for next week (upcoming events, earnings, announcements).
+8. **ACTIONABLE TAKEAWAY** — One specific thing a ${cfg.audience.split(',')[0]} should do this week.
 
 CRITICAL SOURCING RULES:
 - Cite specific, real sources for every factual claim, data point, deal, or stat.
-- Inline each citation as a parenthetical at the end of the sentence, e.g. "(Source: SportBusiness Journal, March 2025)" or "(Source: Forbes Sports Money, Feb 2025)"
-- Use real publications: SportBusiness Journal, Sports Business Daily, Front Office Sports, Forbes, Bloomberg, ESPN, The Athletic, Yahoo Sports, CNBC, Marketing Week, Ad Age, Sportico, GlobalData Sport, IEG/Sponsorship.com, Nielsen Sports
-- At the end of the newsletter, include a "Sources" section listing all referenced publications with brief descriptions
-- If a fact is based on general industry knowledge, say "(Source: Industry analysis)" — do NOT present opinions as sourced facts
+- Inline each citation as a parenthetical, e.g. "(Source: ${cfg.sources.split(',')[0].trim()}, ${today.toLocaleString('en-US', { month: 'short' })} ${today.getFullYear()})"
+- Use real publications: ${cfg.sources}
+- At the end, include a "Sources" section listing referenced publications
+- Label analysis/opinion as "(Analysis)" or "(Industry observation)"
+- Focus on RECENT events (this week or last two weeks). Do not reference old news as if it were new.
 
 Format as clean HTML:
-- Use <h2> for section headers
-- Use <p> for paragraphs
-- Use <ul>/<li> for lists
-- Use <strong> for emphasis
-- Use <blockquote> for key quotes or callouts
+- <h2> for section headers
+- <p> for paragraphs
+- <ul>/<li> for lists
+- <strong> for emphasis
+- <blockquote> for key quotes or callouts
 - End with <h2>Sources</h2> followed by source list
-- Keep total length around 1500-2000 words
+- 1500-2000 words total
 - Do NOT include <html>, <head>, <body> tags
 
 Return JSON:
 {
-  "title": "The Sports Business Weekly — Week of ${weekOf}",
+  "title": "${cfg.name} — Week of ${weekOf}",
   "content": "<h2>...</h2><p>...</p>...<h2>Sources</h2><ul>...</ul>",
   "summary": "One paragraph summary of this week's key themes",
   "topics": [
-    {"title": "topic headline", "category": "Deals|Trends|Technology|Brands|Data", "snippet": "one sentence", "source": "publication name"}
+    {"title": "topic headline", "category": "Deals|Trends|Technology|Spotlight|Data", "snippet": "one sentence", "source": "publication name"}
   ],
   "sources": [
     {"name": "Publication Name", "description": "Brief description of what was referenced"}
@@ -617,11 +725,12 @@ Return ONLY valid JSON.`;
   const text = await callClaude(prompt, 8192);
   const parsed = extractJSON(text);
 
-  // Store globally (no property_id filter — same for everyone)
+  // Store with industry tag
   await supabase.from("newsletters").insert({
     property_id: propertyId || null,
     type: "weekly_digest",
-    title: parsed.title || `The Sports Business Weekly — ${weekOf}`,
+    industry,
+    title: parsed.title || `${cfg.name} — ${weekOf}`,
     content: parsed.content || "",
     summary: parsed.summary || "",
     topics: parsed.topics || [],
@@ -635,13 +744,16 @@ Return ONLY valid JSON.`;
 
 async function generateAfternoonUpdate(supabase: any, body: any) {
   const propertyId = body.property_id;
+  const industry = getIndustryKey(body.industry || 'sports');
+  const cfg = INDUSTRY_CONFIG[industry] || INDUSTRY_CONFIG.sports;
   const today = new Date().toISOString().split("T")[0];
 
-  // Check if today's afternoon update already exists globally
+  // Check if today's afternoon update exists for this industry
   const { data: existing } = await supabase
     .from("newsletters")
     .select("*")
     .eq("type", "afternoon_update")
+    .eq("industry", industry)
     .gte("published_at", today + "T00:00:00Z")
     .limit(1);
 
@@ -649,36 +761,37 @@ async function generateAfternoonUpdate(supabase: any, body: any) {
     return { update: existing[0] };
   }
 
-  const prompt = `You are the editor of "Afternoon Access," a daily afternoon briefing for sports business professionals. Write today's edition for ${today}.
+  const prompt = `You are the editor of "${cfg.afternoonName}," a daily afternoon briefing for ${cfg.audience}. Write today's edition for ${today}.
 
-This is NOT breaking news. It's a curated afternoon digest of developments, insights, and things to consider. Think "smart context" not "alerts."
+This is a curated afternoon digest of developments, insights, and things to consider from TODAY or this week. Think "smart context" not "breaking alerts."
 
-Write 4-5 concise items covering:
+Summarize 4-5 concise items covering ${cfg.focus}:
 
-1. **A development worth watching** — Something evolving in sports business (not breaking, but a noteworthy update)
-2. **Industry intel** — An insight or data point about sponsor behavior, fan engagement, or market dynamics
-3. **Brand move** — A brand making an interesting sports marketing play (new activation, renewed deal, category shift)
+1. **A development worth watching** — Something evolving in the ${industry} industry today
+2. **Industry intel** — An insight or data point about ${cfg.audience.split(',')[0]} behavior or market dynamics
+3. **Brand move** — An organization making an interesting ${cfg.brandDesc} play
 4. **Conversation starter** — Something that would make for good discussion with a prospect or colleague
-5. **Quick thought** — A brief observation or contrarian take on a current sports business topic
+5. **Quick thought** — A brief observation or contrarian take on a current ${industry} topic
 
 CRITICAL SOURCING RULES:
-- Cite a specific source for each item's factual claims inline, e.g. "(via SportBusiness Journal)" or "(per Front Office Sports)"
-- Use real publications: SportBusiness Journal, Front Office Sports, Forbes, Sportico, The Athletic, ESPN, Ad Age, CNBC, Sports Business Daily, Marketing Week
-- If it's your own analysis/opinion, label it as such: "(Analysis)" or "(Industry observation)"
+- Cite a specific source for each item's factual claims inline, e.g. "(via ${cfg.sources.split(',')[0].trim()})"
+- Use real publications: ${cfg.sources}
+- If it's analysis/opinion, label it as such
 - At the end, include a brief "Sources" section
+- Focus on CURRENT events (this week). Do not reference stale news.
 
-Tone: Sharp, informed, conversational. Each item should be 2-4 sentences max.
+Tone: Sharp, informed, conversational. Each item 2-4 sentences.
 
 Format as clean HTML:
-- Use <h3> for item headers (include an emoji prefix)
-- Use <p> for body text
-- Use <strong> for key terms
-- End with <h3>Sources</h3> and a brief source list
+- <h3> for item headers
+- <p> for body text
+- <strong> for key terms
+- End with <h3>Sources</h3>
 - Do NOT include <html>, <head>, <body> tags
 
 Return JSON:
 {
-  "title": "Afternoon Access — ${today}",
+  "title": "${cfg.afternoonName} — ${today}",
   "content": "<h3>...</h3><p>...</p>...<h3>Sources</h3><p>...</p>",
   "summary": "One sentence teaser",
   "topics": [
@@ -694,11 +807,12 @@ Return ONLY valid JSON.`;
   const text = await callClaude(prompt, 4096);
   const parsed = extractJSON(text);
 
-  // Store globally
+  // Store with industry tag
   await supabase.from("newsletters").insert({
     property_id: propertyId || null,
     type: "afternoon_update",
-    title: parsed.title || `Afternoon Access — ${today}`,
+    industry,
+    title: parsed.title || `${cfg.afternoonName} — ${today}`,
     content: parsed.content || "",
     summary: parsed.summary || "",
     topics: parsed.topics || [],

@@ -70,12 +70,23 @@ const GEN_STEPS = {
   ],
 }
 
+const INDUSTRY_MAP = {
+  college: 'sports', professional: 'sports', minor_league: 'sports', sports: 'sports',
+  nonprofit: 'nonprofit', foundation: 'nonprofit',
+  conference: 'conference', events: 'conference',
+  media: 'media', publisher: 'media', broadcast: 'media',
+  realestate: 'realestate', real_estate: 'realestate',
+  entertainment: 'entertainment', venue: 'entertainment',
+}
+
 export default function Newsletter() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const config = useIndustryConfig()
   const propertyId = profile?.property_id
+  const propertyType = profile?.properties?.type || 'sports'
+  const industry = INDUSTRY_MAP[propertyType] || 'sports'
   const [view, setView] = useState('latest')
   const [selectedNewsletter, setSelectedNewsletter] = useState(null)
   const autoGenTriggered = useRef({ weekly: false, afternoon: false })
@@ -106,24 +117,31 @@ export default function Newsletter() {
     return () => clearInterval(progressInterval.current)
   }, [])
 
-  // Fetch newsletters globally
+  // Fetch newsletters for this user's industry
   const { data: newsletters, isLoading, isFetched, isError } = useQuery({
-    queryKey: ['newsletters-global'],
+    queryKey: ['newsletters', industry],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Try filtered by industry first
+      let { data, error } = await supabase
         .from('newsletters')
         .select('*')
+        .eq('industry', industry)
         .order('published_at', { ascending: false })
         .limit(200)
+      // Fallback: if industry column doesn't exist yet, fetch all
+      if (error && error.message?.includes('industry')) {
+        const fallback = await supabase.from('newsletters').select('*').order('published_at', { ascending: false }).limit(200)
+        data = fallback.data
+        error = fallback.error
+      }
       if (error) {
-        // Table may not exist yet — return empty
-        console.warn('Newsletter query error (table may not exist):', error.message)
+        console.warn('Newsletter query error:', error.message)
         return []
       }
       return data || []
     },
     retry: false,
-    refetchInterval: 15 * 60 * 1000, // Re-check every 15 minutes
+    refetchInterval: 15 * 60 * 1000,
     refetchIntervalInBackground: true,
   })
 
@@ -166,7 +184,7 @@ export default function Newsletter() {
     mutationFn: () => {
       if (!isAIFeatureEnabled('ai_newsletter')) throw new Error('Newsletter generation is currently disabled by the developer.')
       startProgress('weekly')
-      return generateWeeklyNewsletter({ property_id: propertyId })
+      return generateWeeklyNewsletter({ property_id: propertyId, industry })
     },
     onSuccess: (data) => {
       stopProgress()
@@ -183,7 +201,7 @@ export default function Newsletter() {
           published_at: new Date().toISOString(),
         })
       }
-      queryClient.invalidateQueries({ queryKey: ['newsletters-global'] })
+      queryClient.invalidateQueries({ queryKey: ['newsletters', industry] })
     },
     onError: (err) => {
       stopProgress()
@@ -195,7 +213,7 @@ export default function Newsletter() {
     mutationFn: () => {
       if (!isAIFeatureEnabled('ai_newsletter')) throw new Error('Newsletter generation is currently disabled by the developer.')
       startProgress('afternoon')
-      return generateAfternoonUpdate({ property_id: propertyId })
+      return generateAfternoonUpdate({ property_id: propertyId, industry })
     },
     onSuccess: (data) => {
       stopProgress()
@@ -210,7 +228,7 @@ export default function Newsletter() {
           published_at: new Date().toISOString(),
         })
       }
-      queryClient.invalidateQueries({ queryKey: ['newsletters-global'] })
+      queryClient.invalidateQueries({ queryKey: ['newsletters', industry] })
     },
     onError: (err) => {
       stopProgress()

@@ -512,7 +512,7 @@ ALREADY KNOWN (do not repeat): ${existingNames || 'None'}`
 // Newsletter — tries dedicated action first, falls back to edit_contract
 // as a Claude prompt passthrough if the edge function isn't deployed with newsletter actions
 
-export async function generateWeeklyNewsletter({ property_id }) {
+export async function generateWeeklyNewsletter({ property_id, industry }) {
   const today = new Date()
   const monday = new Date(today)
   monday.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1))
@@ -520,7 +520,7 @@ export async function generateWeeklyNewsletter({ property_id }) {
 
   // Try the dedicated action first
   try {
-    const result = await invokeEdgeFunction('contract-ai', { action: 'generate_weekly_newsletter', property_id })
+    const result = await invokeEdgeFunction('contract-ai', { action: 'generate_weekly_newsletter', property_id, industry })
     if (result?.newsletter) return result
   } catch (e) {
     if (!e.message?.includes('Unknown action')) throw e
@@ -619,11 +619,11 @@ export async function generateWeeklyNewsletter({ property_id }) {
   return { newsletter }
 }
 
-export async function generateAfternoonUpdate({ property_id }) {
+export async function generateAfternoonUpdate({ property_id, industry }) {
   const today = new Date().toISOString().split('T')[0]
 
   try {
-    const result = await invokeEdgeFunction('contract-ai', { action: 'generate_afternoon_update', property_id })
+    const result = await invokeEdgeFunction('contract-ai', { action: 'generate_afternoon_update', property_id, industry })
     if (result?.update) return result
   } catch (e) {
     if (!e.message?.includes('Unknown action')) throw e

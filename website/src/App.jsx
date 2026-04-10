@@ -61,6 +61,13 @@ const CustomDashboard = lazyRetry(() => import('./modules/crm/CustomDashboard'))
 const DeveloperDashboard = lazyRetry(() => import('./modules/developer/DeveloperDashboard'))
 const SponsorPortal = lazyRetry(() => import('./modules/crm/SponsorPortal'))
 const UpgradeOffer = lazyRetry(() => import('./pages/admin/UpgradeOffer'))
+const AutomationControl = lazyRetry(() => import('./pages/admin/AutomationControl'))
+const EmailQueue = lazyRetry(() => import('./pages/admin/EmailQueue'))
+const SocialQueue = lazyRetry(() => import('./pages/admin/SocialQueue'))
+const AdminTrials = lazyRetry(() => import('./pages/admin/Trials'))
+const AdminAds = lazyRetry(() => import('./pages/admin/Ads'))
+const AdminNotifications = lazyRetry(() => import('./pages/admin/Notifications'))
+const DailyDigestPreview = lazyRetry(() => import('./pages/admin/DailyDigestPreview'))
 const OnboardingModal = lazyRetry(() => import('./components/onboarding/OnboardingModal'))
 const ChecklistWidget = lazyRetry(() => import('./components/onboarding/ChecklistWidget'))
 const TooltipTour = lazyRetry(() => import('./components/onboarding/TooltipTour'))
@@ -79,6 +86,11 @@ export default function App() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {})
     }
+  }, [])
+
+  // Capture UTM params on first visit for attribution
+  useEffect(() => {
+    import('./services/utmService').then(({ captureUtmParams }) => captureUtmParams())
   }, [])
 
   return (
@@ -152,6 +164,13 @@ export default function App() {
                             {/* Developer */}
                             <Route path="/developer" element={<DeveloperDashboard />} />
                             <Route path="/admin/upgrade-offer" element={<UpgradeOffer />} />
+                            <Route path="/admin/automation" element={<AutomationControl />} />
+                            <Route path="/admin/email-queue" element={<EmailQueue />} />
+                            <Route path="/admin/social-queue" element={<SocialQueue />} />
+                            <Route path="/admin/trials" element={<AdminTrials />} />
+                            <Route path="/admin/ads" element={<AdminAds />} />
+                            <Route path="/admin/notifications" element={<AdminNotifications />} />
+                            <Route path="/admin/daily-digest" element={<DailyDigestPreview />} />
                             <Route path="*" element={<Navigate to="/app" replace />} />
                           </Routes>
                         </Suspense>

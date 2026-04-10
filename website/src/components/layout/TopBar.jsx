@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import NotificationCenter from '../NotificationCenter'
+import AutomationStatusBadge from '../automation/AutomationStatusBadge'
 import { APIUsageCompact } from './../../components/APIUsageBanner'
 import { setQAIndustry } from '@/hooks/useIndustryConfig'
 
@@ -79,6 +80,9 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
             <option value="realestate">Real Estate</option>
             <option value="other">Other</option>
           </select>
+        )}
+        {(profile?.role === 'developer' || profile?.role === 'businessops' || profile?.role === 'admin') && (
+          <AutomationStatusBadge />
         )}
         <NotificationCenter />
         <span className="hidden sm:inline text-sm text-text-secondary truncate max-w-[120px]">

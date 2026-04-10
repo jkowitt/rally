@@ -888,24 +888,56 @@ export default function DeveloperDashboard() {
       {activeTab === 'flags' && (
         <div className="space-y-4">
           <Panel title="Module Visibility">
-            <p className="text-xs text-text-muted mb-4">Toggle entire sidebar modules on/off for all users.</p>
-            <div className="space-y-3">
-              {Object.entries(flags).map(([module, enabled]) => (
-                <div key={module} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                  <div>
-                    <span className="text-sm text-text-primary font-mono capitalize">{module}</span>
-                    <span className="text-xs text-text-muted ml-2">
-                      {module === 'crm' ? 'Pipeline, contracts, assets, fulfillment' :
-                       module === 'sportify' ? 'Events, activations, run-of-show' :
-                       module === 'valora' ? 'AI media valuations' :
-                       module === 'businessnow' ? 'Intelligence, alerts, newsletter' : ''}
-                    </span>
+            <p className="text-xs text-text-muted mb-4">Toggle modules on/off for all users. Changes save immediately.</p>
+            <div className="space-y-1">
+              {[
+                { key: 'crm', label: 'Legacy CRM', desc: 'Pipeline, contracts, assets, fulfillment, activities, tasks' },
+                { key: 'sportify', label: 'Sportify', desc: 'Events, activations, run-of-show, broadcast' },
+                { key: 'valora', label: 'VALORA', desc: 'AI media valuations, market positioning' },
+                { key: 'businessnow', label: 'Business Now', desc: 'Intelligence feed, alerts, AI briefings' },
+                { key: 'newsletter', label: 'Newsletter', desc: 'Weekly digest, afternoon updates, AI content' },
+                { key: 'automations', label: 'Automations', desc: 'Workflow rules, triggers, webhooks' },
+                { key: 'marketing', label: 'Marketing Hub', desc: 'Social media posts, ads, integrations, templates' },
+                { key: 'businessops', label: 'Business Ops', desc: 'Revenue pipeline, projections, accounting, QA' },
+                { key: 'developer', label: 'Dev Tools', desc: 'Admin panel, QA, analytics, change log' },
+              ].map(m => (
+                <div key={m.key} className="flex items-center justify-between py-2.5 px-2 rounded hover:bg-bg-card border-b border-border last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-text-primary">{m.label}</span>
+                    <p className="text-[10px] text-text-muted mt-0.5">{m.desc}</p>
                   </div>
                   <button
-                    onClick={() => toggleFlag(module)}
-                    className={`px-4 py-1.5 rounded text-xs font-mono font-medium ${enabled ? 'bg-success/20 text-success border border-success/30' : 'bg-bg-card text-text-muted border border-border'}`}
+                    onClick={() => toggleFlag(m.key)}
+                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 ${flags[m.key] ? 'bg-success/20 text-success border border-success/30' : 'bg-bg-card text-text-muted border border-border'}`}
                   >
-                    {enabled ? 'ENABLED' : 'DISABLED'}
+                    {flags[m.key] ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Industry Modules">
+            <p className="text-xs text-text-muted mb-4">Toggle industry-specific modules. Only visible when the matching industry is selected.</p>
+            <div className="space-y-1">
+              {[
+                { key: 'industry_nonprofit', label: 'Nonprofit', desc: 'Impact metrics, grant tracker, donor portal' },
+                { key: 'industry_media', label: 'Media', desc: 'Campaign calendar, audience analytics, media kit builder' },
+                { key: 'industry_realestate', label: 'Real Estate', desc: 'Occupancy dashboard, broker network' },
+                { key: 'industry_entertainment', label: 'Entertainment', desc: 'Booking calendar, talent management' },
+                { key: 'industry_conference', label: 'Conference', desc: 'Attendee analytics, session planning' },
+                { key: 'industry_agency', label: 'Agency', desc: 'Commission tracker, multi-property view' },
+              ].map(m => (
+                <div key={m.key} className="flex items-center justify-between py-2.5 px-2 rounded hover:bg-bg-card border-b border-border last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-text-primary">{m.label}</span>
+                    <p className="text-[10px] text-text-muted mt-0.5">{m.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => toggleFlag(m.key)}
+                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 ${flags[m.key] ? 'bg-success/20 text-success border border-success/30' : 'bg-bg-card text-text-muted border border-border'}`}
+                  >
+                    {flags[m.key] ? 'ON' : 'OFF'}
                   </button>
                 </div>
               ))}

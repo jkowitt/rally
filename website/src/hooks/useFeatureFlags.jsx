@@ -4,8 +4,15 @@ import { useAuth } from './useAuth'
 
 const FeatureFlagContext = createContext({})
 
-const ALL_ON = { crm: true, sportify: true, valora: true, businessnow: true }
-const ALL_OFF = { crm: false, sportify: false, valora: false, businessnow: false }
+const ALL_MODULES = [
+  'crm', 'sportify', 'valora', 'businessnow',
+  'newsletter', 'automations', 'businessops', 'developer', 'marketing',
+  'industry_nonprofit', 'industry_media', 'industry_realestate',
+  'industry_entertainment', 'industry_conference', 'industry_agency',
+]
+
+const ALL_ON = Object.fromEntries(ALL_MODULES.map(m => [m, true]))
+const ALL_OFF = Object.fromEntries(ALL_MODULES.map(m => [m, false]))
 
 export function FeatureFlagProvider({ children }) {
   const { session, profile } = useAuth()
@@ -15,7 +22,6 @@ export function FeatureFlagProvider({ children }) {
 
   useEffect(() => {
     if (!session) return
-    // Developer always sees everything
     if (isDev) {
       setFlags(ALL_ON)
       setLoaded(true)
@@ -30,10 +36,9 @@ export function FeatureFlagProvider({ children }) {
         .from('feature_flags')
         .select('module, enabled')
       if (error || !data) {
-        // Table missing or RLS blocked — default CRM on
         setFlags({ ...ALL_OFF, crm: true })
       } else {
-        const flagMap = { ...ALL_OFF, crm: true } // CRM always on as baseline
+        const flagMap = { ...ALL_OFF, crm: true }
         data.forEach((f) => { flagMap[f.module] = f.enabled })
         setFlags(flagMap)
       }
@@ -45,12 +50,28 @@ export function FeatureFlagProvider({ children }) {
 
   async function toggleFlag(module) {
     const newValue = !flags[module]
+    // Try update first, if no rows affected then insert
     try {
-      await supabase
+      const { count } = await supabase
         .from('feature_flags')
         .update({ enabled: newValue, updated_at: new Date().toISOString() })
         .eq('module', module)
-    } catch { /* table may not exist */ }
+        .select('*', { count: 'exact', head: true })
+
+      if (!count || count === 0) {
+        // Row doesn't exist — insert it
+        await supabase.from('feature_flags').insert({
+          module, enabled: newValue, updated_at: new Date().toISOString(),
+        })
+      }
+    } catch {
+      // If constraint fails, just try insert with upsert
+      try {
+        await supabase.from('feature_flags').upsert({
+          module, enabled: newValue, updated_at: new Date().toISOString(),
+        }, { onConflict: 'module' })
+      } catch {}
+    }
     setFlags((prev) => ({ ...prev, [module]: newValue }))
   }
 

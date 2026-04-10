@@ -4,8 +4,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { useCMS } from '@/hooks/useCMS'
 
-// Floating Claude assistant — available on every page for developer/businessops
+// Floating Claude assistant — disabled until edge function is deployed
 export default function ClaudeAssistant() {
+  return null
   const { profile } = useAuth()
   const { toast } = useToast()
   const [open, setOpen] = useState(false)

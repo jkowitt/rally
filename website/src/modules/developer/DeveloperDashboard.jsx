@@ -1180,7 +1180,7 @@ export default function DeveloperDashboard() {
 
       {/* QA TEST SUITE */}
       {activeTab === 'qa' && (
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0 overflow-x-hidden">
           <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading reports...</div>}>
             <QAAutoReports />
           </Suspense>

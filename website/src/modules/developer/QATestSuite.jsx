@@ -451,19 +451,19 @@ Respond with EXACTLY this JSON format (no other text):
       {view === 'active' && activeRunId && (
         <div className="space-y-4">
           {/* Run header */}
-          <div className="bg-bg-card border border-accent/30 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div className="bg-bg-card border border-accent/30 rounded-lg p-3 sm:p-4">
+            <div className="space-y-2 mb-3">
               <div>
                 <h3 className="text-sm font-medium text-text-primary">{activeRun?.name}</h3>
-                <p className="text-[10px] text-text-muted mt-0.5">{activeRun?.run_type} run — {runStats.total} tests</p>
+                <p className="text-[10px] text-text-muted mt-0.5">{activeRun?.run_type} — {runStats.total} tests</p>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <button onClick={runAutoQA} disabled={autoQARunning} className="bg-[#7c3aed] text-white px-3 py-1.5 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50">
-                  {autoQARunning ? autoQAProgress : 'Run Auto QA (Claude)'}
+                <button onClick={runAutoQA} disabled={autoQARunning} className="bg-[#7c3aed] text-white px-3 py-1.5 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 flex-1 sm:flex-none">
+                  {autoQARunning ? autoQAProgress : 'Auto QA (Claude)'}
                 </button>
-                {activeRun?.status === 'planned' && <button onClick={startRun} className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium">Start Run</button>}
-                {activeRun?.status === 'in_progress' && <button onClick={completeRun} className="bg-success text-bg-primary px-3 py-1.5 rounded text-xs font-medium">Complete Run</button>}
-                {activeRun?.status === 'completed' && <span className="text-success text-xs font-mono">Completed</span>}
+                {activeRun?.status === 'planned' && <button onClick={startRun} className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium flex-1 sm:flex-none">Start</button>}
+                {activeRun?.status === 'in_progress' && <button onClick={completeRun} className="bg-success text-bg-primary px-3 py-1.5 rounded text-xs font-medium flex-1 sm:flex-none">Complete</button>}
+                {activeRun?.status === 'completed' && <span className="text-success text-xs font-mono">Done</span>}
               </div>
             </div>
 
@@ -493,24 +493,24 @@ Respond with EXACTLY this JSON format (no other text):
               </div>
             </div>
 
-            {/* Stats — dual row */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Stats — stack on mobile, side by side on desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="bg-bg-surface rounded p-2">
-                <div className="text-[9px] text-[#7c3aed] font-mono uppercase mb-1">Claude</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 text-center">
-                  <MiniStat label="Passed" value={runStats.claude_passed} color="text-success" />
-                  <MiniStat label="Failed" value={runStats.claude_failed} color="text-danger" />
-                  <MiniStat label="Review" value={runStats.claude_review} color="text-warning" />
-                  <MiniStat label="Pending" value={runStats.claude_unchecked} />
+                <div className="text-[8px] text-[#7c3aed] font-mono uppercase mb-1">Claude</div>
+                <div className="grid grid-cols-4 gap-1 text-center">
+                  <MiniStat label="Pass" value={runStats.claude_passed} color="text-success" />
+                  <MiniStat label="Fail" value={runStats.claude_failed} color="text-danger" />
+                  <MiniStat label="Rev" value={runStats.claude_review} color="text-warning" />
+                  <MiniStat label="Wait" value={runStats.claude_unchecked} />
                 </div>
               </div>
               <div className="bg-bg-surface rounded p-2">
-                <div className="text-[9px] text-accent font-mono uppercase mb-1">Manual</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 text-center">
-                  <MiniStat label="Passed" value={runStats.passed} color="text-success" />
-                  <MiniStat label="Failed" value={runStats.failed} color="text-danger" />
-                  <MiniStat label="Blocked" value={runStats.blocked} color="text-warning" />
-                  <MiniStat label="Pending" value={runStats.not_started} />
+                <div className="text-[8px] text-accent font-mono uppercase mb-1">Manual</div>
+                <div className="grid grid-cols-4 gap-1 text-center">
+                  <MiniStat label="Pass" value={runStats.passed} color="text-success" />
+                  <MiniStat label="Fail" value={runStats.failed} color="text-danger" />
+                  <MiniStat label="Block" value={runStats.blocked} color="text-warning" />
+                  <MiniStat label="Wait" value={runStats.not_started} />
                 </div>
               </div>
             </div>
@@ -533,71 +533,64 @@ Respond with EXACTLY this JSON format (no other text):
             const modManualFailed = results.filter(r => r.status === 'failed').length
             return (
               <div key={mod} className="bg-bg-surface border border-border rounded-lg overflow-hidden">
-                <div className="px-3 py-2 bg-bg-card border-b border-border flex items-center justify-between flex-wrap gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-text-primary capitalize">{mod}</span>
-                    <span className="text-[9px] text-text-muted">{results.length} tests</span>
-                    {(modClaudePassed > 0 || modClaudeFailed > 0) && (
-                      <span className="text-[8px] font-mono text-[#7c3aed] bg-[#7c3aed]/10 px-1 rounded">C: {modClaudePassed}P {modClaudeFailed}F</span>
-                    )}
-                    {(modManualPassed > 0 || modManualFailed > 0) && (
-                      <span className="text-[8px] font-mono text-accent bg-accent/10 px-1 rounded">M: {modManualPassed}P {modManualFailed}F</span>
-                    )}
+                <div className="px-2 sm:px-3 py-2 bg-bg-card border-b border-border space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                      <span className="text-xs font-medium text-text-primary capitalize">{mod}</span>
+                      <span className="text-[8px] text-text-muted">{results.length}</span>
+                      {(modClaudePassed > 0 || modClaudeFailed > 0) && (
+                        <span className="text-[7px] font-mono text-[#7c3aed] bg-[#7c3aed]/10 px-1 rounded">C:{modClaudePassed}P{modClaudeFailed}F</span>
+                      )}
+                      {(modManualPassed > 0 || modManualFailed > 0) && (
+                        <span className="text-[7px] font-mono text-accent bg-accent/10 px-1 rounded">M:{modManualPassed}P{modManualFailed}F</span>
+                      )}
+                    </div>
+                    <select onChange={e => assignAllInModule(mod, e.target.value)} defaultValue="" className="text-[8px] bg-bg-surface border border-border rounded px-1 py-0.5 text-text-secondary shrink-0 max-w-[90px] sm:max-w-none">
+                      <option value="">Assign...</option>
+                      {assignableUsers.map(u => <option key={u.id} value={u.id}>{u.full_name || u.email?.split('@')[0]}</option>)}
+                    </select>
                   </div>
-                  <select onChange={e => assignAllInModule(mod, e.target.value)} defaultValue="" className="text-[9px] bg-bg-surface border border-border rounded px-1.5 py-0.5 text-text-secondary">
-                    <option value="">Assign all to...</option>
-                    {assignableUsers.map(u => <option key={u.id} value={u.id}>{u.full_name || u.email}</option>)}
-                  </select>
                 </div>
                 <div className="divide-y divide-border">
                   {results.map(result => {
                     const tc = result.qa_test_cases
                     const isExpanded = expandedCase === result.id
                     return (
-                      <div key={result.id} className="px-3 py-2">
-                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                          {/* Test info */}
-                          <div className="flex-1 min-w-0 cursor-pointer order-1" onClick={() => setExpandedCase(isExpanded ? null : result.id)}>
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-[8px] font-mono ${PRIORITY_COLORS[tc?.priority]}`}>{tc?.priority?.slice(0, 4)}</span>
-                              <span className="text-xs text-text-primary truncate">{tc?.title}</span>
-                              <span className="text-[8px] text-text-muted bg-bg-card px-1 rounded hidden sm:inline">{tc?.category}</span>
-                            </div>
-                          </div>
-
+                      <div key={result.id} className="px-2 sm:px-3 py-2">
+                        {/* Row 1: Test name + expand */}
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setExpandedCase(isExpanded ? null : result.id)}>
+                          <span className={`text-[8px] font-mono shrink-0 ${PRIORITY_COLORS[tc?.priority]}`}>{tc?.priority?.slice(0, 4)}</span>
+                          <span className="text-xs text-text-primary truncate flex-1 min-w-0">{tc?.title}</span>
+                          <span className="text-[8px] text-text-muted hidden sm:inline">{tc?.category}</span>
+                          <span className="text-text-muted text-[10px] shrink-0">{isExpanded ? '−' : '+'}</span>
+                        </div>
+                        {/* Row 2: Status controls */}
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                           {/* Claude status */}
-                          <div className="flex items-center gap-1 order-2 shrink-0" title={result.claude_notes || 'Not checked'}>
-                            <span className="text-[7px] text-[#7c3aed] font-mono hidden sm:inline">AI</span>
-                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${CLAUDE_COLORS[result.claude_status || 'not_checked']}`}>
-                              {result.claude_status === 'passed' ? 'PASS' : result.claude_status === 'failed' ? 'FAIL' : result.claude_status === 'needs_review' ? 'REVIEW' : '—'}
-                            </span>
-                          </div>
-
+                          <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded shrink-0 ${CLAUDE_COLORS[result.claude_status || 'not_checked']}`} title={result.claude_notes || 'Not checked'}>
+                            AI:{result.claude_status === 'passed' ? 'P' : result.claude_status === 'failed' ? 'F' : result.claude_status === 'needs_review' ? 'R' : '—'}
+                          </span>
                           {/* Manual status buttons */}
-                          <div className="flex gap-0.5 shrink-0 order-3">
+                          <div className="flex gap-0.5 shrink-0">
                             {['passed', 'failed', 'blocked', 'skipped'].map(s => (
                               <button key={s} onClick={() => updateResultStatus(result.id, result.status === s ? 'not_started' : s)} className={`w-5 h-5 rounded text-[7px] font-bold uppercase leading-none flex items-center justify-center ${result.status === s ? MANUAL_COLORS[s] : 'bg-bg-card/50 text-text-muted/30 hover:text-text-muted'}`} title={`Manual: ${s}`}>
                                 {s[0].toUpperCase()}
                               </button>
                             ))}
                           </div>
-
                           {/* Assignee */}
-                          <select value={result.assigned_to || ''} onChange={e => assignResult(result.id, e.target.value)} className="text-[9px] bg-bg-card border border-border rounded px-1 py-0.5 text-text-secondary max-w-[80px] sm:max-w-[100px] order-4 shrink-0">
+                          <select value={result.assigned_to || ''} onChange={e => assignResult(result.id, e.target.value)} className="text-[8px] bg-bg-card border border-border rounded px-1 py-0.5 text-text-secondary max-w-[70px] sm:max-w-[100px] shrink-0">
                             <option value="">—</option>
                             {assignableUsers.map(u => <option key={u.id} value={u.id}>{u.full_name || u.email?.split('@')[0]}</option>)}
                           </select>
-
                           {/* Ticket actions */}
-                          <div className="flex gap-1 order-5 shrink-0">
-                            {result.claude_status === 'failed' && !result.ticket_id && (
-                              <button onClick={() => createTicketFromFailure(result, 'claude')} className="text-[7px] text-[#7c3aed] hover:underline">+AI ticket</button>
-                            )}
-                            {result.status === 'failed' && !result.ticket_id && (
-                              <button onClick={() => createTicketFromFailure(result, 'manual')} className="text-[7px] text-danger hover:underline">+ticket</button>
-                            )}
-                            {result.ticket_id && <span className="text-[7px] text-accent">linked</span>}
-                          </div>
+                          {result.claude_status === 'failed' && !result.ticket_id && (
+                            <button onClick={() => createTicketFromFailure(result, 'claude')} className="text-[7px] text-[#7c3aed] hover:underline shrink-0">+AI</button>
+                          )}
+                          {result.status === 'failed' && !result.ticket_id && (
+                            <button onClick={() => createTicketFromFailure(result, 'manual')} className="text-[7px] text-danger hover:underline shrink-0">+bug</button>
+                          )}
+                          {result.ticket_id && <span className="text-[7px] text-accent shrink-0">linked</span>}
                         </div>
 
                         {/* Expanded details */}

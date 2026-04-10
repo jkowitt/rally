@@ -930,8 +930,38 @@ export default function DeveloperDashboard() {
             </div>
           </Panel>
 
-          <Panel title="Industry Modules">
-            <p className="text-xs text-text-muted mb-4">Toggle industry-specific modules. Only visible when the matching industry is selected.</p>
+          <Panel title="Industry Visibility (Welcome + Signup)">
+            <p className="text-xs text-text-muted mb-4">Toggle which industries appear in the welcome page and account signup. Turning OFF hides the industry from the public selectors but keeps all code intact — easy to turn back ON.</p>
+            <div className="space-y-1">
+              {[
+                { key: 'show_sports', label: 'Sports', desc: 'College, professional, minor league, agency' },
+                { key: 'show_entertainment', label: 'Entertainment', desc: 'Venues, concerts, festivals, theatre' },
+                { key: 'show_conference', label: 'Conference', desc: 'Trade shows, conventions, summits' },
+                { key: 'show_nonprofit', label: 'Nonprofit', desc: 'Foundations, charities, community orgs' },
+                { key: 'show_media', label: 'Media', desc: 'Publishers, broadcasters, digital media' },
+                { key: 'show_realestate', label: 'Real Estate', desc: 'Commercial, mixed-use, development' },
+                { key: 'show_agency', label: 'Agency', desc: 'Partnership / sponsorship agencies' },
+                { key: 'show_other', label: 'Other', desc: 'Generic "Other" option for unlisted types' },
+              ].map(m => (
+                <div key={m.key} className="flex items-center justify-between py-2.5 px-2 rounded hover:bg-bg-card border-b border-border last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-text-primary">{m.label}</span>
+                    <p className="text-[10px] text-text-muted mt-0.5">{m.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleFlag(m.key, m.label)}
+                    disabled={savingFlag === m.key}
+                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 transition-colors ${savingFlag === m.key ? 'bg-warning/20 text-warning border border-warning/30 animate-pulse' : flags[m.key] !== false ? 'bg-success/20 text-success border border-success/30 hover:bg-success/30' : 'bg-bg-card text-text-muted border border-border hover:bg-bg-card/80'}`}
+                  >
+                    {savingFlag === m.key ? 'SAVING...' : flags[m.key] !== false ? 'SHOWN' : 'HIDDEN'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Industry Modules (In-App)">
+            <p className="text-xs text-text-muted mb-4">Toggle industry-specific modules that show inside the app after login. Separate from the signup visibility above.</p>
             <div className="space-y-1">
               {[
                 { key: 'industry_nonprofit', label: 'Nonprofit', desc: 'Impact metrics, grant tracker, donor portal' },

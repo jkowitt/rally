@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import EditableText, { EditableImage } from '@/components/cms/EditableText'
+import { useIndustryVisibility, shouldShowIndustry } from '@/hooks/useIndustryVisibility'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -111,6 +112,8 @@ const INDUSTRIES = [
 ]
 
 export default function LandingPage() {
+  const { visibility } = useIndustryVisibility()
+  const visibleIndustries = INDUSTRIES.filter(ind => shouldShowIndustry(visibility, ind.id))
   const [industry, setIndustry] = useState(INDUSTRIES[0])
   const [welcomed, setWelcomed] = useState(() => {
     // Skip gate if they've visited before in this browser session
@@ -143,7 +146,7 @@ export default function LandingPage() {
             hasAccount={hasAccount}
             onNewUser={handleNewUser}
             onReturningUser={handleReturningUser}
-            industries={INDUSTRIES}
+            industries={visibleIndustries}
             selectedIndustry={industry}
             onSelectIndustry={setIndustry}
           />
@@ -557,7 +560,7 @@ function IndustrySelector({ selected, onSelect }) {
           description="Loud Legacy adapts its terminology, asset categories, and workflows to your industry. Pick yours to see how it works for you."
         />
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mt-12">
-          {INDUSTRIES.map((ind) => (
+          {visibleIndustries.map((ind) => (
             <button
               key={ind.id}
               onClick={() => { onSelect(ind); window.scrollTo({ top: 0, behavior: 'smooth' }) }}

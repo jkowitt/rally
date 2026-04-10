@@ -9,10 +9,21 @@ const ALL_MODULES = [
   'newsletter', 'automations', 'businessops', 'developer', 'marketing',
   'industry_nonprofit', 'industry_media', 'industry_realestate',
   'industry_entertainment', 'industry_conference', 'industry_agency',
+  // Industry visibility in signup + welcome selectors
+  'show_sports', 'show_entertainment', 'show_conference',
+  'show_nonprofit', 'show_media', 'show_realestate', 'show_agency', 'show_other',
 ]
 
 const ALL_ON = Object.fromEntries(ALL_MODULES.map(m => [m, true]))
 const ALL_OFF = Object.fromEntries(ALL_MODULES.map(m => [m, false]))
+// Defaults when the DB doesn't have a row for the flag — CRM and all industry visibility ON
+const DEFAULT_FLAGS = {
+  ...ALL_OFF,
+  crm: true,
+  show_sports: true, show_entertainment: true, show_conference: true,
+  show_nonprofit: true, show_media: true, show_realestate: true,
+  show_agency: true, show_other: true,
+}
 
 export function FeatureFlagProvider({ children }) {
   const { session, profile } = useAuth()
@@ -36,14 +47,14 @@ export function FeatureFlagProvider({ children }) {
         .from('feature_flags')
         .select('module, enabled')
       if (error || !data) {
-        setFlags({ ...ALL_OFF, crm: true })
+        setFlags({ ...DEFAULT_FLAGS })
       } else {
-        const flagMap = { ...ALL_OFF, crm: true }
+        const flagMap = { ...DEFAULT_FLAGS }
         data.forEach((f) => { flagMap[f.module] = f.enabled })
         setFlags(flagMap)
       }
     } catch {
-      setFlags({ ...ALL_OFF, crm: true })
+      setFlags({ ...DEFAULT_FLAGS })
     }
     setLoaded(true)
   }

@@ -91,14 +91,23 @@ export default function QATickets() {
       </div>
 
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <div className="flex gap-1">
+        <div className="sm:hidden flex-1">
+          <select value={filter} onChange={e => setFilter(e.target.value)} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-xs text-text-primary">
+            <option value="">All</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="wont_fix">Won't Fix</option>
+          </select>
+        </div>
+        <div className="hidden sm:flex gap-1">
           {['open', 'in_progress', 'resolved', 'wont_fix', ''].map(s => (
             <button key={s} onClick={() => setFilter(s)} className={`px-2 py-1 rounded text-[11px] font-mono ${filter === s ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-muted'}`}>
               {s ? s.replace('_', ' ') : 'All'}
             </button>
           ))}
         </div>
-        <button onClick={() => setShowCreate(true)} className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90">+ New Ticket</button>
+        <button onClick={() => setShowCreate(true)} className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 shrink-0">+ New Ticket</button>
       </div>
 
       {showCreate && (

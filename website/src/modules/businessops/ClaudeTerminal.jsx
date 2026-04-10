@@ -68,7 +68,7 @@ export default function ClaudeTerminal() {
         const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
           body: {
             action: 'edit_contract',
-            contract_text: `You are a senior full-stack developer working on the Loud Legacy CRM platform.\nTech stack: React 18, Vite, Tailwind CSS v4, Supabase, Recharts.\n${contextMsgs ? `Previous conversation:\n${contextMsgs}\n\n` : ''}Current request:`,
+            contract_text: `You are a senior full-stack developer for the Loud Legacy CRM (React 18, Vite, Tailwind v4, Supabase). ${contextMsgs ? `Previous conversation:\n${contextMsgs}\n\n` : ''}\n\nRespond with actionable code or a direct answer. Do NOT repeat the user's message. Show file paths and exact code changes.`,
             instructions: userMsg,
           },
         })

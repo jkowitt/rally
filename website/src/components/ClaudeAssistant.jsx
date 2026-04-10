@@ -57,7 +57,17 @@ export default function ClaudeAssistant() {
         response = data?.response || data?.text || ''
         if (!response || response === '{}') response = JSON.stringify(data)
       } else {
-        throw new Error(data?.error || error?.message || 'AI unavailable')
+        // Fallback to edit_contract if code_assistant not deployed yet
+        const contextMsgs = messages.slice(-4).map(m => `${m.role === 'user' ? 'USER' : 'CLAUDE'}: ${m.content.slice(0, 300)}`).join('\n')
+        const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
+          body: {
+            action: 'edit_contract',
+            contract_text: `You are a helpful AI assistant for the Loud Legacy CRM platform. ${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `\nConversation:\n${contextMsgs}\n` : ''}\n\nRespond helpfully to the user's request. Do NOT repeat their message back. Give a real, useful answer.`,
+            instructions: userMsg,
+          },
+        })
+        if (fbErr) throw fbErr
+        response = fb?.contract_text || fb?.text || JSON.stringify(fb)
       }
       setMessages(prev => [...prev, { role: 'assistant', content: response }])
 

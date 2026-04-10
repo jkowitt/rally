@@ -456,7 +456,7 @@ export default function Dashboard() {
           <button onClick={() => navigate('/app/crm/pipeline')} className="text-xs text-accent hover:underline">View pipeline</button>
         </div>
         <div className="bg-bg-surface border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 <th className="px-4 py-2.5 text-[10px] text-text-muted font-mono uppercase">Brand</th>
@@ -483,7 +483,7 @@ export default function Dashboard() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       </div>
     ) : null,

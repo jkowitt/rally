@@ -931,16 +931,13 @@ export default function DeveloperDashboard() {
           </Panel>
 
           <Panel title="Industry Visibility (Welcome + Signup)">
-            <p className="text-xs text-text-muted mb-4">Toggle which industries appear in the welcome page and account signup. Turning OFF hides the industry from the public selectors but keeps all code intact — easy to turn back ON.</p>
+            <p className="text-xs text-text-muted mb-4">Toggle which industries appear in the welcome page and account signup. Turning OFF hides the industry from the public selectors but keeps all code intact — easy to turn back ON. Entertainment and conferences are now bundled under "Sports, Events & Entertainment".</p>
             <div className="space-y-1">
               {[
-                { key: 'show_sports', label: 'Sports', desc: 'College, professional, minor league, agency' },
-                { key: 'show_entertainment', label: 'Entertainment', desc: 'Venues, concerts, festivals, theatre' },
-                { key: 'show_conference', label: 'Conference', desc: 'Trade shows, conventions, summits' },
+                { key: 'show_sports', label: 'Sports, Events & Entertainment', desc: 'Teams, venues, conferences, festivals, trade shows, agencies' },
                 { key: 'show_nonprofit', label: 'Nonprofit', desc: 'Foundations, charities, community orgs' },
                 { key: 'show_media', label: 'Media', desc: 'Publishers, broadcasters, digital media' },
                 { key: 'show_realestate', label: 'Real Estate', desc: 'Commercial, mixed-use, development' },
-                { key: 'show_agency', label: 'Agency', desc: 'Partnership / sponsorship agencies' },
                 { key: 'show_other', label: 'Other', desc: 'Generic "Other" option for unlisted types' },
               ].map(m => (
                 <div key={m.key} className="flex items-center justify-between py-2.5 px-2 rounded hover:bg-bg-card border-b border-border last:border-0">

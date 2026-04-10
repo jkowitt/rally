@@ -51,15 +51,16 @@ export function useIndustryVisibility() {
 }
 
 // Check if a specific industry should be shown
+// Entertainment and conference are now sub-types of "Sports, Events & Entertainment"
+// They follow the sports visibility toggle.
 export function shouldShowIndustry(visibility, industryId) {
-  // Map landing page IDs to visibility keys
   const aliasMap = {
     sports: 'sports',
     college: 'sports',
     professional: 'sports',
     minor_league: 'sports',
-    entertainment: 'entertainment',
-    conference: 'conference',
+    entertainment: 'sports', // merged into sports
+    conference: 'sports',    // merged into sports
     nonprofit: 'nonprofit',
     media: 'media',
     realestate: 'realestate',

@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 const QATestSuite = lazy(() => import('./QATestSuite'))
+const QATaskManager = lazy(() => import('./QATaskManager'))
 const QAUsageSimulator = lazy(() => import('./QAUsageSimulator'))
 const QAAutoReports = lazy(() => import('./QAAutoReports'))
 const ChangeLog = lazy(() => import('./ChangeLog'))
@@ -1229,10 +1230,15 @@ export default function DeveloperDashboard() {
           <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading reports...</div>}>
             <QAAutoReports />
           </Suspense>
+          <Panel title="QA Task Manager">
+            <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading task manager...</div>}>
+              <QATaskManager />
+            </Suspense>
+          </Panel>
           <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading simulator...</div>}>
             <QAUsageSimulator />
           </Suspense>
-          <Panel title="QA Test Suite">
+          <Panel title="QA Test Suite (Runs)">
             <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading test suite...</div>}>
               <QATestSuite profiles={profiles} />
             </Suspense>

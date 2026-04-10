@@ -222,6 +222,18 @@ Respond with EXACTLY this JSON format (no other text):
           claude_checked_at: new Date().toISOString(),
         }).eq('id', result.id)
 
+        // Log attempt to the task manager tracker
+        try {
+          await supabase.from('qa_test_attempts').insert({
+            test_case_id: result.test_case_id,
+            attempt_type: 'auto_claude',
+            result: claudeResult.status === 'passed' ? 'passed' : claudeResult.status === 'failed' ? 'failed' : 'blocked',
+            notes: claudeResult.summary,
+            confidence: claudeResult.confidence === 'high' ? 0.9 : claudeResult.confidence === 'medium' ? 0.6 : 0.3,
+            tested_by: profile?.id,
+          })
+        } catch {}
+
         if (claudeResult.status === 'passed') passed++
         else if (claudeResult.status === 'failed') failed++
         else review++

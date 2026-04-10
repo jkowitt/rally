@@ -716,7 +716,7 @@ function AssetDetailModal({ asset, proposedAssets, propertyId, onClose, onEdit }
           {/* Inventory Status */}
           <div>
             <div className="text-xs text-text-muted font-mono uppercase tracking-wider mb-2">Inventory Status</div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
                 <div className="text-lg font-semibold text-success">{soldCount}</div>
                 <div className="text-[10px] text-text-muted font-mono">Sold</div>

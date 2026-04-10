@@ -1328,8 +1328,7 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
 
         <div className="p-4 sm:p-5 space-y-4">
           {/* Value + Dates */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">            <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
               <div className="text-[10px] text-text-muted font-mono">Value</div>
               <div className="text-lg font-semibold text-accent font-mono">{deal.value ? `$${Number(deal.value).toLocaleString()}` : '—'}</div>
             </div>
@@ -1453,7 +1452,7 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           {deal.annual_values && Object.keys(deal.annual_values).length > 0 && (
             <div>
               <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">Revenue by Year</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {Object.entries(deal.annual_values).map(([year, val]) => (
                   <div key={year} className="bg-bg-card border border-border rounded p-2 text-center">
                     <div className="text-[10px] text-text-muted font-mono">{year}</div>
@@ -2644,8 +2643,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                   className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                 />
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <input
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">                <input
                   placeholder="Founded"
                   value={form.founded}
                   onChange={(e) => setForm({ ...form, founded: e.target.value })}
@@ -2723,7 +2721,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
 
                         {/* Editable details when selected */}
                         {isSelected && proposed && (
-                          <div className="grid grid-cols-3 gap-2 mt-3 pl-8">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 sm:pl-8">
                             <div>
                               <label className="text-[10px] text-text-muted">Qty</label>
                               <input

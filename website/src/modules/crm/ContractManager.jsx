@@ -1041,12 +1041,12 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
             <div className="space-y-2">
               {benefits.map((b, i) => (
                 <div key={i} className="flex gap-2 items-start bg-bg-card border border-border rounded p-2">
-                  <div className="flex-1 grid grid-cols-4 gap-2">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                     <input
                       placeholder="Description"
                       value={b.benefit_description}
                       onChange={(e) => updateBenefit(i, 'benefit_description', e.target.value)}
-                      className="col-span-2 bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                      className="sm:col-span-2 bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                     />
                     <input
                       type="number"

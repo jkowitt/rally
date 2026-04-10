@@ -8,6 +8,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail } from '@/lib/claude'
 import { usePlanLimits } from '@/hooks/usePlanLimits'
 import UpgradeGate, { UsageBadge } from '@/components/UpgradeGate'
+import ICPFilter from '@/components/ICPFilter'
 import CSVImportWizard from '@/components/CSVImportWizard'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { isAIFeatureEnabled } from '@/lib/featureCheck'
@@ -3459,6 +3460,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   const [tab, setTab] = useState('search') // search | suggestions
   const [searchQuery, setSearchQuery] = useState('')
   const [searchCategory, setSearchCategory] = useState('')
+  const [icpFilters, setIcpFilters] = useState(null)
   const [results, setResults] = useState([]) // search or suggestion results
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState('')
@@ -3467,6 +3469,9 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   const [addingIdx, setAddingIdx] = useState(null)
   const [addedIdxs, setAddedIdxs] = useState(new Set())
   const [useVerified, setUseVerified] = useState(true)
+
+  const propertyType = profile?.properties?.type
+  const industryKey = ({ college: 'sports', professional: 'sports', minor_league: 'sports', nonprofit: 'nonprofit', conference: 'conference', media: 'media', realestate: 'realestate', entertainment: 'entertainment' })[propertyType] || 'sports'
 
   async function handleSearch() {
     if (!searchQuery.trim() && !searchCategory) return
@@ -3493,6 +3498,8 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
         query: sanitizeText(searchQuery),
         category: sanitizeText(searchCategory),
         property_id: propertyId,
+        icp_filters: icpFilters,
+        industry: industryKey,
       })
       setResults(data.prospects || [])
       setStatus(data.prospects?.length ? `Found ${data.prospects.length} prospects` : 'No results found. Try a broader search.')
@@ -3510,7 +3517,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     setResearchedContacts({})
     setAddedIdxs(new Set())
     try {
-      const data = await suggestProspects({ property_id: propertyId })
+      const data = await suggestProspects({ property_id: propertyId, icp_filters: icpFilters, industry: industryKey })
       setResults(data.suggestions || [])
       setStatus(data.suggestions?.length ? `${data.suggestions.length} AI-suggested prospects based on your pipeline` : 'No suggestions available.')
     } catch (e) {
@@ -3868,6 +3875,8 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                 {loading ? '...' : 'Search'}
               </button>
             </div>
+            {/* ICP Filter — narrows results to ideal customer profile */}
+            <ICPFilter value={icpFilters} onChange={setIcpFilters} propertyId={effectivePropertyId} mode="inline" />
             <div className="flex gap-1.5 flex-wrap max-h-[100px] overflow-y-auto">
               <button
                 onClick={() => { setSearchCategory(''); }}
@@ -3888,12 +3897,18 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
           </div>
         )}
 
-        {/* Suggestions info */}
-        {tab === 'suggestions' && !loading && results.length > 0 && (
-          <div className="px-4 pt-3">
-            <div className="bg-accent/5 border border-accent/20 rounded-lg p-3 text-xs text-text-secondary">
-              These suggestions are based on your existing pipeline patterns, won deals, and current sports sponsorship market trends.
+        {/* Suggestions controls with ICP filter */}
+        {tab === 'suggestions' && (
+          <div className="p-3 sm:p-4 border-b border-border space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-text-secondary">
+                Suggestions based on your pipeline, won deals, and market trends — filtered by your ICP.
+              </div>
+              <button onClick={handleSuggest} disabled={loading} className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50 shrink-0">
+                {loading ? '...' : 'Refresh'}
+              </button>
             </div>
+            <ICPFilter value={icpFilters} onChange={setIcpFilters} propertyId={effectivePropertyId} mode="inline" />
           </div>
         )}
 
@@ -3940,6 +3955,13 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                               prospect.priority === 'Medium' ? 'bg-warning/10 text-warning' :
                               'bg-bg-surface text-text-muted'
                             }`}>{prospect.priority}</span>
+                          )}
+                          {prospect.icp_match_score && (
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                              prospect.icp_match_score >= 8 ? 'bg-success/10 text-success' :
+                              prospect.icp_match_score >= 5 ? 'bg-accent/10 text-accent' :
+                              'bg-bg-surface text-text-muted'
+                            }`} title="ICP match score">ICP {prospect.icp_match_score}/10</span>
                           )}
                           {prospect.reason && (
                             <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${

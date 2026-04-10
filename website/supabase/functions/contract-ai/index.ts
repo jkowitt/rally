@@ -436,10 +436,89 @@ async function meetingNotes(body: any) {
 
 // ============ PROSPECT SEARCH & DISCOVERY ============
 
+function buildICPConstraints(icp: any): string {
+  if (!icp) return '';
+  const lines: string[] = [];
+
+  // Size
+  if (icp.company_size && icp.company_size !== 'any') {
+    const sizeMap: any = {
+      startup: 'early-stage startups (under 50 employees, typically <$10M revenue)',
+      small: 'small companies (50-200 employees, $10M-$50M revenue)',
+      mid: 'mid-market companies (200-1,000 employees, $50M-$500M revenue)',
+      large: 'large companies (1,000-5,000 employees, $500M-$2B revenue)',
+      enterprise: 'enterprise companies (5,000+ employees, $2B+ revenue)',
+    };
+    lines.push(`- Company size: ${sizeMap[icp.company_size] || icp.company_size}`);
+  }
+  if (icp.employee_min || icp.employee_max) {
+    lines.push(`- Employees: ${icp.employee_min || 1}-${icp.employee_max || 'unlimited'}`);
+  }
+  if (icp.revenue_min || icp.revenue_max) {
+    const fmt = (n: number) => n >= 1000000000 ? `$${(n/1000000000).toFixed(1)}B` : n >= 1000000 ? `$${(n/1000000).toFixed(0)}M` : `$${n}`;
+    lines.push(`- Annual revenue: ${icp.revenue_min ? fmt(icp.revenue_min) : '$0'} to ${icp.revenue_max ? fmt(icp.revenue_max) : 'unlimited'}`);
+  }
+
+  // Location
+  if (icp.location_scope && icp.location_scope !== 'any') {
+    const locMap: any = {
+      local: 'local companies only (within the same city/metro area)',
+      regional: 'regional companies (within the same state or adjacent states)',
+      national: 'national companies (headquartered anywhere in the country)',
+      international: 'international companies (headquartered anywhere in the world)',
+    };
+    lines.push(`- Geographic scope: ${locMap[icp.location_scope]}`);
+  }
+  if (icp.cities?.length) lines.push(`- Target cities: ${icp.cities.join(', ')}`);
+  if (icp.states?.length) lines.push(`- Target states: ${icp.states.join(', ')}`);
+
+  // Industries
+  if (icp.industries?.length) lines.push(`- Target industries: ${icp.industries.join(', ')}`);
+  if (icp.sub_industries?.length) lines.push(`- Target sub-industries: ${icp.sub_industries.join(', ')}`);
+  if (icp.exclude_industries?.length) lines.push(`- EXCLUDE industries: ${icp.exclude_industries.join(', ')}`);
+
+  // Business type
+  if (icp.business_type && icp.business_type !== 'any') {
+    const btMap: any = {
+      b2b: 'B2B (business-to-business) only',
+      b2c: 'B2C (business-to-consumer) only',
+      dtc: 'DTC (direct-to-consumer) brands',
+      b2b2c: 'B2B2C (platforms serving both)',
+    };
+    lines.push(`- Business model: ${btMap[icp.business_type]}`);
+  }
+  if (icp.funding_stage && icp.funding_stage !== 'any') {
+    lines.push(`- Funding stage: ${icp.funding_stage.replace('_', ' ')}`);
+  }
+  if (icp.growth_stage && icp.growth_stage !== 'any') {
+    lines.push(`- Growth stage: ${icp.growth_stage}`);
+  }
+
+  // Budget
+  if (icp.budget_min || icp.budget_max) {
+    lines.push(`- Realistic sponsorship/partnership budget: $${icp.budget_min || 0}-$${icp.budget_max || 'unlimited'}`);
+  }
+
+  // Attributes
+  if (icp.attributes?.length) {
+    lines.push(`- Required attributes: ${icp.attributes.map((a: string) => a.replace('_', ' ')).join(', ')}`);
+  }
+
+  // Free-form description
+  if (icp.ideal_description) {
+    lines.push(`- Additional criteria: ${icp.ideal_description}`);
+  }
+
+  if (lines.length === 0) return '';
+  return `\n\nIDEAL CUSTOMER PROFILE (strict requirements):\n${lines.join('\n')}\n\nCRITICAL: Only suggest companies that fit ALL of the above criteria. Skip massive global brands (Nike, Coca-Cola, Amazon, etc.) unless they specifically match. Prioritize realistic, reachable targets that match the profile. Quality over fame.`;
+}
+
 async function searchProspects(supabase: any, body: any) {
   const query = body.query || "";
   const category = body.category || "";
   const propertyId = body.property_id;
+  const icp = body.icp_filters;
+  const industry = body.industry || 'sports';
 
   // Fetch existing deals to avoid duplicates
   let existingBrands: string[] = [];
@@ -451,14 +530,36 @@ async function searchProspects(supabase: any, body: any) {
     existingBrands = (deals || []).map((d: any) => (d.brand_name || "").toLowerCase());
   }
 
-  const prompt = `Find 8 real companies matching: "${query}". ${category ? `Industry: ${category}.` : ""} ${existingBrands.length > 0 ? `Exclude: ${existingBrands.slice(0, 20).join(", ")}.` : ""}
+  const icpConstraints = buildICPConstraints(icp);
+
+  const prompt = `Find 8-12 real companies for ${industry} sponsorship/partnership outreach.
+
+SEARCH QUERY: "${query}"
+${category ? `Category: ${category}` : ''}
+${existingBrands.length > 0 ? `Exclude (already in pipeline): ${existingBrands.slice(0, 20).join(", ")}` : ''}${icpConstraints}
 
 Return a JSON array of objects with these fields:
-company_name, category, sub_industry, estimated_sponsorship_budget, why_good_fit, headquarters_city, headquarters_state, website, priority (High/Medium/Low)
+{
+  "company_name": "Official company name",
+  "category": "Industry category",
+  "sub_industry": "Specific sub-industry",
+  "estimated_sponsorship_budget": "Realistic budget range (e.g. '$5K-$25K')",
+  "estimated_revenue": "Revenue range (e.g. '$10M-$50M')",
+  "estimated_employees": "Employee count (e.g. '100-500')",
+  "why_good_fit": "1-2 sentences on why they match the ICP",
+  "icp_match_score": 1-10 (how closely they match the ICP),
+  "headquarters_city": "City",
+  "headquarters_state": "State",
+  "website": "URL",
+  "linkedin_url": "LinkedIn company URL",
+  "priority": "High|Medium|Low"
+}
 
-Return ONLY a JSON array, no other text.`;
+CRITICAL: Match the ICP criteria exactly. Prefer realistic mid-market and local targets over massive global brands. Quality matches over famous names.
 
-  const text = await callClaude(prompt, 2048);
+Return ONLY a valid JSON array.`;
+
+  const text = await callClaude(prompt, 3000);
   try {
     return { prospects: extractJSON(text) };
   } catch {
@@ -468,6 +569,8 @@ Return ONLY a JSON array, no other text.`;
 
 async function suggestProspects(supabase: any, body: any) {
   const propertyId = body.property_id;
+  const icp = body.icp_filters;
+  const industry = body.industry || 'sports';
 
   // Fetch existing deals to analyze patterns
   let dealContext = "No existing deals.";
@@ -492,35 +595,41 @@ All brands: ${deals.map((d: any) => d.brand_name).join(", ")}`;
     }
   }
 
-  const prompt = `You are a sports sponsorship sales strategist. Analyze this sales team's existing pipeline and suggest NEW prospect companies they should target.
+  const icpConstraints = buildICPConstraints(icp);
 
-${dealContext}
+  const prompt = `You are a ${industry} sponsorship/partnership sales strategist. Analyze this team's existing pipeline and suggest NEW prospect companies they should target.
+
+${dealContext}${icpConstraints}
 
 Based on:
 1. Which industries and company types have been successful (won deals)
-2. Market trends in sports sponsorship (2024-2025)
-3. Companies actively increasing sports marketing spend
-4. Gaps in their current pipeline (underrepresented high-value categories)
+2. Current market trends in ${industry} partnerships
+3. Companies actively increasing ${industry}-related spending
+4. Gaps in their current pipeline
+5. The IDEAL CUSTOMER PROFILE constraints above
 
-Suggest 12 specific, real companies they should pursue. Mix between:
-- "Similar to winners" — companies in the same industries as their won deals
-- "Trending" — companies currently ramping up sports sponsorship spend
-- "High potential" — companies in growing categories they haven't tapped yet
+Suggest 12 specific, realistic companies they should pursue. Match the ICP strictly. If the ICP specifies "local companies under 500 employees," do NOT suggest Nike or Coca-Cola. Suggest actual local/regional/mid-market companies that fit.
+
+Mix between:
+- "Similar to winners" — companies in same industries as won deals AND matching the ICP
+- "Trending" — companies currently ramping up spend AND matching the ICP
+- "Untapped" — companies in underrepresented categories AND matching the ICP
 
 For each:
 - company_name: Official name
 - category: Industry category
 - sub_industry: Specific industry
-- reason: Why suggested (1 of: "Similar to your winners", "Trending in sports sponsorship", "Untapped high-potential category")
+- reason: "Similar to your winners" | "Trending" | "Untapped category"
 - rationale: 1-2 sentence explanation
-- estimated_sponsorship_budget: Budget range
+- estimated_sponsorship_budget: Realistic budget range
+- estimated_revenue: Revenue range
+- estimated_employees: Employee range
+- icp_match_score: 1-10 (how closely they match the ICP)
 - headquarters_city: City
 - headquarters_state: State
 - website: URL
-- linkedin_url: Company LinkedIn URL (https://linkedin.com/company/slug)
-- priority: "High", "Medium", or "Low"
-- estimated_revenue: Revenue range
-- estimated_employees: Employee range
+- linkedin_url: Company LinkedIn URL
+- priority: "High" | "Medium" | "Low"
 
 Return JSON array. Return ONLY valid JSON.`;
 

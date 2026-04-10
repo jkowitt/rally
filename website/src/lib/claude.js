@@ -241,9 +241,9 @@ function tryParseJSON(text) {
   return null
 }
 
-export async function searchProspects({ query, category, property_id }) {
+export async function searchProspects({ query, category, property_id, icp_filters, industry }) {
   try {
-    const result = await invokeEdgeFunction('contract-ai', { action: 'search_prospects', query, category, property_id })
+    const result = await invokeEdgeFunction('contract-ai', { action: 'search_prospects', query, category, property_id, icp_filters, industry })
     if (result?.prospects?.length > 0) return result
   } catch (e) {
     console.warn('search_prospects failed, using fallback:', e.message)
@@ -291,9 +291,9 @@ export async function searchProspects({ query, category, property_id }) {
   return { prospects }
 }
 
-export async function suggestProspects({ property_id }) {
+export async function suggestProspects({ property_id, icp_filters, industry }) {
   try {
-    const result = await invokeEdgeFunction('contract-ai', { action: 'suggest_prospects', property_id })
+    const result = await invokeEdgeFunction('contract-ai', { action: 'suggest_prospects', property_id, icp_filters, industry })
     if (result?.suggestions?.length > 0) return result
   } catch (e) {
     console.warn('suggest_prospects failed, using fallback:', e.message)

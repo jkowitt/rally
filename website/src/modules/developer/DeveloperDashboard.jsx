@@ -8,7 +8,6 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import APIUsageBanner from '@/components/APIUsageBanner'
 import { logAudit } from '@/lib/audit'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line } from 'recharts'
-import ClaudeAssistant from '@/components/ClaudeAssistant'
 
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 const QATestSuite = lazy(() => import('./QATestSuite'))
@@ -1391,7 +1390,6 @@ export default function DeveloperDashboard() {
           />
         </Suspense>
       )}
-      <ClaudeAssistant />
     </div>
   )
 }

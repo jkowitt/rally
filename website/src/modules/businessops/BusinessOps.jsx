@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { Navigate } from 'react-router-dom'
-import ClaudeAssistant from '@/components/ClaudeAssistant'
 import RevenuePipeline from './RevenuePipeline'
 import GoalTracker from './GoalTracker'
 import FinanceDashboard from './FinanceDashboard'
@@ -9,7 +8,6 @@ import FinancialProjections from './FinancialProjections'
 import AdSpendManager from './AdSpendManager'
 import ReportBuilder from './ReportBuilder'
 import ConnectionManager from './ConnectionManager'
-import ClaudeTerminal from './ClaudeTerminal'
 import RoadmapTracker from './RoadmapTracker'
 import QATickets from './QATickets'
 import Accounting from './Accounting'
@@ -27,7 +25,6 @@ const TABS = [
   { id: 'qa', label: 'QA Tickets' },
   { id: 'connections', label: 'Connections' },
   { id: 'roadmap', label: 'Roadmap' },
-  { id: 'claude', label: 'Claude Code' },
 ]
 
 export default function BusinessOps() {
@@ -74,8 +71,6 @@ export default function BusinessOps() {
       {tab === 'qa' && <QATickets />}
       {tab === 'connections' && <ConnectionManager />}
       {tab === 'roadmap' && <RoadmapTracker />}
-      {tab === 'claude' && <ClaudeTerminal />}
-      <ClaudeAssistant />
     </div>
   )
 }

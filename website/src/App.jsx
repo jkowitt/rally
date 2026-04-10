@@ -60,6 +60,10 @@ const CustomDashboardRequest = lazyRetry(() => import('./modules/crm/CustomDashb
 const CustomDashboard = lazyRetry(() => import('./modules/crm/CustomDashboard'))
 const DeveloperDashboard = lazyRetry(() => import('./modules/developer/DeveloperDashboard'))
 const SponsorPortal = lazyRetry(() => import('./modules/crm/SponsorPortal'))
+const UpgradeOffer = lazyRetry(() => import('./pages/admin/UpgradeOffer'))
+const OnboardingModal = lazyRetry(() => import('./components/onboarding/OnboardingModal'))
+const ChecklistWidget = lazyRetry(() => import('./components/onboarding/ChecklistWidget'))
+const TooltipTour = lazyRetry(() => import('./components/onboarding/TooltipTour'))
 
 function PageLoader() {
   return (
@@ -97,6 +101,11 @@ export default function App() {
                 <ProtectedRoute>
                   <LegalGate>
                     <AppShell>
+                      <Suspense fallback={null}>
+                        <OnboardingModal />
+                        <ChecklistWidget />
+                        <TooltipTour />
+                      </Suspense>
                       <ErrorBoundary>
                         <Suspense fallback={<PageLoader />}>
                           <Routes>
@@ -142,6 +151,7 @@ export default function App() {
                             <Route path="/businessnow" element={<BusinessNow />} />
                             {/* Developer */}
                             <Route path="/developer" element={<DeveloperDashboard />} />
+                            <Route path="/admin/upgrade-offer" element={<UpgradeOffer />} />
                             <Route path="*" element={<Navigate to="/app" replace />} />
                           </Routes>
                         </Suspense>

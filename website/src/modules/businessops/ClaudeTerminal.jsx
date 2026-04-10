@@ -68,12 +68,12 @@ export default function ClaudeTerminal() {
         const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
           body: {
             action: 'edit_contract',
-            contract_text: `You are a senior full-stack developer for the Loud Legacy CRM (React 18, Vite, Tailwind v4, Supabase). ${contextMsgs ? `Previous conversation:\n${contextMsgs}\n\n` : ''}\n\nRespond with actionable code or a direct answer. Do NOT repeat the user's message. Show file paths and exact code changes.`,
-            instructions: userMsg,
+            contract_text: 'RESPOND_ONLY',
+            instructions: `You are a senior full-stack developer for the Loud Legacy CRM (React 18, Vite, Tailwind v4, Supabase). ${contextMsgs ? `Previous conversation:\n${contextMsgs}\n\n` : ''}User request: "${userMsg}"\n\nProvide ONLY your response with actionable code. Show file paths and exact changes. Do not include any preamble or repeat the question.`,
           },
         })
         if (fbErr) throw fbErr
-        response = fb?.contract_text || fb?.text || JSON.stringify(fb)
+        response = (fb?.contract_text || fb?.text || '').replace(/^---\n?/, '').replace(/\n?---$/, '').replace('RESPOND_ONLY', '').trim() || 'AI edge function needs redeployment.'
       } else {
         response = data?.response || data?.contract_text || data?.text || JSON.stringify(data)
       }

@@ -62,12 +62,13 @@ export default function ClaudeAssistant() {
         const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
           body: {
             action: 'edit_contract',
-            contract_text: `You are a helpful AI assistant for the Loud Legacy CRM platform. ${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `\nConversation:\n${contextMsgs}\n` : ''}\n\nRespond helpfully to the user's request. Do NOT repeat their message back. Give a real, useful answer.`,
-            instructions: userMsg,
+            contract_text: 'RESPOND_ONLY',
+            instructions: `You are a helpful AI assistant for the Loud Legacy CRM platform (React 18, Vite, Tailwind, Supabase). ${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `Recent conversation:\n${contextMsgs}\n\n` : ''}User says: "${userMsg}"\n\nProvide ONLY your response. Do not include any preamble, system text, or repeat the question.`,
           },
         })
         if (fbErr) throw fbErr
-        response = fb?.contract_text || fb?.text || JSON.stringify(fb)
+        response = (fb?.contract_text || fb?.text || '').replace(/^---\n?/, '').replace(/\n?---$/, '').replace('RESPOND_ONLY', '').trim()
+        if (!response) response = 'Sorry, I could not generate a response. The AI edge function may need redeployment.'
       }
       setMessages(prev => [...prev, { role: 'assistant', content: response }])
 

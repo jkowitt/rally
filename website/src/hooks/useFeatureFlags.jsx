@@ -50,29 +50,41 @@ export function FeatureFlagProvider({ children }) {
 
   async function toggleFlag(module) {
     const newValue = !flags[module]
+    // Optimistically update UI
+    setFlags((prev) => ({ ...prev, [module]: newValue }))
+
     // Try update first, if no rows affected then insert
     try {
-      const { count } = await supabase
+      const { data, error } = await supabase
         .from('feature_flags')
         .update({ enabled: newValue, updated_at: new Date().toISOString() })
         .eq('module', module)
-        .select('*', { count: 'exact', head: true })
+        .select()
 
-      if (!count || count === 0) {
+      if (error) throw error
+
+      if (!data || data.length === 0) {
         // Row doesn't exist — insert it
-        await supabase.from('feature_flags').insert({
+        const { error: insErr } = await supabase.from('feature_flags').insert({
           module, enabled: newValue, updated_at: new Date().toISOString(),
         })
+        if (insErr) throw insErr
       }
-    } catch {
-      // If constraint fails, just try insert with upsert
+      return { success: true, module, enabled: newValue }
+    } catch (err) {
+      // Try upsert as last resort
       try {
-        await supabase.from('feature_flags').upsert({
+        const { error: upsertErr } = await supabase.from('feature_flags').upsert({
           module, enabled: newValue, updated_at: new Date().toISOString(),
         }, { onConflict: 'module' })
-      } catch {}
+        if (upsertErr) throw upsertErr
+        return { success: true, module, enabled: newValue }
+      } catch (finalErr) {
+        // Revert optimistic update on failure
+        setFlags((prev) => ({ ...prev, [module]: !newValue }))
+        return { success: false, module, error: finalErr.message }
+      }
     }
-    setFlags((prev) => ({ ...prev, [module]: newValue }))
   }
 
   return (

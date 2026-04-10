@@ -34,6 +34,18 @@ export default function DeveloperDashboard() {
   const [newPropType, setNewPropType] = useState('college')
   const [newPropCity, setNewPropCity] = useState('')
   const [newPropState, setNewPropState] = useState('')
+  const [savingFlag, setSavingFlag] = useState(null)
+
+  async function handleToggleFlag(module, label) {
+    setSavingFlag(module)
+    const result = await toggleFlag(module)
+    setSavingFlag(null)
+    if (result.success) {
+      toast({ title: `${label} ${result.enabled ? 'enabled' : 'disabled'}`, description: 'Saved to database', type: 'success' })
+    } else {
+      toast({ title: 'Save failed', description: result.error || 'Could not save change', type: 'error' })
+    }
+  }
   const [newPropPlan, setNewPropPlan] = useState('free')
 
   if (!isDeveloper) return <Navigate to="/app" replace />
@@ -906,10 +918,11 @@ export default function DeveloperDashboard() {
                     <p className="text-[10px] text-text-muted mt-0.5">{m.desc}</p>
                   </div>
                   <button
-                    onClick={() => toggleFlag(m.key)}
-                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 ${flags[m.key] ? 'bg-success/20 text-success border border-success/30' : 'bg-bg-card text-text-muted border border-border'}`}
+                    onClick={() => handleToggleFlag(m.key, m.label)}
+                    disabled={savingFlag === m.key}
+                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 transition-colors ${savingFlag === m.key ? 'bg-warning/20 text-warning border border-warning/30 animate-pulse' : flags[m.key] ? 'bg-success/20 text-success border border-success/30 hover:bg-success/30' : 'bg-bg-card text-text-muted border border-border hover:bg-bg-card/80'}`}
                   >
-                    {flags[m.key] ? 'ON' : 'OFF'}
+                    {savingFlag === m.key ? 'SAVING...' : flags[m.key] ? 'ON' : 'OFF'}
                   </button>
                 </div>
               ))}
@@ -933,10 +946,11 @@ export default function DeveloperDashboard() {
                     <p className="text-[10px] text-text-muted mt-0.5">{m.desc}</p>
                   </div>
                   <button
-                    onClick={() => toggleFlag(m.key)}
-                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 ${flags[m.key] ? 'bg-success/20 text-success border border-success/30' : 'bg-bg-card text-text-muted border border-border'}`}
+                    onClick={() => handleToggleFlag(m.key, m.label)}
+                    disabled={savingFlag === m.key}
+                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 transition-colors ${savingFlag === m.key ? 'bg-warning/20 text-warning border border-warning/30 animate-pulse' : flags[m.key] ? 'bg-success/20 text-success border border-success/30 hover:bg-success/30' : 'bg-bg-card text-text-muted border border-border hover:bg-bg-card/80'}`}
                   >
-                    {flags[m.key] ? 'ON' : 'OFF'}
+                    {savingFlag === m.key ? 'SAVING...' : flags[m.key] ? 'ON' : 'OFF'}
                   </button>
                 </div>
               ))}

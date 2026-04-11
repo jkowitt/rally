@@ -74,6 +74,8 @@ const ChecklistWidget = lazyRetry(() => import('./components/onboarding/Checklis
 const TooltipTour = lazyRetry(() => import('./components/onboarding/TooltipTour'))
 // Private developer-only router — never referenced from any user-facing UI
 const DevRouter = lazyRetry(() => import('./pages/dev/DevRouter'))
+// Public SEO comparison pages — /compare hub + 6 competitor pages in one chunk
+const CompareRouter = lazyRetry(() => import('./pages/compare/CompareRouter'))
 
 function PageLoader() {
   return (
@@ -108,6 +110,8 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/sponsor/:token" element={<SponsorPortal />} />
+            {/* SEO comparison pages (public) */}
+            <Route path="/compare/*" element={<CompareRouter />} />
 
             {/* Private developer console — role gate inside DevRouter.
                 No navigation links to this path exist anywhere in user UI. */}

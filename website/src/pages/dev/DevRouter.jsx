@@ -16,6 +16,9 @@ const FollowUpQueue = lazy(() => import('./outlook/FollowUpQueue'))
 const EmailTemplates = lazy(() => import('./outlook/EmailTemplates'))
 const OutlookAnalytics = lazy(() => import('./outlook/OutlookAnalytics'))
 
+// Email marketing — role-gated at router + flag-gated per route
+const EmailRouter = lazy(() => import('./email/EmailRouter'))
+
 /**
  * Private developer router. Every child route is wrapped in
  * DeveloperOnly which redirects silently to /app if the user is
@@ -50,6 +53,9 @@ export default function DevRouter() {
         <Route path="/outlook/follow-ups" element={<DeveloperOnly><FollowUpQueue /></DeveloperOnly>} />
         <Route path="/outlook/templates" element={<DeveloperOnly><EmailTemplates /></DeveloperOnly>} />
         <Route path="/outlook/analytics" element={<DeveloperOnly><OutlookAnalytics /></DeveloperOnly>} />
+
+        {/* Email marketing — flag gated inside EmailRouter */}
+        <Route path="/email/*" element={<EmailRouter />} />
 
         {/* Silent 404 — never reveal route existence */}
         <Route path="*" element={<Navigate to="/app" replace />} />

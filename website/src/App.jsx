@@ -76,6 +76,10 @@ const TooltipTour = lazyRetry(() => import('./components/onboarding/TooltipTour'
 const DevRouter = lazyRetry(() => import('./pages/dev/DevRouter'))
 // Public SEO comparison pages — /compare hub + 6 competitor pages in one chunk
 const CompareRouter = lazyRetry(() => import('./pages/compare/CompareRouter'))
+// Public unsubscribe page (no login, token-based)
+const UnsubscribePage = lazyRetry(() => import('./pages/email/UnsubscribePage'))
+// Internal /email/* email marketing (admin+ with email_marketing_public flag)
+const EmailPublicRouter = lazyRetry(() => import('./pages/email/EmailPublicRouter'))
 
 function PageLoader() {
   return (
@@ -112,6 +116,10 @@ export default function App() {
             <Route path="/sponsor/:token" element={<SponsorPortal />} />
             {/* SEO comparison pages (public) */}
             <Route path="/compare/*" element={<CompareRouter />} />
+            {/* Public unsubscribe (token-based, no login required) */}
+            <Route path="/unsubscribe/:token" element={<UnsubscribePage />} />
+            {/* Internal email marketing for admin+ when public flag is ON */}
+            <Route path="/email/*" element={<ProtectedRoute><EmailPublicRouter /></ProtectedRoute>} />
 
             {/* Private developer console — role gate inside DevRouter.
                 No navigation links to this path exist anywhere in user UI. */}

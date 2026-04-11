@@ -32,6 +32,8 @@ const ALL_MODULES = [
 // Used by the Dev Tools UI to exclude these from rendering.
 export const HIDDEN_MODULES = [
   'outlook_integration',        // developer-only Outlook integration
+  'email_marketing_developer',  // developer-only email marketing
+  'email_marketing_public',     // admin+ email marketing (requires dev flag on too)
 ]
 
 const ALL_PUBLIC_MODULES = [...ALL_MODULES, ...HIDDEN_MODULES]

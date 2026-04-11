@@ -909,6 +909,46 @@ export default function DeveloperDashboard() {
             </div>
           </Panel>
 
+          <Panel title="Client Growth Tools (Business Ops for Customers)">
+            <p className="text-xs text-text-muted mb-2">Toggle client-facing Growth Tools at <span className="text-accent font-mono">/app/growth</span>. All default to OFF — greenlight when ready. Master toggle controls the whole section; individual tools appear as tabs.</p>
+            <p className="text-[10px] text-text-muted mb-4">Build phases: <span className="text-success">Phase 1 (ship-ready)</span> · <span className="text-warning">Phase 2 (strategic)</span> · <span className="text-accent">Phase 3 (premium)</span></p>
+            <div className="space-y-1">
+              {[
+                { key: 'client_growth_hub', label: 'Master: Growth Hub Page', desc: 'Enables /app/growth route and sidebar link', phase: 'master' },
+                { key: 'client_marketing_hub', label: 'Marketing Hub', desc: 'Social scheduling, ads, integrations, templates', phase: 1 },
+                { key: 'client_ad_spend', label: 'Ad Spend Manager', desc: 'Channel ROI, CPM, CAC tracking', phase: 1 },
+                { key: 'client_goal_tracker', label: 'Goal Tracker', desc: 'KPI targets with progress bars', phase: 1 },
+                { key: 'client_connection_manager', label: 'Connection Manager', desc: 'Personal CRM for prospects, investors, advisors', phase: 1 },
+                { key: 'client_financial_projections', label: 'Financial Projections', desc: '5-year scenario modeler with adjustable assumptions', phase: 2 },
+                { key: 'client_finance_dashboard', label: 'Finance Dashboard', desc: 'Revenue, expenses, P&L tracking', phase: 2 },
+                { key: 'client_growth_workbook', label: 'Growth Workbook (NEW)', desc: '"Where you are" self-assessment with health score', phase: 2 },
+                { key: 'client_report_builder', label: 'AI Report Builder', desc: 'Monthly reviews, investor updates, growth analysis', phase: 3 },
+                { key: 'client_strategic_workbooks', label: 'Strategic Workbooks (NEW)', desc: '6 templated playbooks: ICP, pricing, positioning, QBR, etc.', phase: 3 },
+              ].map(m => (
+                <div key={m.key} className={`flex items-center justify-between py-2.5 px-2 rounded hover:bg-bg-card border-b border-border last:border-0 ${m.phase === 'master' ? 'bg-accent/5' : ''}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm ${m.phase === 'master' ? 'text-accent font-semibold' : 'text-text-primary'}`}>{m.label}</span>
+                      {m.phase !== 'master' && (
+                        <span className={`text-[8px] font-mono px-1 py-0.5 rounded ${m.phase === 1 ? 'bg-success/15 text-success' : m.phase === 2 ? 'bg-warning/15 text-warning' : 'bg-accent/15 text-accent'}`}>
+                          P{m.phase}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-text-muted mt-0.5">{m.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleFlag(m.key, m.label)}
+                    disabled={savingFlag === m.key}
+                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 transition-colors ${savingFlag === m.key ? 'bg-warning/20 text-warning animate-pulse' : flags[m.key] ? 'bg-success/20 text-success border border-success/30' : 'bg-bg-card text-text-muted border border-border'}`}
+                  >
+                    {savingFlag === m.key ? '...' : flags[m.key] ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Panel>
+
           <Panel title="AI Feature Toggles">
             <p className="text-xs text-text-muted mb-4">Disable individual AI features across the platform. Useful for maintenance or when edge functions are down.</p>
             <div className="space-y-3">

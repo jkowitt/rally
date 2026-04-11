@@ -60,6 +60,7 @@ const CustomDashboardRequest = lazyRetry(() => import('./modules/crm/CustomDashb
 const CustomDashboard = lazyRetry(() => import('./modules/crm/CustomDashboard'))
 const DeveloperDashboard = lazyRetry(() => import('./modules/developer/DeveloperDashboard'))
 const SponsorPortal = lazyRetry(() => import('./modules/crm/SponsorPortal'))
+const GrowthHub = lazyRetry(() => import('./modules/growth/GrowthHub'))
 
 function PageLoader() {
   return (
@@ -142,6 +143,7 @@ export default function App() {
                             <Route path="/businessnow" element={<BusinessNow />} />
                             {/* Developer */}
                             <Route path="/developer" element={<DeveloperDashboard />} />
+                            <Route path="/growth" element={<GrowthHub />} />
                             <Route path="*" element={<Navigate to="/app" replace />} />
                           </Routes>
                         </Suspense>

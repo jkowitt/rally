@@ -76,6 +76,11 @@ const TooltipTour = lazyRetry(() => import('./components/onboarding/TooltipTour'
 const DevRouter = lazyRetry(() => import('./pages/dev/DevRouter'))
 // Public SEO comparison pages — /compare hub + 6 competitor pages in one chunk
 const CompareRouter = lazyRetry(() => import('./pages/compare/CompareRouter'))
+// Public database-driven pricing page
+const PricingPage = lazyRetry(() => import('./pages/pricing/PricingPage'))
+// Addons + billing settings pages (authenticated)
+const AddonsPage = lazyRetry(() => import('./pages/settings/AddonsPage'))
+const BillingPage = lazyRetry(() => import('./pages/settings/BillingPage'))
 // Public unsubscribe page (no login, token-based)
 const UnsubscribePage = lazyRetry(() => import('./pages/email/UnsubscribePage'))
 // Internal /email/* email marketing (admin+ with email_marketing_public flag)
@@ -116,6 +121,8 @@ export default function App() {
             <Route path="/sponsor/:token" element={<SponsorPortal />} />
             {/* SEO comparison pages (public) */}
             <Route path="/compare/*" element={<CompareRouter />} />
+            {/* Public pricing page (database-driven) */}
+            <Route path="/pricing" element={<PricingPage />} />
             {/* Public unsubscribe (token-based, no login required) */}
             <Route path="/unsubscribe/:token" element={<UnsubscribePage />} />
             {/* Internal email marketing for admin+ when public flag is ON */}
@@ -177,6 +184,8 @@ export default function App() {
                             {/* Business Ops */}
                             <Route path="/businessops" element={<BusinessOps />} />
                             <Route path="/settings" element={<Settings />} />
+                            <Route path="/settings/addons" element={<AddonsPage />} />
+                            <Route path="/settings/billing" element={<BillingPage />} />
                             <Route path="/help" element={<HelpCenter />} />
                             <Route path="/custom-dashboard" element={<CustomDashboardRequest />} />
                             <Route path="/custom/:slug" element={<CustomDashboard />} />

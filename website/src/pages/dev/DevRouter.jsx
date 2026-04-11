@@ -18,6 +18,8 @@ const OutlookAnalytics = lazy(() => import('./outlook/OutlookAnalytics'))
 
 // Email marketing — role-gated at router + flag-gated per route
 const EmailRouter = lazy(() => import('./email/EmailRouter'))
+// Pricing control center — developer-only, no flag gate (always available)
+const PricingControlCenter = lazy(() => import('./pricing/PricingControlCenter'))
 
 /**
  * Private developer router. Every child route is wrapped in
@@ -56,6 +58,9 @@ export default function DevRouter() {
 
         {/* Email marketing — flag gated inside EmailRouter */}
         <Route path="/email/*" element={<EmailRouter />} />
+
+        {/* Pricing control center — developer-only, no flag gate */}
+        <Route path="/pricing/*" element={<PricingControlCenter />} />
 
         {/* Silent 404 — never reveal route existence */}
         <Route path="*" element={<Navigate to="/app" replace />} />

@@ -62,18 +62,18 @@ export default function ClaudeTerminal() {
         },
       })
 
-      if (error || data?.error?.includes('Unknown action')) {
+      if (error || (typeof data?.error === 'string' && data.error.includes('Unknown action'))) {
         // Fallback to edit_contract if code_assistant not deployed yet
         const contextMsgs = history.slice(-6).map(h => `${h.role === 'user' ? 'USER' : 'CLAUDE'}: ${h.content.slice(0, 500)}`).join('\n\n')
         const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
           body: {
             action: 'edit_contract',
-            contract_text: `You are a senior full-stack developer working on the Loud Legacy CRM platform.\nTech stack: React 18, Vite, Tailwind CSS v4, Supabase, Recharts.\n${contextMsgs ? `Previous conversation:\n${contextMsgs}\n\n` : ''}Current request:`,
-            instructions: userMsg,
+            contract_text: 'RESPOND_ONLY',
+            instructions: `You are a senior full-stack developer for the Loud Legacy CRM (React 18, Vite, Tailwind v4, Supabase). ${contextMsgs ? `Previous conversation:\n${contextMsgs}\n\n` : ''}User request: "${userMsg}"\n\nProvide ONLY your response with actionable code. Show file paths and exact changes. Do not include any preamble or repeat the question.`,
           },
         })
         if (fbErr) throw fbErr
-        response = fb?.contract_text || fb?.text || JSON.stringify(fb)
+        response = (fb?.contract_text || fb?.text || '').replace(/^---\n?/, '').replace(/\n?---$/, '').replace('RESPOND_ONLY', '').trim() || 'AI edge function needs redeployment.'
       } else {
         response = data?.response || data?.contract_text || data?.text || JSON.stringify(data)
       }
@@ -224,7 +224,7 @@ export default function ClaudeTerminal() {
           file_path: path,
         },
       })
-      if (!error && !data?.error?.includes('Unknown action')) {
+      if (!error && !(typeof data?.error === 'string' && data.error.includes('Unknown action'))) {
         newContent = data?.response || data?.contract_text || ''
       } else {
         // Fallback to edit_contract

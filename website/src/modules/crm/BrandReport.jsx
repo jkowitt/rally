@@ -65,7 +65,7 @@ export default function BrandReport() {
       {deal.deal_assets?.length > 0 && (
         <div className="bg-bg-surface border border-border rounded-lg p-6">
           <h3 className="text-sm font-mono text-text-muted uppercase mb-3">Included Assets</h3>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
                 <th className="pb-2 text-left text-xs text-text-muted font-mono">Asset</th>
@@ -84,7 +84,7 @@ export default function BrandReport() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 

@@ -203,7 +203,7 @@ export default function SponsorPortal() {
               <span className="text-xs font-mono text-text-muted">{deal.priority} Priority</span>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-[#161B22] border border-border rounded-lg p-4 text-center">
               <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider">Deal Value</div>
               <div className="text-xl font-semibold text-[#E8B84B] font-mono mt-1">

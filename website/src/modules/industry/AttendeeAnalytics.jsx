@@ -96,7 +96,7 @@ export default function AttendeeAnalytics() {
       )}
 
       <div className="bg-bg-surface border border-border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead><tr className="border-b border-border text-left">
             <th className="px-4 py-3 text-xs text-text-muted font-mono">Event</th>
             <th className="px-4 py-3 text-xs text-text-muted font-mono">Type</th>
@@ -117,7 +117,7 @@ export default function AttendeeAnalytics() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
         {(!attendees || attendees.length === 0) && <div className="text-xs text-text-muted text-center py-8">No attendance data yet.</div>}
       </div>
     </div>

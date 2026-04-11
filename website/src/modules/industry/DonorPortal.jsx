@@ -55,7 +55,7 @@ export default function DonorPortal() {
         <p className="text-text-secondary text-xs sm:text-sm mt-1">Share impact dashboards with your corporate partners</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-bg-surface border border-border rounded-lg p-4 text-center">
           <div className="text-[10px] text-text-muted font-mono">Active Donors</div>
           <div className="text-2xl font-bold font-mono text-accent mt-1">{activeDonors}</div>

@@ -44,7 +44,6 @@ export function FeatureFlagProvider({ children }) {
 
   useEffect(() => {
     if (!session) return
-    // Developer always sees everything
     if (isDev) {
       setFlags(ALL_ON)
       setLoaded(true)
@@ -59,28 +58,55 @@ export function FeatureFlagProvider({ children }) {
         .from('feature_flags')
         .select('module, enabled')
       if (error || !data) {
-        // Table missing or RLS blocked — default CRM on
-        setFlags({ ...ALL_OFF, crm: true })
+        setFlags({ ...DEFAULT_FLAGS })
       } else {
-        const flagMap = { ...ALL_OFF, crm: true } // CRM always on as baseline
+        const flagMap = { ...DEFAULT_FLAGS }
         data.forEach((f) => { flagMap[f.module] = f.enabled })
         setFlags(flagMap)
       }
     } catch {
-      setFlags({ ...ALL_OFF, crm: true })
+      setFlags({ ...DEFAULT_FLAGS })
     }
     setLoaded(true)
   }
 
   async function toggleFlag(module) {
     const newValue = !flags[module]
+    // Optimistically update UI
+    setFlags((prev) => ({ ...prev, [module]: newValue }))
+
+    // Try update first, if no rows affected then insert
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('feature_flags')
         .update({ enabled: newValue, updated_at: new Date().toISOString() })
         .eq('module', module)
-    } catch { /* table may not exist */ }
-    setFlags((prev) => ({ ...prev, [module]: newValue }))
+        .select()
+
+      if (error) throw error
+
+      if (!data || data.length === 0) {
+        // Row doesn't exist — insert it
+        const { error: insErr } = await supabase.from('feature_flags').insert({
+          module, enabled: newValue, updated_at: new Date().toISOString(),
+        })
+        if (insErr) throw insErr
+      }
+      return { success: true, module, enabled: newValue }
+    } catch (err) {
+      // Try upsert as last resort
+      try {
+        const { error: upsertErr } = await supabase.from('feature_flags').upsert({
+          module, enabled: newValue, updated_at: new Date().toISOString(),
+        }, { onConflict: 'module' })
+        if (upsertErr) throw upsertErr
+        return { success: true, module, enabled: newValue }
+      } catch (finalErr) {
+        // Revert optimistic update on failure
+        setFlags((prev) => ({ ...prev, [module]: !newValue }))
+        return { success: false, module, error: finalErr.message }
+      }
+    }
   }
 
   return (

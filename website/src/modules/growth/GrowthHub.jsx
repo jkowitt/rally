@@ -5,6 +5,7 @@ import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 
 // Reuse existing Business Ops components — they're already built
 // They pull from biz_* tables which now have proper RLS per migration 052
+const MarketingHub = lazy(() => import('@/modules/businessops/MarketingHub'))
 const AdSpendManager = lazy(() => import('@/modules/businessops/AdSpendManager'))
 const GoalTracker = lazy(() => import('@/modules/businessops/GoalTracker'))
 const ConnectionManager = lazy(() => import('@/modules/businessops/ConnectionManager'))
@@ -30,6 +31,7 @@ export default function GrowthHub() {
   const availableTabs = [
     flags.client_growth_workbook && { id: 'workbook', label: 'Where You Are', component: GrowthWorkbook, icon: '🧭' },
     flags.client_strategic_workbooks && { id: 'workbooks', label: 'Workbooks', component: StrategicWorkbooks, icon: '📚' },
+    flags.client_marketing_hub && { id: 'marketing', label: 'Marketing Hub', component: MarketingHub, icon: '📢' },
     flags.client_ad_spend && { id: 'ads', label: 'Ad Spend', component: AdSpendManager, icon: '💰' },
     flags.client_financial_projections && { id: 'projections', label: 'Projections', component: FinancialProjections, icon: '📈' },
     flags.client_finance_dashboard && { id: 'finance', label: 'Finance', component: FinanceDashboard, icon: '💳' },

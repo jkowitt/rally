@@ -53,6 +53,8 @@ Deno.serve(async (req: Request) => {
       result = await researchContacts(body);
     } else if (action === "code_assistant") {
       result = await codeAssistant(body);
+    } else if (action === "smart_match_assets") {
+      result = await smartMatchAssets(supabaseClient, body);
     } else if (action === "generate_weekly_newsletter") {
       result = await generateWeeklyNewsletter(supabaseClient, body);
     } else if (action === "generate_afternoon_update") {
@@ -86,7 +88,7 @@ async function callClaude(prompt: string, maxTokens: number): Promise<string> {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-3-haiku-20240307",
+      model: "claude-sonnet-4-20250514",
       max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -434,10 +436,89 @@ async function meetingNotes(body: any) {
 
 // ============ PROSPECT SEARCH & DISCOVERY ============
 
+function buildICPConstraints(icp: any): string {
+  if (!icp) return '';
+  const lines: string[] = [];
+
+  // Size
+  if (icp.company_size && icp.company_size !== 'any') {
+    const sizeMap: any = {
+      startup: 'early-stage startups (under 50 employees, typically <$10M revenue)',
+      small: 'small companies (50-200 employees, $10M-$50M revenue)',
+      mid: 'mid-market companies (200-1,000 employees, $50M-$500M revenue)',
+      large: 'large companies (1,000-5,000 employees, $500M-$2B revenue)',
+      enterprise: 'enterprise companies (5,000+ employees, $2B+ revenue)',
+    };
+    lines.push(`- Company size: ${sizeMap[icp.company_size] || icp.company_size}`);
+  }
+  if (icp.employee_min || icp.employee_max) {
+    lines.push(`- Employees: ${icp.employee_min || 1}-${icp.employee_max || 'unlimited'}`);
+  }
+  if (icp.revenue_min || icp.revenue_max) {
+    const fmt = (n: number) => n >= 1000000000 ? `$${(n/1000000000).toFixed(1)}B` : n >= 1000000 ? `$${(n/1000000).toFixed(0)}M` : `$${n}`;
+    lines.push(`- Annual revenue: ${icp.revenue_min ? fmt(icp.revenue_min) : '$0'} to ${icp.revenue_max ? fmt(icp.revenue_max) : 'unlimited'}`);
+  }
+
+  // Location
+  if (icp.location_scope && icp.location_scope !== 'any') {
+    const locMap: any = {
+      local: 'local companies only (within the same city/metro area)',
+      regional: 'regional companies (within the same state or adjacent states)',
+      national: 'national companies (headquartered anywhere in the country)',
+      international: 'international companies (headquartered anywhere in the world)',
+    };
+    lines.push(`- Geographic scope: ${locMap[icp.location_scope]}`);
+  }
+  if (icp.cities?.length) lines.push(`- Target cities: ${icp.cities.join(', ')}`);
+  if (icp.states?.length) lines.push(`- Target states: ${icp.states.join(', ')}`);
+
+  // Industries
+  if (icp.industries?.length) lines.push(`- Target industries: ${icp.industries.join(', ')}`);
+  if (icp.sub_industries?.length) lines.push(`- Target sub-industries: ${icp.sub_industries.join(', ')}`);
+  if (icp.exclude_industries?.length) lines.push(`- EXCLUDE industries: ${icp.exclude_industries.join(', ')}`);
+
+  // Business type
+  if (icp.business_type && icp.business_type !== 'any') {
+    const btMap: any = {
+      b2b: 'B2B (business-to-business) only',
+      b2c: 'B2C (business-to-consumer) only',
+      dtc: 'DTC (direct-to-consumer) brands',
+      b2b2c: 'B2B2C (platforms serving both)',
+    };
+    lines.push(`- Business model: ${btMap[icp.business_type]}`);
+  }
+  if (icp.funding_stage && icp.funding_stage !== 'any') {
+    lines.push(`- Funding stage: ${icp.funding_stage.replace('_', ' ')}`);
+  }
+  if (icp.growth_stage && icp.growth_stage !== 'any') {
+    lines.push(`- Growth stage: ${icp.growth_stage}`);
+  }
+
+  // Budget
+  if (icp.budget_min || icp.budget_max) {
+    lines.push(`- Realistic sponsorship/partnership budget: $${icp.budget_min || 0}-$${icp.budget_max || 'unlimited'}`);
+  }
+
+  // Attributes
+  if (icp.attributes?.length) {
+    lines.push(`- Required attributes: ${icp.attributes.map((a: string) => a.replace('_', ' ')).join(', ')}`);
+  }
+
+  // Free-form description
+  if (icp.ideal_description) {
+    lines.push(`- Additional criteria: ${icp.ideal_description}`);
+  }
+
+  if (lines.length === 0) return '';
+  return `\n\nIDEAL CUSTOMER PROFILE (strict requirements):\n${lines.join('\n')}\n\nCRITICAL: Only suggest companies that fit ALL of the above criteria. Skip massive global brands (Nike, Coca-Cola, Amazon, etc.) unless they specifically match. Prioritize realistic, reachable targets that match the profile. Quality over fame.`;
+}
+
 async function searchProspects(supabase: any, body: any) {
   const query = body.query || "";
   const category = body.category || "";
   const propertyId = body.property_id;
+  const icp = body.icp_filters;
+  const industry = body.industry || 'sports';
 
   // Fetch existing deals to avoid duplicates
   let existingBrands: string[] = [];
@@ -449,14 +530,36 @@ async function searchProspects(supabase: any, body: any) {
     existingBrands = (deals || []).map((d: any) => (d.brand_name || "").toLowerCase());
   }
 
-  const prompt = `Find 8 real companies matching: "${query}". ${category ? `Industry: ${category}.` : ""} ${existingBrands.length > 0 ? `Exclude: ${existingBrands.slice(0, 20).join(", ")}.` : ""}
+  const icpConstraints = buildICPConstraints(icp);
+
+  const prompt = `Find 8-12 real companies for ${industry} sponsorship/partnership outreach.
+
+SEARCH QUERY: "${query}"
+${category ? `Category: ${category}` : ''}
+${existingBrands.length > 0 ? `Exclude (already in pipeline): ${existingBrands.slice(0, 20).join(", ")}` : ''}${icpConstraints}
 
 Return a JSON array of objects with these fields:
-company_name, category, sub_industry, estimated_sponsorship_budget, why_good_fit, headquarters_city, headquarters_state, website, priority (High/Medium/Low)
+{
+  "company_name": "Official company name",
+  "category": "Industry category",
+  "sub_industry": "Specific sub-industry",
+  "estimated_sponsorship_budget": "Realistic budget range (e.g. '$5K-$25K')",
+  "estimated_revenue": "Revenue range (e.g. '$10M-$50M')",
+  "estimated_employees": "Employee count (e.g. '100-500')",
+  "why_good_fit": "1-2 sentences on why they match the ICP",
+  "icp_match_score": 1-10 (how closely they match the ICP),
+  "headquarters_city": "City",
+  "headquarters_state": "State",
+  "website": "URL",
+  "linkedin_url": "LinkedIn company URL",
+  "priority": "High|Medium|Low"
+}
 
-Return ONLY a JSON array, no other text.`;
+CRITICAL: Match the ICP criteria exactly. Prefer realistic mid-market and local targets over massive global brands. Quality matches over famous names.
 
-  const text = await callClaude(prompt, 2048);
+Return ONLY a valid JSON array.`;
+
+  const text = await callClaude(prompt, 3000);
   try {
     return { prospects: extractJSON(text) };
   } catch {
@@ -466,6 +569,8 @@ Return ONLY a JSON array, no other text.`;
 
 async function suggestProspects(supabase: any, body: any) {
   const propertyId = body.property_id;
+  const icp = body.icp_filters;
+  const industry = body.industry || 'sports';
 
   // Fetch existing deals to analyze patterns
   let dealContext = "No existing deals.";
@@ -490,35 +595,41 @@ All brands: ${deals.map((d: any) => d.brand_name).join(", ")}`;
     }
   }
 
-  const prompt = `You are a sports sponsorship sales strategist. Analyze this sales team's existing pipeline and suggest NEW prospect companies they should target.
+  const icpConstraints = buildICPConstraints(icp);
 
-${dealContext}
+  const prompt = `You are a ${industry} sponsorship/partnership sales strategist. Analyze this team's existing pipeline and suggest NEW prospect companies they should target.
+
+${dealContext}${icpConstraints}
 
 Based on:
 1. Which industries and company types have been successful (won deals)
-2. Market trends in sports sponsorship (2024-2025)
-3. Companies actively increasing sports marketing spend
-4. Gaps in their current pipeline (underrepresented high-value categories)
+2. Current market trends in ${industry} partnerships
+3. Companies actively increasing ${industry}-related spending
+4. Gaps in their current pipeline
+5. The IDEAL CUSTOMER PROFILE constraints above
 
-Suggest 12 specific, real companies they should pursue. Mix between:
-- "Similar to winners" — companies in the same industries as their won deals
-- "Trending" — companies currently ramping up sports sponsorship spend
-- "High potential" — companies in growing categories they haven't tapped yet
+Suggest 12 specific, realistic companies they should pursue. Match the ICP strictly. If the ICP specifies "local companies under 500 employees," do NOT suggest Nike or Coca-Cola. Suggest actual local/regional/mid-market companies that fit.
+
+Mix between:
+- "Similar to winners" — companies in same industries as won deals AND matching the ICP
+- "Trending" — companies currently ramping up spend AND matching the ICP
+- "Untapped" — companies in underrepresented categories AND matching the ICP
 
 For each:
 - company_name: Official name
 - category: Industry category
 - sub_industry: Specific industry
-- reason: Why suggested (1 of: "Similar to your winners", "Trending in sports sponsorship", "Untapped high-potential category")
+- reason: "Similar to your winners" | "Trending" | "Untapped category"
 - rationale: 1-2 sentence explanation
-- estimated_sponsorship_budget: Budget range
+- estimated_sponsorship_budget: Realistic budget range
+- estimated_revenue: Revenue range
+- estimated_employees: Employee range
+- icp_match_score: 1-10 (how closely they match the ICP)
 - headquarters_city: City
 - headquarters_state: State
 - website: URL
-- linkedin_url: Company LinkedIn URL (https://linkedin.com/company/slug)
-- priority: "High", "Medium", or "Low"
-- estimated_revenue: Revenue range
-- estimated_employees: Employee range
+- linkedin_url: Company LinkedIn URL
+- priority: "High" | "Medium" | "Low"
 
 Return JSON array. Return ONLY valid JSON.`;
 
@@ -547,63 +658,171 @@ Return ONLY valid JSON, no other text.`;
 
 // ============ NEWSLETTER ============
 
+const INDUSTRY_CONFIG: any = {
+  sports: {
+    name: "The Sports Business Weekly",
+    afternoonName: "Sports Afternoon Access",
+    audience: "sports sponsorship and partnership professionals",
+    sources: "SportBusiness Journal, Sports Business Daily, Front Office Sports, Forbes Sports Money, ESPN, The Athletic, Sportico, IEG/Sponsorship.com, Nielsen Sports, Ad Age, CNBC Sports",
+    focus: "sponsorship deals, media rights, NIL, athlete partnerships, sports marketing, fan engagement, broadcast valuations",
+    headlineDesc: "biggest sports business story",
+    trendsDesc: "sports sponsorship (shifting budgets, new categories, NIL impact)",
+    techDesc: "sports business (AI, streaming, fan engagement, ticketing, measurement)",
+    brandDesc: "sports marketing strategy",
+    categories: "NFL, NBA, MLB, NHL, NCAA, soccer, esports, Olympics",
+  },
+  nonprofit: {
+    name: "The Nonprofit Impact Weekly",
+    afternoonName: "Nonprofit Afternoon Access",
+    audience: "nonprofit development officers, fundraisers, and grant managers",
+    sources: "Chronicle of Philanthropy, Nonprofit Quarterly, Inside Philanthropy, Philanthropy News Digest, Stanford Social Innovation Review, Candid, GuideStar, NonProfit PRO, Fast Company Impact",
+    focus: "grant funding, major donor cultivation, impact measurement, fundraising campaigns, corporate giving, donor retention",
+    headlineDesc: "biggest nonprofit/philanthropy story",
+    trendsDesc: "nonprofit fundraising (donor behavior, grant trends, giving circles)",
+    techDesc: "nonprofits (donor CRM, payment platforms, impact tracking, AI fundraising)",
+    brandDesc: "corporate-nonprofit partnership",
+    categories: "foundations, community orgs, international NGOs, social enterprises, advocacy groups",
+  },
+  conference: {
+    name: "The Conference Business Weekly",
+    afternoonName: "Conference Afternoon Access",
+    audience: "conference organizers, event marketers, and sponsorship managers",
+    sources: "BizBash, PCMA Convene, Trade Show News Network, Skift Meetings, Event Marketer, MeetingsNet, Northstar Meetings Group, Cvent Blog, EventMB",
+    focus: "conference sponsorships, trade show ROI, attendee engagement, hybrid events, sponsor activations, exhibitor experience",
+    headlineDesc: "biggest conference/events story",
+    trendsDesc: "events industry (attendance, sponsorship spend, format changes)",
+    techDesc: "events (event tech, engagement platforms, hybrid delivery, AI networking)",
+    brandDesc: "B2B event activation strategy",
+    categories: "trade shows, conferences, summits, expos, user conferences, industry conventions",
+  },
+  media: {
+    name: "The Media Business Weekly",
+    afternoonName: "Media Afternoon Access",
+    audience: "media publishers, broadcasters, and ad sales professionals",
+    sources: "Digiday, AdWeek, Ad Age, Variety, The Hollywood Reporter, Nieman Lab, Axios Media Trends, Press Gazette, Media Post, MarketingBrew",
+    focus: "advertising, audience measurement, publisher revenue, content monetization, branded content, programmatic ads",
+    headlineDesc: "biggest media/publishing story",
+    trendsDesc: "media industry (ad spend, audience trends, platform shifts)",
+    techDesc: "media (AI content, measurement, attribution, CTV, addressable advertising)",
+    brandDesc: "brand media strategy",
+    categories: "digital publishers, broadcast, streaming, print, podcasts, newsletters",
+  },
+  realestate: {
+    name: "The Real Estate Partnerships Weekly",
+    afternoonName: "Real Estate Afternoon Access",
+    audience: "commercial real estate developers, property managers, and brokers",
+    sources: "CoStar, Bisnow, Commercial Observer, The Real Deal, GlobeSt, NAIOP, CBRE Insights, JLL Research, Cushman & Wakefield",
+    focus: "commercial leasing, tenant partnerships, mixed-use development, retail anchors, office space, multifamily",
+    headlineDesc: "biggest commercial real estate story",
+    trendsDesc: "real estate partnerships (tenant trends, occupancy, lease structures)",
+    techDesc: "real estate (proptech, smart buildings, tenant experience platforms)",
+    brandDesc: "retail/restaurant tenant strategy",
+    categories: "retail, office, multifamily, industrial, mixed-use, hospitality",
+  },
+  entertainment: {
+    name: "The Entertainment Business Weekly",
+    afternoonName: "Entertainment Afternoon Access",
+    audience: "venue operators, talent bookers, and entertainment sponsorship managers",
+    sources: "Pollstar, Billboard, Variety, The Hollywood Reporter, Venues Now, IQ Magazine, Music Business Worldwide, Amplify",
+    focus: "live events, venue sponsorships, talent partnerships, festival activations, brand integrations, ticketing",
+    headlineDesc: "biggest live entertainment story",
+    trendsDesc: "entertainment industry (touring, venue economics, sponsor spend)",
+    techDesc: "entertainment (ticketing tech, fan experience, streaming integrations)",
+    brandDesc: "brand-artist partnership",
+    categories: "concerts, festivals, venues, touring, theatre, nightlife, theme parks",
+  },
+}
+
+function getIndustryKey(industryInput: string): string {
+  const map: any = {
+    sports: 'sports',
+    college: 'sports',
+    professional: 'sports',
+    minor_league: 'sports',
+    nonprofit: 'nonprofit',
+    foundation: 'nonprofit',
+    charity: 'nonprofit',
+    conference: 'conference',
+    events: 'conference',
+    tradeshow: 'conference',
+    media: 'media',
+    publisher: 'media',
+    broadcast: 'media',
+    realestate: 'realestate',
+    real_estate: 'realestate',
+    commercial: 'realestate',
+    entertainment: 'entertainment',
+    venue: 'entertainment',
+    music: 'entertainment',
+  }
+  return map[industryInput?.toLowerCase()] || 'sports'
+}
+
 async function generateWeeklyNewsletter(supabase: any, body: any) {
   const propertyId = body.property_id;
+  const industry = getIndustryKey(body.industry || 'sports');
+  const cfg = INDUSTRY_CONFIG[industry] || INDUSTRY_CONFIG.sports;
 
   const today = new Date();
   const monday = new Date(today);
   monday.setDate(today.getDate() - today.getDay() + 1);
   const weekOf = monday.toISOString().split("T")[0];
 
-  // Check if this week's newsletter already exists globally
+  // Check if this industry's weekly newsletter already exists for this week
   const { data: existing } = await supabase
     .from("newsletters")
     .select("*")
     .eq("type", "weekly_digest")
     .eq("week_of", weekOf)
+    .eq("industry", industry)
     .limit(1);
 
   if (existing?.length > 0) {
     return { newsletter: existing[0] };
   }
 
-  const prompt = `You are the editor of "The Sports Business Weekly," a premium newsletter for sports sponsorship and partnership professionals. Write the weekly edition for the week of ${weekOf}.
+  const prompt = `You are the editor of "${cfg.name}," a premium weekly newsletter for ${cfg.audience}. Write the edition for the week of ${weekOf}.
 
-Write a comprehensive, well-structured newsletter covering:
+Summarize the most important stories and developments from THIS WEEK (${weekOf} onward) in the ${industry} industry. Pull from recent real articles and news events from your knowledge. Focus on: ${cfg.focus}.
 
-1. **HEADLINE STORY** — The biggest sports business story this week (major deal, partnership, or market shift)
-2. **DEALS & PARTNERSHIPS** — 3-4 notable sponsorship deals or partnership announcements
-3. **MARKET TRENDS** — 2-3 emerging trends in sports sponsorship (data-driven insights, shifting budgets, new categories)
-4. **TECHNOLOGY & INNOVATION** — 1-2 tech developments impacting sports business (AI, streaming, fan engagement, measurement)
-5. **BRAND SPOTLIGHT** — Deep dive on one brand's sports marketing strategy and what others can learn
-6. **NUMBERS THAT MATTER** — 3-4 key stats or data points from the sports business world
-7. **LOOKING AHEAD** — What to watch for next week (upcoming events, earnings, announcements)
-8. **ACTIONABLE TAKEAWAY** — One specific thing a sponsorship sales professional should do this week
+Cover these sectors: ${cfg.categories}.
+
+Structure the newsletter with these sections:
+
+1. **HEADLINE STORY** — The ${cfg.headlineDesc} of the week. Summarize it in 2-3 paragraphs with specific names, numbers, and quotes if available.
+2. **DEALS & PARTNERSHIPS** — 3-4 notable deals, partnerships, or announcements from this week. Include dollar amounts where known.
+3. **MARKET TRENDS** — 2-3 emerging trends in ${cfg.trendsDesc}. Data-driven insights.
+4. **TECHNOLOGY & INNOVATION** — 1-2 tech developments impacting ${cfg.techDesc}.
+5. **SPOTLIGHT** — Deep dive on one organization's ${cfg.brandDesc} and what others can learn.
+6. **NUMBERS THAT MATTER** — 3-4 key stats or data points from the ${industry} world this week.
+7. **LOOKING AHEAD** — What to watch for next week (upcoming events, earnings, announcements).
+8. **ACTIONABLE TAKEAWAY** — One specific thing a ${cfg.audience.split(',')[0]} should do this week.
 
 CRITICAL SOURCING RULES:
 - Cite specific, real sources for every factual claim, data point, deal, or stat.
-- Inline each citation as a parenthetical at the end of the sentence, e.g. "(Source: SportBusiness Journal, March 2025)" or "(Source: Forbes Sports Money, Feb 2025)"
-- Use real publications: SportBusiness Journal, Sports Business Daily, Front Office Sports, Forbes, Bloomberg, ESPN, The Athletic, Yahoo Sports, CNBC, Marketing Week, Ad Age, Sportico, GlobalData Sport, IEG/Sponsorship.com, Nielsen Sports
-- At the end of the newsletter, include a "Sources" section listing all referenced publications with brief descriptions
-- If a fact is based on general industry knowledge, say "(Source: Industry analysis)" — do NOT present opinions as sourced facts
+- Inline each citation as a parenthetical, e.g. "(Source: ${cfg.sources.split(',')[0].trim()}, ${today.toLocaleString('en-US', { month: 'short' })} ${today.getFullYear()})"
+- Use real publications: ${cfg.sources}
+- At the end, include a "Sources" section listing referenced publications
+- Label analysis/opinion as "(Analysis)" or "(Industry observation)"
+- Focus on RECENT events (this week or last two weeks). Do not reference old news as if it were new.
 
 Format as clean HTML:
-- Use <h2> for section headers
-- Use <p> for paragraphs
-- Use <ul>/<li> for lists
-- Use <strong> for emphasis
-- Use <blockquote> for key quotes or callouts
+- <h2> for section headers
+- <p> for paragraphs
+- <ul>/<li> for lists
+- <strong> for emphasis
+- <blockquote> for key quotes or callouts
 - End with <h2>Sources</h2> followed by source list
-- Keep total length around 1500-2000 words
+- 1500-2000 words total
 - Do NOT include <html>, <head>, <body> tags
 
 Return JSON:
 {
-  "title": "The Sports Business Weekly — Week of ${weekOf}",
+  "title": "${cfg.name} — Week of ${weekOf}",
   "content": "<h2>...</h2><p>...</p>...<h2>Sources</h2><ul>...</ul>",
   "summary": "One paragraph summary of this week's key themes",
   "topics": [
-    {"title": "topic headline", "category": "Deals|Trends|Technology|Brands|Data", "snippet": "one sentence", "source": "publication name"}
+    {"title": "topic headline", "category": "Deals|Trends|Technology|Spotlight|Data", "snippet": "one sentence", "source": "publication name"}
   ],
   "sources": [
     {"name": "Publication Name", "description": "Brief description of what was referenced"}
@@ -615,11 +834,12 @@ Return ONLY valid JSON.`;
   const text = await callClaude(prompt, 8192);
   const parsed = extractJSON(text);
 
-  // Store globally (no property_id filter — same for everyone)
+  // Store with industry tag
   await supabase.from("newsletters").insert({
     property_id: propertyId || null,
     type: "weekly_digest",
-    title: parsed.title || `The Sports Business Weekly — ${weekOf}`,
+    industry,
+    title: parsed.title || `${cfg.name} — ${weekOf}`,
     content: parsed.content || "",
     summary: parsed.summary || "",
     topics: parsed.topics || [],
@@ -633,13 +853,16 @@ Return ONLY valid JSON.`;
 
 async function generateAfternoonUpdate(supabase: any, body: any) {
   const propertyId = body.property_id;
+  const industry = getIndustryKey(body.industry || 'sports');
+  const cfg = INDUSTRY_CONFIG[industry] || INDUSTRY_CONFIG.sports;
   const today = new Date().toISOString().split("T")[0];
 
-  // Check if today's afternoon update already exists globally
+  // Check if today's afternoon update exists for this industry
   const { data: existing } = await supabase
     .from("newsletters")
     .select("*")
     .eq("type", "afternoon_update")
+    .eq("industry", industry)
     .gte("published_at", today + "T00:00:00Z")
     .limit(1);
 
@@ -647,36 +870,37 @@ async function generateAfternoonUpdate(supabase: any, body: any) {
     return { update: existing[0] };
   }
 
-  const prompt = `You are the editor of "Afternoon Access," a daily afternoon briefing for sports business professionals. Write today's edition for ${today}.
+  const prompt = `You are the editor of "${cfg.afternoonName}," a daily afternoon briefing for ${cfg.audience}. Write today's edition for ${today}.
 
-This is NOT breaking news. It's a curated afternoon digest of developments, insights, and things to consider. Think "smart context" not "alerts."
+This is a curated afternoon digest of developments, insights, and things to consider from TODAY or this week. Think "smart context" not "breaking alerts."
 
-Write 4-5 concise items covering:
+Summarize 4-5 concise items covering ${cfg.focus}:
 
-1. **A development worth watching** — Something evolving in sports business (not breaking, but a noteworthy update)
-2. **Industry intel** — An insight or data point about sponsor behavior, fan engagement, or market dynamics
-3. **Brand move** — A brand making an interesting sports marketing play (new activation, renewed deal, category shift)
+1. **A development worth watching** — Something evolving in the ${industry} industry today
+2. **Industry intel** — An insight or data point about ${cfg.audience.split(',')[0]} behavior or market dynamics
+3. **Brand move** — An organization making an interesting ${cfg.brandDesc} play
 4. **Conversation starter** — Something that would make for good discussion with a prospect or colleague
-5. **Quick thought** — A brief observation or contrarian take on a current sports business topic
+5. **Quick thought** — A brief observation or contrarian take on a current ${industry} topic
 
 CRITICAL SOURCING RULES:
-- Cite a specific source for each item's factual claims inline, e.g. "(via SportBusiness Journal)" or "(per Front Office Sports)"
-- Use real publications: SportBusiness Journal, Front Office Sports, Forbes, Sportico, The Athletic, ESPN, Ad Age, CNBC, Sports Business Daily, Marketing Week
-- If it's your own analysis/opinion, label it as such: "(Analysis)" or "(Industry observation)"
+- Cite a specific source for each item's factual claims inline, e.g. "(via ${cfg.sources.split(',')[0].trim()})"
+- Use real publications: ${cfg.sources}
+- If it's analysis/opinion, label it as such
 - At the end, include a brief "Sources" section
+- Focus on CURRENT events (this week). Do not reference stale news.
 
-Tone: Sharp, informed, conversational. Each item should be 2-4 sentences max.
+Tone: Sharp, informed, conversational. Each item 2-4 sentences.
 
 Format as clean HTML:
-- Use <h3> for item headers (include an emoji prefix)
-- Use <p> for body text
-- Use <strong> for key terms
-- End with <h3>Sources</h3> and a brief source list
+- <h3> for item headers
+- <p> for body text
+- <strong> for key terms
+- End with <h3>Sources</h3>
 - Do NOT include <html>, <head>, <body> tags
 
 Return JSON:
 {
-  "title": "Afternoon Access — ${today}",
+  "title": "${cfg.afternoonName} — ${today}",
   "content": "<h3>...</h3><p>...</p>...<h3>Sources</h3><p>...</p>",
   "summary": "One sentence teaser",
   "topics": [
@@ -692,11 +916,12 @@ Return ONLY valid JSON.`;
   const text = await callClaude(prompt, 4096);
   const parsed = extractJSON(text);
 
-  // Store globally
+  // Store with industry tag
   await supabase.from("newsletters").insert({
     property_id: propertyId || null,
     type: "afternoon_update",
-    title: parsed.title || `Afternoon Access — ${today}`,
+    industry,
+    title: parsed.title || `${cfg.afternoonName} — ${today}`,
     content: parsed.content || "",
     summary: parsed.summary || "",
     topics: parsed.topics || [],
@@ -705,4 +930,159 @@ Return ONLY valid JSON.`;
   });
 
   return { update: parsed };
+}
+
+// ============ SMART ASSET MATCHING ============
+
+async function smartMatchAssets(supabase: any, body: any): Promise<any> {
+  const propertyId = body.property_id;
+  const contractId = body.contract_id;
+  const benefits = body.benefits || [];
+
+  if (!propertyId || benefits.length === 0) {
+    return { matches: [], error: "No benefits to match" };
+  }
+
+  // Get existing assets for the property
+  const { data: assets } = await supabase
+    .from("assets")
+    .select("id, name, category, description, base_price, quantity")
+    .eq("property_id", propertyId)
+    .eq("active", true);
+
+  // Get past match history for learning
+  const { data: history } = await supabase
+    .from("asset_match_history")
+    .select("benefit_text, matched_asset_id, matched_asset_name, matched_category, confidence, approved")
+    .eq("property_id", propertyId)
+    .eq("approved", true)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  const assetList = (assets || []).map((a: any) =>
+    `ID: ${a.id} | Name: ${a.name} | Category: ${a.category} | Price: $${a.base_price || 0} | Qty: ${a.quantity}`
+  ).join("\n");
+
+  const historyList = (history || []).slice(0, 50).map((h: any) =>
+    `"${h.benefit_text}" → "${h.matched_asset_name}" (${h.matched_category}) [confidence: ${h.confidence}]`
+  ).join("\n");
+
+  const benefitList = benefits.map((b: any, i: number) =>
+    `${i + 1}. "${b.benefit_description}" (qty: ${b.quantity}, freq: ${b.frequency}, value: $${b.value || 0})`
+  ).join("\n");
+
+  const prompt = `You are an expert at matching sponsorship contract benefits to existing asset inventory. A sports/entertainment property has uploaded a contract and extracted these benefits. Match each benefit to the BEST existing asset, or mark it as "new" if no match exists.
+
+EXISTING ASSETS (match to these by ID):
+${assetList || "No existing assets"}
+
+PAST SUCCESSFUL MATCHES (learn from these patterns):
+${historyList || "No history yet — this is the first match"}
+
+CONTRACT BENEFITS TO MATCH:
+${benefitList}
+
+MATCHING RULES:
+1. Match by MEANING, not exact text. "LED board signage" and "Electronic display sponsorship" are the same thing.
+2. "PA announcement" and "Public address read" are the same thing.
+3. "Social media post" includes Instagram, Facebook, Twitter mentions.
+4. If the benefit clearly matches an existing asset, set confidence HIGH (0.85-1.0).
+5. If it's a partial match or you're unsure, set confidence MEDIUM (0.5-0.84).
+6. If there's no reasonable match, set confidence LOW (0.0-0.49) and suggest creating a new asset.
+7. Learn from PAST MATCHES — if a similar benefit was matched before, follow that pattern.
+8. Consider category alignment: LED Board benefits match LED Board assets, etc.
+
+Return a JSON array. For EACH benefit (same order):
+[
+  {
+    "benefit_index": 0,
+    "matched_asset_id": "uuid-or-null",
+    "matched_asset_name": "name-or-null",
+    "suggested_category": "category name",
+    "confidence": 0.0-1.0,
+    "reasoning": "1 sentence why",
+    "alternatives": [{"asset_id": "uuid", "name": "name", "confidence": 0.7}],
+    "is_new": false
+  }
+]
+
+Return ONLY valid JSON array.`;
+
+  const text = await callClaudeAdvanced(
+    "You are a sponsorship asset matching specialist. Match contract benefits to existing asset inventory with high accuracy. Learn from past matches to improve.",
+    [{ role: "user", content: prompt }],
+    4096,
+  );
+
+  let matches: any[] = [];
+  try {
+    matches = extractJSON(text);
+  } catch {
+    matches = benefits.map((_: any, i: number) => ({
+      benefit_index: i,
+      matched_asset_id: null,
+      confidence: 0,
+      reasoning: "Could not parse AI response",
+      is_new: true,
+    }));
+  }
+
+  // Process matches: auto-match high confidence, queue low confidence
+  const AUTO_THRESHOLD = 0.80;
+  const results: any[] = [];
+
+  for (let i = 0; i < benefits.length; i++) {
+    const benefit = benefits[i];
+    const match = matches[i] || { confidence: 0, is_new: true };
+    const conf = match.confidence || 0;
+
+    if (conf >= AUTO_THRESHOLD && match.matched_asset_id) {
+      // HIGH confidence: auto-match
+      // Update benefit with asset_id
+      if (benefit.id) {
+        await supabase.from("contract_benefits").update({
+          asset_id: match.matched_asset_id,
+        }).eq("id", benefit.id);
+      }
+
+      // Log to history for learning
+      await supabase.from("asset_match_history").insert({
+        property_id: propertyId,
+        benefit_text: benefit.benefit_description,
+        matched_asset_id: match.matched_asset_id,
+        matched_asset_name: match.matched_asset_name,
+        matched_category: match.suggested_category,
+        confidence: conf,
+        was_auto: true,
+        approved: true,
+      });
+
+      results.push({ ...match, status: "auto_matched", benefit_description: benefit.benefit_description });
+    } else {
+      // LOW/MEDIUM confidence: queue for approval
+      await supabase.from("asset_match_queue").insert({
+        contract_id: contractId,
+        benefit_id: benefit.id || null,
+        benefit_text: benefit.benefit_description,
+        suggested_asset_id: match.matched_asset_id || null,
+        suggested_asset_name: match.matched_asset_name || null,
+        suggested_category: match.suggested_category || null,
+        confidence: conf,
+        alternative_assets: match.alternatives || [],
+        status: "pending",
+      });
+
+      results.push({ ...match, status: "needs_approval", benefit_description: benefit.benefit_description });
+    }
+  }
+
+  const autoMatched = results.filter(r => r.status === "auto_matched").length;
+  const needsApproval = results.filter(r => r.status === "needs_approval").length;
+
+  return {
+    matches: results,
+    auto_matched: autoMatched,
+    needs_approval: needsApproval,
+    total: results.length,
+  };
 }

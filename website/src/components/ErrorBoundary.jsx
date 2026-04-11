@@ -72,22 +72,27 @@ export default class ErrorBoundary extends Component {
       return
     }
 
-    // Auto-reload for stale chunks
+    // Auto-reload for stale chunks (max 2 reloads per 60 seconds)
     if (info.autoReload) {
       const reloadKey = 'll-error-reload'
-      const lastReload = sessionStorage.getItem(reloadKey)
-      if (!lastReload || Date.now() - Number(lastReload) > 10000) {
+      const countKey = 'll-error-reload-count'
+      const lastReload = Number(sessionStorage.getItem(reloadKey) || 0)
+      const reloadCount = Number(sessionStorage.getItem(countKey) || 0)
+      const elapsed = Date.now() - lastReload
+      if (elapsed > 60000) { sessionStorage.setItem(countKey, '0') } // reset after 60s
+      if (reloadCount < 2 && elapsed > 5000) {
         sessionStorage.setItem(reloadKey, String(Date.now()))
+        sessionStorage.setItem(countKey, String(reloadCount + 1))
         window.location.reload()
         return
       }
     }
 
-    // Auto-recover — reset error state after a brief delay
+    // Auto-recover — reset error state after a reasonable delay
     if (info.autoRecover) {
       setTimeout(() => {
         this.setState({ hasError: false, error: null, errorInfo: null })
-      }, 100)
+      }, 500)
     }
 
     // Redirect (e.g. expired session)

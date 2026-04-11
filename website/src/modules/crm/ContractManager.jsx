@@ -90,6 +90,8 @@ const STATUS_COLORS = {
   Expired: 'bg-danger/10 text-danger',
 }
 
+import AssetMatchQueue from './AssetMatchQueue'
+
 export default function ContractManager() {
   const { profile } = useAuth()
   const queryClient = useQueryClient()
@@ -477,6 +479,15 @@ export default function ContractManager() {
           onClose={() => setShowPdfViewer(null)}
         />
       )}
+
+      {/* Smart Asset Match Queue — shows when benefits need approval */}
+      <AssetMatchQueue
+        propertyId={propertyId}
+        onComplete={() => {
+          queryClient.invalidateQueries({ queryKey: ['contracts', propertyId] })
+          queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
+        }}
+      />
     </div>
   )
 }
@@ -1030,12 +1041,12 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
             <div className="space-y-2">
               {benefits.map((b, i) => (
                 <div key={i} className="flex gap-2 items-start bg-bg-card border border-border rounded p-2">
-                  <div className="flex-1 grid grid-cols-4 gap-2">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                     <input
                       placeholder="Description"
                       value={b.benefit_description}
                       onChange={(e) => updateBenefit(i, 'benefit_description', e.target.value)}
-                      className="col-span-2 bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                      className="sm:col-span-2 bg-bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                     />
                     <input
                       type="number"
@@ -1370,24 +1381,58 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
           else fulfillmentCount = fulfillmentRows.length
         }
 
-        // Auto-sync to asset catalog
+        // Smart asset matching: use AI to match benefits to existing assets
         if (insertedBenefits?.length > 0) {
-          for (const b of insertedBenefits) {
-            const category = guessAssetCategory(b.benefit_description || '')
-            const { error: assetErr } = await supabase.from('assets').insert({
-              property_id: propertyId,
-              name: b.benefit_description || 'Contract Benefit',
-              category,
-              quantity: b.quantity || 1,
-              base_price: b.value || null,
-              active: true,
-              from_contract: true,
-              source_contract_id: contract.id,
-              sold_count: b.quantity || 1,
-              total_available: 0,
+          try {
+            const { data: matchResult } = await supabase.functions.invoke('contract-ai', {
+              body: {
+                action: 'smart_match_assets',
+                contract_id: contract.id,
+                property_id: propertyId,
+                benefits: insertedBenefits.map(b => ({
+                  id: b.id,
+                  benefit_description: b.benefit_description,
+                  quantity: b.quantity,
+                  frequency: b.frequency,
+                  value: b.value,
+                })),
+              },
             })
-            if (assetErr) console.warn('Asset insert error:', assetErr.message)
-            else assetCount++
+
+            const autoMatched = matchResult?.auto_matched || 0
+            const needsApproval = matchResult?.needs_approval || 0
+
+            // For auto-matched benefits, asset_id is already set
+            // For unmatched/low confidence, they're queued for approval
+            // Create assets ONLY for benefits that weren't matched at all (no queue entry)
+            const unmatchedBenefits = insertedBenefits.filter(b => {
+              const match = (matchResult?.matches || []).find(m => m.benefit_description === b.benefit_description)
+              return !match || match.status === 'needs_approval'
+            })
+
+            assetCount = autoMatched
+            if (needsApproval > 0) {
+              toast({ title: `${autoMatched} auto-matched, ${needsApproval} need your approval`, description: 'Check the Asset Match Queue to review', type: 'info' })
+            }
+          } catch (matchErr) {
+            // Fallback to old approach if smart matching fails
+            console.warn('Smart match failed, using legacy:', matchErr.message)
+            for (const b of insertedBenefits) {
+              const category = guessAssetCategory(b.benefit_description || '')
+              const { error: assetErr } = await supabase.from('assets').insert({
+                property_id: propertyId,
+                name: b.benefit_description || 'Contract Benefit',
+                category,
+                quantity: b.quantity || 1,
+                base_price: b.value || null,
+                active: true,
+                from_contract: true,
+                source_contract_id: contract.id,
+                sold_count: b.quantity || 1,
+                total_available: 0,
+              })
+              if (!assetErr) assetCount++
+            }
           }
         }
       }

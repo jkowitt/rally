@@ -309,8 +309,20 @@ export default function AssetCatalog() {
       </div>
 
       {/* View toggle + filter */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        {/* Mobile: dropdown filter */}
+        <div className="sm:hidden flex-1">
+          <select value={filter} onChange={e => setFilter(e.target.value)} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-xs text-text-primary">
+            <option value="">All ({assets?.length || 0})</option>
+            {CATEGORIES.map(cat => {
+              const count = (assets || []).filter(a => a.category === cat).length || 0
+              if (count === 0) return null
+              return <option key={cat} value={cat}>{cat} ({count})</option>
+            })}
+          </select>
+        </div>
+        {/* Desktop: button filter */}
+        <div className="hidden sm:flex gap-2 flex-wrap">
           <button
             onClick={() => setFilter('')}
             className={`px-3 py-1 rounded text-xs font-mono ${!filter ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-secondary hover:text-text-primary'}`}
@@ -331,7 +343,7 @@ export default function AssetCatalog() {
             )
           })}
         </div>
-        <div className="flex gap-1 bg-bg-card rounded p-0.5">
+        <div className="flex gap-1 bg-bg-card rounded p-0.5 shrink-0">
           <button onClick={() => setView('grid')} className={`px-2 py-1 rounded text-xs ${view === 'grid' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Grid</button>
           <button onClick={() => setView('table')} className={`px-2 py-1 rounded text-xs ${view === 'table' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Table</button>
         </div>
@@ -416,7 +428,7 @@ export default function AssetCatalog() {
       ) : (
         /* Table View */
         <div className="bg-bg-surface border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 <th className="px-4 py-3 text-xs text-text-muted font-mono uppercase">Name</th>
@@ -470,7 +482,7 @@ export default function AssetCatalog() {
                 </tr>
               )}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -716,7 +728,7 @@ function AssetDetailModal({ asset, proposedAssets, propertyId, onClose, onEdit }
           {/* Inventory Status */}
           <div>
             <div className="text-xs text-text-muted font-mono uppercase tracking-wider mb-2">Inventory Status</div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
                 <div className="text-lg font-semibold text-success">{soldCount}</div>
                 <div className="text-[10px] text-text-muted font-mono">Sold</div>

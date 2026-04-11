@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import EditableText, { EditableImage } from '@/components/cms/EditableText'
+import { useIndustryVisibility, shouldShowIndustry } from '@/hooks/useIndustryVisibility'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -15,46 +16,20 @@ const stagger = {
 const INDUSTRIES = [
   {
     id: 'sports',
-    label: 'Sports',
+    label: 'Sports, Events & Entertainment',
     icon: '🏟',
-    headline: 'Sports Partnerships',
-    subtitle: 'Teams, athletic departments, leagues, and partnership agencies',
-    description: 'AI-powered sponsorship CRM, verified contact intelligence, contract analysis, event operations, and media valuations — built for college athletics, professional teams, and sports agencies.',
+    headline: 'Sports, Events & Entertainment',
+    subtitle: 'Teams, venues, conferences, festivals, trade shows, and partnership agencies',
+    description: 'AI-powered sponsorship CRM, verified contact intelligence, contract analysis, event operations, media valuations, and exhibitor management — built for sports teams, entertainment venues, conferences, festivals, and the agencies that represent them.',
     deals: 'sponsorship deals',
     assets: 'sponsorship assets',
-    cta: 'sports business',
-    modules: ['Pipeline', 'Contracts', 'Assets', 'Fulfillment', 'Events', 'VALORA', 'Newsletter'],
+    cta: 'sponsorship business',
+    modules: ['Pipeline', 'Contracts', 'Assets', 'Fulfillment', 'Events', 'Booth Inventory', 'VALORA', 'Newsletter'],
     stats: [{ value: '22', label: 'Asset Categories' }, { value: 'AI', label: 'Powered Intelligence' }, { value: '∞', label: 'Scalable Pipeline' }],
     subChoices: [
-      { id: 'property', label: 'Sports Property', description: 'Team, athletic department, or league', industryId: 'sports' },
+      { id: 'property', label: 'Property / Venue', description: 'Team, venue, conference, festival, or trade show', industryId: 'sports' },
       { id: 'agency', label: 'Partnership Agency', description: 'Sell sponsorships on behalf of properties', industryId: 'agency' },
     ],
-  },
-  {
-    id: 'entertainment',
-    label: 'Entertainment',
-    icon: '🎭',
-    headline: 'Venue Partnerships',
-    subtitle: 'Concert halls, theaters, arenas, and entertainment venues',
-    description: 'Manage venue sponsorships, naming rights, VIP packages, and partner activations — from prospect to fulfillment in one platform.',
-    deals: 'venue partnerships',
-    assets: 'venue packages',
-    cta: 'venue operation',
-    modules: ['Pipeline', 'Contracts', 'Packages', 'Fulfillment', 'Events', 'Valuations'],
-    stats: [{ value: '20+', label: 'Package Types' }, { value: 'AI', label: 'Contract Analysis' }, { value: '∞', label: 'Scalable Pipeline' }],
-  },
-  {
-    id: 'conference',
-    label: 'Conferences',
-    icon: '🎤',
-    headline: 'Exhibitor & Sponsor Sales',
-    subtitle: 'Trade shows, expos, summits, and industry conferences',
-    description: 'Track exhibitor pipelines, manage booth packages, automate sponsor contracts, and fulfill deliverables — no more spreadsheets.',
-    deals: 'exhibitor deals',
-    assets: 'booth & sponsorship packages',
-    cta: 'conference operation',
-    modules: ['Pipeline', 'Contracts', 'Booth Inventory', 'Fulfillment', 'Events', 'Newsletter'],
-    stats: [{ value: '15+', label: 'Package Types' }, { value: 'AI', label: 'Prospect Finder' }, { value: '∞', label: 'Exhibitor Pipeline' }],
   },
   {
     id: 'nonprofit',
@@ -111,6 +86,8 @@ const INDUSTRIES = [
 ]
 
 export default function LandingPage() {
+  const { visibility } = useIndustryVisibility()
+  const visibleIndustries = INDUSTRIES.filter(ind => shouldShowIndustry(visibility, ind.id))
   const [industry, setIndustry] = useState(INDUSTRIES[0])
   const [welcomed, setWelcomed] = useState(() => {
     // Skip gate if they've visited before in this browser session
@@ -143,7 +120,7 @@ export default function LandingPage() {
             hasAccount={hasAccount}
             onNewUser={handleNewUser}
             onReturningUser={handleReturningUser}
-            industries={INDUSTRIES}
+            industries={visibleIndustries}
             selectedIndustry={industry}
             onSelectIndustry={setIndustry}
           />
@@ -193,7 +170,7 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.35 }}
-              className="text-center space-y-8"
+              className="text-center space-y-6"
             >
               <div>
                 <motion.span
@@ -205,47 +182,99 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                 >
                   LOUD LEGACY
                 </motion.span>
-                <motion.p
+                <motion.h1
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 }}
-                  className="text-text-secondary text-sm mt-3"
+                  className="text-text-primary text-2xl sm:text-3xl font-bold mt-4 leading-tight"
                 >
-                  The operating system for revenue teams
+                  Upload any sponsor contract.
+                  <br />
+                  <span className="text-accent">AI extracts every benefit in 30 seconds.</span>
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-text-secondary text-sm mt-4"
+                >
+                  The sponsorship CRM built for people drowning in spreadsheets. <span className="text-text-primary">$39/mo</span> — not $15,000/year like the others.
                 </motion.p>
               </div>
+
+              {/* Comparison bar — vs spreadsheets / vs SponsorCX */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="bg-bg-card border border-border rounded-lg p-3 text-left"
+              >
+                <div className="grid grid-cols-3 gap-2 text-[10px] font-mono">
+                  <div className="text-text-muted">
+                    <div className="text-danger">Spreadsheets</div>
+                    <div className="mt-0.5">Manual · Stale · No AI</div>
+                  </div>
+                  <div className="text-text-muted">
+                    <div className="text-danger">SponsorCX</div>
+                    <div className="mt-0.5">$15K+/yr · Dated UX</div>
+                  </div>
+                  <div className="text-accent">
+                    <div>Loud Legacy</div>
+                    <div className="mt-0.5">AI-first · $39/mo</div>
+                  </div>
+                </div>
+              </motion.div>
 
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="space-y-3"
+                transition={{ delay: 0.6 }}
+                className="space-y-2"
               >
+                <Link
+                  to="/login?mode=signup"
+                  onClick={() => { localStorage.setItem('ll-welcomed', '1') }}
+                  className="block w-full bg-accent text-bg-primary py-4 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity text-center"
+                >
+                  Start Free — No Credit Card
+                </Link>
                 <button
                   onClick={() => setStep('industry')}
-                  className="w-full bg-accent text-bg-primary py-4 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                  className="w-full border border-border text-text-secondary py-3 rounded-lg text-xs font-medium hover:border-accent/50 hover:text-text-primary transition-colors"
                 >
-                  I'm New Here — Show Me Around
+                  See how it works for my industry
                 </button>
                 <button
                   onClick={() => {
                     localStorage.setItem('ll-has-account', '1')
                     navigate('/login')
                   }}
-                  className="w-full border border-border text-text-secondary py-4 rounded-lg text-sm font-medium hover:border-accent/50 hover:text-text-primary transition-colors"
+                  className="w-full text-[11px] text-text-muted hover:text-text-secondary py-1"
                 >
-                  Welcome Back — Sign In
+                  Already have an account? Sign in
                 </button>
               </motion.div>
 
-              <motion.p
+              {/* Social proof row */}
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-                className="text-[11px] text-text-muted"
+                transition={{ delay: 0.8 }}
+                className="grid grid-cols-3 gap-2 pt-2"
               >
-                Free to start. No credit card required.
-              </motion.p>
+                <div className="text-center">
+                  <div className="text-base font-bold text-text-primary">22</div>
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider">Asset Types</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-base font-bold text-text-primary">18</div>
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider">AI Features</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-base font-bold text-accent">$0</div>
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider">To Start</div>
+                </div>
+              </motion.div>
             </motion.div>
           )}
 
@@ -557,7 +586,7 @@ function IndustrySelector({ selected, onSelect }) {
           description="Loud Legacy adapts its terminology, asset categories, and workflows to your industry. Pick yours to see how it works for you."
         />
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mt-12">
-          {INDUSTRIES.map((ind) => (
+          {visibleIndustries.map((ind) => (
             <button
               key={ind.id}
               onClick={() => { onSelect(ind); window.scrollTo({ top: 0, behavior: 'smooth' }) }}

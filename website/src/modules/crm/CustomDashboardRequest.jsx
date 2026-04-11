@@ -277,7 +277,7 @@ export default function CustomDashboardRequest() {
               {/* Branding */}
               <div>
                 <label className="text-xs text-text-muted mb-2 block">Branding (optional)</label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="text-[10px] text-text-muted">Logo URL</label>
                     <input value={form.branding.logo_url} onChange={(e) => setForm({ ...form, branding: { ...form.branding, logo_url: e.target.value } })} placeholder="https://..." className="w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent mt-0.5" />

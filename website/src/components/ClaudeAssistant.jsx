@@ -4,8 +4,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { useCMS } from '@/hooks/useCMS'
 
-// Floating Claude assistant — available on every page for developer/businessops
+// Floating Claude assistant — disabled until edge function is deployed
 export default function ClaudeAssistant() {
+  return null
   const { profile } = useAuth()
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
@@ -38,47 +39,37 @@ export default function ClaudeAssistant() {
     const contextMsgs = messages.slice(-4).map(m => `${m.role === 'user' ? 'USER' : 'CLAUDE'}: ${m.content.slice(0, 300)}`).join('\n')
 
     try {
-      // Use code_assistant for code/qa modes, edit_contract for ask/report
-      const useCodeAssistant = mode === 'code' || mode === 'qa'
+      // All modes use code_assistant (Opus with system prompt)
       const conversation = messages.slice(-8).filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({
         role: m.role, content: m.content,
       }))
 
+      const { data, error } = await supabase.functions.invoke('contract-ai', {
+        body: {
+          action: 'code_assistant',
+          prompt: `[${mode.toUpperCase()} MODE] ${userMsg}`,
+          conversation,
+          page_context: `${pageContext}\n${modeInstructions[mode]}`,
+        },
+      })
+
       let response
-      if (useCodeAssistant) {
-        // Try code_assistant (Sonnet with system prompt), fall back to edit_contract
-        const { data, error } = await supabase.functions.invoke('contract-ai', {
-          body: {
-            action: 'code_assistant',
-            prompt: `[${mode.toUpperCase()} MODE] ${userMsg}`,
-            conversation,
-            page_context: `${pageContext}\n${modeInstructions[mode]}`,
-          },
-        })
-        if (!error && !data?.error?.includes('Unknown action')) {
-          response = data?.response || data?.text || JSON.stringify(data)
-        } else {
-          // Fallback
-          const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
-            body: {
-              action: 'edit_contract',
-              contract_text: `${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `\nConversation:\n${contextMsgs}\n` : ''}`,
-              instructions: userMsg,
-            },
-          })
-          if (fbErr) throw fbErr
-          response = fb?.contract_text || fb?.text || JSON.stringify(fb)
-        }
+      if (!error && !(typeof data?.error === 'string' && data.error.includes('Unknown action'))) {
+        response = data?.response || data?.text || ''
+        if (!response || response === '{}') response = JSON.stringify(data)
       } else {
-        const { data, error } = await supabase.functions.invoke('contract-ai', {
+        // Fallback to edit_contract if code_assistant not deployed yet
+        const contextMsgs = messages.slice(-4).map(m => `${m.role === 'user' ? 'USER' : 'CLAUDE'}: ${m.content.slice(0, 300)}`).join('\n')
+        const { data: fb, error: fbErr } = await supabase.functions.invoke('contract-ai', {
           body: {
             action: 'edit_contract',
-            contract_text: `${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `\nConversation:\n${contextMsgs}\n` : ''}`,
-            instructions: userMsg,
+            contract_text: 'RESPOND_ONLY',
+            instructions: `You are a helpful AI assistant for the Loud Legacy CRM platform (React 18, Vite, Tailwind, Supabase). ${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `Recent conversation:\n${contextMsgs}\n\n` : ''}User says: "${userMsg}"\n\nProvide ONLY your response. Do not include any preamble, system text, or repeat the question.`,
           },
         })
-        if (error) throw error
-        response = data?.contract_text || data?.text || JSON.stringify(data)
+        if (fbErr) throw fbErr
+        response = (fb?.contract_text || fb?.text || '').replace(/^---\n?/, '').replace(/\n?---$/, '').replace('RESPOND_ONLY', '').trim()
+        if (!response) response = 'Sorry, I could not generate a response. The AI edge function may need redeployment.'
       }
       setMessages(prev => [...prev, { role: 'assistant', content: response }])
 

@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { useIndustryVisibility, shouldShowIndustry } from '@/hooks/useIndustryVisibility'
 
 const INDUSTRY_OPTIONS = [
   { value: 'college', label: 'College / University Athletics' },
   { value: 'professional', label: 'Professional Sports Team' },
   { value: 'minor_league', label: 'Minor League / Independent' },
+  { value: 'entertainment', label: 'Entertainment Venue / Arena' },
+  { value: 'conference', label: 'Conference / Trade Show / Festival' },
   { value: 'agency', label: 'Partnership / Sponsorship Agency' },
-  { value: 'entertainment', label: 'Entertainment Venue' },
-  { value: 'conference', label: 'Conference / Trade Show' },
   { value: 'nonprofit', label: 'Nonprofit / Foundation' },
   { value: 'media', label: 'Media / Publishing' },
   { value: 'realestate', label: 'Real Estate' },
@@ -32,7 +33,8 @@ export default function LoginPage() {
 
   const [premiumLink, setPremiumLink] = useState(null)
   const [teamInviteProperty, setTeamInviteProperty] = useState(null)
-  const [mode, setMode] = useState(inviteToken ? 'invite' : (premiumToken || teamToken) ? 'signup' : 'signin') // signin | signup | invite | onboard | confirm
+  const modeParam = searchParams.get('mode')
+  const [mode, setMode] = useState(inviteToken ? 'invite' : (premiumToken || teamToken || modeParam === 'signup') ? 'signup' : 'signin') // signin | signup | invite | onboard | confirm
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -45,6 +47,8 @@ export default function LoginPage() {
   const [industryType, setIndustryType] = useState(industryToType[industryParam] || 'college')
   const [companyCity, setCompanyCity] = useState('')
   const [companyState, setCompanyState] = useState('')
+  const { visibility } = useIndustryVisibility()
+  const visibleIndustryOptions = INDUSTRY_OPTIONS.filter(opt => shouldShowIndustry(visibility, opt.value))
 
   // Invite flow: load invitation
   useEffect(() => {
@@ -335,7 +339,7 @@ export default function LoginPage() {
                 </div>
                 <input type="text" placeholder="Company / Organization Name *" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
                 <select value={industryType} onChange={(e) => setIndustryType(e.target.value)} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent">
-                  {INDUSTRY_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  {visibleIndustryOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
                 <div className="grid grid-cols-2 gap-3">
                   <input placeholder="City" value={companyCity} onChange={(e) => setCompanyCity(e.target.value)} className="bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />

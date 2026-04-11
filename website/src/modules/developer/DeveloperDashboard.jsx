@@ -8,11 +8,13 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import APIUsageBanner from '@/components/APIUsageBanner'
 import { logAudit } from '@/lib/audit'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line } from 'recharts'
-import ClaudeAssistant from '@/components/ClaudeAssistant'
 
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 const QATestSuite = lazy(() => import('./QATestSuite'))
+const QATaskManager = lazy(() => import('./QATaskManager'))
 const QAUsageSimulator = lazy(() => import('./QAUsageSimulator'))
+const QAAutoReports = lazy(() => import('./QAAutoReports'))
+const ChangeLog = lazy(() => import('./ChangeLog'))
 const ROLES = ['developer', 'admin', 'rep']
 const PLANS = ['free', 'starter', 'pro', 'enterprise']
 
@@ -33,6 +35,18 @@ export default function DeveloperDashboard() {
   const [newPropType, setNewPropType] = useState('college')
   const [newPropCity, setNewPropCity] = useState('')
   const [newPropState, setNewPropState] = useState('')
+  const [savingFlag, setSavingFlag] = useState(null)
+
+  async function handleToggleFlag(module, label) {
+    setSavingFlag(module)
+    const result = await toggleFlag(module)
+    setSavingFlag(null)
+    if (result.success) {
+      toast({ title: `${label} ${result.enabled ? 'enabled' : 'disabled'}`, description: 'Saved to database', type: 'success' })
+    } else {
+      toast({ title: 'Save failed', description: result.error || 'Could not save change', type: 'error' })
+    }
+  }
   const [newPropPlan, setNewPropPlan] = useState('free')
 
   if (!isDeveloper) return <Navigate to="/app" replace />
@@ -385,6 +399,7 @@ export default function DeveloperDashboard() {
     { id: 'suggestions', label: `Suggestions (${(suggestions || []).filter(s => s.status === 'new').length || 0})` },
     { id: 'analytics', label: 'Analytics' },
     { id: 'qa', label: 'QA Hub' },
+    { id: 'changelog', label: 'Change Log' },
     { id: 'cache', label: `Contact Cache (${(contactCache || []).length})` },
     { id: 'custom', label: 'Custom Dashboards' },
   ]
@@ -564,7 +579,7 @@ export default function DeveloperDashboard() {
                 placeholder="Label (e.g. 'NIU Athletics pilot')"
                 value={newLinkLabel}
                 onChange={(e) => setNewLinkLabel(e.target.value)}
-                className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent min-w-[200px]"
+                className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent min-w-0 sm:min-w-[200px]"
               />
               <select
                 value={newLinkPlan}
@@ -885,24 +900,85 @@ export default function DeveloperDashboard() {
       {activeTab === 'flags' && (
         <div className="space-y-4">
           <Panel title="Module Visibility">
-            <p className="text-xs text-text-muted mb-4">Toggle entire sidebar modules on/off for all users.</p>
-            <div className="space-y-3">
-              {Object.entries(flags).map(([module, enabled]) => (
-                <div key={module} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                  <div>
-                    <span className="text-sm text-text-primary font-mono capitalize">{module}</span>
-                    <span className="text-xs text-text-muted ml-2">
-                      {module === 'crm' ? 'Pipeline, contracts, assets, fulfillment' :
-                       module === 'sportify' ? 'Events, activations, run-of-show' :
-                       module === 'valora' ? 'AI media valuations' :
-                       module === 'businessnow' ? 'Intelligence, alerts, newsletter' : ''}
-                    </span>
+            <p className="text-xs text-text-muted mb-4">Toggle modules on/off for all users. Changes save immediately.</p>
+            <div className="space-y-1">
+              {[
+                { key: 'crm', label: 'Legacy CRM', desc: 'Pipeline, contracts, assets, fulfillment, activities, tasks' },
+                { key: 'sportify', label: 'Sportify', desc: 'Events, activations, run-of-show, broadcast' },
+                { key: 'valora', label: 'VALORA', desc: 'AI media valuations, market positioning' },
+                { key: 'businessnow', label: 'Business Now', desc: 'Intelligence feed, alerts, AI briefings' },
+                { key: 'newsletter', label: 'Newsletter', desc: 'Weekly digest, afternoon updates, AI content' },
+                { key: 'automations', label: 'Automations', desc: 'Workflow rules, triggers, webhooks' },
+                { key: 'marketing', label: 'Marketing Hub', desc: 'Social media posts, ads, integrations, templates' },
+                { key: 'businessops', label: 'Business Ops', desc: 'Revenue pipeline, projections, accounting, QA' },
+                { key: 'developer', label: 'Dev Tools', desc: 'Admin panel, QA, analytics, change log' },
+              ].map(m => (
+                <div key={m.key} className="flex items-center justify-between py-2.5 px-2 rounded hover:bg-bg-card border-b border-border last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-text-primary">{m.label}</span>
+                    <p className="text-[10px] text-text-muted mt-0.5">{m.desc}</p>
                   </div>
                   <button
-                    onClick={() => toggleFlag(module)}
-                    className={`px-4 py-1.5 rounded text-xs font-mono font-medium ${enabled ? 'bg-success/20 text-success border border-success/30' : 'bg-bg-card text-text-muted border border-border'}`}
+                    onClick={() => handleToggleFlag(m.key, m.label)}
+                    disabled={savingFlag === m.key}
+                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 transition-colors ${savingFlag === m.key ? 'bg-warning/20 text-warning border border-warning/30 animate-pulse' : flags[m.key] ? 'bg-success/20 text-success border border-success/30 hover:bg-success/30' : 'bg-bg-card text-text-muted border border-border hover:bg-bg-card/80'}`}
                   >
-                    {enabled ? 'ENABLED' : 'DISABLED'}
+                    {savingFlag === m.key ? 'SAVING...' : flags[m.key] ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Industry Visibility (Welcome + Signup)">
+            <p className="text-xs text-text-muted mb-4">Toggle which industries appear in the welcome page and account signup. Turning OFF hides the industry from the public selectors but keeps all code intact — easy to turn back ON. Entertainment and conferences are now bundled under "Sports, Events & Entertainment".</p>
+            <div className="space-y-1">
+              {[
+                { key: 'show_sports', label: 'Sports, Events & Entertainment', desc: 'Teams, venues, conferences, festivals, trade shows, agencies' },
+                { key: 'show_nonprofit', label: 'Nonprofit', desc: 'Foundations, charities, community orgs' },
+                { key: 'show_media', label: 'Media', desc: 'Publishers, broadcasters, digital media' },
+                { key: 'show_realestate', label: 'Real Estate', desc: 'Commercial, mixed-use, development' },
+                { key: 'show_other', label: 'Other', desc: 'Generic "Other" option for unlisted types' },
+              ].map(m => (
+                <div key={m.key} className="flex items-center justify-between py-2.5 px-2 rounded hover:bg-bg-card border-b border-border last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-text-primary">{m.label}</span>
+                    <p className="text-[10px] text-text-muted mt-0.5">{m.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleFlag(m.key, m.label)}
+                    disabled={savingFlag === m.key}
+                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 transition-colors ${savingFlag === m.key ? 'bg-warning/20 text-warning border border-warning/30 animate-pulse' : flags[m.key] !== false ? 'bg-success/20 text-success border border-success/30 hover:bg-success/30' : 'bg-bg-card text-text-muted border border-border hover:bg-bg-card/80'}`}
+                  >
+                    {savingFlag === m.key ? 'SAVING...' : flags[m.key] !== false ? 'SHOWN' : 'HIDDEN'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Industry Modules (In-App)">
+            <p className="text-xs text-text-muted mb-4">Toggle industry-specific modules that show inside the app after login. Separate from the signup visibility above.</p>
+            <div className="space-y-1">
+              {[
+                { key: 'industry_nonprofit', label: 'Nonprofit', desc: 'Impact metrics, grant tracker, donor portal' },
+                { key: 'industry_media', label: 'Media', desc: 'Campaign calendar, audience analytics, media kit builder' },
+                { key: 'industry_realestate', label: 'Real Estate', desc: 'Occupancy dashboard, broker network' },
+                { key: 'industry_entertainment', label: 'Entertainment', desc: 'Booking calendar, talent management' },
+                { key: 'industry_conference', label: 'Conference', desc: 'Attendee analytics, session planning' },
+                { key: 'industry_agency', label: 'Agency', desc: 'Commission tracker, multi-property view' },
+              ].map(m => (
+                <div key={m.key} className="flex items-center justify-between py-2.5 px-2 rounded hover:bg-bg-card border-b border-border last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-text-primary">{m.label}</span>
+                    <p className="text-[10px] text-text-muted mt-0.5">{m.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleFlag(m.key, m.label)}
+                    disabled={savingFlag === m.key}
+                    className={`px-3 py-1.5 rounded text-[10px] font-mono font-medium shrink-0 ml-2 transition-colors ${savingFlag === m.key ? 'bg-warning/20 text-warning border border-warning/30 animate-pulse' : flags[m.key] ? 'bg-success/20 text-success border border-success/30 hover:bg-success/30' : 'bg-bg-card text-text-muted border border-border hover:bg-bg-card/80'}`}
+                  >
+                    {savingFlag === m.key ? 'SAVING...' : flags[m.key] ? 'ON' : 'OFF'}
                   </button>
                 </div>
               ))}
@@ -1018,15 +1094,16 @@ export default function DeveloperDashboard() {
           </Panel>
           <Panel title="Overage Pricing (Non-Enterprise)">
             <p className="text-xs text-text-muted mb-3">Set included usage per plan and overage cost per additional request. Enterprise plans have unlimited usage at no extra charge.</p>
-            <div className="space-y-1">
-              <div className="hidden sm:grid sm:grid-cols-[1.5fr_0.8fr_0.8fr_0.5fr] gap-2 px-2 py-1 text-[10px] font-mono text-text-muted uppercase">
+            <div className="overflow-x-auto">
+            <div className="space-y-1 min-w-[600px]">
+              <div className="grid grid-cols-[1.5fr_0.8fr_0.8fr_0.5fr] gap-2 px-2 py-1 text-[10px] font-mono text-text-muted uppercase">
                 <span>Feature</span>
                 <span>Included/mo</span>
                 <span>Overage $/ea</span>
                 <span>Active</span>
               </div>
               {(overagePricing || []).map(item => (
-                <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[1.5fr_0.8fr_0.8fr_0.5fr] gap-2 items-center bg-bg-card border border-border rounded px-3 py-2">
+                <div key={item.id} className="grid grid-cols-[1.5fr_0.8fr_0.8fr_0.5fr] gap-2 items-center bg-bg-card border border-border rounded px-3 py-2">
                   <span className="text-sm text-text-primary">{item.label || item.service}</span>
                   <div className="flex items-center gap-1">
                     <input
@@ -1059,6 +1136,7 @@ export default function DeveloperDashboard() {
               {(!overagePricing || overagePricing.length === 0) && (
                 <div className="text-xs text-text-muted text-center py-4">Run migration 028 to enable overage pricing.</div>
               )}
+            </div>
             </div>
           </Panel>
 
@@ -1215,17 +1293,34 @@ export default function DeveloperDashboard() {
 
       {/* QA TEST SUITE */}
       {activeTab === 'qa' && (
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0 overflow-x-hidden">
+          <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading reports...</div>}>
+            <QAAutoReports />
+          </Suspense>
+          <Panel title="QA Task Manager">
+            <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading task manager...</div>}>
+              <QATaskManager />
+            </Suspense>
+          </Panel>
           <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading simulator...</div>}>
             <QAUsageSimulator />
           </Suspense>
-          <Panel title="QA Test Suite">
+          <Panel title="QA Test Suite (Runs)">
             <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading test suite...</div>}>
               <QATestSuite profiles={profiles} />
             </Suspense>
           </Panel>
           <QAHub properties={properties} profiles={profiles} />
         </div>
+      )}
+
+      {/* CHANGE LOG */}
+      {activeTab === 'changelog' && (
+        <Panel title="Change Log">
+          <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading...</div>}>
+            <ChangeLog />
+          </Suspense>
+        </Panel>
       )}
 
       {/* ANALYTICS */}
@@ -1382,7 +1477,6 @@ export default function DeveloperDashboard() {
           />
         </Suspense>
       )}
-      <ClaudeAssistant />
     </div>
   )
 }
@@ -1580,35 +1674,22 @@ function QAHub({ properties, profiles }) {
             const result = pageTests[page.path]
             const isTesting = testingPage === page.path
             return (
-              <div key={page.path} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-bg-card group">
+              <div key={page.path} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-bg-card gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${result ? (result.ok ? 'bg-success' : 'bg-danger') : 'bg-bg-card'} ${isTesting ? 'animate-pulse bg-accent' : ''}`} />
                   <span className="text-xs text-text-primary truncate">{page.label}</span>
-                  <span className="text-[9px] text-text-muted font-mono">{page.path}</span>
-                  {page.public && <span className="text-[8px] font-mono text-text-muted bg-bg-card px-1 py-0.5 rounded">public</span>}
+                  <span className="text-[9px] text-text-muted font-mono hidden sm:inline">{page.path}</span>
+                  {page.public && <span className="text-[8px] font-mono text-text-muted bg-bg-card px-1 py-0.5 rounded hidden sm:inline">public</span>}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {result && (
-                    <>
-                      <span className={`text-[10px] font-mono ${result.loadTime > 3000 ? 'text-danger' : result.loadTime > 1000 ? 'text-warning' : 'text-success'}`}>
-                        {result.loadTime}ms
-                      </span>
-                      {result.error && <span className="text-[9px] text-danger">{result.error}</span>}
-                    </>
+                    <span className={`text-[10px] font-mono ${result.loadTime > 3000 ? 'text-danger' : result.loadTime > 1000 ? 'text-warning' : 'text-success'}`}>
+                      {result.loadTime}ms
+                    </span>
                   )}
-                  <button
-                    onClick={() => navigate(page.path)}
-                    className="text-[9px] text-accent hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    Visit
-                  </button>
-                  <button
-                    onClick={() => testPage(page.path)}
-                    disabled={isTesting}
-                    className="text-[9px] text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-30"
-                  >
-                    Test
-                  </button>
+                  {result?.error && <span className="text-[9px] text-danger hidden sm:inline">{result.error}</span>}
+                  <button onClick={() => navigate(page.path)} className="text-[9px] text-accent hover:underline">Go</button>
+                  <button onClick={() => testPage(page.path)} disabled={isTesting} className="text-[9px] text-text-muted hover:text-text-primary disabled:opacity-30">Test</button>
                 </div>
               </div>
             )
@@ -1640,19 +1721,20 @@ function QAHub({ properties, profiles }) {
         <Panel title="Automated Health Checks (Mon/Thu/Sun)">
           <div className="space-y-1.5">
             {healthHistory.map(report => (
-              <div key={report.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${report.status === 'passed' ? 'bg-success' : report.status === 'warnings' ? 'bg-warning' : 'bg-danger'}`} />
+              <div key={report.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0 gap-2 flex-wrap">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${report.status === 'passed' ? 'bg-success' : report.status === 'warnings' ? 'bg-warning' : 'bg-danger'}`} />
                   <span className="text-xs text-text-primary capitalize">{report.schedule}</span>
-                  <span className="text-[9px] text-text-muted font-mono">{new Date(report.run_date).toLocaleString()}</span>
+                  <span className="text-[9px] text-text-muted font-mono hidden sm:inline">{new Date(report.run_date).toLocaleString()}</span>
+                  <span className="text-[9px] text-text-muted font-mono sm:hidden">{new Date(report.run_date).toLocaleDateString()}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-mono text-text-secondary">{report.passed_checks}/{report.total_checks} passed</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-mono text-text-secondary">{report.passed_checks}/{report.total_checks}</span>
                   {report.error_count_24h > 0 && (
-                    <span className="text-[9px] font-mono text-danger">{report.error_count_24h} errors</span>
+                    <span className="text-[9px] font-mono text-danger">{report.error_count_24h}err</span>
                   )}
                   {report.platform_stats && (
-                    <span className="text-[9px] text-text-muted font-mono">
+                    <span className="text-[9px] text-text-muted font-mono hidden sm:inline">
                       {report.platform_stats.profiles}u {report.platform_stats.deals}d
                     </span>
                   )}

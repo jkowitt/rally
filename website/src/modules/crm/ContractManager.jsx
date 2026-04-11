@@ -653,8 +653,24 @@ function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpe
         </div>
       ))}
       {contracts?.length === 0 && (
-        <div className="text-center text-text-muted text-sm py-12">
-          No contracts yet. Create one manually, use the AI Editor, or upload a template.
+        <div className="text-center py-12 space-y-4">
+          <div className="text-text-muted text-sm">
+            No contracts yet. Create one manually, use the AI Editor, or upload a template.
+          </div>
+          <div className="inline-block bg-gradient-to-br from-accent/10 to-transparent border border-accent/30 rounded-lg p-4 max-w-md">
+            <div className="text-xs text-text-secondary mb-2">
+              Coming from SponsorCX or a spreadsheet?
+            </div>
+            <a
+              href="/app/crm/migrate"
+              className="inline-block bg-accent text-bg-primary font-semibold px-4 py-2 rounded text-xs hover:opacity-90"
+            >
+              Migrate from existing system →
+            </a>
+            <div className="text-[10px] text-text-muted mt-2">
+              Upload all your contracts at once — AI extracts every benefit automatically.
+            </div>
+          </div>
         </div>
       )}
     </div>

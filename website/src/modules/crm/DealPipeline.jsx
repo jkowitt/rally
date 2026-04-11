@@ -983,7 +983,20 @@ export default function DealPipeline() {
                 )
               })}
               {activeDeals.length === 0 && (
-                <tr><td colSpan={11} className="px-4 py-8 text-center text-text-muted">No active deals yet.</td></tr>
+                <tr>
+                  <td colSpan={11} className="px-4 py-10 text-center">
+                    <div className="text-text-muted text-sm mb-3">No active deals yet.</div>
+                    <a
+                      href="/app/crm/migrate"
+                      className="inline-block bg-accent text-bg-primary font-semibold px-4 py-2 rounded text-xs hover:opacity-90"
+                    >
+                      Migrate from existing system →
+                    </a>
+                    <div className="text-[10px] text-text-muted mt-2">
+                      Coming from SponsorCX or a spreadsheet? Import all your contracts at once.
+                    </div>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

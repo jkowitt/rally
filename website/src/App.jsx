@@ -27,6 +27,7 @@ const Dashboard = lazyRetry(() => import('./modules/dashboard/Dashboard'))
 const AssetCatalog = lazyRetry(() => import('./modules/crm/AssetCatalog'))
 const DealPipeline = lazyRetry(() => import('./modules/crm/DealPipeline'))
 const ContractManager = lazyRetry(() => import('./modules/crm/ContractManager'))
+const MigratePage = lazyRetry(() => import('./pages/contracts/MigratePage'))
 const FulfillmentTracker = lazyRetry(() => import('./modules/crm/FulfillmentTracker'))
 const BrandReport = lazyRetry(() => import('./modules/crm/BrandReport'))
 const DeclinedDeals = lazyRetry(() => import('./modules/crm/DeclinedDeals'))
@@ -159,6 +160,7 @@ export default function App() {
                             <Route path="/crm/assets" element={<AssetCatalog />} />
                             <Route path="/crm/pipeline" element={<DealPipeline />} />
                             <Route path="/crm/contracts" element={<ContractManager />} />
+                            <Route path="/crm/migrate" element={<MigratePage />} />
                             <Route path="/crm/fulfillment" element={<FulfillmentTracker />} />
                             <Route path="/crm/report/:dealId" element={<BrandReport />} />
                             <Route path="/crm/declined" element={<DeclinedDeals />} />

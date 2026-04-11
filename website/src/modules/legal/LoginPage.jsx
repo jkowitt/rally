@@ -33,7 +33,8 @@ export default function LoginPage() {
 
   const [premiumLink, setPremiumLink] = useState(null)
   const [teamInviteProperty, setTeamInviteProperty] = useState(null)
-  const [mode, setMode] = useState(inviteToken ? 'invite' : (premiumToken || teamToken) ? 'signup' : 'signin') // signin | signup | invite | onboard | confirm
+  const modeParam = searchParams.get('mode')
+  const [mode, setMode] = useState(inviteToken ? 'invite' : (premiumToken || teamToken || modeParam === 'signup') ? 'signup' : 'signin') // signin | signup | invite | onboard | confirm
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')

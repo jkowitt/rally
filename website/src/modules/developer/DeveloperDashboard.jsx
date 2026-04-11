@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useFeatureFlags } from '@/hooks/useFeatureFlags'
+import { useFeatureFlags, HIDDEN_MODULES } from '@/hooks/useFeatureFlags'
 import { useToast } from '@/components/Toast'
 import { Navigate, useNavigate } from 'react-router-dom'
 import APIUsageBanner from '@/components/APIUsageBanner'
@@ -516,10 +516,12 @@ export default function DeveloperDashboard() {
             </div>
           </Panel>
 
-          {/* Feature Flags */}
+          {/* Feature Flags — hidden modules never rendered here */}
           <Panel title="Feature Flags">
             <div className="space-y-2">
-              {Object.entries(flags).map(([module, enabled]) => (
+              {Object.entries(flags)
+                .filter(([module]) => !HIDDEN_MODULES.includes(module))
+                .map(([module, enabled]) => (
                 <div key={module} className="flex items-center justify-between py-2">
                   <span className="text-sm text-text-primary font-mono">{module}</span>
                   <button

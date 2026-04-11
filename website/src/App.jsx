@@ -72,6 +72,8 @@ const GrowthHub = lazyRetry(() => import('./modules/growth/GrowthHub'))
 const OnboardingModal = lazyRetry(() => import('./components/onboarding/OnboardingModal'))
 const ChecklistWidget = lazyRetry(() => import('./components/onboarding/ChecklistWidget'))
 const TooltipTour = lazyRetry(() => import('./components/onboarding/TooltipTour'))
+// Private developer-only router — never referenced from any user-facing UI
+const DevRouter = lazyRetry(() => import('./pages/dev/DevRouter'))
 
 function PageLoader() {
   return (
@@ -106,6 +108,17 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/sponsor/:token" element={<SponsorPortal />} />
+
+            {/* Private developer console — role gate inside DevRouter.
+                No navigation links to this path exist anywhere in user UI. */}
+            <Route
+              path="/dev/*"
+              element={
+                <ProtectedRoute>
+                  <DevRouter />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Authenticated app */}
             <Route

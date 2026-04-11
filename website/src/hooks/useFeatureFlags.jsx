@@ -25,8 +25,22 @@ const ALL_MODULES = [
   'client_strategic_workbooks', // Phase 3 (new)
 ]
 
+// Hidden modules: flags that must NEVER appear in the standard Dev Tools
+// feature flags UI and must NOT be auto-enabled by the developer role.
+// These always respect their DB value, even for developers, and are
+// toggleable only from the private /dev/feature-flags console.
+// Used by the Dev Tools UI to exclude these from rendering.
+export const HIDDEN_MODULES = [
+  'outlook_integration',        // developer-only Outlook integration
+]
+
+const ALL_PUBLIC_MODULES = [...ALL_MODULES, ...HIDDEN_MODULES]
+
+// ALL_ON is the developer override: everything visible on. Hidden modules
+// are intentionally excluded so developers still have to toggle them on
+// manually from the hidden dev console.
 const ALL_ON = Object.fromEntries(ALL_MODULES.map(m => [m, true]))
-const ALL_OFF = Object.fromEntries(ALL_MODULES.map(m => [m, false]))
+const ALL_OFF = Object.fromEntries(ALL_PUBLIC_MODULES.map(m => [m, false]))
 // Defaults when the DB doesn't have a row for the flag — CRM and all industry visibility ON
 const DEFAULT_FLAGS = {
   ...ALL_OFF,
@@ -44,11 +58,6 @@ export function FeatureFlagProvider({ children }) {
 
   useEffect(() => {
     if (!session) return
-    if (isDev) {
-      setFlags(ALL_ON)
-      setLoaded(true)
-      return
-    }
     loadFlags()
   }, [session, isDev])
 
@@ -57,15 +66,29 @@ export function FeatureFlagProvider({ children }) {
       const { data, error } = await supabase
         .from('feature_flags')
         .select('module, enabled')
+      // Developer baseline: all standard flags ON, hidden flags OFF.
+      // Client baseline: DEFAULT_FLAGS.
+      const baseline = isDev ? { ...ALL_ON } : { ...DEFAULT_FLAGS }
+      // Hidden modules always start OFF, even for developers — they must
+      // be explicitly toggled on from the private /dev/feature-flags page.
+      HIDDEN_MODULES.forEach((m) => { baseline[m] = false })
       if (error || !data) {
-        setFlags({ ...DEFAULT_FLAGS })
+        setFlags(baseline)
       } else {
-        const flagMap = { ...DEFAULT_FLAGS }
-        data.forEach((f) => { flagMap[f.module] = f.enabled })
+        const flagMap = { ...baseline }
+        // For developers: only hidden flags read from DB (everything else is already ON).
+        // For clients: all flags read from DB.
+        data.forEach((f) => {
+          if (!isDev || HIDDEN_MODULES.includes(f.module)) {
+            flagMap[f.module] = f.enabled
+          }
+        })
         setFlags(flagMap)
       }
     } catch {
-      setFlags({ ...DEFAULT_FLAGS })
+      const baseline = isDev ? { ...ALL_ON } : { ...DEFAULT_FLAGS }
+      HIDDEN_MODULES.forEach((m) => { baseline[m] = false })
+      setFlags(baseline)
     }
     setLoaded(true)
   }

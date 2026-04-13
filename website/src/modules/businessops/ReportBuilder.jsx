@@ -122,7 +122,7 @@ Use real numbers from the platform data above. Be specific and actionable.`,
     { title: 'Investor Update', prompt: 'Generate a concise investor update email covering key metrics, recent wins, challenges, and next milestones.' },
     { title: 'Growth Analysis', prompt: 'Analyze our growth trajectory, identify bottlenecks, and recommend 3 specific actions to accelerate user acquisition.' },
     { title: 'Revenue Forecast', prompt: 'Based on current trends, forecast revenue for the next 6 months with best-case, likely, and worst-case scenarios.' },
-    { title: 'Competitive Position', prompt: 'Analyze our positioning vs Monday CRM, SponsorCX, and HubSpot. What are our advantages and where do we need to improve?' },
+    { title: 'Competitive Position', prompt: 'Analyze our positioning vs general-purpose CRMs and legacy sponsorship management tools. What are our advantages and where do we need to improve?' },
   ]
 
   return (

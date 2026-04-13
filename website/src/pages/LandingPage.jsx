@@ -198,11 +198,11 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                   transition={{ delay: 0.4 }}
                   className="text-text-secondary text-sm mt-4"
                 >
-                  The sponsorship CRM built for people drowning in spreadsheets. <span className="text-text-primary">$39/mo</span> — not $15,000/year like the others.
+                  The sponsorship CRM built for people drowning in spreadsheets. <span className="text-text-primary">$39/mo</span> — not $15,000/year like legacy enterprise tools.
                 </motion.p>
               </div>
 
-              {/* Comparison bar — vs spreadsheets / vs SponsorCX */}
+              {/* Comparison bar — vs spreadsheets / vs legacy CRMs */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -215,7 +215,7 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                     <div className="mt-0.5">Manual · Stale · No AI</div>
                   </div>
                   <div className="text-text-muted">
-                    <div className="text-danger">SponsorCX</div>
+                    <div className="text-danger">Legacy CRMs</div>
                     <div className="mt-0.5">$15K+/yr · Dated UX</div>
                   </div>
                   <div className="text-accent">

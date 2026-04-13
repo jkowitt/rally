@@ -993,7 +993,7 @@ export default function DealPipeline() {
                       Migrate from existing system →
                     </a>
                     <div className="text-[10px] text-text-muted mt-2">
-                      Coming from SponsorCX or a spreadsheet? Import all your contracts at once.
+                      Bringing contracts in from another system? Import them all at once.
                     </div>
                   </td>
                 </tr>

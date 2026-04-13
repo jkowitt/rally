@@ -659,7 +659,7 @@ function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpe
           </div>
           <div className="inline-block bg-gradient-to-br from-accent/10 to-transparent border border-accent/30 rounded-lg p-4 max-w-md">
             <div className="text-xs text-text-secondary mb-2">
-              Coming from SponsorCX or a spreadsheet?
+              Bringing contracts in from another system?
             </div>
             <a
               href="/app/crm/migrate"

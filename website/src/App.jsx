@@ -11,6 +11,7 @@ import { CMSProvider } from './hooks/useCMS'
 import CMSToolbar from './components/cms/CMSToolbar'
 import PageEditor from './components/cms/PageEditor'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import QACommentButton from './components/qa/QACommentButton'
 
 // Auto-reload on chunk load failure (stale cache after deploy)
 function lazyRetry(fn) {
@@ -60,6 +61,7 @@ const HelpCenter = lazyRetry(() => import('./modules/crm/HelpCenter'))
 const CustomDashboardRequest = lazyRetry(() => import('./modules/crm/CustomDashboardRequest'))
 const CustomDashboard = lazyRetry(() => import('./modules/crm/CustomDashboard'))
 const DeveloperDashboard = lazyRetry(() => import('./modules/developer/DeveloperDashboard'))
+const QACommentsReport = lazyRetry(() => import('./pages/developer/QACommentsReport'))
 const SponsorPortal = lazyRetry(() => import('./modules/crm/SponsorPortal'))
 const UpgradeOffer = lazyRetry(() => import('./pages/admin/UpgradeOffer'))
 const AutomationControl = lazyRetry(() => import('./pages/admin/AutomationControl'))
@@ -200,6 +202,7 @@ export default function App() {
                             <Route path="/businessnow" element={<BusinessNow />} />
                             {/* Developer */}
                             <Route path="/developer" element={<DeveloperDashboard />} />
+                            <Route path="/developer/qa-comments" element={<QACommentsReport />} />
                             <Route path="/admin/upgrade-offer" element={<UpgradeOffer />} />
                             <Route path="/admin/automation" element={<AutomationControl />} />
                             <Route path="/admin/email-queue" element={<EmailQueue />} />
@@ -225,6 +228,7 @@ export default function App() {
           <CMSToolbar />
           <PageEditor />
           <PWAInstallPrompt />
+          <QACommentButton />
           </Suspense>
           </ToastProvider>
           </CMSProvider>

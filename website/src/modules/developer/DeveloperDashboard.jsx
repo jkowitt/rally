@@ -1444,6 +1444,22 @@ export default function DeveloperDashboard() {
       {/* QA TEST SUITE */}
       {activeTab === 'qa' && (
         <div className="space-y-6 min-w-0 overflow-x-hidden">
+          {/* Walkthrough comments — ad-hoc notes captured via the floating button */}
+          <Panel title="QA Walkthrough Comments">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-xs text-text-secondary">
+                Click the floating 💬 button on any page to leave a comment.
+                All comments roll up into one report.
+              </div>
+              <a
+                href="/app/developer/qa-comments"
+                className="text-xs bg-accent text-bg-primary px-3 py-1.5 rounded font-semibold whitespace-nowrap"
+              >
+                Open comment report →
+              </a>
+            </div>
+          </Panel>
+
           <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading reports...</div>}>
             <QAAutoReports />
           </Suspense>

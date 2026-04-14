@@ -103,7 +103,42 @@ export function FeatureFlagProvider({ children }) {
     // Optimistically update UI
     setFlags((prev) => ({ ...prev, [module]: newValue }))
 
-    // Try update first, if no rows affected then insert
+    // ─── Primary path: edge function with service role ────────
+    // Bypasses RLS + CHECK constraints entirely. Works regardless
+    // of whether migration 058 has been applied, regardless of
+    // what RLS policies exist, regardless of what modules are
+    // in the CHECK constraint. See supabase/functions/
+    // set-feature-flag/index.ts for the server side.
+    try {
+      const { data: efData, error: efErr } = await supabase.functions.invoke('set-feature-flag', {
+        body: { module, enabled: newValue },
+      })
+
+      if (!efErr && efData?.success) {
+        console.info('[useFeatureFlags] Saved via edge function:', module, '=', newValue)
+        return { success: true, module, enabled: newValue }
+      }
+
+      if (!efErr && efData && efData.success === false) {
+        // Edge function responded but reported failure — log the
+        // specific error it returned
+        console.error('[useFeatureFlags] Edge function rejected write:', efData)
+        if (efData.hint) console.error('[useFeatureFlags] →', efData.hint)
+      }
+
+      if (efErr) {
+        // Invocation itself failed — probably the function isn't
+        // deployed yet. Fall through to direct-DB path.
+        console.warn('[useFeatureFlags] Edge function unreachable, falling back to direct DB:', efErr.message)
+      }
+    } catch (err) {
+      console.warn('[useFeatureFlags] Edge function threw, falling back to direct DB:', err?.message || err)
+    }
+
+    // ─── Fallback: direct DB writes ─────────────────────────
+    // Used when the edge function isn't deployed yet. Requires
+    // migration 058 (flags_insert policy + dropped CHECK
+    // constraint) to work for brand-new flag rows.
     try {
       const { data, error } = await supabase
         .from('feature_flags')
@@ -112,48 +147,35 @@ export function FeatureFlagProvider({ children }) {
         .select()
 
       if (error) {
-        console.error('[useFeatureFlags] UPDATE failed for', module, error)
+        console.error('[useFeatureFlags] Fallback UPDATE failed for', module, error)
         throw error
       }
 
       if (!data || data.length === 0) {
-        // Row doesn't exist — insert it
         console.info('[useFeatureFlags] No existing row for', module, '- attempting INSERT')
         const { error: insErr } = await supabase.from('feature_flags').insert({
           module, enabled: newValue, updated_at: new Date().toISOString(),
         })
         if (insErr) {
-          console.error('[useFeatureFlags] INSERT failed for', module, insErr)
-          // Hint the developer at the most likely root causes so they
-          // can apply the fix instead of staring at a silent revert.
+          console.error('[useFeatureFlags] Fallback INSERT failed for', module, insErr)
           if (insErr.message?.includes('row-level security') || insErr.code === '42501') {
-            console.error('[useFeatureFlags] → RLS blocked the insert. Apply migration 058 (supabase db push) to add the flags_insert policy.')
+            console.error('[useFeatureFlags] → RLS blocked insert. Deploy set-feature-flag edge function or run migration 058.')
           }
           if (insErr.message?.includes('check constraint') || insErr.code === '23514') {
-            console.error('[useFeatureFlags] → CHECK constraint blocked the insert. Apply migration 058 to drop feature_flags_module_check.')
+            console.error('[useFeatureFlags] → CHECK constraint blocked insert. Deploy set-feature-flag edge function or run migration 058.')
           }
           throw insErr
         }
       }
-      console.info('[useFeatureFlags] Saved', module, '=', newValue)
+      console.info('[useFeatureFlags] Saved via direct DB fallback:', module, '=', newValue)
       return { success: true, module, enabled: newValue }
-    } catch (err) {
-      // Try upsert as last resort
-      try {
-        const { error: upsertErr } = await supabase.from('feature_flags').upsert({
-          module, enabled: newValue, updated_at: new Date().toISOString(),
-        }, { onConflict: 'module' })
-        if (upsertErr) {
-          console.error('[useFeatureFlags] UPSERT fallback failed for', module, upsertErr)
-          throw upsertErr
-        }
-        console.info('[useFeatureFlags] Saved via upsert fallback', module, '=', newValue)
-        return { success: true, module, enabled: newValue }
-      } catch (finalErr) {
-        // Revert optimistic update on failure
-        console.error('[useFeatureFlags] All save attempts failed for', module, '- reverting UI')
-        setFlags((prev) => ({ ...prev, [module]: !newValue }))
-        return { success: false, module, error: finalErr.message || 'Unknown error' }
+    } catch (finalErr) {
+      console.error('[useFeatureFlags] All save attempts failed for', module, '- reverting UI')
+      setFlags((prev) => ({ ...prev, [module]: !newValue }))
+      return {
+        success: false,
+        module,
+        error: finalErr?.message || 'Could not save. Deploy set-feature-flag edge function or apply migration 058.',
       }
     }
   }

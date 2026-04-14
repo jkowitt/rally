@@ -57,15 +57,15 @@ export default function DeveloperDashboard() {
   }
 
   /**
-   * Runs a live test against feature_flags to verify migration 058
-   * has been applied. Attempts to insert a sentinel row, checks for
-   * RLS / CHECK / policy errors, and reports the specific fix needed.
-   * Rolls back the sentinel row on success so nothing is left behind.
+   * Runs a live test against feature_flags to find out EXACTLY why
+   * saves aren't persisting. Tests the edge function write path
+   * (preferred) plus three direct DB operations and reports which
+   * works. Gives an actionable recommendation based on the results.
    */
   async function runFeatureFlagDiagnostic() {
     setRunningDiagnostic(true)
     const result = {
-      migration058: 'unknown',
+      edgeFunction: 'unknown',
       canSelect: false,
       canUpdate: false,
       canInsert: false,
@@ -74,7 +74,29 @@ export default function DeveloperDashboard() {
       recommendation: '',
     }
     try {
-      // 1. Can we select?
+      // 1. Does the set-feature-flag edge function work? Preferred path.
+      try {
+        const testMod = `__diagnostic_ef_${Date.now()}`
+        const { data: efData, error: efErr } = await supabase.functions.invoke('set-feature-flag', {
+          body: { module: testMod, enabled: false },
+        })
+        if (efErr) {
+          result.edgeFunction = 'not_deployed'
+          result.errors.push(`Edge fn: ${efErr.message}`)
+        } else if (efData?.success) {
+          result.edgeFunction = 'working'
+          // Clean up sentinel row
+          await supabase.from('feature_flags').delete().eq('module', testMod).catch(() => {})
+        } else {
+          result.edgeFunction = 'deployed_but_rejected'
+          result.errors.push(`Edge fn rejected: ${efData?.error || 'unknown'}${efData?.hint ? ' — ' + efData.hint : ''}`)
+        }
+      } catch (err) {
+        result.edgeFunction = 'not_deployed'
+        result.errors.push(`Edge fn threw: ${err.message}`)
+      }
+
+      // 2. Can we select from the table? (read test)
       const { data: rows, error: selErr } = await supabase
         .from('feature_flags')
         .select('module, enabled')
@@ -85,7 +107,7 @@ export default function DeveloperDashboard() {
         result.rowCount = rows?.length || 0
       }
 
-      // 2. Can we update an existing row? (Use 'crm' — seeded since day 1)
+      // 3. Can we UPDATE an existing row directly? (Use 'crm' — seeded day 1)
       const { error: updErr } = await supabase
         .from('feature_flags')
         .update({ updated_at: new Date().toISOString() })
@@ -97,29 +119,32 @@ export default function DeveloperDashboard() {
         result.canUpdate = true
       }
 
-      // 3. Can we insert a new row? (Use a sentinel that isn't a real flag)
-      const sentinel = `__diagnostic_${Date.now()}`
+      // 4. Can we INSERT a new row directly? (sentinel, cleaned up on success)
+      const sentinel = `__diagnostic_direct_${Date.now()}`
       const { error: insErr } = await supabase
         .from('feature_flags')
         .insert({ module: sentinel, enabled: false, updated_at: new Date().toISOString() })
       if (insErr) {
         result.errors.push(`INSERT sentinel: ${insErr.message}`)
-        if (insErr.code === '42501' || insErr.message?.includes('row-level security')) {
-          result.recommendation = 'Migration 058 NOT applied — flags_insert RLS policy is missing. Run: supabase db push'
-        } else if (insErr.code === '23514' || insErr.message?.includes('check constraint')) {
-          result.recommendation = 'Migration 058 NOT applied — feature_flags_module_check constraint still blocks new module names. Run: supabase db push'
-        } else {
-          result.recommendation = `INSERT failed for reason other than RLS/CHECK: ${insErr.message}`
-        }
       } else {
         result.canInsert = true
-        result.migration058 = 'applied'
-        result.recommendation = 'All three operations work. Feature flag saves should persist.'
-        // Clean up the sentinel row
         await supabase.from('feature_flags').delete().eq('module', sentinel)
       }
 
-      if (!result.canInsert) result.migration058 = 'not_applied'
+      // ─── Build recommendation based on what worked ───
+      if (result.edgeFunction === 'working') {
+        result.recommendation = '✓ Edge function works. Toggles should persist via the primary path. If you still see reverts, hard-refresh the browser to pick up the latest JS.'
+      } else if (result.canInsert) {
+        result.recommendation = '✓ Direct DB writes work (migration 058 applied). Toggles persist via the fallback path.'
+      } else if (result.edgeFunction === 'not_deployed' && !result.canInsert) {
+        result.recommendation = '✗ Neither path works. Deploy the edge function: supabase functions deploy set-feature-flag — OR apply migration 058: supabase db push'
+      } else if (result.canUpdate && !result.canInsert) {
+        result.recommendation = '✗ Can update existing rows but not insert new ones. Deploy the edge function OR run migration 058.'
+      } else if (!result.canUpdate) {
+        result.recommendation = '✗ Cannot even update existing rows. Your profile role is likely not \'developer\' in the DB. Check: select role from profiles where id = auth.uid()'
+      } else {
+        result.recommendation = '✗ Unexpected state. See raw errors below.'
+      }
     } catch (err) {
       result.errors.push(`Exception: ${err.message}`)
     } finally {
@@ -609,6 +634,9 @@ export default function DeveloperDashboard() {
               </button>
               {diagnosticResult && (
                 <div className="mt-2 space-y-1 text-[10px] font-mono">
+                  <div className={diagnosticResult.edgeFunction === 'working' ? 'text-success' : 'text-danger'}>
+                    {diagnosticResult.edgeFunction === 'working' ? '✓' : '✗'} Edge function (set-feature-flag): {diagnosticResult.edgeFunction}
+                  </div>
                   <div className={diagnosticResult.canSelect ? 'text-success' : 'text-danger'}>
                     {diagnosticResult.canSelect ? '✓' : '✗'} SELECT ({diagnosticResult.rowCount} rows)
                   </div>
@@ -617,9 +645,6 @@ export default function DeveloperDashboard() {
                   </div>
                   <div className={diagnosticResult.canInsert ? 'text-success' : 'text-danger'}>
                     {diagnosticResult.canInsert ? '✓' : '✗'} INSERT new row
-                  </div>
-                  <div className={diagnosticResult.migration058 === 'applied' ? 'text-success mt-1' : 'text-warning mt-1'}>
-                    Migration 058: {diagnosticResult.migration058}
                   </div>
                   {diagnosticResult.recommendation && (
                     <div className="text-text-secondary mt-1 font-sans leading-relaxed">

@@ -209,7 +209,96 @@ export async function runFullAutoQA(schedule = 'manual') {
       const { data: aiData, error: aiInvokeErr } = await supabase.functions.invoke('contract-ai', {
         body: {
           action: 'code_assistant',
-          prompt: `You are performing an automated QA audit of the Loud Legacy CRM platform. Based on the current state:
+          prompt: `You are auditing the Loud Legacy CRM platform. Your job is to diagnose problems and suggest improvements that are GROUNDED in the actual codebase below. You are forbidden from inventing file paths, table names, column names, hook names, or function names that are not in the GROUNDED FACTS section.
+
+═══════════════════════════════════════
+GROUNDED FACTS — these are the ONLY entities you may reference by exact name
+═══════════════════════════════════════
+
+REAL MODULE FILES (under website/src/modules/):
+- crm/AssetCatalog.jsx           — sponsorship asset catalog
+- crm/DealPipeline.jsx           — kanban + table pipeline view
+- crm/ContractManager.jsx        — contract upload, generation, AI parsing (NOT ContractList.jsx)
+- crm/FulfillmentTracker.jsx     — sponsor fulfillment tracking (NOT components/fulfillment/*)
+- crm/BrandReport.jsx            — auto-generated brand report
+- crm/DeclinedDeals.jsx
+- crm/ActivityTimeline.jsx
+- crm/TaskManager.jsx
+- crm/DealInsights.jsx
+- crm/Newsletter.jsx
+- crm/TeamManager.jsx
+- crm/Automations.jsx
+- crm/Settings.jsx
+- crm/HelpCenter.jsx
+- crm/SponsorPortal.jsx
+- sportify/EventManager.jsx, sportify/EventDetail.jsx
+- valora/ValuationEngine.jsx
+- businessnow/BusinessNow.jsx
+- businessops/* (Accounting, AdSpendManager, ConnectionManager, FinanceDashboard, FinancialProjections, GoalTracker, MarketingHub, QATickets, ReportBuilder, RevenuePipeline, RoadmapTracker, ClaudeTerminal)
+- developer/DeveloperDashboard.jsx, QAAutoReports.jsx, QATestSuite.jsx, QATaskManager.jsx, QAUsageSimulator.jsx, ChangeLog.jsx
+- industry/* (12 industry-specific modules)
+- legal/LoginPage.jsx
+- dashboard/Dashboard.jsx
+- growth/GrowthHub.jsx, GrowthWorkbook.jsx, StrategicWorkbooks.jsx
+
+REAL SERVICES (under website/src/services/):
+- emailSequenceService.js, automationGate.js, churnRiskService.js, digestService.js,
+  notificationService.js, onboardingService.js, trialHealthService.js,
+  upgradeOpportunityService.js, upgradePromptService.js, usageTracker.js, utmService.js,
+  pricingService.js, aiCreditService.js, addonService.js, billingService.js, stripeSyncService.js,
+  contractMigrationService.js
+- email/* (emailListService, subscriberService, campaignService, emailTemplateService,
+  conversationService, pipelineSyncService, importService, emailAnalyticsService)
+- dev/* (outlookAuthService, outlookGraphService, emailSyncService, outreachService,
+  templateService, outreachAnalyticsService, dealVelocityService)
+
+REAL HOOKS (under website/src/hooks/):
+- useAuth (returns { profile, session, loading, isDeveloper, isAdmin } — profile has id, email, role, property_id, full_name, onboarding_completed)
+- useFeatureFlags (returns { flags, loaded, toggleFlag })
+- useCMS, useIndustryConfig, useIndustryVisibility, useAutomation, useNotifications,
+  useOnboarding, useUpgrade, useSeo
+- dev/useDevAccess (developer role + flag check)
+- THERE IS NO useToast HOOK. Toasts come from @/components/Toast which exports useToast() returning { toast }.
+- THERE IS NO useHealthCheck HOOK.
+
+REAL EDGE FUNCTIONS (under website/supabase/functions/):
+- contract-ai (action-dispatched: generate_contract, edit_contract, parse_pdf_text,
+  summarize_contract, extract_benefits, generate_fulfillment, deal_insights,
+  pipeline_forecast, draft_email, code_assistant, smart_match_assets, etc.)
+- automation-runner (action: daily_digest, weekly_report, trial_health, churn_scan,
+  upgrade_scan, contract_expiry, send_queued_emails, generate_social_posts)
+- send-email, claude-valuation, daily-intelligence, benchmark-updater, code-analysis,
+  github-code, contact-form, apollo-enrichment, hunter-verify, stripe-billing,
+  outlook-auth, outlook-graph, outlook-token-refresh, outlook-delta-sync, outlook-prospect-signup-webhook,
+  email-marketing-send, email-marketing-track, email-marketing-webhook,
+  email-marketing-pipeline-sync, email-marketing-unsubscribe,
+  process-contract-batch, finalize-migration,
+  reset-monthly-credits, stripe-pricing-sync, pricing-cache-invalidate
+- THERE IS NO claude-api EDGE FUNCTION.
+
+REAL KEY TABLES + COLUMNS (only the ones you might reference):
+- profiles (id, email, full_name, role, property_id, onboarding_completed) — id IS auth.users.id, NOT auth_user_id
+- properties (id, name, industry, ...)
+- deals (id, property_id, brand_name, contact_name, contact_email, value, start_date,
+  end_date, stage) — stage is one of 'Prospect','Proposal Sent','Negotiation','Contracted','In Fulfillment','Renewed'
+  THERE IS NO deals.name COLUMN. Use brand_name.
+- contracts (id, deal_id, property_id, brand_name, contract_number, effective_date,
+  expiration_date, total_value, signed)
+- contacts (id, property_id, deal_id, first_name, last_name, email, phone, position,
+  company, city, state, linkedin, website, is_primary, last_contacted_at)
+  Contact org is in 'company' NOT 'organization'.
+- assets (id, property_id, name, category, description, quantity, base_price,
+  total_available, sold_count, from_contract, source_contract_id) — category is a CHECK constraint on 8 values
+- fulfillment_records (id, deal_id, contract_id, asset_id, benefit_id, scheduled_date,
+  delivered, delivery_notes, auto_generated)
+- activities (id, property_id, deal_id, created_by, activity_type, subject, description, occurred_at)
+- teams (id, name, property_id, type, created_by) — EXISTS, has RLS, see migration 014
+- team_members (id, team_id, user_id, role)
+- feature_flags (module, enabled)
+
+═══════════════════════════════════════
+PLATFORM STATE THIS RUN
+═══════════════════════════════════════
 
 PLATFORM STATS:
 ${Object.entries(platformStats).map(([k, v]) => `- ${k}: ${v} rows`).join('\n')}
@@ -223,32 +312,47 @@ ${issues.length > 0 ? issues.map(i => `- [${i.severity}] ${i.module}: ${i.descri
 MODULE HEALTH SCORES:
 ${Object.entries(moduleScores).map(([k, v]) => `- ${k}: ${v}/100`).join('\n')}
 
-Provide:
-1. A summary of the platform health (2-3 sentences)
-2. Top 5 specific improvements that should be made, with EXACT instructions someone could paste into Claude Code to implement them
-3. Any critical issues that need immediate attention
-4. Suggestions for new features or enhancements
+═══════════════════════════════════════
+RULES — read these carefully
+═══════════════════════════════════════
 
-Format your response as:
+1. EMPTY TABLES ARE NOT BUGS. Zero rows in contracts/teams/fulfillment usually means no test data was created, NOT that the table is broken or missing. Distinguish "empty data" from "broken structure". Empty data is a UX/onboarding signal, not a code fix.
+
+2. NEVER invent file paths. If you don't know the exact file, refer to the module category (e.g. "the contract management surface") rather than guessing a filename.
+
+3. NEVER invent table columns, hook names, function names, or edge function names. If GROUNDED FACTS doesn't list it, it doesn't exist.
+
+4. NEVER suggest creating files that already exist. If you're recommending an empty-state CTA on contracts, check the GROUNDED FACTS — ContractManager.jsx already exists.
+
+5. NEVER suggest "improvements" that are just self-scoring tricks (e.g. counting DOM nodes to inflate the health score). Suggest changes that improve real user outcomes.
+
+6. PREFER DIAGNOSIS OVER CODE. For each suggestion, lead with what's wrong and what category of fix it needs. Only include code if you can ground every line in GROUNDED FACTS.
+
+7. RATE YOUR OWN CONFIDENCE. After each suggestion, label it [GROUNDED] if every reference is in GROUNDED FACTS, or [DIRECTIONAL] if you're suggesting a direction without specific code.
+
+═══════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════
 
 SUMMARY:
-[2-3 sentences]
+[2-3 sentences. Distinguish data-empty signals from real bugs. Be honest if everything looks healthy.]
 
-IMPROVEMENTS (paste into Claude Code):
+IMPROVEMENTS:
 ---
-1. [Title]
-[Exact instruction to paste into Claude Code, including file paths and what to change]
+1. [Title] [GROUNDED or DIRECTIONAL]
+Diagnosis: [What the signal is and what it means]
+Suggested direction: [The category of fix]
+[Optional: specific code, but only if every file/column/function name comes from GROUNDED FACTS]
 ---
-2. [Title]
-[Exact instruction]
+2. [Title] [GROUNDED or DIRECTIONAL]
+...
 ---
-(etc.)
 
 CRITICAL ISSUES:
-[List or "None"]
+[List actual blocking problems, or "None — empty test data is not a critical issue"]
 
 FEATURE SUGGESTIONS:
-[List]`,
+[Brainstorms for new capabilities. These do not need to be GROUNDED — they're directional ideas. But still use real module names where you reference them.]`,
         },
       })
 

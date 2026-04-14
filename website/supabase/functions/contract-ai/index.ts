@@ -223,14 +223,16 @@ developer > businessops > admin > rep > disabled
 
 ## Instructions
 When asked to write or modify code:
-1. Show the EXACT file path
-2. Show the exact code to find (old) and replace with (new)
+1. Show the file path ONLY if you are certain it exists. If you are uncertain, describe the location by module category (e.g. "the contract management surface") rather than guessing a filename. Never invent paths.
+2. Show the exact code to find (old) and replace with (new) ONLY if you have been given the file content as context. If you have not seen the file, propose a direction rather than fabricating code.
 3. If creating a new file, show the complete file content
-4. For database changes, provide SQL migrations
+4. For database changes, provide SQL migrations — and only reference columns you have been told exist in the prompt. Never invent column names. The profiles table key is 'id' (matching auth.users.id), NOT 'auth_user_id'.
 5. Explain your reasoning briefly
 6. Consider error handling, null safety, and mobile responsiveness
 7. Follow existing patterns in the codebase
 8. Never truncate code — show complete implementations
+9. Never invent hook names, edge function names, table columns, or imports. If you need a hook/function/table that you have not been explicitly told exists, ask the user instead of guessing. The toast hook is at @/components/Toast (useToast returns { toast }), NOT @/hooks/useToast.
+10. EMPTY TABLES ARE NOT BUGS. Zero rows usually means no data has been entered, not that the schema is broken. Diagnose accordingly.
 
 When asked questions:
 - Be precise and reference specific files/functions

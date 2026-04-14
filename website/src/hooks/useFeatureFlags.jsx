@@ -70,21 +70,24 @@ export function FeatureFlagProvider({ children }) {
         .select('module, enabled')
       // Developer baseline: all standard flags ON, hidden flags OFF.
       // Client baseline: DEFAULT_FLAGS.
+      // The baseline is ONLY used for flags that have no row in the
+      // DB (e.g. a brand-new flag that hasn't been seeded yet). Any
+      // flag that DOES have a row is read from the DB regardless of
+      // role, so toggles in Dev Tools persist across reloads.
       const baseline = isDev ? { ...ALL_ON } : { ...DEFAULT_FLAGS }
-      // Hidden modules always start OFF, even for developers — they must
-      // be explicitly toggled on from the private /dev/feature-flags page.
+      // Hidden modules start OFF in the baseline. DB values still
+      // override if a row exists.
       HIDDEN_MODULES.forEach((m) => { baseline[m] = false })
       if (error || !data) {
         setFlags(baseline)
       } else {
         const flagMap = { ...baseline }
-        // For developers: only hidden flags read from DB (everything else is already ON).
-        // For clients: all flags read from DB.
-        data.forEach((f) => {
-          if (!isDev || HIDDEN_MODULES.includes(f.module)) {
-            flagMap[f.module] = f.enabled
-          }
-        })
+        // Overlay DB values for ALL flags regardless of role. This
+        // is the critical fix: previously developers only read
+        // hidden flags from the DB, which meant standard flag
+        // toggles appeared to save but silently reverted on reload
+        // because ALL_ON overwrote them.
+        data.forEach((f) => { flagMap[f.module] = f.enabled })
         setFlags(flagMap)
       }
     } catch {

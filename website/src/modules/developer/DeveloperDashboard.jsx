@@ -36,6 +36,8 @@ export default function DeveloperDashboard() {
   const [newPropCity, setNewPropCity] = useState('')
   const [newPropState, setNewPropState] = useState('')
   const [savingFlag, setSavingFlag] = useState(null)
+  const [diagnosticResult, setDiagnosticResult] = useState(null)
+  const [runningDiagnostic, setRunningDiagnostic] = useState(false)
 
   async function handleToggleFlag(module, label) {
     setSavingFlag(module)
@@ -44,7 +46,85 @@ export default function DeveloperDashboard() {
     if (result.success) {
       toast({ title: `${label} ${result.enabled ? 'enabled' : 'disabled'}`, description: 'Saved to database', type: 'success' })
     } else {
-      toast({ title: 'Save failed', description: result.error || 'Could not save change', type: 'error' })
+      // Surface the real error in the toast AND make it dismissable
+      // so the developer can see what blocked the save
+      toast({
+        title: 'Save failed',
+        description: result.error || 'Check browser console for details',
+        type: 'error',
+      })
+    }
+  }
+
+  /**
+   * Runs a live test against feature_flags to verify migration 058
+   * has been applied. Attempts to insert a sentinel row, checks for
+   * RLS / CHECK / policy errors, and reports the specific fix needed.
+   * Rolls back the sentinel row on success so nothing is left behind.
+   */
+  async function runFeatureFlagDiagnostic() {
+    setRunningDiagnostic(true)
+    const result = {
+      migration058: 'unknown',
+      canSelect: false,
+      canUpdate: false,
+      canInsert: false,
+      rowCount: 0,
+      errors: [],
+      recommendation: '',
+    }
+    try {
+      // 1. Can we select?
+      const { data: rows, error: selErr } = await supabase
+        .from('feature_flags')
+        .select('module, enabled')
+      if (selErr) {
+        result.errors.push(`SELECT: ${selErr.message}`)
+      } else {
+        result.canSelect = true
+        result.rowCount = rows?.length || 0
+      }
+
+      // 2. Can we update an existing row? (Use 'crm' — seeded since day 1)
+      const { error: updErr } = await supabase
+        .from('feature_flags')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('module', 'crm')
+        .select()
+      if (updErr) {
+        result.errors.push(`UPDATE crm: ${updErr.message}`)
+      } else {
+        result.canUpdate = true
+      }
+
+      // 3. Can we insert a new row? (Use a sentinel that isn't a real flag)
+      const sentinel = `__diagnostic_${Date.now()}`
+      const { error: insErr } = await supabase
+        .from('feature_flags')
+        .insert({ module: sentinel, enabled: false, updated_at: new Date().toISOString() })
+      if (insErr) {
+        result.errors.push(`INSERT sentinel: ${insErr.message}`)
+        if (insErr.code === '42501' || insErr.message?.includes('row-level security')) {
+          result.recommendation = 'Migration 058 NOT applied — flags_insert RLS policy is missing. Run: supabase db push'
+        } else if (insErr.code === '23514' || insErr.message?.includes('check constraint')) {
+          result.recommendation = 'Migration 058 NOT applied — feature_flags_module_check constraint still blocks new module names. Run: supabase db push'
+        } else {
+          result.recommendation = `INSERT failed for reason other than RLS/CHECK: ${insErr.message}`
+        }
+      } else {
+        result.canInsert = true
+        result.migration058 = 'applied'
+        result.recommendation = 'All three operations work. Feature flag saves should persist.'
+        // Clean up the sentinel row
+        await supabase.from('feature_flags').delete().eq('module', sentinel)
+      }
+
+      if (!result.canInsert) result.migration058 = 'not_applied'
+    } catch (err) {
+      result.errors.push(`Exception: ${err.message}`)
+    } finally {
+      setDiagnosticResult(result)
+      setRunningDiagnostic(false)
     }
   }
   const [newPropPlan, setNewPropPlan] = useState('free')
@@ -518,6 +598,48 @@ export default function DeveloperDashboard() {
 
           {/* Feature Flags — hidden modules never rendered here */}
           <Panel title="Feature Flags">
+            {/* Diagnostic — tests if migration 058 was actually applied */}
+            <div className="mb-3 pb-3 border-b border-border">
+              <button
+                onClick={runFeatureFlagDiagnostic}
+                disabled={runningDiagnostic}
+                className="text-[10px] px-2 py-1 border border-border rounded hover:border-accent/50 disabled:opacity-50"
+              >
+                {runningDiagnostic ? 'Testing…' : 'Run save diagnostic'}
+              </button>
+              {diagnosticResult && (
+                <div className="mt-2 space-y-1 text-[10px] font-mono">
+                  <div className={diagnosticResult.canSelect ? 'text-success' : 'text-danger'}>
+                    {diagnosticResult.canSelect ? '✓' : '✗'} SELECT ({diagnosticResult.rowCount} rows)
+                  </div>
+                  <div className={diagnosticResult.canUpdate ? 'text-success' : 'text-danger'}>
+                    {diagnosticResult.canUpdate ? '✓' : '✗'} UPDATE existing row
+                  </div>
+                  <div className={diagnosticResult.canInsert ? 'text-success' : 'text-danger'}>
+                    {diagnosticResult.canInsert ? '✓' : '✗'} INSERT new row
+                  </div>
+                  <div className={diagnosticResult.migration058 === 'applied' ? 'text-success mt-1' : 'text-warning mt-1'}>
+                    Migration 058: {diagnosticResult.migration058}
+                  </div>
+                  {diagnosticResult.recommendation && (
+                    <div className="text-text-secondary mt-1 font-sans leading-relaxed">
+                      {diagnosticResult.recommendation}
+                    </div>
+                  )}
+                  {diagnosticResult.errors.length > 0 && (
+                    <details className="mt-1">
+                      <summary className="cursor-pointer text-text-muted">
+                        Raw errors ({diagnosticResult.errors.length})
+                      </summary>
+                      {diagnosticResult.errors.map((e, i) => (
+                        <div key={i} className="text-danger pl-2">{e}</div>
+                      ))}
+                    </details>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               {Object.entries(flags)
                 .filter(([module]) => !HIDDEN_MODULES.includes(module))
@@ -525,10 +647,11 @@ export default function DeveloperDashboard() {
                 <div key={module} className="flex items-center justify-between py-2">
                   <span className="text-sm text-text-primary font-mono">{module}</span>
                   <button
-                    onClick={() => toggleFlag(module)}
-                    className={`px-3 py-1 rounded text-xs font-mono ${enabled ? 'bg-success/20 text-success' : 'bg-bg-card text-text-muted'}`}
+                    onClick={() => handleToggleFlag(module, module)}
+                    disabled={savingFlag === module}
+                    className={`px-3 py-1 rounded text-xs font-mono transition-opacity ${enabled ? 'bg-success/20 text-success' : 'bg-bg-card text-text-muted'} ${savingFlag === module ? 'opacity-50' : ''}`}
                   >
-                    {enabled ? 'ON' : 'OFF'}
+                    {savingFlag === module ? '…' : (enabled ? 'ON' : 'OFF')}
                   </button>
                 </div>
               ))}

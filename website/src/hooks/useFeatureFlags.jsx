@@ -111,15 +111,31 @@ export function FeatureFlagProvider({ children }) {
         .eq('module', module)
         .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('[useFeatureFlags] UPDATE failed for', module, error)
+        throw error
+      }
 
       if (!data || data.length === 0) {
         // Row doesn't exist — insert it
+        console.info('[useFeatureFlags] No existing row for', module, '- attempting INSERT')
         const { error: insErr } = await supabase.from('feature_flags').insert({
           module, enabled: newValue, updated_at: new Date().toISOString(),
         })
-        if (insErr) throw insErr
+        if (insErr) {
+          console.error('[useFeatureFlags] INSERT failed for', module, insErr)
+          // Hint the developer at the most likely root causes so they
+          // can apply the fix instead of staring at a silent revert.
+          if (insErr.message?.includes('row-level security') || insErr.code === '42501') {
+            console.error('[useFeatureFlags] → RLS blocked the insert. Apply migration 058 (supabase db push) to add the flags_insert policy.')
+          }
+          if (insErr.message?.includes('check constraint') || insErr.code === '23514') {
+            console.error('[useFeatureFlags] → CHECK constraint blocked the insert. Apply migration 058 to drop feature_flags_module_check.')
+          }
+          throw insErr
+        }
       }
+      console.info('[useFeatureFlags] Saved', module, '=', newValue)
       return { success: true, module, enabled: newValue }
     } catch (err) {
       // Try upsert as last resort
@@ -127,12 +143,17 @@ export function FeatureFlagProvider({ children }) {
         const { error: upsertErr } = await supabase.from('feature_flags').upsert({
           module, enabled: newValue, updated_at: new Date().toISOString(),
         }, { onConflict: 'module' })
-        if (upsertErr) throw upsertErr
+        if (upsertErr) {
+          console.error('[useFeatureFlags] UPSERT fallback failed for', module, upsertErr)
+          throw upsertErr
+        }
+        console.info('[useFeatureFlags] Saved via upsert fallback', module, '=', newValue)
         return { success: true, module, enabled: newValue }
       } catch (finalErr) {
         // Revert optimistic update on failure
+        console.error('[useFeatureFlags] All save attempts failed for', module, '- reverting UI')
         setFlags((prev) => ({ ...prev, [module]: !newValue }))
-        return { success: false, module, error: finalErr.message }
+        return { success: false, module, error: finalErr.message || 'Unknown error' }
       }
     }
   }

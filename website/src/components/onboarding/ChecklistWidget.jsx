@@ -13,15 +13,27 @@ export default function ChecklistWidget() {
   if (!loaded || !profile) return null
   if (dismissed) return null
 
-  // Hide after 30 days since account creation
-  const accountAge = profile.created_at ? Math.floor((Date.now() - new Date(profile.created_at).getTime()) / 86400000) : 0
-  if (accountAge > 30) return null
+  // Hide for returning users — the checklist is only useful during
+  // the first-week ramp-up. After that, it becomes clutter.
+  //
+  // "Returning user" heuristic:
+  //   - Account older than 7 days, OR
+  //   - Onboarding marked complete AND checklist is more than half done
+  // Either signal means they know the product already.
+  const accountAge = profile.created_at
+    ? Math.floor((Date.now() - new Date(profile.created_at).getTime()) / 86400000)
+    : 0
+  if (accountAge > 7) return null
 
   const completed = checklistItems.filter(i => i.completed).length
   const total = checklistItems.length
 
-  // Hide if all 6 items are done
+  // Hide if all items are done
   if (completed >= total) return null
+
+  // Hide if onboarding is complete AND the user has made meaningful
+  // progress. They're past the point where a checklist helps.
+  if (profile.onboarding_completed && total > 0 && completed / total >= 0.5) return null
 
   return (
     <div className="fixed bottom-20 md:bottom-4 right-3 md:right-4 z-30 w-[calc(100vw-24px)] sm:w-80 max-w-sm">

@@ -75,6 +75,11 @@ export function useOnboarding() {
     if (!userId) return
     await completeOnboardingSvc(userId)
     setIsOnboardingVisible(false)
+    // Session-scoped trigger so TooltipTour runs the feature tour
+    // exactly once after onboarding completes in THIS session.
+    // Returning users never see the tour because they don't have
+    // this flag set.
+    try { sessionStorage.setItem('ll_tour_trigger', 'true') } catch {}
     trackEvent('onboarding_completed', {})
   }, [userId])
 

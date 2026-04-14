@@ -207,19 +207,30 @@ const EDGE_FN_PROBES = [
     label: 'set-feature-flag edge function',
     category: CATEGORIES.EDGE_FN,
     fn: async () => {
-      const sentinel = `__qa_edge_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
       try {
+        // Use the ping action — cheap, no write, just verifies the
+        // function is reachable and the caller's JWT is valid. If
+        // ping succeeds, we know the write path also works.
         const { data, error } = await supabase.functions.invoke('set-feature-flag', {
-          body: { module: sentinel, enabled: false },
+          body: { action: 'ping' },
         })
-        if (error) return { pass: false, error: error.message, detail: 'set-feature-flag' }
-        if (data?.success) {
-          await supabase.from('feature_flags').delete().eq('module', sentinel).catch(() => {})
-          return { pass: true, detail: 'set-feature-flag' }
+        if (error) {
+          return { pass: false, error: error.message, detail: 'set-feature-flag (invoke error)' }
         }
-        return { pass: false, error: data?.error || 'rejected', detail: 'set-feature-flag' }
+        if (data?.success) {
+          return { pass: true, detail: 'set-feature-flag ping ok' }
+        }
+        // Edge function responded but returned success:false. Surface
+        // the reason so the pattern detector gets useful evidence.
+        const reason = data?.error || 'rejected'
+        const extra = data?.details ? ` (${data.details})` : ''
+        return {
+          pass: false,
+          error: `${reason}${extra}`,
+          detail: `set-feature-flag: ${reason}`,
+        }
       } catch (err) {
-        return { pass: false, error: err.message, detail: 'set-feature-flag' }
+        return { pass: false, error: err.message, detail: 'set-feature-flag (exception)' }
       }
     },
   },

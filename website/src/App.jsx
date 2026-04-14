@@ -62,6 +62,8 @@ const CustomDashboardRequest = lazyRetry(() => import('./modules/crm/CustomDashb
 const CustomDashboard = lazyRetry(() => import('./modules/crm/CustomDashboard'))
 const DeveloperDashboard = lazyRetry(() => import('./modules/developer/DeveloperDashboard'))
 const QACommentsReport = lazyRetry(() => import('./pages/developer/QACommentsReport'))
+const AutoQAEngine = lazyRetry(() => import('./pages/developer/AutoQAEngine'))
+const QARepairPrompts = lazyRetry(() => import('./pages/developer/QARepairPrompts'))
 const SponsorPortal = lazyRetry(() => import('./modules/crm/SponsorPortal'))
 const UpgradeOffer = lazyRetry(() => import('./pages/admin/UpgradeOffer'))
 const AutomationControl = lazyRetry(() => import('./pages/admin/AutomationControl'))
@@ -203,6 +205,8 @@ export default function App() {
                             {/* Developer */}
                             <Route path="/developer" element={<DeveloperDashboard />} />
                             <Route path="/developer/qa-comments" element={<QACommentsReport />} />
+                            <Route path="/developer/auto-qa" element={<AutoQAEngine />} />
+                            <Route path="/developer/repair-prompts" element={<QARepairPrompts />} />
                             <Route path="/admin/upgrade-offer" element={<UpgradeOffer />} />
                             <Route path="/admin/automation" element={<AutomationControl />} />
                             <Route path="/admin/email-queue" element={<EmailQueue />} />

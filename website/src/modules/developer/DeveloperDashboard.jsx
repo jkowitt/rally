@@ -1460,6 +1460,31 @@ export default function DeveloperDashboard() {
             </div>
           </Panel>
 
+          {/* Auto QA Engine — probe-based full-site runner with pattern detection */}
+          <Panel title="Auto QA Engine">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-xs text-text-secondary max-w-lg">
+                Exercises every module (DB reads, writes, routes, edge functions,
+                uploads, integration flows) and repeats 10× to catch flaky failures.
+                Auto-generates Claude Code repair prompts for any patterns found.
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <a
+                  href="/app/developer/auto-qa"
+                  className="text-xs bg-accent text-bg-primary px-3 py-1.5 rounded font-semibold whitespace-nowrap"
+                >
+                  Run QA pass →
+                </a>
+                <a
+                  href="/app/developer/repair-prompts"
+                  className="text-xs border border-border text-text-secondary px-3 py-1.5 rounded whitespace-nowrap hover:border-accent/50"
+                >
+                  Prompt archive
+                </a>
+              </div>
+            </div>
+          </Panel>
+
           <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading reports...</div>}>
             <QAAutoReports />
           </Suspense>

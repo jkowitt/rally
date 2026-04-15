@@ -31,6 +31,22 @@ CREATE TABLE IF NOT EXISTS automation_log (
   executed_at timestamptz
 );
 
+-- Tolerate the old schema from migration 032 (same table name,
+-- different columns). If automation_log already exists with the
+-- old shape (automation_id/trigger_data/action_result/success/
+-- executed_at), these ALTERs add the new columns so the index
+-- below works and the app code in automationGate.js can read/write.
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS event_type text;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS event_category text;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS triggered_by text DEFAULT 'automation';
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS target_user_id uuid;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS target_email text;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS payload jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending';
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS error_message text;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS executed_at timestamptz;
+
 CREATE INDEX IF NOT EXISTS idx_automation_log_category ON automation_log(event_category, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_automation_log_status ON automation_log(status, created_at DESC);
 

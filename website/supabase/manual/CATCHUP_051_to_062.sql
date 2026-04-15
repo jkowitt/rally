@@ -1,34 +1,19 @@
--- ============================================================
--- MANUAL CATCH-UP SCRIPT — migrations 051 through 062
--- ============================================================
--- Use this file ONLY if the supabase-deploy GitHub Actions
--- workflow has been failing and your production database is
--- missing these migrations.
---
--- HOW TO RUN:
---   1. Open your Supabase project dashboard
---   2. Go to SQL Editor → New Query
---   3. Paste this entire file
---   4. Click "Run"
---
--- This file is safe to re-run — every CREATE TABLE uses
--- IF NOT EXISTS, every DROP POLICY uses IF EXISTS, every
--- INSERT uses ON CONFLICT DO NOTHING. You can paste it as
--- many times as you want.
---
--- PREFLIGHT: drop the feature_flags CHECK constraint from
--- migration 045 FIRST so migrations 053/054's inserts don't
--- fail before the rest of the script even runs.
--- ============================================================
+-- ==============================================================
+-- CATCH-UP MIGRATION: 051 -> 062
+-- Generated 2026-04-15T02:46:37Z
+-- Paste this entire file into the Supabase SQL Editor and run.
+-- Safe to run multiple times (all statements are idempotent).
+-- ==============================================================
 
-alter table feature_flags drop constraint if exists feature_flags_module_check;
+-- Preflight: drop legacy feature_flags.module CHECK constraint from 045
+-- (migrations 053/054/058/062 insert new module names that would
+--  otherwise violate this constraint)
+alter table if exists feature_flags drop constraint if exists feature_flags_module_check;
 
 
-
--- ============================================================
--- ▼ ▼ ▼  051_automation_engine.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 051_automation_engine.sql
+-- ==============================================================
 -- Master automation settings
 CREATE TABLE IF NOT EXISTS automation_settings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -61,6 +46,22 @@ CREATE TABLE IF NOT EXISTS automation_log (
   created_at timestamptz DEFAULT now(),
   executed_at timestamptz
 );
+
+-- Tolerate the old schema from migration 032 (same table name,
+-- different columns). If automation_log already exists with the
+-- old shape (automation_id/trigger_data/action_result/success/
+-- executed_at), these ALTERs add the new columns so the index
+-- below works and the app code in automationGate.js can read/write.
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS event_type text;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS event_category text;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS triggered_by text DEFAULT 'automation';
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS target_user_id uuid;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS target_email text;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS payload jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending';
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS error_message text;
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+ALTER TABLE automation_log ADD COLUMN IF NOT EXISTS executed_at timestamptz;
 
 CREATE INDEX IF NOT EXISTS idx_automation_log_category ON automation_log(event_category, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_automation_log_status ON automation_log(status, created_at DESC);
@@ -253,10 +254,9 @@ INSERT INTO email_sequences (name, trigger_event, total_emails) VALUES
 ON CONFLICT DO NOTHING;
 
 
--- ============================================================
--- ▼ ▼ ▼  052_client_growth_tools.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 052_client_growth_tools.sql
+-- ==============================================================
 -- Phase 1: Fix broken RLS on biz_* tables (data leakage blocker)
 -- Phase 2: Add property_id to enable multi-tenant client-facing features
 -- Phase 3: Add growth workbook and strategic workbook tables
@@ -429,10 +429,9 @@ INSERT INTO strategic_workbooks (name, slug, description, category, icon, estima
 ON CONFLICT (slug) DO NOTHING;
 
 
--- ============================================================
--- ▼ ▼ ▼  053_developer_outlook_integration.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 053_developer_outlook_integration.sql
+-- ==============================================================
 -- ============================================================
 -- MIGRATION 053 — DEVELOPER-ONLY OUTLOOK INTEGRATION
 -- ============================================================
@@ -714,10 +713,9 @@ end $$;
 -- ========================
 
 
--- ============================================================
--- ▼ ▼ ▼  054_email_marketing_system.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 054_email_marketing_system.sql
+-- ==============================================================
 -- ============================================================
 -- MIGRATION 054 — EMAIL MARKETING SYSTEM
 -- ============================================================
@@ -1294,10 +1292,9 @@ create trigger contacts_enqueue_email_sync
 -- ========================
 
 
--- ============================================================
--- ▼ ▼ ▼  055_pricing_architecture.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 055_pricing_architecture.sql
+-- ==============================================================
 -- ============================================================
 -- MIGRATION 055 — PRICING ARCHITECTURE (DB-driven)
 -- ============================================================
@@ -1890,10 +1887,9 @@ on conflict (property_id) do nothing;
 -- ============================================================
 
 
--- ============================================================
--- ▼ ▼ ▼  056_bulk_contract_migration.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 056_bulk_contract_migration.sql
+-- ==============================================================
 -- ============================================================
 -- MIGRATION 056 — BULK CONTRACT MIGRATION SYSTEM
 -- ============================================================
@@ -2053,10 +2049,9 @@ create policy "migration_sponsors_all" on contract_migration_sponsors
 -- ============================================================
 
 
--- ============================================================
--- ▼ ▼ ▼  057_remove_competitor_references.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 057_remove_competitor_references.sql
+-- ==============================================================
 -- ============================================================
 -- MIGRATION 057 — REMOVE COMPETITOR REFERENCES FROM PRICING PAGE
 -- ============================================================
@@ -2091,10 +2086,9 @@ where question = 'Why is Loud Legacy so much cheaper than SponsorCX?';
 -- ============================================================
 
 
--- ============================================================
--- ▼ ▼ ▼  058_fix_feature_flag_writes.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 058_fix_feature_flag_writes.sql
+-- ==============================================================
 -- ============================================================
 -- MIGRATION 058 — FIX FEATURE FLAG WRITES
 -- ============================================================
@@ -2195,10 +2189,9 @@ on conflict (module) do nothing;
 -- ============================================================
 
 
--- ============================================================
--- ▼ ▼ ▼  059_qa_walkthrough_comments.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 059_qa_walkthrough_comments.sql
+-- ==============================================================
 -- ============================================================
 -- MIGRATION 059 — QA WALKTHROUGH COMMENTS
 -- ============================================================
@@ -2283,10 +2276,9 @@ create policy "qa_comments_delete" on qa_comments
 -- ============================================================
 
 
--- ============================================================
--- ▼ ▼ ▼  060_qa_repair_prompts.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 060_qa_repair_prompts.sql
+-- ==============================================================
 -- ============================================================
 -- MIGRATION 060 — QA REPAIR PROMPTS ARCHIVE
 -- ============================================================
@@ -2354,10 +2346,9 @@ create policy "qa_repair_prompts_all" on qa_repair_prompts
 -- ============================================================
 
 
--- ============================================================
--- ▼ ▼ ▼  061_storage_buckets.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 061_storage_buckets.sql
+-- ==============================================================
 -- ============================================================
 -- MIGRATION 061 — STORAGE BUCKETS
 -- ============================================================
@@ -2450,10 +2441,9 @@ end $$;
 -- ============================================================
 
 
--- ============================================================
--- ▼ ▼ ▼  062_digest_management_system.sql  ▼ ▼ ▼
--- ============================================================
-
+-- ==============================================================
+-- 062_digest_management_system.sql
+-- ==============================================================
 -- ============================================================
 -- MIGRATION 062 — DIGEST MANAGEMENT SYSTEM
 -- ============================================================
@@ -2664,22 +2654,5 @@ on conflict (module) do nothing;
 -- ============================================================
 
 
--- ============================================================
--- ▼ ▼ ▼  FINAL: reload PostgREST schema cache  ▼ ▼ ▼
--- ============================================================
--- After applying migrations, PostgREST's schema cache is stale
--- and new tables return "not found in schema cache". This tells
--- PostgREST to refresh immediately.
-
+-- Reload PostgREST schema cache so the app sees new tables/columns
 notify pgrst, 'reload schema';
-
--- ============================================================
--- DONE — verify by running:
---   select tablename from pg_tables where schemaname='public'
---     and tablename in (
---       'automation_settings', 'outlook_auth', 'email_campaigns',
---       'pricing_plans', 'contract_migration_sessions',
---       'qa_comments', 'qa_repair_prompts', 'digest_issues'
---     );
--- You should see all 8 rows.
--- ============================================================

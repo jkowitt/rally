@@ -35,7 +35,7 @@ app.use((_req, res, next) => {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.anthropic.com https://api.github.com https://unpkg.com https://cdn.sheetjs.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com",
+    "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.anthropic.com https://api.github.com https://unpkg.com https://cdn.sheetjs.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://fonts.googleapis.com https://fonts.gstatic.com",
     "frame-src 'self' https://*.supabase.co",
     "object-src 'none'",
     "base-uri 'self'",

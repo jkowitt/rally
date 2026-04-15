@@ -68,7 +68,10 @@ begin
       updated_at = now()
     where id = v_existing;
   else
-    -- Create a new active subscriber
+    -- Create a new active subscriber. Defensive ON CONFLICT DO NOTHING
+    -- in case a concurrent transaction inserted a matching row between
+    -- our SELECT and our INSERT. email_subscribers has unique(property_id,
+    -- email), so we target that constraint.
     insert into email_subscribers (
       email,
       first_name,
@@ -90,9 +93,7 @@ begin
       now(),
       now()
     )
-    on conflict (email) do update set
-      tags = array(select distinct unnest(coalesce(email_subscribers.tags, '{}'::text[]) || array['digest', 'platform_user'])),
-      updated_at = now();
+    on conflict (property_id, email) do nothing;
   end if;
 
   return new;
@@ -116,15 +117,26 @@ create trigger profiles_auto_digest_subscribe
 -- ============================================================
 -- BACKFILL: enroll every existing profile into the Digest list
 -- ============================================================
--- This is a one-shot INSERT ... ON CONFLICT that walks every
--- profile and adds them to email_subscribers with the 'digest'
--- tag. Idempotent — safe to re-run.
+-- One-shot INSERT that walks every profile and adds them to
+-- email_subscribers with the 'digest' tag. Idempotent — safe to
+-- re-run because:
+--   1. The NOT EXISTS subquery filters out emails that already
+--      have an email_subscribers row (regardless of property_id)
+--   2. A DISTINCT ON prevents duplicate emails within the SELECT
+--      itself (two profiles could theoretically share an email)
+--   3. An ON CONFLICT DO NOTHING catches any race condition
+--      against the (property_id, email) unique constraint
+--
+-- Rows that already exist in email_subscribers get their tags
+-- updated in a separate UPDATE below — not via ON CONFLICT, so
+-- we don't need an ON CONFLICT target that matches the actual
+-- unique constraint shape.
 --
 -- full_name is split on the first space. Profiles with no name
--- get null first_name/last_name (personalization will fall back
--- to the email address prefix).
+-- get null first_name/last_name (personalization falls back to
+-- the email address prefix in email templates).
 insert into email_subscribers (email, first_name, last_name, status, source, tags, property_id, created_at, updated_at)
-select
+select distinct on (lower(p.email))
   lower(p.email),
   case
     when p.full_name is null or p.full_name = '' then null
@@ -148,9 +160,7 @@ where p.email is not null
   and not exists (
     select 1 from email_subscribers e where lower(e.email) = lower(p.email)
   )
-on conflict (email) do update set
-  tags = array(select distinct unnest(coalesce(email_subscribers.tags, '{}'::text[]) || array['digest', 'platform_user'])),
-  updated_at = now();
+on conflict (property_id, email) do nothing;
 
 -- Tag any pre-existing email_subscribers rows that belong to platform
 -- users but don't yet have the 'digest' tag. This catches anyone who

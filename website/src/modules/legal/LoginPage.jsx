@@ -28,8 +28,30 @@ export default function LoginPage() {
   const premiumToken = searchParams.get('premium')
   const teamToken = searchParams.get('team')
 
-  // Map landing page industry IDs to property types
-  const industryToType = { sports: 'college', entertainment: 'entertainment', conference: 'conference', nonprofit: 'nonprofit', media: 'media', realestate: 'realestate', agency: 'agency' }
+  // Map landing page industry IDs → property.type values. The landing
+  // page uses human-friendly IDs (sports, other, etc); the `properties`
+  // table stores them as registration-type values that match the
+  // INDUSTRY_OPTIONS list above.
+  //
+  // 'sports' routes to 'college' by default; landing page sub-choices
+  // (college / professional / minor_league) pass their real id via the
+  // _registrationId field, so sports without a sub-choice is rare.
+  //
+  // 'other' was missing — without it the form silently defaulted to
+  // 'college' which miscategorized every "Other" signup.
+  const industryToType = {
+    sports: 'college',
+    college: 'college',
+    professional: 'professional',
+    minor_league: 'minor_league',
+    entertainment: 'entertainment',
+    conference: 'conference',
+    nonprofit: 'nonprofit',
+    media: 'media',
+    realestate: 'realestate',
+    agency: 'agency',
+    other: 'other',
+  }
 
   const [premiumLink, setPremiumLink] = useState(null)
   const [teamInviteProperty, setTeamInviteProperty] = useState(null)

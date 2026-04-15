@@ -137,7 +137,7 @@ export default function LandingPage() {
         <>
           <Nav onLogoClick={handleLogoClick} />
           <Hero industry={industry} onSelectIndustry={setIndustry} />
-          <IndustrySelector selected={industry} onSelect={setIndustry} />
+          <IndustrySelector selected={industry} onSelect={setIndustry} industries={visibleIndustries} />
           <Ecosystem industry={industry} />
           <Modules industry={industry} />
           <HowItWorks />
@@ -583,7 +583,12 @@ function Hero({ industry }) {
 }
 
 /* ─── INDUSTRY SELECTOR ─── */
-function IndustrySelector({ selected, onSelect }) {
+// `industries` is passed in from the parent LandingPage so we respect
+// the show_* visibility flags. Previously this function referenced a
+// `visibleIndustries` variable that was only in LandingPage's scope,
+// which threw ReferenceError at render time — causing the whole
+// section (and any CTA inside it, like "Other") to fail silently.
+function IndustrySelector({ selected, onSelect, industries = [] }) {
   return (
     <section id="industries" className="py-16 px-6 border-t border-border">
       <div className="max-w-6xl mx-auto">
@@ -593,7 +598,7 @@ function IndustrySelector({ selected, onSelect }) {
           description="Loud Legacy adapts its terminology, asset categories, and workflows to your industry. Pick yours to see how it works for you."
         />
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mt-12">
-          {visibleIndustries.map((ind) => (
+          {industries.map((ind) => (
             <button
               key={ind.id}
               onClick={() => { onSelect(ind); window.scrollTo({ top: 0, behavior: 'smooth' }) }}

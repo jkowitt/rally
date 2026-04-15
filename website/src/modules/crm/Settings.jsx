@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
@@ -196,6 +196,9 @@ export default function Settings() {
         </label>
       </div>
 
+      {/* Email preferences */}
+      <EmailPreferencesSection userEmail={profile?.email} />
+
       {/* Account Deletion — Danger Zone */}
       <div className="bg-bg-surface border border-danger/30 rounded-lg p-4 sm:p-5">
         <h2 className="text-sm font-mono text-danger uppercase mb-1">Danger Zone</h2>
@@ -392,6 +395,146 @@ function UsageOverageSection({ propertyId, currentPlan }) {
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
           <span className="text-sm text-text-primary font-medium">Overage charges this month</span>
           <span className="text-lg font-mono font-bold text-warning">${totalCharges.toFixed(2)}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Email preferences — opt in/out of The Digest and other marketing
+ * emails from Loud Legacy. Backed by the email_subscribers table:
+ * each row has a status field ('active', 'unsubscribed', 'bounced')
+ * and the user is identified by their profile email address.
+ *
+ * New platform users are auto-enrolled in The Digest via a database
+ * trigger on profile creation (migration 065). This section gives
+ * them the opt-out control. Rows don't get deleted — they just get
+ * marked unsubscribed so re-opts and analytics still work.
+ */
+function EmailPreferencesSection({ userEmail }) {
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [subscriber, setSubscriber] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      if (!userEmail) {
+        if (mounted) setLoading(false)
+        return
+      }
+      const { data } = await supabase
+        .from('email_subscribers')
+        .select('id, status, tags, global_unsubscribe, unsubscribe_token')
+        .ilike('email', userEmail)
+        .maybeSingle()
+      if (mounted) {
+        setSubscriber(data || null)
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [userEmail])
+
+  async function reload() {
+    const { data } = await supabase
+      .from('email_subscribers')
+      .select('id, status, tags, global_unsubscribe, unsubscribe_token')
+      .ilike('email', userEmail)
+      .maybeSingle()
+    setSubscriber(data || null)
+  }
+
+  async function setDigestSubscribed(enabled) {
+    if (!userEmail) return
+    setSaving(true)
+    try {
+      if (subscriber) {
+        // Existing row — update status / global_unsubscribe
+        const patch = enabled
+          ? { status: 'active', global_unsubscribe: false, unsubscribed_at: null }
+          : { status: 'unsubscribed', global_unsubscribe: true, unsubscribed_at: new Date().toISOString() }
+        const { error } = await supabase
+          .from('email_subscribers')
+          .update(patch)
+          .eq('id', subscriber.id)
+        if (error) throw error
+      } else if (enabled) {
+        // No row exists but user wants in — create it
+        const { error } = await supabase
+          .from('email_subscribers')
+          .insert({
+            email: userEmail.toLowerCase(),
+            status: 'active',
+            source: 'settings_opt_in',
+            tags: ['digest', 'platform_user'],
+          })
+        if (error) throw error
+      }
+      toast({
+        title: enabled ? 'Subscribed' : 'Unsubscribed',
+        description: enabled
+          ? 'You will receive The Digest and platform announcements.'
+          : 'You are unsubscribed from all marketing emails. Transactional messages (receipts, security) will still be sent.',
+        type: 'success',
+      })
+      reload()
+    } catch (err) {
+      toast({ title: 'Save failed', description: String(err?.message || err), type: 'error' })
+    }
+    setSaving(false)
+  }
+
+  const isSubscribed = subscriber?.status === 'active' && !subscriber?.global_unsubscribe
+
+  return (
+    <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
+      <h2 className="text-sm font-mono text-text-muted uppercase mb-1">Email Preferences</h2>
+      <p className="text-xs text-text-muted mb-4">
+        Manage the marketing emails you receive from Loud Legacy. Transactional
+        emails (login, security, billing) cannot be turned off.
+      </p>
+
+      {loading ? (
+        <div className="text-xs text-text-muted">Loading…</div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-4 py-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-text-primary font-medium">The Digest</div>
+              <div className="text-[11px] text-text-muted mt-1 leading-relaxed">
+                One monthly editorial newsletter covering sponsorship, real estate, sports, and marketing.
+                When you signed up, you were auto-subscribed per our Terms &amp; Conditions. Toggle off to
+                stop receiving it. You can also unsubscribe from any email using the link in the footer.
+              </div>
+            </div>
+            <button
+              onClick={() => setDigestSubscribed(!isSubscribed)}
+              disabled={saving}
+              className={`shrink-0 px-3 py-1.5 rounded text-xs font-mono transition-opacity ${
+                isSubscribed ? 'bg-success/20 text-success' : 'bg-bg-card text-text-muted border border-border'
+              } ${saving ? 'opacity-50' : ''}`}
+            >
+              {saving ? '…' : isSubscribed ? 'Subscribed' : 'Unsubscribed'}
+            </button>
+          </div>
+
+          {subscriber?.unsubscribe_token && (
+            <div className="text-[10px] text-text-muted pt-2 border-t border-border">
+              One-click unsubscribe link (same as email footer):{' '}
+              <a
+                href={`/unsubscribe/${subscriber.unsubscribe_token}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent hover:underline"
+              >
+                /unsubscribe/...
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

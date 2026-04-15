@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
 import * as subService from '@/services/email/subscriberService'
 
 export default function EmailSubscribers() {
+  const { profile } = useAuth()
   const [params, setParams] = useSearchParams()
   const [subscribers, setSubscribers] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [showAdd, setShowAdd] = useState(false)
   const [filters, setFilters] = useState({
     status: 'all',
     source: 'all',
@@ -50,6 +53,28 @@ export default function EmailSubscribers() {
     reload()
   }
 
+  async function handleAddSubscriber(fields) {
+    const r = await subService.createSubscriber(
+      {
+        email: fields.email.trim().toLowerCase(),
+        first_name: fields.first_name.trim(),
+        last_name: fields.last_name.trim(),
+        organization: fields.organization.trim() || null,
+        source: 'manual',
+        status: 'active',
+        tags: [],
+      },
+      profile?.property_id,
+    )
+    if (!r.success) {
+      alert(r.error || 'Failed to add subscriber')
+      return { ok: false }
+    }
+    setShowAdd(false)
+    reload()
+    return { ok: true }
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-4">
       <header className="flex items-center justify-between flex-wrap gap-3">
@@ -57,7 +82,15 @@ export default function EmailSubscribers() {
           <h2 className="text-xl font-semibold">Subscribers</h2>
           <p className="text-[11px] text-text-muted">{total} total</p>
         </div>
-        <Link to="/app/marketing/email/import" className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50">Import</Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAdd(true)}
+            className="text-xs px-3 py-1.5 bg-accent text-bg-primary rounded font-semibold hover:opacity-90"
+          >
+            + Add Subscriber
+          </button>
+          <Link to="/app/marketing/email/import" className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50">Import CSV</Link>
+        </div>
       </header>
 
       <div className="flex items-center gap-2 flex-wrap border-b border-border pb-2">
@@ -100,6 +133,13 @@ export default function EmailSubscribers() {
           <option value="outlook_sync">Outlook Sync</option>
         </select>
       </div>
+
+      {showAdd && (
+        <AddSubscriberModal
+          onClose={() => setShowAdd(false)}
+          onSave={handleAddSubscriber}
+        />
+      )}
 
       <div className="bg-bg-card border border-border rounded-lg overflow-x-auto">
         <table className="w-full text-xs">
@@ -175,4 +215,104 @@ function EngagementBadge({ score }) {
   const seg = subService.engagementSegment(score)
   const color = seg.color === 'success' ? 'text-success' : seg.color === 'warning' ? 'text-warning' : seg.color === 'danger' ? 'text-danger' : 'text-accent'
   return <span className={`text-[10px] font-mono ${color}`}>{score} · {seg.label}</span>
+}
+
+function AddSubscriberModal({ onClose, onSave }) {
+  const [fields, setFields] = useState({ first_name: '', last_name: '', email: '', organization: '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError('')
+    if (!fields.first_name || !fields.last_name || !fields.email) {
+      setError('First name, last name, and email are required.')
+      return
+    }
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)
+    if (!emailOk) {
+      setError('Enter a valid email address.')
+      return
+    }
+    setSaving(true)
+    const r = await onSave(fields)
+    setSaving(false)
+    if (!r?.ok) setError('Could not save — that email may already exist in the list.')
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div
+        className="bg-bg-primary border border-border rounded-lg max-w-md w-full p-5"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm font-semibold">Add Subscriber</div>
+          <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg leading-none">×</button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-text-muted mb-1">First name *</label>
+              <input
+                type="text"
+                value={fields.first_name}
+                onChange={e => setFields({ ...fields, first_name: e.target.value })}
+                className="w-full bg-bg-card border border-border rounded px-2 py-2 focus:outline-none focus:border-accent"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-text-muted mb-1">Last name *</label>
+              <input
+                type="text"
+                value={fields.last_name}
+                onChange={e => setFields({ ...fields, last_name: e.target.value })}
+                className="w-full bg-bg-card border border-border rounded px-2 py-2 focus:outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-text-muted mb-1">Email *</label>
+            <input
+              type="email"
+              value={fields.email}
+              onChange={e => setFields({ ...fields, email: e.target.value })}
+              placeholder="person@example.com"
+              className="w-full bg-bg-card border border-border rounded px-2 py-2 focus:outline-none focus:border-accent"
+            />
+          </div>
+          <div>
+            <label className="block text-text-muted mb-1">
+              Organization <span className="text-text-muted">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={fields.organization}
+              onChange={e => setFields({ ...fields, organization: e.target.value })}
+              placeholder="Acme Inc."
+              className="w-full bg-bg-card border border-border rounded px-2 py-2 focus:outline-none focus:border-accent"
+            />
+          </div>
+          {error && <div className="text-danger text-[11px]">{error}</div>}
+          <div className="flex gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 border border-border text-text-secondary py-2 rounded text-xs"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 bg-accent text-bg-primary py-2 rounded text-xs font-semibold disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Add Subscriber'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
 }

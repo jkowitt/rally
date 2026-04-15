@@ -123,9 +123,37 @@ async function handleCampaignBatch(sb: any, campaignId: string) {
       const unsubUrl = `${APP_URL}/unsubscribe/${sub.unsubscribe_token}`;
       const pixelUrl = `${APP_URL}/functions/v1/email-marketing-track?pixel=${row.tracking_pixel_id}`;
 
-      const personalized = personalize(campaign.html_content || "", sub, { unsubscribe_url: unsubUrl })
-        + `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none;" />`;
-      const plain = personalize(campaign.plain_text_content || "", sub, { unsubscribe_url: unsubUrl });
+      let personalized = personalize(campaign.html_content || "", sub, { unsubscribe_url: unsubUrl });
+
+      // Guarantee an unsubscribe link in every marketing email, regardless
+      // of whether the template author included {{unsubscribe_url}}. CAN-SPAM,
+      // CASL, and GDPR all require a clear, working unsubscribe mechanism.
+      // If the personalized HTML doesn't already contain our unsub URL,
+      // append a compliant footer before the closing body tag.
+      if (!personalized.includes(unsubUrl)) {
+        const fallbackFooter = `
+<div style="margin-top:32px;padding:16px;border-top:1px solid #d4d0c3;text-align:center;font-family:Georgia,serif;font-size:11px;color:#7a7a75;line-height:1.6;">
+  You're receiving this because you subscribed to updates from Loud Legacy Ventures.<br/>
+  <a href="${unsubUrl}" style="color:#D85A30;text-decoration:underline;">Unsubscribe</a>
+  &nbsp;·&nbsp;
+  <a href="${APP_URL}/app/settings" style="color:#7a7a75;text-decoration:underline;">Email preferences</a>
+</div>`;
+        if (personalized.includes("</body>")) {
+          personalized = personalized.replace("</body>", fallbackFooter + "</body>");
+        } else {
+          personalized = personalized + fallbackFooter;
+        }
+      }
+
+      // Inject the tracking pixel (always — unconditional)
+      personalized = personalized + `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none;" />`;
+
+      // Plain-text version: also guarantee an unsub URL
+      let plain = personalize(campaign.plain_text_content || "", sub, { unsubscribe_url: unsubUrl });
+      if (!plain.includes(unsubUrl)) {
+        plain = (plain || "") + `\n\n---\nUnsubscribe: ${unsubUrl}\nEmail preferences: ${APP_URL}/app/settings\n`;
+      }
+
       const subject = personalize(campaign.subject_line, sub);
 
       const result = await sendOneEmail({

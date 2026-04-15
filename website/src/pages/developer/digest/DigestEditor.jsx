@@ -230,6 +230,27 @@ export default function DigestEditor() {
     else toast({ title: 'Test failed', description: r.error, type: 'error' })
   }
 
+  function handleCopyShareableLink() {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://loud-legacy.com'
+    const shareUrl = `${origin}/digest/${issue.slug}`
+    // Include UTM so we can track how many opens come from social shares
+    const utmUrl = `${shareUrl}?utm_source=social_share&utm_medium=founder&utm_campaign=${encodeURIComponent(issue.slug)}`
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(utmUrl).then(
+        () => toast({
+          title: 'Link copied',
+          description: `${shareUrl} (with UTM tags) — paste into LinkedIn, X, or wherever`,
+          type: 'success',
+        }),
+        () => toast({ title: 'Copy failed', description: utmUrl, type: 'error' }),
+      )
+    } else {
+      // Fallback: prompt the user to copy manually
+      window.prompt('Copy this link:', utmUrl)
+    }
+  }
+
   async function handleResendUnopened() {
     // Suggest a subject line but let the author override
     const defaultSubject = `Did you see this? ${issue.title}`
@@ -296,6 +317,15 @@ export default function DigestEditor() {
             <button onClick={() => handlePublish('publish_and_send')} className="text-xs px-3 py-1.5 bg-accent text-bg-primary rounded font-semibold">
               Publish + Send
             </button>
+            {issue.status === 'published' && issue.slug && (
+              <button
+                onClick={handleCopyShareableLink}
+                title="Copy the public article URL to paste into social posts"
+                className="text-xs px-3 py-1.5 border border-accent/40 text-accent rounded hover:bg-accent/10"
+              >
+                🔗 Copy link
+              </button>
+            )}
             {issue.status === 'published' && issue.email_campaign_id && (
               <button
                 onClick={handleResendUnopened}

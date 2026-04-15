@@ -144,6 +144,7 @@ export default function LandingPage() {
           <AISection />
           <WhyLoudLegacy />
           <CTA industry={industry} />
+          <SponsorsSection />
           <Footer />
         </>
       )}
@@ -227,6 +228,12 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                 >
                   See how it works for my industry
                 </button>
+                <Link
+                  to="/digest"
+                  className="block w-full border border-accent/40 text-accent py-3 rounded-lg text-xs font-medium hover:bg-accent/10 transition-colors text-center"
+                >
+                  📖 Read The Digest — no account required
+                </Link>
                 <button
                   onClick={() => {
                     localStorage.setItem('ll-has-account', '1')
@@ -1105,6 +1112,49 @@ function CTA({ industry }) {
           <a href="mailto:jason@loud-legacy.com" className="text-accent hover:underline">jason@loud-legacy.com</a>
         </motion.p>
       </motion.div>
+    </section>
+  )
+}
+
+/* ─── SPONSORS / PARTNERS ─── */
+// Inline CMS editable sponsor slots. Developer clicks any empty slot
+// in edit mode to upload a logo. Edit mode is toggled from the CMS
+// toolbar (top right). Slots with no image render nothing in normal
+// mode, so an empty state looks clean rather than broken.
+function SponsorsSection() {
+  return (
+    <section className="py-16 px-6 border-t border-border">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-10">
+          <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-2">
+            <EditableText contentKey="sponsors_eyebrow" fallback="Partners & Sponsors" tag="span" />
+          </div>
+          <h3 className="text-xl text-text-primary font-semibold">
+            <EditableText contentKey="sponsors_headline" fallback="Loud Legacy is proudly supported by" tag="span" />
+          </h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 items-center">
+          {['sponsor_logo_1', 'sponsor_logo_2', 'sponsor_logo_3', 'sponsor_logo_4', 'sponsor_logo_5', 'sponsor_logo_6'].map(key => (
+            <div key={key} className="flex items-center justify-center h-16 opacity-80 hover:opacity-100 transition-opacity">
+              <EditableImage
+                contentKey={key}
+                fallback=""
+                alt="Sponsor logo"
+                className="max-h-16 max-w-full object-contain"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="text-center mt-6">
+          <EditableText
+            contentKey="sponsors_caption"
+            fallback=""
+            tag="p"
+            className="text-xs text-text-muted"
+            multiline
+          />
+        </div>
+      </div>
     </section>
   )
 }

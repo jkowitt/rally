@@ -11,7 +11,12 @@
 --   2. /app/settings email preferences toggle
 --
 -- This behavior is covered by the updated Terms & Conditions
--- (migration also covers the legal document update).
+-- (migration 066).
+--
+-- NOTE ON NAMES: profiles has a single full_name column (migration
+-- 001), not first_name/last_name. We split on the first space when
+-- populating email_subscribers. Not perfect for people whose first
+-- name has a space, but good enough for personalization tokens.
 -- ============================================================
 
 create or replace function auto_subscribe_new_user_to_digest()
@@ -22,18 +27,29 @@ language plpgsql
 as $$
 declare
   v_email text;
+  v_full_name text;
   v_first_name text;
   v_last_name text;
   v_existing uuid;
+  v_space_pos integer;
 begin
   -- Pull email + name from the profile row
   v_email := lower(coalesce(new.email, ''));
-  v_first_name := new.first_name;
-  v_last_name := new.last_name;
+  v_full_name := coalesce(new.full_name, '');
 
   -- Must have an email to enroll
   if v_email = '' or v_email is null then
     return new;
+  end if;
+
+  -- Split full_name on the first space for personalization
+  v_space_pos := position(' ' in v_full_name);
+  if v_space_pos > 0 then
+    v_first_name := substring(v_full_name from 1 for v_space_pos - 1);
+    v_last_name := substring(v_full_name from v_space_pos + 1);
+  else
+    v_first_name := nullif(v_full_name, '');
+    v_last_name := null;
   end if;
 
   -- Check if the email is already in email_subscribers. If it is,
@@ -60,7 +76,6 @@ begin
       status,
       source,
       tags,
-      industry,
       property_id,
       created_at,
       updated_at
@@ -71,7 +86,6 @@ begin
       'active',
       'signup',
       array['digest', 'platform_user'],
-      null,
       new.property_id,
       now(),
       now()
@@ -99,27 +113,29 @@ create trigger profiles_auto_digest_subscribe
   for each row
   execute function auto_subscribe_new_user_to_digest();
 
--- Backfill existing profiles into the Digest list (one-shot).
--- Anybody who already has a profile row gets enrolled as of this
--- migration. Idempotent — re-running just re-adds the tags.
-do $$
-declare
-  p record;
-begin
-  for p in select id, email, first_name, last_name, property_id from profiles where email is not null loop
-    perform auto_subscribe_new_user_to_digest() from (select p.* as new) _;
-    -- Inline the trigger body manually since we can't call it as a plain function
-    null;
-  end loop;
-end $$;
-
--- Simpler backfill using direct SQL (the DO block above is a no-op;
--- this is the real one). Safe to re-run.
+-- ============================================================
+-- BACKFILL: enroll every existing profile into the Digest list
+-- ============================================================
+-- This is a one-shot INSERT ... ON CONFLICT that walks every
+-- profile and adds them to email_subscribers with the 'digest'
+-- tag. Idempotent — safe to re-run.
+--
+-- full_name is split on the first space. Profiles with no name
+-- get null first_name/last_name (personalization will fall back
+-- to the email address prefix).
 insert into email_subscribers (email, first_name, last_name, status, source, tags, property_id, created_at, updated_at)
 select
   lower(p.email),
-  p.first_name,
-  p.last_name,
+  case
+    when p.full_name is null or p.full_name = '' then null
+    when position(' ' in p.full_name) > 0 then substring(p.full_name from 1 for position(' ' in p.full_name) - 1)
+    else p.full_name
+  end as first_name,
+  case
+    when p.full_name is null or p.full_name = '' then null
+    when position(' ' in p.full_name) > 0 then substring(p.full_name from position(' ' in p.full_name) + 1)
+    else null
+  end as last_name,
   'active',
   'signup',
   array['digest', 'platform_user'],
@@ -128,6 +144,7 @@ select
   now()
 from profiles p
 where p.email is not null
+  and p.email != ''
   and not exists (
     select 1 from email_subscribers e where lower(e.email) = lower(p.email)
   )
@@ -136,9 +153,11 @@ on conflict (email) do update set
   updated_at = now();
 
 -- Tag any pre-existing email_subscribers rows that belong to platform
--- users but don't yet have the 'digest' tag.
+-- users but don't yet have the 'digest' tag. This catches anyone who
+-- was already in email_subscribers from a CSV import or pipeline sync
+-- but hasn't been explicitly enrolled in the Digest.
 update email_subscribers e
 set tags = array(select distinct unnest(coalesce(e.tags, '{}'::text[]) || array['digest', 'platform_user']))
 from profiles p
 where lower(e.email) = lower(p.email)
-  and not (e.tags @> array['digest']);
+  and not (coalesce(e.tags, '{}'::text[]) @> array['digest']);

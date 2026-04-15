@@ -1485,6 +1485,33 @@ export default function DeveloperDashboard() {
             </div>
           </Panel>
 
+          {/* The Digest — editorial newsletter management */}
+          <Panel title="The Digest by Loud Legacy Ventures">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-xs text-text-secondary max-w-lg">
+                Monthly editorial newsletter. AI research, rich text editor, image library,
+                subscriber management, and branded email dispatch via the existing Resend
+                integration.
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <a
+                  href="/app/developer/digest"
+                  className="text-xs bg-accent text-bg-primary px-3 py-1.5 rounded font-semibold whitespace-nowrap"
+                >
+                  Manage issues →
+                </a>
+                <a
+                  href="/digest"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs border border-border text-text-secondary px-3 py-1.5 rounded whitespace-nowrap hover:border-accent/50"
+                >
+                  Public archive ↗
+                </a>
+              </div>
+            </div>
+          </Panel>
+
           <Suspense fallback={<div className="text-text-muted text-xs p-4">Loading reports...</div>}>
             <QAAutoReports />
           </Suspense>

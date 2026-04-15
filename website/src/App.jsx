@@ -64,6 +64,8 @@ const DeveloperDashboard = lazyRetry(() => import('./modules/developer/Developer
 const QACommentsReport = lazyRetry(() => import('./pages/developer/QACommentsReport'))
 const AutoQAEngine = lazyRetry(() => import('./pages/developer/AutoQAEngine'))
 const QARepairPrompts = lazyRetry(() => import('./pages/developer/QARepairPrompts'))
+const DigestAdminList = lazyRetry(() => import('./pages/developer/digest/DigestAdminList'))
+const DigestEditor = lazyRetry(() => import('./pages/developer/digest/DigestEditor'))
 const SponsorPortal = lazyRetry(() => import('./modules/crm/SponsorPortal'))
 const UpgradeOffer = lazyRetry(() => import('./pages/admin/UpgradeOffer'))
 const AutomationControl = lazyRetry(() => import('./pages/admin/AutomationControl'))
@@ -88,6 +90,9 @@ const AddonsPage = lazyRetry(() => import('./pages/settings/AddonsPage'))
 const BillingPage = lazyRetry(() => import('./pages/settings/BillingPage'))
 // Public unsubscribe page (no login, token-based)
 const UnsubscribePage = lazyRetry(() => import('./pages/email/UnsubscribePage'))
+// Public Digest newsletter (archive + individual articles)
+const DigestArchive = lazyRetry(() => import('./pages/digest/DigestArchive'))
+const DigestArticle = lazyRetry(() => import('./pages/digest/DigestArticle'))
 // Internal /email/* email marketing (admin+ with email_marketing_public flag)
 const EmailPublicRouter = lazyRetry(() => import('./pages/email/EmailPublicRouter'))
 
@@ -130,6 +135,9 @@ export default function App() {
             <Route path="/pricing" element={<PricingPage />} />
             {/* Public unsubscribe (token-based, no login required) */}
             <Route path="/unsubscribe/:token" element={<UnsubscribePage />} />
+            {/* Public Digest archive + individual articles */}
+            <Route path="/digest" element={<DigestArchive />} />
+            <Route path="/digest/:slug" element={<DigestArticle />} />
             {/* Internal email marketing for admin+ when public flag is ON */}
             <Route path="/email/*" element={<ProtectedRoute><EmailPublicRouter /></ProtectedRoute>} />
 
@@ -207,6 +215,8 @@ export default function App() {
                             <Route path="/developer/qa-comments" element={<QACommentsReport />} />
                             <Route path="/developer/auto-qa" element={<AutoQAEngine />} />
                             <Route path="/developer/repair-prompts" element={<QARepairPrompts />} />
+                            <Route path="/developer/digest" element={<DigestAdminList />} />
+                            <Route path="/developer/digest/:id" element={<DigestEditor />} />
                             <Route path="/admin/upgrade-offer" element={<UpgradeOffer />} />
                             <Route path="/admin/automation" element={<AutomationControl />} />
                             <Route path="/admin/email-queue" element={<EmailQueue />} />

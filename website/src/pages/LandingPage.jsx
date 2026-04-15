@@ -3,6 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import EditableText, { EditableImage } from '@/components/cms/EditableText'
 import { useIndustryVisibility, shouldShowIndustry } from '@/hooks/useIndustryVisibility'
+import DigestSignupForm from '@/components/digest/DigestSignupForm'
+
+// Inline signup wrapper — dark-theme variant for the landing hero
+function DigestSignupInline() {
+  return <DigestSignupForm source="landing_page" compact brandLight={false} />
+}
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -230,6 +236,23 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                 >
                   Already have an account? Sign in
                 </button>
+              </motion.div>
+
+              {/* The Digest signup — monthly newsletter */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.75 }}
+                className="mt-8 pt-6 border-t border-border"
+              >
+                <div className="text-center mb-3">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-accent">The Digest</div>
+                  <div className="text-[11px] text-text-muted mt-1">One good article a month. Real estate, sports, marketing.</div>
+                </div>
+                <DigestSignupInline />
+                <div className="text-center mt-2">
+                  <Link to="/digest" className="text-[10px] text-text-muted hover:text-accent">Browse past issues →</Link>
+                </div>
               </motion.div>
 
               {/* Social proof row */}

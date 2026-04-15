@@ -95,18 +95,27 @@ grant execute on function count_ai_calls(uuid, text, integer) to authenticated, 
 -- ============================================================
 -- 2. CRON: auto-publish scheduled digest issues
 -- ============================================================
--- Runs every 5 minutes. The edge function URL + service key are
--- stored in database settings via pg_net.http_post.
+-- Runs every 5 minutes. Reads the service role key from Supabase
+-- Vault (vault.decrypted_secrets) instead of database settings.
 --
--- Set these values manually in the Supabase dashboard under
--- Database > Extensions > pg_cron, or run the following once:
+-- Supabase hosted blocks `alter database postgres set ...`, so the
+-- older `current_setting('app.service_role_key', true)` approach
+-- does not work on managed projects. Vault is the sanctioned
+-- alternative: the key is encrypted at rest and only readable by
+-- postgres-level code.
 --
---   select vault.create_secret('https://juaqategmrghsfkbaiap.functions.supabase.co', 'functions_base_url');
---   select vault.create_secret('YOUR_SERVICE_ROLE_KEY', 'service_role_key');
+-- OPERATOR STEP (required once after running this migration):
 --
--- The job below reads from app settings via current_setting().
--- If the settings aren't set, the cron job will log an error but
--- won't crash — nothing else depends on it.
+--   select vault.create_secret(
+--     '<your-service-role-key>',
+--     'service_role_key',
+--     'Used by digest-scheduled-publish cron'
+--   );
+--
+-- If the secret doesn't exist, the cron job still runs but the
+-- HTTP call is sent with `Authorization: Bearer ` (empty) and
+-- will fail auth at the edge function. Nothing crashes — the
+-- cron logs a 401 and waits for the next tick.
 
 -- Unschedule old versions of this job if they exist, so re-runs
 -- of this migration don't accumulate duplicates.
@@ -119,19 +128,24 @@ exception
     null;
 end $$;
 
--- Schedule the cron job. It POSTs to the edge function with the
--- service role bearer. If the settings aren't configured yet,
--- the job will be a no-op HTTP call but won't raise.
+-- Schedule the cron job. Reads the service role key from
+-- vault.decrypted_secrets where name = 'service_role_key'.
+-- If the secret isn't set yet, the subquery returns null,
+-- the Authorization header becomes 'Bearer ', and the edge
+-- function returns 401 — harmless, non-crashing no-op.
 select cron.schedule(
   'digest-scheduled-publish',
   '*/5 * * * *',  -- every 5 minutes
   $cron$
   select
     net.http_post(
-      url := coalesce(current_setting('app.functions_base_url', true), 'https://juaqategmrghsfkbaiap.functions.supabase.co') || '/digest-scheduled-publish',
+      url := 'https://juaqategmrghsfkbaiap.functions.supabase.co/digest-scheduled-publish',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
-        'Authorization', 'Bearer ' || coalesce(current_setting('app.service_role_key', true), '')
+        'Authorization', 'Bearer ' || coalesce(
+          (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key' limit 1),
+          ''
+        )
       ),
       body := '{}'::jsonb,
       timeout_milliseconds := 30000
@@ -162,14 +176,23 @@ select cron.schedule(
 -- ============================================================
 -- NOTE TO OPERATOR
 -- ============================================================
--- After running this migration, set the two app settings via SQL:
+-- After running this migration, store the service role key in
+-- Supabase Vault so the cron job above can authenticate to the
+-- edge function:
 --
---   alter database postgres set app.functions_base_url = 'https://juaqategmrghsfkbaiap.functions.supabase.co';
---   alter database postgres set app.service_role_key = '<your-service-role-key>';
+--   select vault.create_secret(
+--     '<your-service-role-key>',  -- copy from Dashboard > Settings > API
+--     'service_role_key',
+--     'Used by digest-scheduled-publish cron'
+--   );
 --
--- The second one is secret; put it in Supabase Vault instead if
--- you're security-conscious:
+-- To rotate the key later (e.g. if it leaks):
 --
---   select vault.create_secret('<key>', 'service_role_key');
+--   update vault.secrets
+--   set secret = '<new-key>'
+--   where name = 'service_role_key';
 --
+-- Supabase hosted does NOT allow `alter database postgres set ...`
+-- for parameters, so `current_setting('app.xxx')` will not work.
+-- Vault is the only workable mechanism.
 -- ============================================================

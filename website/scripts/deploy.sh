@@ -104,12 +104,81 @@ fi
 # ─── 2. Supabase CLI ────────────────────────────────────────
 header "Step 2/5: Supabase CLI"
 
+# Version to install if we need to fall back to the direct binary download.
+# Keep this in sync with whatever Homebrew would install, or bump it to the
+# latest from https://github.com/supabase/cli/releases
+SUPABASE_CLI_VERSION="2.90.0"
+
+install_supabase_via_binary() {
+  warn "Falling back to direct binary download (skips Homebrew / Xcode tools)"
+  local arch os tarball url tmp_tar
+  arch="$(uname -m)"
+  os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+
+  # Map arch names to what supabase-cli releases use
+  case "$arch" in
+    arm64|aarch64) arch="arm64" ;;
+    x86_64)        arch="amd64" ;;
+    *) error "Unsupported architecture: $arch"; return 1 ;;
+  esac
+
+  case "$os" in
+    darwin) tarball="supabase_darwin_${arch}.tar.gz" ;;
+    linux)  tarball="supabase_linux_${arch}.tar.gz" ;;
+    *) error "Unsupported OS: $os"; return 1 ;;
+  esac
+
+  url="https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/${tarball}"
+  tmp_tar="$(mktemp -t supabase-cli.XXXXXX).tar.gz"
+
+  info "Downloading $url"
+  curl -fsSL "$url" -o "$tmp_tar" || { error "Download failed"; return 1; }
+
+  local extract_dir
+  extract_dir="$(mktemp -d -t supabase-cli.XXXXXX)"
+  tar -xzf "$tmp_tar" -C "$extract_dir" || { error "Extract failed"; return 1; }
+
+  # Prefer /opt/homebrew/bin (Apple Silicon brew, already in PATH) or /usr/local/bin (Intel brew / legacy)
+  local target_dir=""
+  if [[ -d "/opt/homebrew/bin" ]]; then
+    target_dir="/opt/homebrew/bin"
+  elif [[ -d "/usr/local/bin" ]]; then
+    target_dir="/usr/local/bin"
+  else
+    error "Neither /opt/homebrew/bin nor /usr/local/bin exists. Install supabase manually."
+    return 1
+  fi
+
+  info "Installing to $target_dir/supabase (may prompt for sudo password)"
+  sudo mv "$extract_dir/supabase" "$target_dir/supabase" || return 1
+  sudo chmod +x "$target_dir/supabase" || true
+  rm -f "$tmp_tar"
+  rm -rf "$extract_dir"
+  return 0
+}
+
 if command -v supabase >/dev/null 2>&1; then
   success "Supabase CLI already installed: $(supabase --version)"
 else
-  warn "Supabase CLI not found. Installing..."
-  brew install supabase/tap/supabase
-  success "Supabase CLI installed: $(supabase --version)"
+  warn "Supabase CLI not found. Trying Homebrew first..."
+  if brew install supabase/tap/supabase 2>&1 | tee /tmp/supabase-brew-install.log; then
+    success "Supabase CLI installed via Homebrew"
+  else
+    # Common failure: outdated Command Line Tools. Fall back to binary.
+    if grep -q "Command Line Tools are too outdated" /tmp/supabase-brew-install.log 2>/dev/null; then
+      warn "Brew failed due to outdated Xcode Command Line Tools."
+    else
+      warn "Brew install failed (see above). Trying direct binary install..."
+    fi
+    if install_supabase_via_binary; then
+      success "Supabase CLI installed: $(supabase --version)"
+    else
+      error "Supabase CLI install failed both ways. Manual fix:"
+      echo "  1. Update Xcode Command Line Tools via Software Update, OR"
+      echo "  2. Download manually from https://github.com/supabase/cli/releases"
+      exit 1
+    fi
+  fi
 fi
 
 # ─── 3. Login + link ────────────────────────────────────────

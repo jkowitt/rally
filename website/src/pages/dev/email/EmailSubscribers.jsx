@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import * as subService from '@/services/email/subscriberService'
+import * as listService from '@/services/email/emailListService'
 
 export default function EmailSubscribers() {
   const { profile } = useAuth()
@@ -54,6 +55,7 @@ export default function EmailSubscribers() {
   }
 
   async function handleAddSubscriber(fields) {
+    // First, create the master email_subscribers row
     const r = await subService.createSubscriber(
       {
         email: fields.email.trim().toLowerCase(),
@@ -69,6 +71,16 @@ export default function EmailSubscribers() {
     if (!r.success) {
       alert(r.error || 'Failed to add subscriber')
       return { ok: false }
+    }
+    // Then, if the user selected one or more lists, add the new
+    // subscriber to each via the email_list_subscribers junction.
+    // Without this step the subscriber exists but belongs to no
+    // lists, meaning campaigns that target those lists will send
+    // to 0 recipients — which is the bug we're fixing here.
+    if (fields.list_ids && fields.list_ids.length > 0) {
+      for (const listId of fields.list_ids) {
+        await listService.addSubscribersToList(listId, [r.subscriber.id], 'manual')
+      }
     }
     setShowAdd(false)
     reload()
@@ -218,9 +230,43 @@ function EngagementBadge({ score }) {
 }
 
 function AddSubscriberModal({ onClose, onSave }) {
-  const [fields, setFields] = useState({ first_name: '', last_name: '', email: '', organization: '' })
+  const [fields, setFields] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    organization: '',
+    list_ids: [],
+  })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [availableLists, setAvailableLists] = useState([])
+  const [loadingLists, setLoadingLists] = useState(true)
+
+  // Load the available lists once when the modal opens so the user
+  // can pick which ones to enroll the new subscriber in. If there
+  // are no lists yet, we show a note pointing them at /app/marketing/
+  // email/lists to create one first.
+  useEffect(() => {
+    let mounted = true
+    async function loadLists() {
+      const result = await listService.listLists()
+      if (mounted) {
+        setAvailableLists(result?.lists || [])
+        setLoadingLists(false)
+      }
+    }
+    loadLists()
+    return () => { mounted = false }
+  }, [])
+
+  function toggleList(listId) {
+    setFields(prev => ({
+      ...prev,
+      list_ids: prev.list_ids.includes(listId)
+        ? prev.list_ids.filter(id => id !== listId)
+        : [...prev.list_ids, listId],
+    }))
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -293,6 +339,42 @@ function AddSubscriberModal({ onClose, onSave }) {
               placeholder="Acme Inc."
               className="w-full bg-bg-card border border-border rounded px-2 py-2 focus:outline-none focus:border-accent"
             />
+          </div>
+          <div>
+            <label className="block text-text-muted mb-1">
+              Add to lists <span className="text-text-muted">(select at least one so campaigns can reach them)</span>
+            </label>
+            {loadingLists ? (
+              <div className="text-[11px] text-text-muted py-2">Loading lists…</div>
+            ) : availableLists.length === 0 ? (
+              <div className="text-[11px] text-warning bg-warning/10 border border-warning/30 rounded p-2">
+                No lists exist yet.{' '}
+                <Link to="/app/marketing/email/lists" className="underline">
+                  Create a list first
+                </Link>{' '}
+                — otherwise this subscriber won't be reachable by any campaign.
+              </div>
+            ) : (
+              <div className="bg-bg-card border border-border rounded p-2 max-h-32 overflow-y-auto space-y-1">
+                {availableLists.map(list => (
+                  <label
+                    key={list.id}
+                    className="flex items-center gap-2 text-xs text-text-primary cursor-pointer py-1 px-1 hover:bg-bg-surface rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={fields.list_ids.includes(list.id)}
+                      onChange={() => toggleList(list.id)}
+                      className="accent-accent"
+                    />
+                    <span className="flex-1 truncate">{list.name}</span>
+                    <span className="text-[10px] text-text-muted font-mono shrink-0">
+                      {list.active_count ?? 0}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
           {error && <div className="text-danger text-[11px]">{error}</div>}
           <div className="flex gap-2 pt-2">

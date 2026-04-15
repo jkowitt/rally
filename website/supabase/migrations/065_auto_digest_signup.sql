@@ -31,6 +31,8 @@ declare
   v_first_name text;
   v_last_name text;
   v_existing uuid;
+  v_subscriber_id uuid;
+  v_digest_list_id uuid;
   v_space_pos integer;
 begin
   -- Pull email + name from the profile row
@@ -67,6 +69,7 @@ begin
       tags = array(select distinct unnest(coalesce(tags, '{}'::text[]) || array['digest', 'platform_user'])),
       updated_at = now()
     where id = v_existing;
+    v_subscriber_id := v_existing;
   else
     -- Create a new active subscriber. Defensive ON CONFLICT DO NOTHING
     -- in case a concurrent transaction inserted a matching row between
@@ -93,7 +96,40 @@ begin
       now(),
       now()
     )
-    on conflict (property_id, email) do nothing;
+    on conflict (property_id, email) do nothing
+    returning id into v_subscriber_id;
+
+    -- If the INSERT was skipped by ON CONFLICT (rare race condition),
+    -- look up the id so we can still add them to the list below.
+    if v_subscriber_id is null then
+      select id into v_subscriber_id
+      from email_subscribers
+      where lower(email) = v_email
+      limit 1;
+    end if;
+  end if;
+
+  -- Enroll the subscriber in the "Digest Subscribers" list via the
+  -- email_list_subscribers junction. Without this, the master
+  -- email_subscribers row exists but belongs to no lists, meaning
+  -- the digest-scheduled-publish cron finds 0 recipients when it
+  -- tries to send the next issue.
+  --
+  -- The list is identified by list_type='newsletter' AND 'digest' in
+  -- tags. This matches the convention in digestIssueService.js and
+  -- the digest-scheduled-publish edge function.
+  if v_subscriber_id is not null then
+    select id into v_digest_list_id
+    from email_lists
+    where list_type = 'newsletter'
+      and 'digest' = any(tags)
+    limit 1;
+
+    if v_digest_list_id is not null then
+      insert into email_list_subscribers (list_id, subscriber_id, source, status)
+      values (v_digest_list_id, v_subscriber_id, 'signup', 'active')
+      on conflict (list_id, subscriber_id) do nothing;
+    end if;
   end if;
 
   return new;
@@ -171,3 +207,66 @@ set tags = array(select distinct unnest(coalesce(e.tags, '{}'::text[]) || array[
 from profiles p
 where lower(e.email) = lower(p.email)
   and not (coalesce(e.tags, '{}'::text[]) @> array['digest']);
+
+-- ============================================================
+-- LIST MEMBERSHIP: auto-create the Digest list and enroll everyone
+-- ============================================================
+-- The subscriber→list link lives in the email_list_subscribers
+-- junction table. Without a junction row, a subscriber belongs to
+-- no lists and no campaign can target them — which is exactly what
+-- caused "Will send to ~0 subscribers" in the campaign builder
+-- even when the master email_subscribers table had rows.
+--
+-- This block:
+--   1. Ensures a list named "The Digest Subscribers" exists with
+--      list_type='newsletter' and tags=['digest']. This matches the
+--      convention used by digestIssueService.js and the cron job.
+--   2. Enrolls every email_subscriber that has 'digest' in its tags
+--      into that list via email_list_subscribers.
+--
+-- Safe to re-run: the list upsert is idempotent on name, and the
+-- enrollment insert uses ON CONFLICT DO NOTHING.
+
+-- email_lists has no unique constraint on name, so use a conditional
+-- insert guarded by NOT EXISTS instead of ON CONFLICT. This matches
+-- the find-or-create pattern used by digestIssueService.js and the
+-- digest-scheduled-publish edge function.
+insert into email_lists (name, description, list_type, tags, is_public)
+select
+  'The Digest Subscribers',
+  'Everyone subscribed to The Digest by Loud Legacy Ventures. Auto-enrolled from platform signups and landing page form submissions.',
+  'newsletter',
+  array['digest'],
+  false
+where not exists (
+  select 1 from email_lists
+  where list_type = 'newsletter'
+    and 'digest' = any(tags)
+);
+
+-- Enroll all tagged subscribers into the list.
+insert into email_list_subscribers (list_id, subscriber_id, source, status)
+select
+  l.id,
+  s.id,
+  'signup',
+  'active'
+from email_lists l
+cross join email_subscribers s
+where l.list_type = 'newsletter'
+  and 'digest' = any(l.tags)
+  and 'digest' = any(coalesce(s.tags, '{}'::text[]))
+  and s.status = 'active'
+on conflict (list_id, subscriber_id) do nothing;
+
+-- Refresh the denormalized subscriber counters on email_lists so
+-- the UI shows the right count immediately (instead of waiting
+-- for the next natural recount). This replicates what the
+-- refreshListCounts() service function does.
+update email_lists l
+set
+  subscriber_count = (select count(*) from email_list_subscribers where list_id = l.id),
+  active_count = (select count(*) from email_list_subscribers where list_id = l.id and status = 'active'),
+  updated_at = now()
+where l.list_type = 'newsletter'
+  and 'digest' = any(l.tags);

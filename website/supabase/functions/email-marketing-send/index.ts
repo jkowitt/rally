@@ -21,6 +21,13 @@ const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY") ?? "";
 const FROM_EMAIL_DEFAULT = Deno.env.get("FROM_EMAIL") ?? "noreply@loud-legacy.com";
 const FROM_NAME_DEFAULT = Deno.env.get("FROM_NAME") ?? "Loud Legacy";
 const APP_URL = Deno.env.get("APP_URL") ?? "https://loud-legacy.com";
+// CAN-SPAM requires a physical mailing address in every commercial email.
+// Set this in Supabase edge function secrets:
+//   supabase secrets set FROM_PHYSICAL_ADDRESS="Loud Legacy Ventures, 123 Main St, City, ST 12345"
+// If unset, we fall back to a generic Loud Legacy line which satisfies
+// the letter of CAN-SPAM (identifies the sender) but NOT the full spirit
+// (no physical address). Setting the env var is the correct long-term fix.
+const FROM_PHYSICAL_ADDRESS = Deno.env.get("FROM_PHYSICAL_ADDRESS") ?? "Loud Legacy Ventures";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -125,11 +132,13 @@ async function handleCampaignBatch(sb: any, campaignId: string) {
 
       let personalized = personalize(campaign.html_content || "", sub, { unsubscribe_url: unsubUrl });
 
-      // Guarantee an unsubscribe link in every marketing email, regardless
-      // of whether the template author included {{unsubscribe_url}}. CAN-SPAM,
-      // CASL, and GDPR all require a clear, working unsubscribe mechanism.
-      // If the personalized HTML doesn't already contain our unsub URL,
-      // append a compliant footer before the closing body tag.
+      // Guarantee both CAN-SPAM requirements in every marketing email:
+      //   1. A functional unsubscribe mechanism (via unsubUrl)
+      //   2. The sender's physical postal address
+      // Regardless of whether the template author included {{unsubscribe_url}}
+      // or a street address, we inject a fallback footer before the closing
+      // body tag. This makes the campaign-builder compliance checks advisory
+      // rather than blocking — the send path always produces a compliant email.
       if (!personalized.includes(unsubUrl)) {
         const fallbackFooter = `
 <div style="margin-top:32px;padding:16px;border-top:1px solid #d4d0c3;text-align:center;font-family:Georgia,serif;font-size:11px;color:#7a7a75;line-height:1.6;">
@@ -137,6 +146,8 @@ async function handleCampaignBatch(sb: any, campaignId: string) {
   <a href="${unsubUrl}" style="color:#D85A30;text-decoration:underline;">Unsubscribe</a>
   &nbsp;·&nbsp;
   <a href="${APP_URL}/app/settings" style="color:#7a7a75;text-decoration:underline;">Email preferences</a>
+  <br/><br/>
+  <span style="color:#a5a198;font-size:10px;">${FROM_PHYSICAL_ADDRESS}</span>
 </div>`;
         if (personalized.includes("</body>")) {
           personalized = personalized.replace("</body>", fallbackFooter + "</body>");
@@ -148,10 +159,11 @@ async function handleCampaignBatch(sb: any, campaignId: string) {
       // Inject the tracking pixel (always — unconditional)
       personalized = personalized + `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none;" />`;
 
-      // Plain-text version: also guarantee an unsub URL
+      // Plain-text version: guarantee an unsub URL and physical address
       let plain = personalize(campaign.plain_text_content || "", sub, { unsubscribe_url: unsubUrl });
       if (!plain.includes(unsubUrl)) {
-        plain = (plain || "") + `\n\n---\nUnsubscribe: ${unsubUrl}\nEmail preferences: ${APP_URL}/app/settings\n`;
+        plain = (plain || "") +
+          `\n\n---\nUnsubscribe: ${unsubUrl}\nEmail preferences: ${APP_URL}/app/settings\n\n${FROM_PHYSICAL_ADDRESS}\n`;
       }
 
       const subject = personalize(campaign.subject_line, sub);

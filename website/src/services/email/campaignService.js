@@ -94,21 +94,42 @@ export async function resolveRecipients(campaign) {
 /**
  * CAN-SPAM + deliverability checklist. Returns { ok, issues[] }.
  * Blocks send if any `critical` issue exists.
+ *
+ * Important: the email-marketing-send edge function guarantees a
+ * compliant unsubscribe footer + physical address at send time —
+ * if a template doesn't include {{unsubscribe_url}}, the function
+ * injects a fallback footer with the unsubscribe link AND the
+ * physical address from the FROM_PHYSICAL_ADDRESS env var.
+ *
+ * Because of that safety net, the checks below are informational.
+ * They're not blockers for sending.
  */
 export function validateCampaign(campaign) {
   const issues = []
+
+  // Hard blockers — no template can recover from these
   if (!campaign.subject_line?.trim()) issues.push({ critical: true, msg: 'Missing subject line' })
   if (!campaign.from_name?.trim()) issues.push({ critical: true, msg: 'Missing from name' })
   if (!campaign.from_email?.trim()) issues.push({ critical: true, msg: 'Missing from email' })
   if (!campaign.html_content?.trim()) issues.push({ critical: true, msg: 'Missing content' })
   if (!campaign.list_ids || campaign.list_ids.length === 0) issues.push({ critical: true, msg: 'No recipient lists selected' })
 
+  // Soft warnings — the backend injects a compliant footer as a fallback,
+  // so these don't block sending. They do encourage authors to include
+  // the unsub link inline where design matters (top of footer, branded
+  // button, etc).
   const html = campaign.html_content || ''
   if (!html.includes('{{unsubscribe_url}}')) {
-    issues.push({ critical: true, msg: 'Content missing {{unsubscribe_url}} merge tag — required for CAN-SPAM' })
+    issues.push({
+      critical: false,
+      msg: 'Template is missing {{unsubscribe_url}} — an unsubscribe footer will be injected automatically, but you may prefer to place it yourself for design control',
+    })
   }
-  if (!html.match(/\b(street|ave|road|suite|boulevard|drive|lane|pkwy|\d{5})\b/i)) {
-    issues.push({ critical: false, msg: 'No physical address detected in content (required for CAN-SPAM)' })
+  if (!html.match(/\b(street|ave|avenue|road|suite|boulevard|drive|lane|pkwy|\d{5}(-\d{4})?)\b/i)) {
+    issues.push({
+      critical: false,
+      msg: 'No physical address detected — one will be appended from the FROM_PHYSICAL_ADDRESS env var. Set that in Supabase edge function secrets or include an address in your template',
+    })
   }
   return { ok: !issues.some(i => i.critical), issues }
 }

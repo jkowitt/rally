@@ -22,7 +22,7 @@ export default function CampaignAnalytics() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
       <header>
-        <Link to="/dev/email/campaigns" className="text-[10px] text-text-muted hover:text-accent">← Campaigns</Link>
+        <Link to="/app/marketing/email/campaigns" className="text-[10px] text-text-muted hover:text-accent">← Campaigns</Link>
         <h2 className="text-xl font-semibold mt-1">{campaign.name}</h2>
         <p className="text-[11px] text-text-muted">{campaign.subject_line}</p>
       </header>
@@ -68,7 +68,7 @@ export default function CampaignAnalytics() {
                   <td className="p-2"><span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-bg-surface">{r.status}</span></td>
                   <td className="p-2 text-[10px] text-text-muted">{new Date(r.last_message_at).toLocaleString()}</td>
                   <td className="p-2 text-right">
-                    <Link to={`/dev/email/conversations/${r.id}`} className="text-[10px] text-accent hover:underline">Open</Link>
+                    <Link to={`/app/marketing/email/conversations/${r.id}`} className="text-[10px] text-accent hover:underline">Open</Link>
                   </td>
                 </tr>
               ))}

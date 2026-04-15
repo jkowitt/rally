@@ -90,7 +90,7 @@ export default function CampaignBuilder() {
     setSending(false)
     if (r.success) {
       alert(`Sending started — ${r.total} recipients queued`)
-      navigate(`/dev/email/campaigns/${campaign.id}/analytics`)
+      navigate(`/app/marketing/email/campaigns/${campaign.id}/analytics`)
     } else {
       alert(`Failed: ${r.error}\n${(r.issues || []).map(i => i.msg).join('\n')}`)
     }
@@ -100,7 +100,7 @@ export default function CampaignBuilder() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-5">
       <header className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <Link to="/dev/email/campaigns" className="text-[10px] text-text-muted hover:text-accent">← Campaigns</Link>
+          <Link to="/app/marketing/email/campaigns" className="text-[10px] text-text-muted hover:text-accent">← Campaigns</Link>
           <h2 className="text-xl font-semibold mt-1">{campaign.name || 'New Campaign'}</h2>
           <p className="text-[11px] text-text-muted">Step {step} of 4 {saving && '· saving…'}</p>
         </div>

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 /**
- * /dev/email/settings — high-level email marketing configuration.
+ * /app/marketing/email/settings — high-level email marketing configuration.
  * Most provider-level settings (Resend API key, webhook URLs) live
  * in Supabase Edge Function secrets and DNS records. This page
  * documents them and links to setup docs.
@@ -58,7 +58,7 @@ export default function EmailSettings() {
 
       <div className="bg-bg-card border border-border rounded-lg p-4 text-xs">
         <div className="text-sm font-semibold mb-2">Full setup guide</div>
-        <Link to="#" className="text-accent hover:underline">docs/dev/email-marketing-setup.md</Link>
+        <Link to="#" className="text-accent hover:underline">docs/app/marketing/email-marketing-setup.md</Link>
         <div className="text-[10px] text-text-muted mt-1">Includes DNS records, webhook configuration, and inbound routing setup.</div>
       </div>
     </div>

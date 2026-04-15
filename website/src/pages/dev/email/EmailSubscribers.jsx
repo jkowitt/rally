@@ -57,7 +57,7 @@ export default function EmailSubscribers() {
           <h2 className="text-xl font-semibold">Subscribers</h2>
           <p className="text-[11px] text-text-muted">{total} total</p>
         </div>
-        <Link to="/dev/email/import" className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50">Import</Link>
+        <Link to="/app/marketing/email/import" className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50">Import</Link>
       </header>
 
       <div className="flex items-center gap-2 flex-wrap border-b border-border pb-2">

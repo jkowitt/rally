@@ -107,7 +107,7 @@ export default function EmailConversations() {
           {conversations.map(c => (
             <button
               key={c.id}
-              onClick={() => { navigate(`/dev/email/conversations/${c.id}`); openConversation(c.id) }}
+              onClick={() => { navigate(`/app/marketing/email/conversations/${c.id}`); openConversation(c.id) }}
               className={`w-full text-left p-3 border-b border-border hover:bg-bg-card ${active?.id === c.id ? 'bg-bg-card border-l-2 border-l-accent' : ''}`}
             >
               <div className="flex items-center gap-2">

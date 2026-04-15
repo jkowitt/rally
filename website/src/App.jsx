@@ -95,6 +95,9 @@ const DigestArchive = lazyRetry(() => import('./pages/digest/DigestArchive'))
 const DigestArticle = lazyRetry(() => import('./pages/digest/DigestArticle'))
 // Internal /email/* email marketing (admin+ with email_marketing_public flag)
 const EmailPublicRouter = lazyRetry(() => import('./pages/email/EmailPublicRouter'))
+// Email marketing inside the authenticated app shell — shared between
+// developers and admin+ users (gated by useEmailMarketingAccess)
+const EmailRouter = lazyRetry(() => import('./pages/dev/email/EmailRouter'))
 
 function PageLoader() {
   return (
@@ -225,6 +228,10 @@ export default function App() {
                             <Route path="/admin/ads" element={<AdminAds />} />
                             <Route path="/admin/notifications" element={<AdminNotifications />} />
                             <Route path="/admin/daily-digest" element={<DailyDigestPreview />} />
+                            {/* Email Marketing — gated by useEmailMarketingAccess
+                                which allows devs + email_marketing_developer OR
+                                admin/businessops + email_marketing_public. */}
+                            <Route path="/marketing/email/*" element={<EmailRouter />} />
                             <Route path="/growth" element={<GrowthHub />} />
                             <Route path="*" element={<Navigate to="/app" replace />} />
                           </Routes>

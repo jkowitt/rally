@@ -5,7 +5,7 @@ import * as sync from '@/services/email/pipelineSyncService'
 import * as listService from '@/services/email/emailListService'
 
 /**
- * /dev/email/sync — bulk pipeline sync UI.
+ * /app/marketing/email/sync — bulk pipeline sync UI.
  * Shows CRM contacts not yet in email marketing, lets user select and sync.
  */
 export default function EmailSync() {
@@ -66,7 +66,7 @@ export default function EmailSync() {
           <h2 className="text-xl font-semibold">Pipeline Sync</h2>
           <p className="text-[11px] text-text-muted">Sync CRM contacts into email marketing lists</p>
         </div>
-        <Link to="/dev/email/sync-settings" className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50">Auto-sync settings</Link>
+        <Link to="/app/marketing/email/sync-settings" className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50">Auto-sync settings</Link>
       </header>
 
       {loading && <div className="text-xs text-text-muted">Loading contacts…</div>}

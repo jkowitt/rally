@@ -87,6 +87,15 @@ function getNavSections(t, propertyType) {
 export default function Sidebar({ collapsed, onToggle, mobile }) {
   const { flags } = useFeatureFlags()
   const { isDeveloper, profile } = useAuth()
+
+  // Email marketing is visible to admin+ when the public flag is on,
+  // OR to developers when the developer flag is on. Mirrors the
+  // useEmailMarketingAccess hook used by the route itself.
+  const emailMarketingRole = profile?.role
+  const hasAdminPlusRole = emailMarketingRole === 'developer' || emailMarketingRole === 'businessops' || emailMarketingRole === 'admin'
+  const showEmailMarketing =
+    (isDeveloper && flags.email_marketing_developer) ||
+    (hasAdminPlusRole && flags.email_marketing_public)
   const config = useIndustryConfig()
   const moduleLabels = config.moduleLabels || {}
   const t = config.terminology || {}
@@ -167,6 +176,40 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
               }
             >
               {showLabels && <span>Declined</span>}
+            </NavLink>
+          </div>
+        )}
+
+        {/* Email Marketing — admin+ with email_marketing_public flag, or
+            developer with email_marketing_developer flag. Mirrors the
+            RLS helper can_access_email_marketing() in migration 054. */}
+        {showEmailMarketing && (
+          <div className="mb-4">
+            {!collapsed && (
+              <div className="px-4 mb-1 text-[10px] uppercase tracking-widest text-text-muted font-mono">
+                Marketing
+              </div>
+            )}
+            <NavLink
+              to="/app/marketing/email"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
+                  isActive
+                    ? 'text-accent bg-accent/5 border-r-2 border-accent'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
+                } ${!showLabels ? 'justify-center' : ''}`
+              }
+            >
+              {showLabels && (
+                <span className="flex items-center gap-2">
+                  Email Marketing
+                  {!isDeveloper && (
+                    <span className="text-[8px] font-mono uppercase tracking-widest px-1 py-0.5 rounded bg-accent/15 text-accent">
+                      BETA
+                    </span>
+                  )}
+                </span>
+              )}
             </NavLink>
           </div>
         )}

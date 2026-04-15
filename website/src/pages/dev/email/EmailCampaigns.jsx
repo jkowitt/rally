@@ -28,7 +28,7 @@ export default function EmailCampaigns() {
           <h2 className="text-xl font-semibold">Campaigns</h2>
           {stats && <p className="text-[11px] text-text-muted">{stats.total} total · {stats.draft} draft · {stats.scheduled} scheduled · {stats.sent} sent</p>}
         </div>
-        <Link to="/dev/email/campaigns/new" className="text-xs px-3 py-1.5 bg-accent text-bg-primary rounded font-semibold">+ New Campaign</Link>
+        <Link to="/app/marketing/email/campaigns/new" className="text-xs px-3 py-1.5 bg-accent text-bg-primary rounded font-semibold">+ New Campaign</Link>
       </header>
 
       <div className="flex gap-1 border-b border-border">
@@ -60,12 +60,12 @@ export default function EmailCampaigns() {
           <tbody>
             {loading && <tr><td colSpan={8} className="p-4 text-center text-text-muted">Loading…</td></tr>}
             {!loading && campaigns.length === 0 && (
-              <tr><td colSpan={8} className="p-4 text-center text-text-muted">No campaigns yet. <Link to="/dev/email/campaigns/new" className="text-accent">Create one</Link></td></tr>
+              <tr><td colSpan={8} className="p-4 text-center text-text-muted">No campaigns yet. <Link to="/app/marketing/email/campaigns/new" className="text-accent">Create one</Link></td></tr>
             )}
             {campaigns.map(c => (
               <tr key={c.id} className="border-t border-border">
                 <td className="p-2">
-                  <Link to={`/dev/email/campaigns/${c.id}/edit`} className="text-text-primary hover:text-accent">{c.name}</Link>
+                  <Link to={`/app/marketing/email/campaigns/${c.id}/edit`} className="text-text-primary hover:text-accent">{c.name}</Link>
                   <div className="text-[10px] text-text-muted truncate max-w-xs">{c.subject_line}</div>
                 </td>
                 <td className="p-2"><StatusBadge status={c.status} /></td>
@@ -74,14 +74,14 @@ export default function EmailCampaigns() {
                 <td className="p-2 text-right text-success">{Number(c.click_rate || 0).toFixed(1)}</td>
                 <td className="p-2 text-right text-accent">
                   {c.reply_count > 0 ? (
-                    <Link to={`/dev/email/conversations?campaign=${c.id}`} className="hover:underline">
+                    <Link to={`/app/marketing/email/conversations?campaign=${c.id}`} className="hover:underline">
                       {Number(c.reply_rate || 0).toFixed(1)} ({c.reply_count})
                     </Link>
                   ) : '—'}
                 </td>
                 <td className="p-2 text-[10px] text-text-muted">{c.sent_at ? new Date(c.sent_at).toLocaleDateString() : '—'}</td>
                 <td className="p-2 text-right">
-                  <Link to={`/dev/email/campaigns/${c.id}/analytics`} className="text-[10px] text-accent hover:underline">Stats</Link>
+                  <Link to={`/app/marketing/email/campaigns/${c.id}/analytics`} className="text-[10px] text-accent hover:underline">Stats</Link>
                 </td>
               </tr>
             ))}

@@ -111,7 +111,7 @@ export default function DevConsole() {
               <DevLink to="/dev/outlook/templates" label="Templates" desc="Email templates" />
               <DevLink to="/dev/outlook/analytics" label="Analytics" desc="Funnel + conversion" />
               <DevLink to="/dev/outlook/connect" label="Connection" desc="OAuth + status" />
-              <DevLink to="/dev/email" label="Email Marketing" desc="Campaigns + lists" />
+              <DevLink to="/app/marketing/email" label="Email Marketing" desc="Campaigns + lists" external />
               <DevLink to="/dev/pricing" label="Pricing Control" desc="Plans, credits, addons" />
               <DevLink to="/dev/feature-flags" label="Feature Flags" desc="All flags (incl. hidden)" />
               <DevLink to="/dev/flag-audit" label="Flag Audit" desc="Graveyard + lifecycle" />

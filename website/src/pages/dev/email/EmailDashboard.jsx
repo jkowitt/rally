@@ -4,8 +4,10 @@ import { getDashboardMetrics, getTopCampaigns } from '@/services/email/emailAnal
 import { getRecentAddsCount } from '@/services/email/emailListService'
 
 /**
- * /dev/email — Email marketing dashboard with 30-day rollups,
- * conversation widgets, and top-campaign list.
+ * /app/marketing/email — Email marketing dashboard with 30-day rollups,
+ * conversation widgets, and top-campaign list. First-run accounts
+ * (zero subscribers + zero campaigns) see a getting-started card
+ * instead of empty metric tiles.
  */
 export default function EmailDashboard() {
   const [metrics, setMetrics] = useState(null)
@@ -26,11 +28,20 @@ export default function EmailDashboard() {
 
   if (!metrics) return <div className="p-6 text-xs text-text-muted">Loading…</div>
 
+  // First-run: zero subscribers AND zero sends AND no campaigns
+  // → show getting-started card instead of empty dashboard.
+  const isFirstRun =
+    (metrics.totalSubscribers || 0) === 0 &&
+    (metrics.emailsSent30 || 0) === 0 &&
+    topCampaigns.length === 0
+
+  if (isFirstRun) return <GettingStarted />
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       {recentAdds > 0 && (
         <Link
-          to="/dev/email/subscribers?recent=1"
+          to="/app/marketing/email/subscribers?recent=1"
           className="block bg-accent/10 border border-accent/40 rounded-lg p-3 text-sm text-accent hover:bg-accent/15"
         >
           {recentAdds} new contact{recentAdds !== 1 ? 's' : ''} synced from pipeline in the last 72 hours — View new adds →
@@ -56,20 +67,20 @@ export default function EmailDashboard() {
           label="Unread conversations"
           value={metrics.unreadConversations}
           action="View"
-          to="/dev/email/conversations"
+          to="/app/marketing/email/conversations"
           color={metrics.unreadConversations > 0 ? 'accent' : 'muted'}
         />
         <QuickWidget
           label="Open conversations"
           value={metrics.openConversations}
           action="Open"
-          to="/dev/email/conversations"
+          to="/app/marketing/email/conversations"
         />
         <QuickWidget
           label="Pipeline new adds"
           value={recentAdds}
           action="Review"
-          to="/dev/email/subscribers?recent=1"
+          to="/app/marketing/email/subscribers?recent=1"
         />
       </section>
 
@@ -91,7 +102,7 @@ export default function EmailDashboard() {
               {topCampaigns.map(c => (
                 <tr key={c.id} className="border-t border-border">
                   <td className="p-3">
-                    <Link to={`/dev/email/campaigns/${c.id}/analytics`} className="text-text-primary hover:text-accent">
+                    <Link to={`/app/marketing/email/campaigns/${c.id}/analytics`} className="text-text-primary hover:text-accent">
                       {c.name}
                     </Link>
                   </td>
@@ -103,7 +114,7 @@ export default function EmailDashboard() {
                 </tr>
               ))}
               {topCampaigns.length === 0 && (
-                <tr><td colSpan={6} className="p-4 text-center text-text-muted">No campaigns sent yet — <Link to="/dev/email/campaigns/new" className="text-accent">create one</Link></td></tr>
+                <tr><td colSpan={6} className="p-4 text-center text-text-muted">No campaigns sent yet — <Link to="/app/marketing/email/campaigns/new" className="text-accent">create one</Link></td></tr>
               )}
             </tbody>
           </table>
@@ -138,6 +149,79 @@ function QuickWidget({ label, value, action, to, color = 'accent' }) {
       </div>
       <Link to={to} className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50 hover:text-accent">
         {action}
+      </Link>
+    </div>
+  )
+}
+
+/**
+ * First-run onboarding. Shown when the account has zero subscribers,
+ * zero campaigns, and zero sends in the last 30 days. Walks the user
+ * through the three steps needed to get an email out the door.
+ */
+function GettingStarted() {
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+      <header className="text-center space-y-2">
+        <div className="text-[10px] font-mono uppercase tracking-widest text-accent">Email Marketing</div>
+        <h1 className="text-3xl font-semibold">Let's send your first campaign.</h1>
+        <p className="text-sm text-text-secondary max-w-xl mx-auto">
+          Email Marketing runs on the same subscriber database as the rest of Rally.
+          Three quick steps and you're ready to ship. Nothing is sent until you hit Send.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Step
+          num={1}
+          title="Create a list"
+          body="Lists group subscribers by source or segment — prospects, trials, customers, or a custom slice you build. Your first list takes 10 seconds."
+          cta="Create a list"
+          to="/app/marketing/email/lists"
+        />
+        <Step
+          num={2}
+          title="Add subscribers"
+          body="Import a CSV, sync contacts from your deal pipeline, or let the existing Digest signup form populate your list automatically."
+          cta="Import or sync"
+          to="/app/marketing/email/import"
+        />
+        <Step
+          num={3}
+          title="Build a campaign"
+          body="Pick a list, write the email, preview it on desktop and mobile, and schedule or send. Analytics appear the moment the first open lands."
+          cta="Draft a campaign"
+          to="/app/marketing/email/campaigns/new"
+        />
+      </div>
+
+      <div className="bg-bg-card border border-border rounded-lg p-5">
+        <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-3">Good to know</div>
+        <ul className="space-y-2 text-xs text-text-secondary">
+          <li>• <strong className="text-text-primary">Deliverability:</strong> we send via Resend (primary) and SendGrid (fallback). Emails are signed with SPF + DKIM against loud-legacy.com — no configuration on your end.</li>
+          <li>• <strong className="text-text-primary">Unsubscribe:</strong> every email includes a one-click token-based unsubscribe link and a proper List-Unsubscribe header for Gmail/Outlook compliance.</li>
+          <li>• <strong className="text-text-primary">Tracking:</strong> opens and clicks are captured with a tracking pixel + redirect links. You can turn both off per-campaign in campaign settings.</li>
+          <li>• <strong className="text-text-primary">Suppression list:</strong> bounced and complained addresses are added to a global suppression list automatically. They'll never receive another email, even across lists.</li>
+          <li>• <strong className="text-text-primary">Templates:</strong> save any campaign as a template to reuse. The Digest by Loud Legacy uses the same pipeline.</li>
+        </ul>
+      </div>
+    </div>
+  )
+}
+
+function Step({ num, title, body, cta, to }) {
+  return (
+    <div className="bg-bg-card border border-border rounded-lg p-5 flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <div className="w-6 h-6 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-semibold">{num}</div>
+        <div className="text-sm font-semibold text-text-primary">{title}</div>
+      </div>
+      <p className="text-[11px] text-text-secondary leading-relaxed flex-1">{body}</p>
+      <Link
+        to={to}
+        className="text-xs px-3 py-2 bg-accent text-bg-primary rounded font-semibold text-center hover:opacity-90"
+      >
+        {cta}
       </Link>
     </div>
   )

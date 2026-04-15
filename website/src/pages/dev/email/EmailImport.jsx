@@ -6,7 +6,7 @@ import * as listService from '@/services/email/emailListService'
 import { useEffect } from 'react'
 
 /**
- * /dev/email/import — 5-step wizard:
+ * /app/marketing/email/import — 5-step wizard:
  * 1 Upload → 2 Map columns → 3 Options → 4 Review → 5 Results
  */
 export default function EmailImport() {
@@ -205,7 +205,7 @@ export default function EmailImport() {
             </details>
           )}
           <div className="pt-2 border-t border-border flex gap-2">
-            <Link to="/dev/email/subscribers" className="flex-1 text-center bg-accent text-bg-primary py-2 rounded font-semibold">View subscribers</Link>
+            <Link to="/app/marketing/email/subscribers" className="flex-1 text-center bg-accent text-bg-primary py-2 rounded font-semibold">View subscribers</Link>
             <button onClick={() => { setStep(1); setParsed(null); setSummary(null) }} className="flex-1 border border-border py-2 rounded">Import more</button>
           </div>
         </div>

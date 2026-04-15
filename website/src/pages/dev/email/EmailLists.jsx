@@ -49,8 +49,8 @@ export default function EmailLists() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowNew(true)} className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50">+ Create List</button>
-          <Link to="/dev/email/import" className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50">Import</Link>
-          <Link to="/dev/email/sync" className="text-xs px-3 py-1.5 bg-accent text-bg-primary rounded font-semibold">Sync Pipeline</Link>
+          <Link to="/app/marketing/email/import" className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50">Import</Link>
+          <Link to="/app/marketing/email/sync" className="text-xs px-3 py-1.5 bg-accent text-bg-primary rounded font-semibold">Sync Pipeline</Link>
         </div>
       </header>
 
@@ -92,7 +92,7 @@ export default function EmailLists() {
                 <span className="text-danger">{l.bounced_count} bnc</span>
               </div>
               <div className="flex items-center gap-1 flex-wrap pt-2 border-t border-border">
-                <Link to={`/dev/email/subscribers?list=${l.id}`} className="text-[10px] px-2 py-1 border border-border rounded hover:border-accent/50">View</Link>
+                <Link to={`/app/marketing/email/subscribers?list=${l.id}`} className="text-[10px] px-2 py-1 border border-border rounded hover:border-accent/50">View</Link>
                 <button onClick={() => handleDuplicate(l.id)} className="text-[10px] px-2 py-1 border border-border rounded hover:border-accent/50">Duplicate</button>
                 <button onClick={() => handleDelete(l.id)} className="text-[10px] px-2 py-1 border border-danger/30 text-danger rounded hover:bg-danger/10">Delete</button>
               </div>

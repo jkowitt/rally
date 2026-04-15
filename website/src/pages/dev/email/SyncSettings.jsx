@@ -37,7 +37,7 @@ export default function SyncSettings() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5">
       <header>
-        <Link to="/dev/email/sync" className="text-[10px] text-text-muted hover:text-accent">← Pipeline Sync</Link>
+        <Link to="/app/marketing/email/sync" className="text-[10px] text-text-muted hover:text-accent">← Pipeline Sync</Link>
         <h2 className="text-xl font-semibold mt-1">Auto-Sync Settings</h2>
       </header>
 

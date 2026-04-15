@@ -17,8 +17,8 @@ const FollowUpQueue = lazy(() => import('./outlook/FollowUpQueue'))
 const EmailTemplates = lazy(() => import('./outlook/EmailTemplates'))
 const OutlookAnalytics = lazy(() => import('./outlook/OutlookAnalytics'))
 
-// Email marketing — role-gated at router + flag-gated per route
-const EmailRouter = lazy(() => import('./email/EmailRouter'))
+// Email marketing has moved to /app/marketing/email — the old /dev/email/*
+// paths redirect for backward compat with existing bookmarks.
 // Pricing control center — developer-only, no flag gate (always available)
 const PricingControlCenter = lazy(() => import('./pricing/PricingControlCenter'))
 
@@ -58,8 +58,10 @@ export default function DevRouter() {
         <Route path="/outlook/templates" element={<DeveloperOnly><EmailTemplates /></DeveloperOnly>} />
         <Route path="/outlook/analytics" element={<DeveloperOnly><OutlookAnalytics /></DeveloperOnly>} />
 
-        {/* Email marketing — flag gated inside EmailRouter */}
-        <Route path="/email/*" element={<EmailRouter />} />
+        {/* Email marketing — moved to /app/marketing/email. Redirect old
+            /dev/email/* bookmarks so developer muscle memory keeps working. */}
+        <Route path="/email" element={<Navigate to="/app/marketing/email" replace />} />
+        <Route path="/email/*" element={<Navigate to="/app/marketing/email" replace />} />
 
         {/* Pricing control center — developer-only, no flag gate */}
         <Route path="/pricing/*" element={<PricingControlCenter />} />

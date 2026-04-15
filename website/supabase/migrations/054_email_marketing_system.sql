@@ -521,6 +521,11 @@ create policy "suppression_all" on email_suppression_list
 -- ========================
 -- 16. FEATURE FLAG SEED ROWS
 -- ========================
+-- Same CHECK constraint issue as migration 053. Drop it again in
+-- case this migration runs standalone on a DB where 053 hasn't
+-- been applied yet. Idempotent — safe if already dropped.
+alter table feature_flags drop constraint if exists feature_flags_module_check;
+
 insert into feature_flags (module, enabled, updated_at)
 values
   ('email_marketing_developer', false, now()),

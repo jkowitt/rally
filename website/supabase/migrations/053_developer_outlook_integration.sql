@@ -235,8 +235,19 @@ create policy "outlook_template_usage_dev_delete" on outlook_template_usage
 -- ========================
 -- Hidden feature flag. Never listed in the standard flags UI.
 -- Default OFF. Only the developer console at /dev/feature-flags
--- exposes this row. Consumed by the client via the normal
--- feature_flags read policy (public read per migration 049).
+-- exposes this row.
+--
+-- IMPORTANT: drop the feature_flags_module_check CHECK constraint
+-- from migration 045 FIRST. That constraint had a hardcoded enum
+-- of allowed module names and 'outlook_integration' is not in it,
+-- so the INSERT below would fail with error 23514. 'on conflict'
+-- does NOT catch check constraint violations — it only handles
+-- unique constraint conflicts. Dropping the constraint is the
+-- right long-term fix because new feature flags should not
+-- require a DB migration (see migration 058 which also drops
+-- this, now doubled up for safety).
+alter table feature_flags drop constraint if exists feature_flags_module_check;
+
 insert into feature_flags (module, enabled, updated_at)
 values ('outlook_integration', false, now())
 on conflict (module) do nothing;

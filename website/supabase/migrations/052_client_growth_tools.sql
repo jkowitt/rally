@@ -3,53 +3,79 @@
 -- Phase 3: Add growth workbook and strategic workbook tables
 
 -- ─── Fix broken RLS on financial projections tables ───
--- Originally these had USING (true) which means any authenticated user could read all rows
-ALTER TABLE biz_projections ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
-ALTER TABLE biz_ad_campaigns ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
-ALTER TABLE biz_reports ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
+-- Wrapped in DO block with exception handling so a missing biz_*
+-- table (e.g. on a DB where migration 036 never ran) doesn't
+-- block the whole migration.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'biz_projections') THEN
+    ALTER TABLE biz_projections ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
+    DROP POLICY IF EXISTS biz_projections_ops ON biz_projections;
+    DROP POLICY IF EXISTS biz_projections_access ON biz_projections;
+    CREATE POLICY biz_projections_access ON biz_projections FOR ALL USING (
+      property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
+      OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
+    );
+  END IF;
 
-DROP POLICY IF EXISTS biz_projections_ops ON biz_projections;
-DROP POLICY IF EXISTS biz_ad_campaigns_ops ON biz_ad_campaigns;
-DROP POLICY IF EXISTS biz_reports_ops ON biz_reports;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'biz_ad_campaigns') THEN
+    ALTER TABLE biz_ad_campaigns ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
+    DROP POLICY IF EXISTS biz_ad_campaigns_ops ON biz_ad_campaigns;
+    DROP POLICY IF EXISTS biz_ad_campaigns_access ON biz_ad_campaigns;
+    CREATE POLICY biz_ad_campaigns_access ON biz_ad_campaigns FOR ALL USING (
+      property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
+      OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
+    );
+  END IF;
 
-CREATE POLICY biz_projections_access ON biz_projections FOR ALL USING (
-  property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
-  OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
-);
-CREATE POLICY biz_ad_campaigns_access ON biz_ad_campaigns FOR ALL USING (
-  property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
-  OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
-);
-CREATE POLICY biz_reports_access ON biz_reports FOR ALL USING (
-  property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
-  OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
-);
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'biz_reports') THEN
+    ALTER TABLE biz_reports ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
+    DROP POLICY IF EXISTS biz_reports_ops ON biz_reports;
+    DROP POLICY IF EXISTS biz_reports_access ON biz_reports;
+    CREATE POLICY biz_reports_access ON biz_reports FOR ALL USING (
+      property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
+      OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
+    );
+  END IF;
+END $$;
 
 -- ─── Add property_id to other biz_* tables for multi-tenancy ───
-ALTER TABLE biz_goals ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
-ALTER TABLE biz_connections ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
-ALTER TABLE biz_finances ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
+-- Also wrapped in DO block so missing tables don't break the migration.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'biz_goals') THEN
+    ALTER TABLE biz_goals ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
+    DROP POLICY IF EXISTS biz_goals_ops ON biz_goals;
+    DROP POLICY IF EXISTS biz_goals_access ON biz_goals;
+    CREATE POLICY biz_goals_access ON biz_goals FOR ALL USING (
+      property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
+      OR property_id IS NULL
+      OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
+    );
+  END IF;
 
--- Update policies to scope by property_id
-DROP POLICY IF EXISTS biz_goals_ops ON biz_goals;
-DROP POLICY IF EXISTS biz_connections_ops ON biz_connections;
-DROP POLICY IF EXISTS biz_finances_ops ON biz_finances;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'biz_connections') THEN
+    ALTER TABLE biz_connections ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
+    DROP POLICY IF EXISTS biz_connections_ops ON biz_connections;
+    DROP POLICY IF EXISTS biz_connections_access ON biz_connections;
+    CREATE POLICY biz_connections_access ON biz_connections FOR ALL USING (
+      property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
+      OR property_id IS NULL
+      OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
+    );
+  END IF;
 
-CREATE POLICY biz_goals_access ON biz_goals FOR ALL USING (
-  property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
-  OR property_id IS NULL
-  OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
-);
-CREATE POLICY biz_connections_access ON biz_connections FOR ALL USING (
-  property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
-  OR property_id IS NULL
-  OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
-);
-CREATE POLICY biz_finances_access ON biz_finances FOR ALL USING (
-  property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
-  OR property_id IS NULL
-  OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
-);
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'biz_finances') THEN
+    ALTER TABLE biz_finances ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id) ON DELETE CASCADE;
+    DROP POLICY IF EXISTS biz_finances_ops ON biz_finances;
+    DROP POLICY IF EXISTS biz_finances_access ON biz_finances;
+    CREATE POLICY biz_finances_access ON biz_finances FOR ALL USING (
+      property_id IN (SELECT property_id FROM profiles WHERE id = auth.uid())
+      OR property_id IS NULL
+      OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('developer', 'businessops'))
+    );
+  END IF;
+END $$;
 
 -- ─── Growth Workbook — self-assessment / "where you are" ───
 CREATE TABLE IF NOT EXISTS growth_workbook_responses (

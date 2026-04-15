@@ -28,25 +28,50 @@ jobs:
       - name: Link Supabase project
         working-directory: website
         run: |
+          set -e
           supabase link --project-ref $SUPABASE_PROJECT_ID --password "$SUPABASE_DB_PASSWORD"
 
-      - name: Push database migrations
+      - name: List pending migrations
         working-directory: website
         run: |
-          supabase db push --password "$SUPABASE_DB_PASSWORD" || echo "No new migrations or all already applied"
+          echo "### Migrations state" >> $GITHUB_STEP_SUMMARY
+          supabase migration list --password "$SUPABASE_DB_PASSWORD" | tee -a $GITHUB_STEP_SUMMARY || true
 
-      - name: Deploy edge functions
+      - name: Push database migrations (fail loudly)
         working-directory: website
         run: |
+          set -e
+          # Previous version silenced errors with `|| echo "..."` which
+          # caused weeks of silent migration failures. This version
+          # fails the whole job if db push reports any error, so the
+          # problem is visible in the Actions tab.
+          supabase db push --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Deploy edge functions (per-function visibility)
+        working-directory: website
+        run: |
+          failed=""
           for fn in supabase/functions/*/; do
             name=$(basename "$fn")
-            if [ "$name" != "_shared" ]; then
-              echo "Deploying $name..."
-              supabase functions deploy "$name" --no-verify-jwt --project-ref $SUPABASE_PROJECT_ID || echo "Failed to deploy $name"
+            if [ "$name" = "_shared" ]; then continue; fi
+            echo "::group::Deploy $name"
+            if supabase functions deploy "$name" --no-verify-jwt --project-ref $SUPABASE_PROJECT_ID; then
+              echo "✓ $name deployed"
+            else
+              echo "✗ $name FAILED"
+              failed="$failed $name"
             fi
+            echo "::endgroup::"
           done
+          if [ -n "$failed" ]; then
+            echo "::error::Edge function deploy failures:$failed"
+            echo "### ❌ Edge function deploy failures" >> $GITHUB_STEP_SUMMARY
+            echo "$failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
 
       - name: Summary
+        if: always()
         run: |
-          echo "### Supabase Deploy Complete" >> $GITHUB_STEP_SUMMARY
-          echo "Migrations and edge functions pushed to production." >> $GITHUB_STEP_SUMMARY
+          echo "### Supabase Deploy" >> $GITHUB_STEP_SUMMARY
+          echo "Job status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY

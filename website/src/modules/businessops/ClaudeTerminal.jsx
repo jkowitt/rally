@@ -52,7 +52,7 @@ export default function ClaudeTerminal() {
       }))
 
       let response
-      // Try code_assistant first (Sonnet with system prompt), fall back to edit_contract
+      // Try code_assistant first (Opus with system prompt), fall back to edit_contract
       const { data, error } = await supabase.functions.invoke('contract-ai', {
         body: {
           action: 'code_assistant',

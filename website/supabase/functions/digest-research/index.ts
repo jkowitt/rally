@@ -5,7 +5,7 @@
 //
 // Flow:
 //   1. Admin enters topic, industry, optional keywords
-//   2. This edge function calls Claude Sonnet 4.5 with the
+//   2. This edge function calls Claude Opus 4.6 with the
 //      web_search_20250305 tool enabled
 //   3. Claude researches the topic via real web searches and
 //      writes a draft article (800-1200 words) with inline
@@ -137,7 +137,7 @@ Use web_search to find recent, credible sources. Return the result as a JSON obj
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
+        model: "claude-opus-4-6",
         max_tokens: 8192,
         system: SYSTEM_PROMPT,
         tools: [

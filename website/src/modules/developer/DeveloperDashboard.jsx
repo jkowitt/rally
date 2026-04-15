@@ -18,6 +18,18 @@ const ChangeLog = lazy(() => import('./ChangeLog'))
 const ROLES = ['developer', 'admin', 'rep']
 const PLANS = ['free', 'starter', 'pro', 'enterprise']
 
+// Descriptions for hidden developer flags — shown inline next to the
+// toggle so it's obvious what flipping each one does. Keep in sync with
+// HIDDEN_MODULES in src/hooks/useFeatureFlags.jsx.
+const HIDDEN_FLAG_DESCRIPTIONS = {
+  outlook_integration:
+    "Developer-only Outlook integration for personal outreach management.",
+  email_marketing_developer:
+    "Developer-only email marketing access. Enables the full /app/marketing/email UI for the developer role.",
+  email_marketing_public:
+    "Public (admin+) email marketing beta. When ON, admin/businessops users see Email Marketing in their sidebar.",
+}
+
 export default function DeveloperDashboard() {
   const { isDeveloper, profile } = useAuth()
   const { flags, toggleFlag } = useFeatureFlags()
@@ -681,6 +693,50 @@ export default function DeveloperDashboard() {
                 </div>
               ))}
             </div>
+
+            {/* Hidden Developer Flags — only the developer role sees this
+                section. These flags are excluded from the filter above so
+                they don't appear twice. Toggling works the same way. */}
+            {profile?.role === 'developer' && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-accent">
+                    Hidden Developer Flags
+                  </div>
+                  <div className="text-[9px] text-text-muted">
+                    developer-only
+                  </div>
+                </div>
+                <div className="text-[10px] text-text-muted mb-3 leading-relaxed">
+                  These flags are hidden from the normal list. Flipping them
+                  ON activates features currently gated behind internal review
+                  (Outlook sync, email marketing, etc).
+                </div>
+                <div className="space-y-2">
+                  {HIDDEN_MODULES.map(module => {
+                    const enabled = Boolean(flags[module])
+                    const description = HIDDEN_FLAG_DESCRIPTIONS[module] || 'Hidden developer flag'
+                    return (
+                      <div key={module} className="flex items-center justify-between py-2">
+                        <div className="flex-1 min-w-0 mr-3">
+                          <div className="text-sm text-text-primary font-mono">{module}</div>
+                          <div className="text-[10px] text-text-muted mt-0.5 leading-relaxed">
+                            {description}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleToggleFlag(module, module)}
+                          disabled={savingFlag === module}
+                          className={`shrink-0 px-3 py-1 rounded text-xs font-mono transition-opacity ${enabled ? 'bg-success/20 text-success' : 'bg-bg-card text-text-muted border border-border'} ${savingFlag === module ? 'opacity-50' : ''}`}
+                        >
+                          {savingFlag === module ? '…' : (enabled ? 'ON' : 'OFF')}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </Panel>
 
           {/* API Usage (30 days) */}

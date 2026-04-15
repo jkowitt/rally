@@ -304,7 +304,7 @@ Extract all sponsorship benefits from this contract. If you cannot read the file
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-opus-4-6",
+        model: "claude-sonnet-4-6",
         max_tokens: 4000,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],

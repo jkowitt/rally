@@ -577,6 +577,49 @@ export async function researchArticle({ topic, industry, keywords }) {
   }
 }
 
+// ─── Resend to unopened ───────────────────────────────────
+//
+// Creates a new campaign targeting only subscribers who never
+// opened the original send. Delegates to digest-resend-unopened
+// edge function which builds the recipient list, pre-inserts
+// pending sends, and invokes email-marketing-send.
+//
+// Options:
+//   newSubject:   defaults to "Did you see this? {title}"
+//   minAgeHours:  safety guard, default 72h (3 days)
+export async function resendUnopened(issueId, { newSubject, minAgeHours = 72 } = {}) {
+  const { data, error } = await supabase.functions.invoke('digest-resend-unopened', {
+    body: {
+      issue_id: issueId,
+      new_subject: newSubject,
+      min_age_hours: minAgeHours,
+    },
+  })
+  if (error) return { success: false, error: error.message }
+  if (!data?.success) return { success: false, error: data?.error || 'Resend failed', details: data?.details }
+  return {
+    success: true,
+    campaignId: data.campaign_id,
+    recipientsCount: data.recipients_count,
+    subject: data.subject,
+    warning: data.warning,
+  }
+}
+
+// ─── Manual trigger for scheduled-publish (dry-run button) ──
+//
+// Normally pg_cron calls digest-scheduled-publish every 5 minutes.
+// This lets a developer force-run it from the admin UI (useful
+// for verifying a scheduled issue will publish correctly without
+// waiting for the next cron tick).
+export async function runScheduledPublishNow() {
+  const { data, error } = await supabase.functions.invoke('digest-scheduled-publish', {
+    body: {},
+  })
+  if (error) return { success: false, error: error.message }
+  return data || { success: false, error: 'empty_response' }
+}
+
 // ─── Re-exports ───────────────────────────────────────────
 
 export { renderMarkdown, renderCitations, slugify, excerpt, readingTime }

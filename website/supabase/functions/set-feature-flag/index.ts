@@ -159,6 +159,9 @@ Deno.serve(async (req: Request) => {
     diagnostics.steps.push("validated");
 
     // ─── Upsert with service role (bypasses RLS) ──────────
+    // last_flipped_by is populated for audit trail. The DB
+    // trigger (migration 064) sets last_flipped_at automatically
+    // when the enabled column changes.
     const { data, error } = await sb
       .from("feature_flags")
       .upsert(
@@ -166,6 +169,7 @@ Deno.serve(async (req: Request) => {
           module: mod,
           enabled,
           updated_at: new Date().toISOString(),
+          last_flipped_by: userId,
         },
         { onConflict: "module" }
       )

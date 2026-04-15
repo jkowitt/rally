@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 // /dev/* is visited).
 const DevConsole = lazy(() => import('./DevConsole'))
 const DevFeatureFlags = lazy(() => import('./DevFeatureFlags'))
+const DevFlagAudit = lazy(() => import('./DevFlagAudit'))
 const OutlookConnect = lazy(() => import('./outlook/OutlookConnect'))
 const OutlookCallback = lazy(() => import('./outlook/OutlookCallback'))
 const OutlookDashboard = lazy(() => import('./outlook/OutlookDashboard'))
@@ -45,6 +46,7 @@ export default function DevRouter() {
       <Routes>
         {/* Role-only gates (flag not required) */}
         <Route path="/feature-flags" element={<DevFeatureFlags />} />
+        <Route path="/flag-audit" element={<DevFlagAudit />} />
         <Route path="/" element={<DevConsole />} />
 
         {/* Outlook integration — role + flag gated */}

@@ -230,6 +230,30 @@ export default function DigestEditor() {
     else toast({ title: 'Test failed', description: r.error, type: 'error' })
   }
 
+  async function handleResendUnopened() {
+    // Suggest a subject line but let the author override
+    const defaultSubject = `Did you see this? ${issue.title}`
+    const subject = prompt(
+      'Resend to subscribers who never opened the original.\n\nNew subject line:',
+      defaultSubject,
+    )
+    if (!subject) return
+    if (!confirm(
+      `Resend "${issue.title}" to UNOPENED subscribers with the new subject:\n\n"${subject}"\n\nThis creates a new campaign. The original must be at least 72h old.`,
+    )) return
+
+    const r = await digest.resendUnopened(issue.id, { newSubject: subject })
+    if (r.success) {
+      toast({
+        title: `Resend queued · ${r.recipientsCount} recipients`,
+        description: r.recipientsCount === 0 ? 'Nobody is unopened — skipping.' : `Campaign ${r.campaignId}`,
+        type: 'success',
+      })
+    } else {
+      toast({ title: 'Resend failed', description: r.error || r.details, type: 'error' })
+    }
+  }
+
   if (loading) return <div className="p-6 text-xs text-text-muted">Loading…</div>
   if (!issue) return (
     <div className="p-6 text-center">
@@ -272,6 +296,15 @@ export default function DigestEditor() {
             <button onClick={() => handlePublish('publish_and_send')} className="text-xs px-3 py-1.5 bg-accent text-bg-primary rounded font-semibold">
               Publish + Send
             </button>
+            {issue.status === 'published' && issue.email_campaign_id && (
+              <button
+                onClick={handleResendUnopened}
+                title="Create a new campaign targeting only subscribers who never opened the original"
+                className="text-xs px-3 py-1.5 border border-warning/40 text-warning rounded hover:bg-warning/10"
+              >
+                Resend to unopened
+              </button>
+            )}
           </div>
         </div>
       </header>

@@ -21,6 +21,7 @@
 // ============================================================
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { enforceRateLimit, logRateLimitCall } from "../_shared/rateLimit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -98,6 +99,22 @@ Deno.serve(async (req: Request) => {
       return json({ success: false, error: "not_developer", diagnostics });
     }
     diagnostics.steps.push("developer_ok");
+
+    // ─── Rate limit: 10 research calls / hour ────────────
+    // Developer bypass is DISABLED here even for developers —
+    // digest-research is an expensive Opus + web_search call and
+    // we want a hard cap even against the developer's own account.
+    const gate = await enforceRateLimit(sb, {
+      userId,
+      functionName: "digest-research",
+      limit: 10,
+      windowMinutes: 60,
+      developerBypass: false,
+    });
+    if (!gate.ok) {
+      diagnostics.errors.push(`rate_limited_at_${gate.currentCount}`);
+      return gate.response!;
+    }
 
     // ─── Parse body ────────────────────────────────────
     const body = await req.json().catch(() => ({}));
@@ -249,6 +266,15 @@ Use web_search to find recent, credible sources. Return the result as a JSON obj
     }
 
     diagnostics.steps.push("returned");
+
+    // Log successful call for rate limiting (fire and forget)
+    await logRateLimitCall(sb, {
+      userId,
+      functionName: "digest-research",
+      creditsCharged: 20, // Opus + web_search is expensive
+      metadata: { topic, industry },
+    });
+
     return json({
       success: true,
       ...result,

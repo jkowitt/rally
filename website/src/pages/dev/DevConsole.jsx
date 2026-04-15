@@ -114,6 +114,7 @@ export default function DevConsole() {
               <DevLink to="/dev/email" label="Email Marketing" desc="Campaigns + lists" />
               <DevLink to="/dev/pricing" label="Pricing Control" desc="Plans, credits, addons" />
               <DevLink to="/dev/feature-flags" label="Feature Flags" desc="All flags (incl. hidden)" />
+              <DevLink to="/dev/flag-audit" label="Flag Audit" desc="Graveyard + lifecycle" />
               <DevLink to="/app/developer" label="Dev Tools" desc="QA, automation, etc." external />
             </div>
           </>
@@ -122,6 +123,7 @@ export default function DevConsole() {
         {!outlookOn && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <DevLink to="/dev/feature-flags" label="Feature Flags" desc="Toggle hidden flags" />
+            <DevLink to="/dev/flag-audit" label="Flag Audit" desc="Graveyard + lifecycle" />
             <DevLink to="/app/developer" label="Dev Tools" desc="QA, automation" external />
             <DevLink to="/app/admin/automation" label="Automation" desc="Master toggle" external />
           </div>

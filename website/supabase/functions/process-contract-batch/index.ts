@@ -20,6 +20,7 @@
 // ============================================================
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { enforceRateLimit, logRateLimitCall } from "../_shared/rateLimit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -44,6 +45,23 @@ Deno.serve(async (req: Request) => {
     const sb = createClient(SUPABASE_URL, SERVICE_KEY);
     const { data: userRes } = await sb.auth.getUser(jwt);
     if (!userRes?.user) return json({ success: false, error: "unauthorized" }, 200);
+
+    // Rate limit: 10 batches/hour per user. Each batch may process
+    // dozens of contracts so this is a hard cap on cost.
+    const { data: profile } = await sb
+      .from("profiles")
+      .select("role")
+      .eq("id", userRes.user.id)
+      .maybeSingle();
+    const gate = await enforceRateLimit(sb, {
+      userId: userRes.user.id,
+      functionName: "process-contract-batch",
+      limit: 10,
+      windowMinutes: 60,
+      developerBypass: true,
+      developerRole: profile?.role,
+    });
+    if (!gate.ok) return gate.response!;
 
     const body = await req.json();
     const sessionId = body.session_id;
@@ -128,6 +146,15 @@ Deno.serve(async (req: Request) => {
         updated_at: new Date().toISOString(),
       })
       .eq("id", sessionId);
+
+    // Log for rate limiting — 1 batch call regardless of how many
+    // contracts were in it. creditsCharged scales with file count.
+    await logRateLimitCall(sb, {
+      userId: userRes.user.id,
+      functionName: "process-contract-batch",
+      creditsCharged: 5 * processed,
+      metadata: { session_id: sessionId, processed, succeeded, failed },
+    });
 
     return json({ success: true, processed, succeeded, failed });
   } catch (err) {

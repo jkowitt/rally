@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { enforceRateLimit, logRateLimitCall } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,6 +17,45 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    // ─── Rate limiting ──────────────────────────────────
+    // Extract the caller's JWT (if present) to enforce a per-user
+    // cap on how often contract-ai can be hit. We don't REQUIRE
+    // auth here — some actions are invoked by internal jobs — but
+    // if a JWT is present, we use it to track usage. Without a JWT,
+    // we skip rate limiting (trust the internal caller).
+    let rateLimitUserId: string | null = null;
+    let callerRole: string | null = null;
+    try {
+      const authHeader = req.headers.get("Authorization") || "";
+      const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
+      if (jwt && jwt !== (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "")) {
+        const { data: userRes } = await supabaseClient.auth.getUser(jwt);
+        if (userRes?.user) {
+          rateLimitUserId = userRes.user.id;
+          const { data: profile } = await supabaseClient
+            .from("profiles")
+            .select("role")
+            .eq("id", rateLimitUserId)
+            .maybeSingle();
+          callerRole = profile?.role ?? null;
+        }
+      }
+    } catch {
+      // auth inspection is best-effort; fall through without rate limiting
+    }
+
+    if (rateLimitUserId) {
+      const gate = await enforceRateLimit(supabaseClient, {
+        userId: rateLimitUserId,
+        functionName: "contract-ai",
+        limit: 120,              // 120 calls/hour per user
+        windowMinutes: 60,
+        developerBypass: true,   // dev console can hammer it
+        developerRole: callerRole,
+      });
+      if (!gate.ok) return gate.response!;
+    }
 
     const body = await req.json();
     const action = body.action;
@@ -61,6 +101,16 @@ Deno.serve(async (req: Request) => {
       result = await generateAfternoonUpdate(supabaseClient, body);
     } else {
       throw new Error("Unknown action: " + action);
+    }
+
+    // Log the call post-success for rate limiting
+    if (rateLimitUserId) {
+      await logRateLimitCall(supabaseClient, {
+        userId: rateLimitUserId,
+        functionName: "contract-ai",
+        creditsCharged: 5,
+        metadata: { action },
+      });
     }
 
     return new Response(JSON.stringify(result), {

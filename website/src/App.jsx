@@ -98,6 +98,9 @@ const EmailPublicRouter = lazyRetry(() => import('./pages/email/EmailPublicRoute
 // Email marketing inside the authenticated app shell — shared between
 // developers and admin+ users (gated by useEmailMarketingAccess)
 const EmailRouter = lazyRetry(() => import('./pages/dev/email/EmailRouter'))
+// Hub dashboards — Marketing and Ops aggregate views
+const MarketingDashboard = lazyRetry(() => import('./pages/marketing/MarketingDashboard'))
+const OpsDashboard = lazyRetry(() => import('./pages/ops/OpsDashboard'))
 
 function PageLoader() {
   return (
@@ -231,7 +234,11 @@ export default function App() {
                             {/* Email Marketing — gated by useEmailMarketingAccess
                                 which allows devs + email_marketing_developer OR
                                 admin/businessops + email_marketing_public. */}
+                            {/* Marketing hub dashboard + email subroutes */}
+                            <Route path="/marketing" element={<MarketingDashboard />} />
                             <Route path="/marketing/email/*" element={<EmailRouter />} />
+                            {/* Ops hub dashboard */}
+                            <Route path="/ops" element={<OpsDashboard />} />
                             <Route path="/growth" element={<GrowthHub />} />
                             <Route path="*" element={<Navigate to="/app" replace />} />
                           </Routes>

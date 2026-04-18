@@ -35,6 +35,9 @@ const DeclinedDeals = lazyRetry(() => import('./modules/crm/DeclinedDeals'))
 const ActivityTimeline = lazyRetry(() => import('./modules/crm/ActivityTimeline'))
 const TaskManager = lazyRetry(() => import('./modules/crm/TaskManager'))
 const DealInsights = lazyRetry(() => import('./modules/crm/DealInsights'))
+// Project management
+const ProjectList = lazyRetry(() => import('./pages/projects/ProjectList'))
+const ProjectDetail = lazyRetry(() => import('./pages/projects/ProjectDetail'))
 const Newsletter = lazyRetry(() => import('./modules/crm/Newsletter'))
 const TeamManager = lazyRetry(() => import('./modules/crm/TeamManager'))
 const Automations = lazyRetry(() => import('./modules/crm/Automations'))
@@ -181,6 +184,8 @@ export default function App() {
                             <Route path="/crm/migrate" element={<MigratePage />} />
                             <Route path="/crm/fulfillment" element={<FulfillmentTracker />} />
                             <Route path="/crm/report/:dealId" element={<BrandReport />} />
+                            <Route path="/crm/projects" element={<ProjectList />} />
+                            <Route path="/crm/projects/:id" element={<ProjectDetail />} />
                             <Route path="/crm/declined" element={<DeclinedDeals />} />
                             <Route path="/crm/activities" element={<ActivityTimeline />} />
                             <Route path="/crm/tasks" element={<TaskManager />} />

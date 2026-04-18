@@ -55,6 +55,7 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
         { to: '/app/crm/pipeline', label: `${t?.deal || 'Deal'} Pipeline` },
         { to: '/app/crm/contracts', label: 'Contracts' },
         { to: '/app/crm/fulfillment', label: t?.fulfillment || 'Fulfillment' },
+        { to: '/app/crm/projects', label: 'Projects' },
         { to: '/app/crm/declined', label: 'Declined' },
       ],
     },

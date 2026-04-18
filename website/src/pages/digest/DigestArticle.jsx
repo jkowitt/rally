@@ -3,6 +3,7 @@ import { Link, useParams, Navigate } from 'react-router-dom'
 import { useSeo } from '@/hooks/useSeo'
 import * as digest from '@/services/digestIssueService'
 import DigestSignupForm from '@/components/digest/DigestSignupForm'
+import RelatedArticles from '@/components/digest/RelatedArticles'
 
 /**
  * /digest/:slug — individual published article, branded with
@@ -141,6 +142,9 @@ export default function DigestArticle() {
 
         {/* Social sharing */}
         <ShareRow issue={issue} canonical={canonical} />
+
+        {/* Related articles — internal linking for SEO */}
+        <RelatedArticles currentIssue={issue} maxResults={3} />
 
         {/* Prev/Next navigation */}
         <PrevNextNav prev={prevNext.prev} next={prevNext.next} />

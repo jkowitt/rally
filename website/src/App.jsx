@@ -38,6 +38,8 @@ const DealInsights = lazyRetry(() => import('./modules/crm/DealInsights'))
 // Project management
 const ProjectList = lazyRetry(() => import('./pages/projects/ProjectList'))
 const ProjectDetail = lazyRetry(() => import('./pages/projects/ProjectDetail'))
+// User-facing analytics
+const SalesDashboard = lazyRetry(() => import('./pages/analytics/SalesDashboard'))
 const Newsletter = lazyRetry(() => import('./modules/crm/Newsletter'))
 const TeamManager = lazyRetry(() => import('./modules/crm/TeamManager'))
 const Automations = lazyRetry(() => import('./modules/crm/Automations'))
@@ -190,6 +192,7 @@ export default function App() {
                             <Route path="/crm/activities" element={<ActivityTimeline />} />
                             <Route path="/crm/tasks" element={<TaskManager />} />
                             <Route path="/crm/insights" element={<DealInsights />} />
+                            <Route path="/crm/analytics" element={<SalesDashboard />} />
                             <Route path="/crm/newsletter" element={<Newsletter />} />
                             <Route path="/crm/team" element={<TeamManager />} />
                             <Route path="/crm/automations" element={<Automations />} />

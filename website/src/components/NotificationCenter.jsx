@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import * as userNotifService from '@/services/userNotificationService'
 
 export default function NotificationCenter() {
   const { profile } = useAuth()
@@ -10,6 +11,23 @@ export default function NotificationCenter() {
   const [dismissed, setDismissed] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('ll_dismissed_notifs') || '[]')) } catch { return new Set() }
   })
+  // Real-time user notifications from DB
+  const [dbNotifications, setDbNotifications] = useState([])
+  const [dbUnread, setDbUnread] = useState(0)
+
+  // Subscribe to real-time user_notifications via Supabase
+  useEffect(() => {
+    if (!profile?.id) return
+    userNotifService.getUnreadCount().then(setDbUnread)
+    userNotifService.getNotifications({ limit: 20 }).then(setDbNotifications)
+
+    const unsub = userNotifService.subscribeToNotifications(profile.id, (newNotif) => {
+      setDbNotifications(prev => [newNotif, ...prev].slice(0, 30))
+      setDbUnread(prev => prev + 1)
+      userNotifService.showBrowserNotification(newNotif.title, newNotif.body, newNotif.link)
+    })
+    return unsub
+  }, [profile?.id])
 
   // Generate notifications from live data
   const { data: notifData } = useQuery({
@@ -115,8 +133,23 @@ export default function NotificationCenter() {
     })
   }
 
-  const visible = notifications.filter(n => !dismissed.has(n.id))
-  const unreadCount = visible.length
+  // Merge DB-driven notifications with generated CRM alerts
+  const dbMapped = dbNotifications.map(n => ({
+    id: `db-${n.id}`,
+    _dbId: n.id,
+    type: n.type === 'deal_stage_changed' ? 'accent' : n.type === 'task_assigned' ? 'info' : 'info',
+    icon: n.icon || '🔔',
+    title: n.title,
+    sub: n.body,
+    time: timeAgo(n.created_at),
+    href: n.link || '#',
+    isDb: true,
+    read: n.read,
+  }))
+
+  const allNotifications = [...dbMapped, ...notifications]
+  const visible = allNotifications.filter(n => !dismissed.has(n.id))
+  const unreadCount = visible.filter(n => n.isDb ? !n.read : true).length
 
   function dismiss(id) {
     const next = new Set([...dismissed, id])
@@ -124,11 +157,19 @@ export default function NotificationCenter() {
     localStorage.setItem('ll_dismissed_notifs', JSON.stringify([...next].slice(-200)))
   }
 
-  function dismissAll() {
+  async function dismissAll() {
     const next = new Set([...dismissed, ...visible.map(n => n.id)])
     setDismissed(next)
     localStorage.setItem('ll_dismissed_notifs', JSON.stringify([...next].slice(-200)))
+    // Also mark all DB notifications as read
+    await userNotifService.markAllRead()
+    setDbNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    setDbUnread(0)
     setOpen(false)
+  }
+
+  async function handleEnablePush() {
+    await userNotifService.requestBrowserNotifications()
   }
 
   const typeColors = {
@@ -163,6 +204,9 @@ export default function NotificationCenter() {
             <div className="p-3 border-b border-border flex items-center justify-between">
               <h3 className="text-sm font-medium text-text-primary">Notifications</h3>
               <div className="flex items-center gap-2">
+                {typeof Notification !== 'undefined' && Notification.permission === 'default' && (
+                  <button onClick={handleEnablePush} className="text-[9px] text-accent hover:underline">Enable push</button>
+                )}
                 {visible.length > 0 && (
                   <button onClick={dismissAll} className="text-[10px] text-text-muted hover:text-accent">Clear all</button>
                 )}
@@ -196,4 +240,16 @@ export default function NotificationCenter() {
       )}
     </div>
   )
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return ''
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'now'
+  if (mins < 60) return `${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  return `${days}d`
 }

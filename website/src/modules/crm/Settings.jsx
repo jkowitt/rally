@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import * as exportService from '@/services/dataExportService'
 import { useToast } from '@/components/Toast'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { supabase } from '@/lib/supabase'
@@ -198,6 +199,12 @@ export default function Settings() {
 
       {/* Email preferences */}
       <EmailPreferencesSection userEmail={profile?.email} />
+
+      {/* Data Export */}
+      <DataExportSection userId={profile?.id} />
+
+      {/* Integrations */}
+      <IntegrationsSection propertyId={propertyId} />
 
       {/* Account Deletion — Danger Zone */}
       <div className="bg-bg-surface border border-danger/30 rounded-lg p-4 sm:p-5">
@@ -537,6 +544,136 @@ function EmailPreferencesSection({ userEmail }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function DataExportSection({ userId }) {
+  const { toast } = useToast()
+  const [exporting, setExporting] = useState(null)
+  const [history, setHistory] = useState([])
+
+  useEffect(() => {
+    if (userId) exportService.getExportHistory(userId).then(setHistory)
+  }, [userId])
+
+  async function handleExport(type) {
+    setExporting(type)
+    try {
+      let result
+      if (type === 'deals') result = await exportService.exportDeals(userId)
+      else if (type === 'contacts') result = await exportService.exportContacts(userId)
+      else if (type === 'activities') result = await exportService.exportActivities(userId)
+      else if (type === 'gdpr') result = await exportService.exportGdprData(userId)
+
+      if (result?.success) {
+        toast({ title: 'Export complete', description: `${result.count || 'All'} records downloaded`, type: 'success' })
+        exportService.getExportHistory(userId).then(setHistory)
+      } else {
+        toast({ title: 'Export failed', description: result?.error || 'No data to export', type: 'error' })
+      }
+    } catch (err) {
+      toast({ title: 'Export failed', description: String(err.message || err), type: 'error' })
+    }
+    setExporting(null)
+  }
+
+  return (
+    <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
+      <h2 className="text-sm font-mono text-text-muted uppercase mb-1">Data Export</h2>
+      <p className="text-xs text-text-muted mb-4">
+        Download your data as CSV files. For GDPR data portability, use the full export which
+        includes your profile, deals, contacts, and activities as a single JSON file.
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { type: 'deals', label: 'Deals CSV', icon: '📊' },
+          { type: 'contacts', label: 'Contacts CSV', icon: '👥' },
+          { type: 'activities', label: 'Activities CSV', icon: '📋' },
+          { type: 'gdpr', label: 'Full Export (GDPR)', icon: '📦' },
+        ].map(exp => (
+          <button
+            key={exp.type}
+            onClick={() => handleExport(exp.type)}
+            disabled={exporting === exp.type}
+            className="flex flex-col items-center gap-1 p-3 bg-bg-card border border-border rounded-lg hover:border-accent/50 transition-colors text-center disabled:opacity-50"
+          >
+            <span className="text-lg">{exp.icon}</span>
+            <span className="text-[10px] text-text-primary">{exp.label}</span>
+            {exporting === exp.type && <span className="text-[9px] text-accent">Exporting…</span>}
+          </button>
+        ))}
+      </div>
+      {history.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <div className="text-[9px] text-text-muted font-mono uppercase tracking-widest mb-1">Recent exports</div>
+          <div className="space-y-1">
+            {history.slice(0, 5).map(h => (
+              <div key={h.id} className="text-[10px] text-text-muted flex items-center justify-between">
+                <span>{h.export_type} · {h.row_count} rows</span>
+                <span>{new Date(h.requested_at).toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function IntegrationsSection({ propertyId }) {
+  const [integrations, setIntegrations] = useState([])
+
+  useEffect(() => {
+    if (!propertyId) return
+    supabase
+      .from('integration_status')
+      .select('*')
+      .eq('property_id', propertyId)
+      .then(({ data }) => setIntegrations(data || []))
+  }, [propertyId])
+
+  const allIntegrations = [
+    { name: 'outlook', label: 'Outlook', icon: '📧', description: 'Email sync and contact enrichment' },
+    { name: 'stripe', label: 'Stripe', icon: '💳', description: 'Payment processing and billing' },
+    { name: 'resend', label: 'Resend', icon: '📨', description: 'Email delivery (primary)' },
+    { name: 'sendgrid', label: 'SendGrid', icon: '📬', description: 'Email delivery (fallback)' },
+    { name: 'apollo', label: 'Apollo', icon: '🔍', description: 'Contact enrichment and prospecting' },
+    { name: 'hunter', label: 'Hunter.io', icon: '✉', description: 'Email verification' },
+  ]
+
+  return (
+    <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
+      <h2 className="text-sm font-mono text-text-muted uppercase mb-1">Integrations</h2>
+      <p className="text-xs text-text-muted mb-4">
+        Connected services and their sync status. Contact support to configure new integrations.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {allIntegrations.map(int => {
+          const status = integrations.find(i => i.integration_name === int.name)
+          const isConnected = status?.status === 'connected' || status?.status === 'syncing'
+          return (
+            <div key={int.name} className="flex items-center gap-3 p-3 bg-bg-card border border-border rounded-lg">
+              <span className="text-xl shrink-0">{int.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-text-primary font-medium">{int.label}</div>
+                <div className="text-[10px] text-text-muted">{int.description}</div>
+                {status?.last_synced_at && (
+                  <div className="text-[9px] text-text-muted mt-0.5">Last sync: {new Date(status.last_synced_at).toLocaleString()}</div>
+                )}
+                {status?.last_error && (
+                  <div className="text-[9px] text-danger mt-0.5">{status.last_error}</div>
+                )}
+              </div>
+              <div className={`text-[9px] font-mono uppercase px-2 py-1 rounded ${
+                isConnected ? 'bg-success/15 text-success' : 'bg-bg-surface text-text-muted'
+              }`}>
+                {status?.status || 'not set up'}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

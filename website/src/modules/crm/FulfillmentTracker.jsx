@@ -1,9 +1,11 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
+import { useAutoSave } from '@/hooks/useAutoSave'
+import SaveIndicator from '@/components/SaveIndicator'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -179,15 +181,23 @@ function DeliveryNotesEditor({ record, onSaved }) {
   const [text, setText] = useState(record.delivery_notes || '')
   const inputRef = useRef(null)
 
-  async function save() {
+  const saveFn = useCallback(async (value) => {
     const { error } = await supabase
       .from('fulfillment_records')
-      .update({ delivery_notes: text })
+      .update({ delivery_notes: value })
       .eq('id', record.id)
-    if (!error) {
-      onSaved()
-      setEditing(false)
-    }
+    if (error) throw error
+    onSaved()
+  }, [record.id, onSaved])
+
+  const autosave = useAutoSave(text, saveFn, {
+    debounceMs: 1500,
+    enabled: editing,
+  })
+
+  async function saveAndClose() {
+    await autosave.save()
+    setEditing(false)
   }
 
   if (!editing) {
@@ -209,10 +219,18 @@ function DeliveryNotesEditor({ record, onSaved }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         className="bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-primary w-full focus:outline-none focus:border-accent"
-        onKeyDown={(e) => e.key === 'Enter' && save()}
+        onKeyDown={(e) => e.key === 'Enter' && saveAndClose()}
       />
-      <button onClick={save} className="text-xs text-success whitespace-nowrap font-medium">
-        Save
+      <SaveIndicator
+        status={autosave.status}
+        save={autosave.save}
+        lastSavedAt={autosave.lastSavedAt}
+        error={autosave.error}
+        showManualButton={false}
+        className="text-[10px]"
+      />
+      <button onClick={saveAndClose} className="text-xs text-success whitespace-nowrap font-medium">
+        Done
       </button>
       <button onClick={() => setEditing(false)} className="text-xs text-text-primary whitespace-nowrap">
         Cancel

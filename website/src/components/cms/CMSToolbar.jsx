@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useCMS } from '@/hooks/useCMS'
 import { useToast } from '@/components/Toast'
+import { useAutoSave } from '@/hooks/useAutoSave'
+import SaveIndicator from '@/components/SaveIndicator'
 
 export default function CMSToolbar() {
   const { editMode, canEdit, setEditMode, hasUnsaved, drafts, publishAll, saveDrafts, discardDrafts, media, uploadImage, deleteImage } = useCMS()
@@ -9,6 +11,16 @@ export default function CMSToolbar() {
   const [publishing, setPublishing] = useState(false)
   const fileRef = useRef(null)
   const draftCount = Object.keys(drafts).length
+
+  // Autosave drafts to the CMS draft column. Publish stays manual.
+  const autosaveFn = useCallback(async () => {
+    if (Object.keys(drafts).length === 0) return
+    await saveDrafts()
+  }, [drafts, saveDrafts])
+  const autosave = useAutoSave(drafts, autosaveFn, {
+    debounceMs: 2500,
+    enabled: editMode && canEdit,
+  })
 
   if (!canEdit) return null
 
@@ -35,9 +47,16 @@ export default function CMSToolbar() {
           </span>
           {draftCount > 0 && (
             <span className="text-[10px] font-mono text-warning bg-warning/10 px-2 py-0.5 rounded">
-              {draftCount} unsaved change{draftCount !== 1 ? 's' : ''}
+              {draftCount} draft{draftCount !== 1 ? 's' : ''}
             </span>
           )}
+          <SaveIndicator
+            status={autosave.status}
+            save={autosave.save}
+            lastSavedAt={autosave.lastSavedAt}
+            error={autosave.error}
+            showManualButton={false}
+          />
         </div>
 
         <div className="flex items-center gap-2">

@@ -138,7 +138,7 @@ async function callClaude(prompt: string, maxTokens: number): Promise<string> {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-opus-4-6",
+      model: "claude-opus-4-7",
       max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -207,7 +207,7 @@ async function callClaudeAdvanced(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-opus-4-6",
+      model: "claude-opus-4-7",
       max_tokens: maxTokens,
       system: systemPrompt,
       messages: messages,

@@ -1,19 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/hooks/useAuth'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
-
-// ─── Hub definitions ──────────────────────────────────────
-// Each hub has an id, label, icon (for collapsed view), and
-// a function that returns its nav sections given the current
-// flags/config/role context.
-
-const HUBS = [
-  { id: 'crm', label: 'CRM', icon: '📊' },
-  { id: 'marketing', label: 'Marketing', icon: '📢' },
-  { id: 'ops', label: 'Operations', icon: '⚙' },
-]
+import { useActiveHub, detectHub } from '@/hooks/useActiveHub'
 
 function getCrmSections(t, propertyType, flags, moduleLabels) {
   const industryItems = []
@@ -48,14 +38,11 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
       items: [{ to: '/app', label: 'Dashboard' }],
     },
     {
-      label: 'Pipeline',
+      label: 'Prospecting & Pipeline',
       flag: 'crm',
       items: [
         { to: '/app/crm/assets', label: t?.asset ? `${t.asset}s` : 'Assets' },
         { to: '/app/crm/pipeline', label: `${t?.deal || 'Deal'} Pipeline` },
-        { to: '/app/crm/contracts', label: 'Contracts' },
-        { to: '/app/crm/fulfillment', label: t?.fulfillment || 'Fulfillment' },
-        { to: '/app/crm/projects', label: 'Projects' },
         { to: '/app/crm/declined', label: 'Declined' },
       ],
     },
@@ -78,7 +65,6 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
     })
   }
 
-  // Sportify, VALORA, BusinessNow — flag-gated modules
   if (flags.sportify) {
     sections.push({
       label: moduleLabels.sportify || 'Sportify',
@@ -101,58 +87,23 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
   return sections
 }
 
-function getMarketingSections(flags, isDeveloper, showEmailMarketing) {
-  const sections = [
+function getAccountsSections(t) {
+  return [
     {
       label: 'Overview',
-      items: [{ to: '/app/marketing', label: 'Marketing Dashboard' }],
+      items: [{ to: '/app/accounts', label: 'Account Management' }],
+    },
+    {
+      label: 'Active Accounts',
+      items: [
+        { to: '/app/crm/contracts', label: 'Contracts' },
+        { to: '/app/crm/fulfillment', label: t?.fulfillment || 'Fulfillment' },
+      ],
     },
   ]
-
-  if (showEmailMarketing) {
-    sections.push({
-      label: 'Email',
-      items: [
-        { to: '/app/marketing/email/campaigns', label: 'Campaigns' },
-        { to: '/app/marketing/email/lists', label: 'Lists' },
-        { to: '/app/marketing/email/subscribers', label: 'Subscribers' },
-        { to: '/app/marketing/email/templates', label: 'Templates' },
-      ],
-    })
-  }
-
-  sections.push({
-    label: 'The Digest',
-    items: [
-      { to: '/app/developer/digest', label: 'Issues' },
-      { to: '/app/crm/newsletter', label: 'Newsletter' },
-    ],
-  })
-
-  if (flags.client_growth_hub) {
-    const growthItems = [{ to: '/app/growth', label: 'Growth Hub' }]
-    if (flags.client_marketing_hub) growthItems.push({ to: '/app/growth', label: 'Marketing Hub' })
-    if (flags.client_ad_spend) growthItems.push({ to: '/app/growth', label: 'Ad Spend' })
-    if (flags.client_connection_manager) growthItems.push({ to: '/app/growth', label: 'Connections' })
-    sections.push({ label: 'Growth', items: growthItems })
-  }
-
-  if (isDeveloper) {
-    sections.push({
-      label: 'Automations',
-      items: [
-        { to: '/app/crm/automations', label: 'Sequences' },
-        { to: '/app/admin/automation', label: 'Control Center' },
-        { to: '/app/admin/social-queue', label: 'Social Queue' },
-        { to: '/app/admin/email-queue', label: 'Email Queue' },
-      ],
-    })
-  }
-
-  return sections
 }
 
-function getOpsSections(flags, isDeveloper, hasAdminRole) {
+function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing) {
   const sections = [
     {
       label: 'Overview',
@@ -160,6 +111,30 @@ function getOpsSections(flags, isDeveloper, hasAdminRole) {
     },
   ]
 
+  // Marketing — folded into Ops
+  const marketingItems = [{ to: '/app/marketing', label: 'Marketing Dashboard' }]
+  if (showEmailMarketing) {
+    marketingItems.push({ to: '/app/marketing/email/campaigns', label: 'Email Campaigns' })
+    marketingItems.push({ to: '/app/marketing/email/lists', label: 'Lists' })
+    marketingItems.push({ to: '/app/marketing/email/subscribers', label: 'Subscribers' })
+    marketingItems.push({ to: '/app/marketing/email/templates', label: 'Templates' })
+  }
+  marketingItems.push({ to: '/app/crm/newsletter', label: 'Newsletter' })
+  marketingItems.push({ to: '/app/developer/digest', label: 'The Digest' })
+  if (flags.client_growth_hub) {
+    marketingItems.push({ to: '/app/growth', label: 'Growth Hub' })
+  }
+  sections.push({ label: 'Marketing', items: marketingItems })
+
+  // Projects — moved here from CRM (project management for the team)
+  sections.push({
+    label: 'Projects',
+    items: [
+      { to: '/app/crm/projects', label: 'All Projects' },
+    ],
+  })
+
+  // Finance
   if (flags.client_finance_dashboard || flags.client_financial_projections || isDeveloper) {
     const finItems = []
     if (isDeveloper) finItems.push({ to: '/app/businessops', label: 'Business Ops' })
@@ -174,6 +149,18 @@ function getOpsSections(flags, isDeveloper, hasAdminRole) {
       { to: '/app/crm/team', label: 'Team Manager' },
     ],
   })
+
+  if (isDeveloper) {
+    sections.push({
+      label: 'Automations',
+      items: [
+        { to: '/app/crm/automations', label: 'Sequences' },
+        { to: '/app/admin/automation', label: 'Control Center' },
+        { to: '/app/admin/social-queue', label: 'Social Queue' },
+        { to: '/app/admin/email-queue', label: 'Email Queue' },
+      ],
+    })
+  }
 
   sections.push({
     label: 'Billing',
@@ -202,22 +189,6 @@ function getOpsSections(flags, isDeveloper, hasAdminRole) {
   return sections
 }
 
-// ─── Hub auto-detection ────────────────────────────────────
-// When the user navigates via a direct URL or bookmark, detect
-// which hub the current path belongs to and switch automatically.
-function detectHub(pathname) {
-  if (pathname.startsWith('/app/marketing')) return 'marketing'
-  if (pathname.startsWith('/app/ops')) return 'ops'
-  if (pathname.startsWith('/app/admin')) return 'ops'
-  if (pathname.startsWith('/app/businessops')) return 'ops'
-  if (pathname.startsWith('/app/developer')) return 'ops'
-  if (pathname.startsWith('/app/settings')) return 'ops'
-  if (pathname.startsWith('/app/growth')) return 'marketing'
-  return 'crm'
-}
-
-// ─── Main component ────────────────────────────────────────
-
 export default function Sidebar({ collapsed, onToggle, mobile }) {
   const { flags } = useFeatureFlags()
   const { isDeveloper, profile } = useAuth()
@@ -226,6 +197,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
   const t = config.terminology || {}
   const navigate = useNavigate()
   const location = useLocation()
+  const { activeHub, setActiveHub } = useActiveHub()
 
   const role = profile?.role
   const hasAdminRole = role === 'developer' || role === 'businessops' || role === 'admin'
@@ -236,43 +208,21 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
   const qaOverride = typeof window !== 'undefined' ? localStorage.getItem('ll_qa_industry') : null
   const propertyType = (isDeveloper && qaOverride) ? qaOverride : (profile?.properties?.type || 'other')
 
-  // Hub state — persisted in localStorage, auto-detected from URL on mount
-  const [activeHub, setActiveHub] = useState(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('ll_active_hub') : null
-    if (saved && HUBS.some(h => h.id === saved)) return saved
-    return detectHub(typeof window !== 'undefined' ? window.location.pathname : '/app')
-  })
-
   // Auto-switch hub when URL changes to a different hub's territory
   useEffect(() => {
     const detected = detectHub(location.pathname)
     if (detected !== activeHub) {
       setActiveHub(detected)
-      localStorage.setItem('ll_active_hub', detected)
     }
   }, [location.pathname])
 
-  function switchHub(hubId) {
-    setActiveHub(hubId)
-    localStorage.setItem('ll_active_hub', hubId)
-  }
-
-  // Determine which hubs are visible to this role
-  const visibleHubs = HUBS.filter(h => {
-    if (h.id === 'crm') return true
-    if (h.id === 'marketing') return isDeveloper || showEmailMarketing || flags.client_growth_hub
-    if (h.id === 'ops') return isDeveloper || hasAdminRole
-    return false
-  })
-
-  // Build nav sections for the active hub
   let navSections = []
   if (activeHub === 'crm') {
     navSections = getCrmSections(t, propertyType, flags, moduleLabels)
-  } else if (activeHub === 'marketing') {
-    navSections = getMarketingSections(flags, isDeveloper, showEmailMarketing)
+  } else if (activeHub === 'accounts') {
+    navSections = getAccountsSections(t)
   } else if (activeHub === 'ops') {
-    navSections = getOpsSections(flags, isDeveloper, hasAdminRole)
+    navSections = getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing)
   }
 
   const width = mobile ? 'w-[280px]' : collapsed ? 'w-16' : 'w-[220px]'
@@ -280,7 +230,6 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
 
   return (
     <aside className={`fixed top-0 left-0 h-screen bg-bg-surface border-r border-border flex flex-col transition-all duration-200 z-40 ${width}`}>
-      {/* Logo */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-border">
         {showLabels && (
           <button onClick={() => navigate('/app')} className="font-mono font-bold text-accent text-sm cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</button>
@@ -294,47 +243,6 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
         </button>
       </div>
 
-      {/* Hub picker — only shown if user has access to 2+ hubs */}
-      {visibleHubs.length > 1 && (
-        <div className={`border-b border-border ${showLabels ? 'px-3 py-2' : 'px-1 py-2'}`}>
-          {showLabels ? (
-            <div className="flex gap-1">
-              {visibleHubs.map(hub => (
-                <button
-                  key={hub.id}
-                  onClick={() => switchHub(hub.id)}
-                  className={`flex-1 text-[10px] font-mono uppercase tracking-wider py-1.5 px-2 rounded transition-all ${
-                    activeHub === hub.id
-                      ? 'bg-accent/15 text-accent border border-accent/30'
-                      : 'text-text-muted hover:text-text-primary hover:bg-bg-card border border-transparent'
-                  }`}
-                >
-                  {hub.label}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-1">
-              {visibleHubs.map(hub => (
-                <button
-                  key={hub.id}
-                  onClick={() => switchHub(hub.id)}
-                  title={hub.label}
-                  className={`w-8 h-8 flex items-center justify-center rounded text-sm transition-all ${
-                    activeHub === hub.id
-                      ? 'bg-accent/15 border border-accent/30'
-                      : 'text-text-muted hover:bg-bg-card border border-transparent'
-                  }`}
-                >
-                  {hub.icon}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Navigation — hub-scoped */}
       <nav className="flex-1 overflow-y-auto py-3">
         {navSections.map((section) => {
           if (section.flag && !flags[section.flag]) return null
@@ -349,7 +257,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
                 <NavLink
                   key={item.to + item.label}
                   to={item.to}
-                  end={item.to === '/app' || item.to === '/app/marketing' || item.to === '/app/ops'}
+                  end={item.to === '/app' || item.to === '/app/marketing' || item.to === '/app/ops' || item.to === '/app/accounts'}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
                       isActive
@@ -366,7 +274,6 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
         })}
       </nav>
 
-      {/* Bottom — always visible regardless of hub */}
       {showLabels && (
         <div className="border-t border-border px-4 py-3 space-y-2">
           <button

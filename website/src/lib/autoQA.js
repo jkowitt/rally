@@ -179,21 +179,69 @@ export async function runFullAutoQA(schedule = 'manual') {
     moduleScores.team = scoreModule(platformStats.profiles || 0, [(platformStats.profiles || 0) > 0])
     moduleScores.events = scoreModule(eventCount, [eventCount >= 0])
 
-    // Test AI by actually pinging the edge function
-    let aiWorking = false
-    try {
-      const { error: aiErr } = await supabase.functions.invoke('contract-ai', { body: { action: 'summarize_contract', contract_text: 'test' } })
-      aiWorking = !aiErr
-    } catch {}
-    moduleScores.ai = aiWorking ? 90 : 30
+    // ═══════════════════════════════════════
+    // PHASE 3.5: Smoke tests — real round-trip checks
+    // ═══════════════════════════════════════
+    // Each smoke test calls a real endpoint / RPC / table and
+    // records latency + pass/fail to qa_smoke_results so the report
+    // captures actual end-to-end function health, not just data counts.
+    const smokeTests = []
 
-    // Auth check
-    let authWorking = false
-    try {
-      const { data: sess } = await supabase.auth.getSession()
-      authWorking = !!sess?.session
-    } catch {}
+    async function smoke(name, category, fn) {
+      const start = Date.now()
+      try {
+        await fn()
+        smokeTests.push({ name, category, passed: true, latency_ms: Date.now() - start })
+      } catch (e) {
+        smokeTests.push({ name, category, passed: false, latency_ms: Date.now() - start, error_message: e?.message || String(e) })
+      }
+    }
+
+    await smoke('contract-ai/summarize_contract', 'edge_function', async () => {
+      const { error } = await supabase.functions.invoke('contract-ai', { body: { action: 'summarize_contract', contract_text: 'test' } })
+      if (error) throw error
+    })
+    await smoke('auth/getSession', 'auth', async () => {
+      const { data, error } = await supabase.auth.getSession()
+      if (error) throw error
+      if (!data?.session) throw new Error('No session')
+    })
+    await smoke('deals/select_count', 'crud', async () => {
+      const { error } = await supabase.from('deals').select('id', { head: true, count: 'exact' }).limit(1)
+      if (error) throw error
+    })
+    await smoke('contracts/select_count', 'crud', async () => {
+      const { error } = await supabase.from('contracts').select('id', { head: true, count: 'exact' }).limit(1)
+      if (error) throw error
+    })
+    await smoke('contract_versions/select', 'crud', async () => {
+      const { error } = await supabase.from('contract_versions').select('id', { head: true, count: 'exact' }).limit(1)
+      if (error) throw error
+    })
+    await smoke('fulfillment_records/select', 'crud', async () => {
+      const { error } = await supabase.from('fulfillment_records').select('id', { head: true, count: 'exact' }).limit(1)
+      if (error) throw error
+    })
+    await smoke('feature_flags/select', 'crud', async () => {
+      const { error } = await supabase.from('feature_flags').select('module').limit(5)
+      if (error) throw error
+    })
+    await smoke('archive_contract_version/rpc_signature', 'rpc', async () => {
+      // Pass a non-existent uuid — should return null without throwing.
+      const { error } = await supabase.rpc('archive_contract_version', {
+        p_contract_id: '00000000-0000-0000-0000-000000000000',
+        p_reason: 'qa-smoke',
+      })
+      if (error) throw error
+    })
+
+    const aiWorking = smokeTests.find(t => t.name === 'contract-ai/summarize_contract')?.passed
+    const authWorking = smokeTests.find(t => t.name === 'auth/getSession')?.passed
+    moduleScores.ai = aiWorking ? 90 : 30
     moduleScores.auth = authWorking ? 95 : 40
+
+    const smokePassed = smokeTests.filter(t => t.passed).length
+    moduleScores.smoke = scoreModule(smokePassed, [smokePassed === smokeTests.length, smokePassed > 0])
 
     moduleScores.global = scoreModule(results.passed, [results.failed === 0, results.passed > 10])
 
@@ -378,7 +426,7 @@ FEATURE SUGGESTIONS:
     }
 
     // ═══════════════════════════════════════
-    // PHASE 5: Save report
+    // PHASE 5: Save report + smoke results
     // ═══════════════════════════════════════
     await supabase.from('qa_auto_reports').update({
       status: 'completed',
@@ -394,6 +442,14 @@ FEATURE SUGGESTIONS:
       module_scores: moduleScores,
       completed_at: new Date().toISOString(),
     }).eq('id', report.id)
+
+    if (smokeTests.length > 0) {
+      try {
+        await supabase.from('qa_smoke_results').insert(
+          smokeTests.map(t => ({ ...t, qa_report_id: report.id }))
+        )
+      } catch {}
+    }
 
     // ═══════════════════════════════════════
     // PHASE 6: Log auto-fixes to change log

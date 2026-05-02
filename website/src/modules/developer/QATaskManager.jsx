@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { runFullAutoQA } from '@/lib/autoQA'
+import { syncQATestRegistry, QA_TEST_REGISTRY } from '@/lib/qaTestRegistry'
 
 const MODULES = [
   'all', 'pipeline', 'contracts', 'assets', 'fulfillment', 'dashboard',
@@ -35,6 +37,42 @@ export default function QATaskManager() {
   const [expanded, setExpanded] = useState(null)
   const [notesDraft, setNotesDraft] = useState({})
   const [noteForm, setNoteForm] = useState(null)
+  const [running, setRunning] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+
+  async function handleRunAutoQA() {
+    if (running) return
+    setRunning(true)
+    toast({ title: 'Auto QA started…', description: 'This takes 15–60s.', type: 'info' })
+    try {
+      await runFullAutoQA('manual')
+      queryClient.invalidateQueries({ queryKey: ['qa-task-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['qa-auto-reports'] })
+      toast({ title: 'Auto QA complete', type: 'success' })
+    } catch (e) {
+      toast({ title: 'Auto QA failed', description: e.message, type: 'error' })
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  async function handleSyncRegistry() {
+    if (syncing) return
+    setSyncing(true)
+    try {
+      const result = await syncQATestRegistry()
+      queryClient.invalidateQueries({ queryKey: ['qa-task-summary'] })
+      toast({
+        title: 'Registry synced',
+        description: `${result.inserted} new, ${result.updated} updated, ${result.kept} unchanged (of ${QA_TEST_REGISTRY.length})`,
+        type: 'success',
+      })
+    } catch (e) {
+      toast({ title: 'Sync failed', description: e.message, type: 'error' })
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const { data: tasks } = useQuery({
     queryKey: ['qa-task-summary'],
@@ -247,6 +285,33 @@ export default function QATaskManager() {
 
   return (
     <div className="space-y-4">
+      {/* Action bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-bg-surface border border-border rounded-lg p-3">
+        <div>
+          <div className="text-sm font-semibold text-text-primary">QA Task Manager</div>
+          <div className="text-[11px] text-text-muted">
+            Run smoke tests + DB health, or sync the static test registry from the codebase.
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncRegistry}
+            disabled={syncing}
+            className="text-xs px-3 py-1.5 rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 transition-colors disabled:opacity-50"
+            title={`Sync ${QA_TEST_REGISTRY.length} registered test cases to the DB`}
+          >
+            {syncing ? 'Syncing…' : `Sync registry (${QA_TEST_REGISTRY.length})`}
+          </button>
+          <button
+            onClick={handleRunAutoQA}
+            disabled={running}
+            className="text-xs px-3 py-1.5 rounded bg-accent text-bg-primary font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {running ? 'Running…' : 'Run Auto QA now'}
+          </button>
+        </div>
+      </div>
+
       {/* Header stats */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         <StatBox label="Total Tasks" value={stats.total} />

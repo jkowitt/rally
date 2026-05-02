@@ -154,7 +154,7 @@ Use web_search to find recent, credible sources. Return the result as a JSON obj
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-opus-4-6",
+        model: "claude-opus-4-7",
         max_tokens: 8192,
         system: SYSTEM_PROMPT,
         tools: [

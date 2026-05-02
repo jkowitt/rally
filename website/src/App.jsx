@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import { FeatureFlagProvider } from './hooks/useFeatureFlags'
+import { ImpersonationProvider } from './hooks/useImpersonation'
 import ToastProvider from './components/Toast'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import LegalGate from './components/layout/LegalGate'
@@ -131,6 +132,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <ImpersonationProvider>
       <AuthProvider>
         <FeatureFlagProvider>
           <CMSProvider>
@@ -273,6 +275,7 @@ export default function App() {
           </CMSProvider>
         </FeatureFlagProvider>
       </AuthProvider>
+      </ImpersonationProvider>
     </ErrorBoundary>
   )
 }

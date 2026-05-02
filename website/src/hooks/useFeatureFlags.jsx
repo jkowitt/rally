@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
+import { useImpersonation } from './useImpersonation'
 
 const FeatureFlagContext = createContext({})
 
@@ -53,8 +54,9 @@ const DEFAULT_FLAGS = {
 }
 
 export function FeatureFlagProvider({ children }) {
-  const { session, profile } = useAuth()
-  const isDev = profile?.role === 'developer'
+  const { session, realIsDeveloper } = useAuth()
+  const isDev = realIsDeveloper
+  const impersonation = useImpersonation()
   const [flags, setFlags] = useState(ALL_OFF)
   const [loaded, setLoaded] = useState(false)
 
@@ -180,8 +182,13 @@ export function FeatureFlagProvider({ children }) {
     }
   }
 
+  // Overlay tier preset flags when developer is impersonating a tier
+  const effectiveFlags = (isDev && impersonation.tierFlags)
+    ? { ...flags, ...impersonation.tierFlags }
+    : flags
+
   return (
-    <FeatureFlagContext.Provider value={{ flags, loaded, toggleFlag }}>
+    <FeatureFlagContext.Provider value={{ flags: effectiveFlags, rawFlags: flags, loaded, toggleFlag }}>
       {children}
     </FeatureFlagContext.Provider>
   )

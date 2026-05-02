@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { logLogin, logAudit } from '@/lib/audit'
 import { maybeRunScheduledHealthCheck } from '@/lib/healthCheck'
 import { maybeRunScheduledQA } from '@/lib/autoQA'
+import { useImpersonation } from './useImpersonation'
 
 const AuthContext = createContext(null)
 
@@ -112,11 +113,35 @@ export function AuthProvider({ children }) {
     setProfile(null)
   }
 
-  const isDeveloper = profile?.role === 'developer'
-  const isAdmin = profile?.role === 'admin'
+  const realIsDeveloper = profile?.role === 'developer'
+  const impersonation = useImpersonation()
+
+  // Effective profile overlays impersonation values (visual only).
+  // Real DB writes still go through the developer's session.
+  let effectiveProfile = profile
+  if (realIsDeveloper && profile && (impersonation.role || impersonation.industry)) {
+    effectiveProfile = {
+      ...profile,
+      role: impersonation.role || profile.role,
+      properties: impersonation.industry
+        ? { ...(profile.properties || {}), type: impersonation.industry }
+        : profile.properties,
+    }
+  }
+
+  const exposedProfile = effectiveProfile
+  const isDeveloper = exposedProfile?.role === 'developer'
+  const isAdmin = exposedProfile?.role === 'admin'
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signIn, signUp, signOut, isDeveloper, isAdmin, fetchProfile }}>
+    <AuthContext.Provider value={{
+      session,
+      profile: exposedProfile,
+      realProfile: profile,
+      realIsDeveloper,
+      isImpersonating: realIsDeveloper && impersonation.isActive,
+      loading, signIn, signUp, signOut, isDeveloper, isAdmin, fetchProfile,
+    }}>
       {children}
     </AuthContext.Provider>
   )

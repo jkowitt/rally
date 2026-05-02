@@ -205,8 +205,8 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
     (isDeveloper && flags.email_marketing_developer) ||
     (hasAdminRole && flags.email_marketing_public)
 
-  const qaOverride = typeof window !== 'undefined' ? localStorage.getItem('ll_qa_industry') : null
-  const propertyType = (isDeveloper && qaOverride) ? qaOverride : (profile?.properties?.type || 'other')
+  // Profile is the effective (possibly impersonated) profile from useAuth
+  const propertyType = profile?.properties?.type || 'other'
 
   // Auto-switch hub when URL changes to a different hub's territory
   useEffect(() => {

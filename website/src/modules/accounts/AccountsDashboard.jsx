@@ -15,6 +15,7 @@ export default function AccountsDashboard() {
     pending: 0,
   })
   const [recentContracts, setRecentContracts] = useState([])
+  const [recentVersions, setRecentVersions] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -44,16 +45,24 @@ export default function AccountsDashboard() {
       const delivered = recList.filter(r => r.delivered).length
       const pending = recList.length - delivered
 
+      const { data: versions } = await supabase
+        .from('contract_versions')
+        .select('id, contract_id, version_number, archived_at, archived_reason, snapshot')
+        .eq('property_id', propertyId)
+        .order('archived_at', { ascending: false })
+        .limit(5)
+
       if (cancelled) return
       setStats({
         contracts: all.length,
         activeContracts: active.length,
-        archivedContracts: archived.length,
+        archivedContracts: (versions || []).length > 0 ? (versions || []).length : archived.length,
         benefits: recList.length,
         delivered,
         pending,
       })
       setRecentContracts(active.slice(0, 8))
+      setRecentVersions(versions || [])
       setLoading(false)
     }
 
@@ -137,6 +146,32 @@ export default function AccountsDashboard() {
           ))}
         </div>
       </div>
+
+      {recentVersions.length > 0 && (
+        <div>
+          <div className="text-xs uppercase tracking-widest text-text-muted font-mono mb-2">
+            Recent Archived Versions
+          </div>
+          <div className="bg-bg-surface border border-border rounded-lg divide-y divide-border">
+            {recentVersions.map(v => {
+              const snap = v.snapshot?.contract || {}
+              return (
+                <div key={v.id} className="flex items-center justify-between p-3">
+                  <div>
+                    <div className="text-sm text-text-primary">
+                      {snap.brand_name || 'Contract'} <span className="text-text-muted">— v{v.version_number}</span>
+                    </div>
+                    <div className="text-xs text-text-muted mt-0.5">
+                      Archived {new Date(v.archived_at).toLocaleDateString()}
+                      {v.archived_reason ? ` · ${v.archived_reason}` : ''}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

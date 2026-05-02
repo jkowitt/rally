@@ -164,16 +164,34 @@ export default function ContractManager() {
       const { _benefits, ...payload } = contract
       if (!payload.total_value) delete payload.total_value
       let savedContract
+      let isNewContract = false
       if (payload.id) {
+        // Snapshot the prior version before applying the update so the
+        // old contract terms remain visible in Account Management → archives.
+        // Skipped for templates (they're not signed agreements).
+        if (!payload.is_template) {
+          const { error: archiveErr } = await supabase.rpc('archive_contract_version', {
+            p_contract_id: payload.id,
+            p_reason: 'edit',
+          })
+          if (archiveErr) console.warn('Contract archive failed (non-fatal):', archiveErr.message)
+        }
         const { data, error } = await supabase.from('contracts').update(payload).eq('id', payload.id).select().single()
         if (error) throw error
         savedContract = data
       } else {
         delete payload.id
+        isNewContract = true
+        // Auto-mark as active in Account Management when a real (non-template)
+        // contract is created with a deal attached — this is the "send to AM" trigger.
+        if (!payload.is_template && payload.deal_id && !payload.status) {
+          payload.status = 'active'
+        }
         const { data, error } = await supabase.from('contracts').insert({ ...payload, property_id: propertyId, created_by: profile.id }).select().single()
         if (error) throw error
         savedContract = data
       }
+      savedContract._isNew = isNewContract
 
       // Save benefits and auto-sync to assets + fulfillment
       if (_benefits && _benefits.length > 0 && savedContract) {
@@ -244,8 +262,21 @@ export default function ContractManager() {
       queryClient.invalidateQueries({ queryKey: ['contract-templates', propertyId] })
       queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
       queryClient.invalidateQueries({ queryKey: ['fulfillment-records'] })
+      queryClient.invalidateQueries({ queryKey: ['contract-versions'] })
       if (data?._syncErrors?.length > 0) {
         toast({ title: 'Contract saved — sync issues', description: data._syncErrors[0], type: 'warning' })
+      } else if (data?._isNew && !data?.is_template && data?.deal_id) {
+        toast({
+          title: 'Contract sent to Account Management',
+          description: 'Benefits + fulfillment are now tracked under Account Management.',
+          type: 'success',
+        })
+      } else if (data?.id && !data?._isNew && !data?.is_template) {
+        toast({
+          title: 'Contract updated — prior version archived',
+          description: 'Previous terms are saved in the version history.',
+          type: 'success',
+        })
       } else {
         toast({ title: 'Contract saved — benefits synced to Assets & Fulfillment', type: 'success' })
       }
@@ -1340,7 +1371,7 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
         contract_text: pdfText || null,
         ai_summary: parsed?.summary || null,
         ai_extracted_benefits: parsed?.benefits || null,
-        status: 'In Review',
+        status: dealId ? 'active' : 'In Review',
         signed: false,
         created_by: profileId,
         // Store the original PDF exactly as uploaded
@@ -1488,7 +1519,7 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
 
       setStatus(saveAsTemplate
         ? 'Template saved! You can now use it in the AI Editor to create new contracts.'
-        : `Imported! ${benefitCount} benefit${benefitCount !== 1 ? 's' : ''}, ${assetCount} asset${assetCount !== 1 ? 's' : ''}, ${fulfillmentCount} fulfillment record${fulfillmentCount !== 1 ? 's' : ''} created.`
+        : `Imported! Sent to Account Management — ${benefitCount} benefit${benefitCount !== 1 ? 's' : ''}, ${assetCount} asset${assetCount !== 1 ? 's' : ''}, ${fulfillmentCount} fulfillment record${fulfillmentCount !== 1 ? 's' : ''} created.`
       )
       setTimeout(() => onImported(), 1500)
     } catch (e) {

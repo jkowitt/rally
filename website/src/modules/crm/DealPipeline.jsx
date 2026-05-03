@@ -7,8 +7,11 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import DealActivityTimeline from '@/components/DealActivityTimeline'
 import SlashInput from '@/components/SlashInput'
 import ErrorBoundary from '@/components/ErrorBoundary'
-import { Button, EmptyState } from '@/components/ui'
-import { Search } from 'lucide-react'
+import { Badge, Button, EmptyState } from '@/components/ui'
+import {
+  Search, Phone, Mail, Handshake, StickyNote, Bell,
+  FileText, BarChart3, ClipboardList,
+} from 'lucide-react'
 import { on } from '@/lib/appEvents'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
@@ -809,7 +812,7 @@ export default function DealPipeline() {
                             >
                               <div className="flex items-center justify-between">
                                 <div className="text-sm text-text-primary font-medium truncate">{deal.brand_name}</div>
-                                {isStale(deal) && <span className="text-[10px] font-mono text-warning bg-warning/10 px-1 rounded" title="No activity in 14+ days">STALE</span>}
+                                {isStale(deal) && <Badge tone="warning" className="text-[9px]" title="No activity in 14+ days">STALE</Badge>}
                               </div>
                               <div className="flex items-center gap-2 mt-1">
                                 {deal.value && (
@@ -834,7 +837,7 @@ export default function DealPipeline() {
                               </div>
                               <div className="flex gap-1 mt-1">
                                 {deal.renewal_flag && (
-                                  <span className="text-[10px] font-mono text-warning bg-warning/10 px-1.5 py-0.5 rounded">RENEWAL</span>
+                                  <Badge tone="warning" className="text-[9px]">RENEWAL</Badge>
                                 )}
                                 {deal.source && (
                                   <span className="text-[10px] font-mono text-text-muted bg-bg-surface px-1.5 py-0.5 rounded">{deal.source}</span>
@@ -1960,7 +1963,15 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
 
   // Activity log for this deal
   const ACTIVITY_TYPES = ['Call', 'Email', 'Meeting', 'Note', 'Follow Up', 'Contract Sent', 'Stage Change']
-  const ACTIVITY_ICONS = { Call: '📞', Email: '✉️', Meeting: '🤝', Note: '📝', 'Follow Up': '🔔', 'Contract Sent': '📄', 'Stage Change': '📊' }
+  const ACTIVITY_ICONS = {
+    Call: Phone,
+    Email: Mail,
+    Meeting: Handshake,
+    Note: StickyNote,
+    'Follow Up': Bell,
+    'Contract Sent': FileText,
+    'Stage Change': BarChart3,
+  }
 
   const [activityForm, setActivityForm] = useState({ activity_type: 'Note', subject: '', description: '' })
   const [showActivityForm, setShowActivityForm] = useState(false)
@@ -3105,7 +3116,10 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                     )}
                     {dealActivities?.map((a) => (
                       <div key={a.id} className="flex items-start gap-2 py-1.5 border-b border-border/50 last:border-0">
-                        <span className="text-sm shrink-0">{ACTIVITY_ICONS[a.activity_type] || '📋'}</span>
+                        {(() => {
+                          const Icon = ACTIVITY_ICONS[a.activity_type] || ClipboardList
+                          return <Icon className="w-4 h-4 shrink-0 text-text-muted" aria-hidden="true" />
+                        })()}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-text-primary font-medium truncate">{a.subject}</span>

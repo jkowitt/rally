@@ -7,7 +7,7 @@ import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import SaveIndicator from '@/components/SaveIndicator'
 import Breadcrumbs from '@/components/Breadcrumbs'
-import { EmptyState } from '@/components/ui'
+import { Badge, EmptyState } from '@/components/ui'
 import { Package } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -39,18 +39,14 @@ function deriveStatus(rec) {
   return 'pending'
 }
 
-const STATUS_STYLES = {
-  pending: 'bg-yellow-500/15 text-warning',
-  delivered: 'bg-green-500/15 text-success',
-  overdue: 'bg-red-500/15 text-danger',
+const STATUS_TONE = {
+  pending: 'warning',
+  delivered: 'success',
+  overdue: 'danger',
 }
 
 function StatusBadge({ status }) {
-  return (
-    <span className={cx('text-xs font-mono px-2 py-0.5 rounded-full', STATUS_STYLES[status] || '')}>
-      {status}
-    </span>
-  )
+  return <Badge tone={STATUS_TONE[status] || 'neutral'}>{status}</Badge>
 }
 
 function ProgressBar({ delivered, total }) {

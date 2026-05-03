@@ -4,11 +4,11 @@ import { useAuth } from '@/hooks/useAuth'
 import { buildDailyDigest } from '@/services/digestService'
 
 export default function DailyDigestPreview() {
-  const { profile, isDeveloper } = useAuth()
+  const { profile, realIsDeveloper } = useAuth()
   const [digest, setDigest] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  const canAccess = isDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
+  const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
   if (profile && !canAccess) return <Navigate to="/app" replace />
 
   useEffect(() => {

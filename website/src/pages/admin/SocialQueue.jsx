@@ -5,13 +5,13 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 
 export default function SocialQueue() {
-  const { profile, isDeveloper } = useAuth()
+  const { profile, realIsDeveloper } = useAuth()
   const { toast } = useToast()
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null)
 
-  const canAccess = isDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
+  const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
   if (profile && !canAccess) return <Navigate to="/app" replace />
 
   async function load() {

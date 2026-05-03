@@ -14,11 +14,11 @@ const TYPE_COLORS = {
 }
 
 export default function Notifications() {
-  const { profile, isDeveloper } = useAuth()
+  const { profile, realIsDeveloper } = useAuth()
   const { notifications, unreadCount, read, readAll, loaded } = useNotifications()
   const [filter, setFilter] = useState('all')
 
-  const canAccess = isDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
+  const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
   if (profile && !canAccess) return <Navigate to="/app" replace />
 
   const filtered = filter === 'all' ? notifications : notifications.filter(n => n.type === filter)

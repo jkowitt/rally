@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { EmptyState } from '@/components/ui'
+import { Activity } from 'lucide-react'
 
 const ACTIVITY_TYPES = [
   'Call',
@@ -563,13 +565,18 @@ export default function ActivityTimeline() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-bg-surface border border-border rounded-lg p-8 sm:p-12 text-center">
-          <p className="text-text-muted text-sm">
-            {totalCount === 0
-              ? 'No activities logged yet. Click "Log Activity" to record your first one.'
-              : 'No activities match the selected filters.'}
-          </p>
-        </div>
+        totalCount === 0 ? (
+          <EmptyState
+            icon={<Activity className="w-8 h-8 text-text-muted" />}
+            title="No activities logged yet"
+            description="Calls, emails, meetings, and notes you log against deals show up here, sorted by recency. Click Log Activity to record your first one."
+          />
+        ) : (
+          <EmptyState
+            title="No activities match the selected filters"
+            description="Try clearing the activity-type or date filters to see everything."
+          />
+        )
       ) : (
         <div className="space-y-6 sm:space-y-8">
           {grouped.map(([label, items]) => (

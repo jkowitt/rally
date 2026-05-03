@@ -6,7 +6,7 @@ import { useToast } from '@/components/Toast'
 import { Navigate } from 'react-router-dom'
 
 export default function UpgradeOffer() {
-  const { profile, isDeveloper } = useAuth()
+  const { profile, realIsDeveloper } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [form, setForm] = useState({
@@ -25,7 +25,7 @@ export default function UpgradeOffer() {
     },
   })
 
-  if (!isDeveloper && profile?.role !== 'businessops') {
+  if (!realIsDeveloper && profile?.role !== 'businessops') {
     return <Navigate to="/app" replace />
   }
 

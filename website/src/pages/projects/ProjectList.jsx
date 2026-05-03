@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Button, EmptyState } from '@/components/ui'
+import { ClipboardList } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import * as projectService from '@/services/projectService'
 
@@ -84,7 +86,7 @@ export default function ProjectList() {
       {loading ? (
         <div className="text-xs text-text-muted">Loading projects…</div>
       ) : projects.length === 0 ? (
-        <EmptyState onCreateClick={() => setShowCreate(true)} />
+        <ProjectListEmpty onCreateClick={() => setShowCreate(true)} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map(p => (
@@ -156,22 +158,18 @@ function ProjectCard({ project: p }) {
   )
 }
 
-function EmptyState({ onCreateClick }) {
+function ProjectListEmpty({ onCreateClick }) {
   return (
-    <div className="bg-bg-card border border-border rounded-lg p-10 text-center">
-      <div className="text-3xl mb-3">📋</div>
-      <h3 className="text-lg font-semibold text-text-primary">No projects yet</h3>
-      <p className="text-xs text-text-muted mt-2 max-w-md mx-auto leading-relaxed">
-        Projects help you organize tasks, track milestones, and link work to deals and campaigns.
-        When a deal closes, a project is auto-created from your default template.
-      </p>
-      <button
-        onClick={onCreateClick}
-        className="mt-4 bg-accent text-bg-primary px-5 py-2.5 rounded text-xs font-semibold hover:opacity-90"
-      >
-        Create your first project
-      </button>
-    </div>
+    <EmptyState
+      icon={<ClipboardList className="w-8 h-8 text-text-muted" />}
+      title="No projects yet"
+      description="Projects help you organize tasks, track milestones, and link work to deals and campaigns. When a deal closes, a project is auto-created from your default template."
+      primaryAction={
+        <Button size="lg" onClick={onCreateClick}>
+          Create your first project
+        </Button>
+      }
+    />
   )
 }
 

@@ -13,14 +13,14 @@ const TAG_COLORS = {
 }
 
 export default function Trials() {
-  const { profile, isDeveloper } = useAuth()
+  const { profile, realIsDeveloper } = useAuth()
   const { toast } = useToast()
   const [trials, setTrials] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [scoring, setScoring] = useState(false)
 
-  const canAccess = isDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
+  const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
   if (profile && !canAccess) return <Navigate to="/app" replace />
 
   async function load() {

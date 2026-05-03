@@ -1190,14 +1190,14 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   const viewerPlanLimits = usePlanLimits()
   const propertyId = deal.property_id
   const priorityColor = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
-  const stageColor = {
-    Prospect: 'bg-bg-card text-text-secondary',
-    'Proposal Sent': 'bg-warning/10 text-warning',
-    Negotiation: 'bg-accent/10 text-accent',
-    Contracted: 'bg-success/10 text-success',
-    'In Fulfillment': 'bg-success/10 text-success',
-    Renewed: 'bg-success/10 text-success',
-    Declined: 'bg-danger/10 text-danger',
+  const stageTone = {
+    Prospect: 'neutral',
+    'Proposal Sent': 'warning',
+    Negotiation: 'accent',
+    Contracted: 'success',
+    'In Fulfillment': 'success',
+    Renewed: 'success',
+    Declined: 'danger',
   }
 
   async function handleEnrichCompany() {
@@ -1367,7 +1367,7 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           <div className="flex-1 min-w-0">
             <h2 id="deal-viewer-title" className="text-lg font-semibold text-text-primary truncate">{deal.brand_name}</h2>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${stageColor[deal.stage] || stageColor.Prospect}`}>{deal.stage}</span>
+              <Badge tone={stageTone[deal.stage] || 'neutral'}>{deal.stage}</Badge>
               {deal.priority && <span className={`text-[10px] font-mono ${priorityColor[deal.priority]}`}>{deal.priority}</span>}
               {deal.source && <span className="text-[10px] text-text-muted font-mono">{deal.source}</span>}
             </div>

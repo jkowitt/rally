@@ -1,17 +1,34 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 
-const ToastContext = createContext(null)
+export type ToastType = 'success' | 'error' | 'warning' | 'info'
+
+export interface ToastInput {
+  title: string
+  description?: string
+  type?: ToastType
+}
+
+interface ToastInternal extends ToastInput {
+  id: number
+  type: ToastType
+}
+
+export interface ToastContextValue {
+  toast: (input: ToastInput) => number
+}
+
+const ToastContext = createContext<ToastContextValue | null>(null)
 
 const TOAST_DURATION = 4000
 
-const typeStyles = {
+const typeStyles: Record<ToastType, string> = {
   success: 'border-l-success',
   error: 'border-l-danger',
   warning: 'border-l-warning',
   info: 'border-l-accent',
 }
 
-const typeTextStyles = {
+const typeTextStyles: Record<ToastType, string> = {
   success: 'text-success',
   error: 'text-danger',
   warning: 'text-warning',
@@ -20,12 +37,11 @@ const typeTextStyles = {
 
 let toastId = 0
 
-function ToastItem({ toast, onClose }) {
-  const [visible, setVisible] = useState(false)
-  const timerRef = useRef(null)
+function ToastItem({ toast, onClose }: { toast: ToastInternal; onClose: (id: number) => void }) {
+  const [visible, setVisible] = useState<boolean>(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    // Trigger slide-in on next frame
     const frame = requestAnimationFrame(() => setVisible(true))
     return () => cancelAnimationFrame(frame)
   }, [])
@@ -35,11 +51,13 @@ function ToastItem({ toast, onClose }) {
       setVisible(false)
       setTimeout(() => onClose(toast.id), 200)
     }, TOAST_DURATION)
-    return () => clearTimeout(timerRef.current)
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
   }, [toast.id, onClose])
 
   const handleClose = () => {
-    clearTimeout(timerRef.current)
+    if (timerRef.current) clearTimeout(timerRef.current)
     setVisible(false)
     setTimeout(() => onClose(toast.id), 200)
   }
@@ -78,14 +96,14 @@ function ToastItem({ toast, onClose }) {
   )
 }
 
-export default function ToastProvider({ children }) {
-  const [toasts, setToasts] = useState([])
+export default function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<ToastInternal[]>([])
 
-  const removeToast = useCallback((id) => {
+  const removeToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
-  const toast = useCallback(({ title, description, type = 'info' }) => {
+  const toast = useCallback(({ title, description, type = 'info' }: ToastInput): number => {
     const id = ++toastId
     setToasts((prev) => [...prev, { id, title, description, type }])
     return id
@@ -103,7 +121,7 @@ export default function ToastProvider({ children }) {
   )
 }
 
-export function useToast() {
+export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext)
   if (!ctx) throw new Error('useToast must be used within a ToastProvider')
   return ctx

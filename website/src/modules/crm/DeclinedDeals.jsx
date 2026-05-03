@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { EmptyState } from '@/components/ui'
+import { XCircle } from 'lucide-react'
 
 export default function DeclinedDeals() {
   const { profile } = useAuth()
@@ -94,9 +96,11 @@ export default function DeclinedDeals() {
       {isLoading ? (
         <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="skeleton h-16" />)}</div>
       ) : deals?.length === 0 ? (
-        <div className="text-center text-text-muted text-sm py-16 bg-bg-surface border border-border rounded-lg">
-          No declined prospects. All deals are active!
-        </div>
+        <EmptyState
+          icon={<XCircle className="w-8 h-8 text-text-muted" />}
+          title="No declined prospects"
+          description="All deals in your pipeline are still active. When a prospect declines, they'll be moved here so you can review the reason and revisit later."
+        />
       ) : (
         <div className="bg-bg-surface border border-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">

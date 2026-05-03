@@ -16,13 +16,13 @@ const SUB_TOGGLES = [
 ]
 
 export default function AutomationControl() {
-  const { profile, isDeveloper } = useAuth()
+  const { profile, realIsDeveloper } = useAuth()
   const { toast } = useToast()
   const { loaded, settings, isMasterOn, toggleMaster, toggleSub, saving, reload } = useAutomation()
   const [confirmToggle, setConfirmToggle] = useState(null)
   const [health, setHealth] = useState(null)
 
-  const canAccess = isDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
+  const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
   if (profile && !canAccess) return <Navigate to="/app" replace />
 
   // Load health metrics

@@ -6,11 +6,11 @@ import { supabase } from '@/lib/supabase'
 const PLATFORM_ICONS = { linkedin: '🔷', meta: '🟦', google: '🟢' }
 
 export default function Ads() {
-  const { profile, isDeveloper } = useAuth()
+  const { profile, realIsDeveloper } = useAuth()
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const canAccess = isDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
+  const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
   if (profile && !canAccess) return <Navigate to="/app" replace />
 
   useEffect(() => {

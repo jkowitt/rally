@@ -6,13 +6,13 @@ import { sendQueuedEmail } from '@/services/emailSequenceService'
 import { useToast } from '@/components/Toast'
 
 export default function EmailQueue() {
-  const { profile, isDeveloper } = useAuth()
+  const { profile, realIsDeveloper } = useAuth()
   const { toast } = useToast()
   const [queue, setQueue] = useState([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
 
-  const canAccess = isDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
+  const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
   if (profile && !canAccess) return <Navigate to="/app" replace />
 
   async function load() {

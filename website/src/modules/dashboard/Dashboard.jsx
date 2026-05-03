@@ -78,13 +78,13 @@ export default function Dashboard() {
     setSettings(next)
   }
 
-  // Ensure new cards are always present in order
-  useEffect(() => {
+  // Effective card order — appends any newly-added card ids that
+  // aren't yet in the user's saved order. Derived in render rather
+  // than synced via setState to avoid cascading effects.
+  const cardOrder = useMemo(() => {
     const allIds = ALL_CARDS.map(c => c.id)
     const missing = allIds.filter(id => !settings.order.includes(id))
-    if (missing.length) {
-      setSettings(s => ({ ...s, order: [...s.order, ...missing] }))
-    }
+    return missing.length ? [...settings.order, ...missing] : settings.order
   }, [settings.order])
 
   // --- Data Queries ---
@@ -289,7 +289,12 @@ export default function Dashboard() {
 
   const moveCard = useCallback((id, dir) => {
     setSettings(s => {
-      const order = [...s.order]
+      // Source of truth for ordering: persisted order with newly-added
+      // card ids appended. Saving this back also locks in the order
+      // for those new cards in localStorage.
+      const allIds = ALL_CARDS.map(c => c.id)
+      const missing = allIds.filter(x => !s.order.includes(x))
+      const order = missing.length ? [...s.order, ...missing] : [...s.order]
       const idx = order.indexOf(id)
       if (idx < 0) return s
       const newIdx = idx + dir
@@ -589,7 +594,7 @@ export default function Dashboard() {
   }
 
   // Ordered visible cards
-  const visibleCards = settings.order.filter(id => isVisible(id))
+  const visibleCards = cardOrder.filter(id => isVisible(id))
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -673,14 +678,14 @@ export default function Dashboard() {
             </button>
           </div>
           <div className="space-y-1">
-            {settings.order.map((id, idx) => {
+            {cardOrder.map((id, idx) => {
               const card = ALL_CARDS.find(c => c.id === id)
               if (!card) return null
               const hidden = settings.hidden.includes(id)
               return (
                 <div key={id} className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-bg-card transition-colors">
                   <button onClick={() => moveCard(id, -1)} disabled={idx === 0} className="text-xs text-text-muted hover:text-text-primary disabled:opacity-30 font-mono">{'\u2191'}</button>
-                  <button onClick={() => moveCard(id, 1)} disabled={idx === settings.order.length - 1} className="text-xs text-text-muted hover:text-text-primary disabled:opacity-30 font-mono">{'\u2193'}</button>
+                  <button onClick={() => moveCard(id, 1)} disabled={idx === cardOrder.length - 1} className="text-xs text-text-muted hover:text-text-primary disabled:opacity-30 font-mono">{'\u2193'}</button>
                   <button onClick={() => toggleHidden(id)} className={`text-xs font-mono px-1.5 py-0.5 rounded ${hidden ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
                     {hidden ? 'OFF' : 'ON'}
                   </button>

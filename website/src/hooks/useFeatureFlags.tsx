@@ -1,11 +1,25 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
 import { useImpersonation } from './useImpersonation'
 
-const FeatureFlagContext = createContext({})
+export type FlagMap = Record<string, boolean>
 
-const ALL_MODULES = [
+export interface ToggleFlagResult {
+  success: boolean
+  module: string
+  enabled?: boolean
+  error?: string
+}
+
+export interface FeatureFlagContextValue {
+  flags: FlagMap
+  rawFlags: FlagMap
+  loaded: boolean
+  toggleFlag: (module: string) => Promise<ToggleFlagResult>
+}
+
+const ALL_MODULES: readonly string[] = [
   'crm', 'sportify', 'valora', 'businessnow',
   'newsletter', 'automations', 'businessops', 'developer', 'marketing',
   'industry_nonprofit', 'industry_media', 'industry_realestate',
@@ -14,38 +28,33 @@ const ALL_MODULES = [
   'show_sports', 'show_entertainment', 'show_conference',
   'show_nonprofit', 'show_media', 'show_realestate', 'show_agency', 'show_other',
   // Client-facing Growth Tools (all default OFF — greenlit by developer)
-  'client_growth_hub',          // master toggle for the /app/growth page
-  'client_marketing_hub',       // Phase 1
-  'client_ad_spend',            // Phase 1
-  'client_goal_tracker',        // Phase 1
-  'client_connection_manager',  // Phase 1
-  'client_financial_projections', // Phase 2
-  'client_finance_dashboard',   // Phase 2
-  'client_growth_workbook',     // Phase 2 (new)
-  'client_report_builder',      // Phase 3
-  'client_strategic_workbooks', // Phase 3 (new)
+  'client_growth_hub',
+  'client_marketing_hub',
+  'client_ad_spend',
+  'client_goal_tracker',
+  'client_connection_manager',
+  'client_financial_projections',
+  'client_finance_dashboard',
+  'client_growth_workbook',
+  'client_report_builder',
+  'client_strategic_workbooks',
 ]
 
 // Hidden modules: flags that must NEVER appear in the standard Dev Tools
 // feature flags UI and must NOT be auto-enabled by the developer role.
 // These always respect their DB value, even for developers, and are
 // toggleable only from the private /dev/feature-flags console.
-// Used by the Dev Tools UI to exclude these from rendering.
-export const HIDDEN_MODULES = [
-  'outlook_integration',        // developer-only Outlook integration
-  'email_marketing_developer',  // developer-only email marketing
-  'email_marketing_public',     // admin+ email marketing (requires dev flag on too)
+export const HIDDEN_MODULES: readonly string[] = [
+  'outlook_integration',
+  'email_marketing_developer',
+  'email_marketing_public',
 ]
 
 const ALL_PUBLIC_MODULES = [...ALL_MODULES, ...HIDDEN_MODULES]
 
-// ALL_ON is the developer override: everything visible on. Hidden modules
-// are intentionally excluded so developers still have to toggle them on
-// manually from the hidden dev console.
-const ALL_ON = Object.fromEntries(ALL_MODULES.map(m => [m, true]))
-const ALL_OFF = Object.fromEntries(ALL_PUBLIC_MODULES.map(m => [m, false]))
-// Defaults when the DB doesn't have a row for the flag — CRM and all industry visibility ON
-const DEFAULT_FLAGS = {
+const ALL_ON: FlagMap = Object.fromEntries(ALL_MODULES.map(m => [m, true]))
+const ALL_OFF: FlagMap = Object.fromEntries(ALL_PUBLIC_MODULES.map(m => [m, false]))
+const DEFAULT_FLAGS: FlagMap = {
   ...ALL_OFF,
   crm: true,
   show_sports: true, show_entertainment: true, show_conference: true,
@@ -53,64 +62,55 @@ const DEFAULT_FLAGS = {
   show_agency: true, show_other: true,
 }
 
-export function FeatureFlagProvider({ children }) {
+const FeatureFlagContext = createContext<FeatureFlagContextValue>({
+  flags: ALL_OFF,
+  rawFlags: ALL_OFF,
+  loaded: false,
+  toggleFlag: async (m) => ({ success: false, module: m, error: 'Provider not mounted' }),
+})
+
+export function FeatureFlagProvider({ children }: { children: ReactNode }) {
   const { session, realIsDeveloper } = useAuth()
   const isDev = realIsDeveloper
   const impersonation = useImpersonation()
-  const [flags, setFlags] = useState(ALL_OFF)
-  const [loaded, setLoaded] = useState(false)
+  const [flags, setFlags] = useState<FlagMap>(ALL_OFF)
+  const [loaded, setLoaded] = useState<boolean>(false)
 
   useEffect(() => {
     if (!session) return
     loadFlags()
   }, [session, isDev])
 
-  async function loadFlags() {
+  async function loadFlags(): Promise<void> {
     try {
       const { data, error } = await supabase
         .from('feature_flags')
         .select('module, enabled')
-      // Developer baseline: all standard flags ON, hidden flags OFF.
-      // Client baseline: DEFAULT_FLAGS.
-      // The baseline is ONLY used for flags that have no row in the
-      // DB (e.g. a brand-new flag that hasn't been seeded yet). Any
-      // flag that DOES have a row is read from the DB regardless of
-      // role, so toggles in Dev Tools persist across reloads.
-      const baseline = isDev ? { ...ALL_ON } : { ...DEFAULT_FLAGS }
-      // Hidden modules start OFF in the baseline. DB values still
-      // override if a row exists.
+      const baseline: FlagMap = isDev ? { ...ALL_ON } : { ...DEFAULT_FLAGS }
       HIDDEN_MODULES.forEach((m) => { baseline[m] = false })
       if (error || !data) {
         setFlags(baseline)
       } else {
-        const flagMap = { ...baseline }
-        // Overlay DB values for ALL flags regardless of role. This
-        // is the critical fix: previously developers only read
-        // hidden flags from the DB, which meant standard flag
-        // toggles appeared to save but silently reverted on reload
-        // because ALL_ON overwrote them.
-        data.forEach((f) => { flagMap[f.module] = f.enabled })
+        const flagMap: FlagMap = { ...baseline }
+        for (const f of data as Array<{ module: string; enabled: boolean }>) {
+          flagMap[f.module] = f.enabled
+        }
         setFlags(flagMap)
       }
     } catch {
-      const baseline = isDev ? { ...ALL_ON } : { ...DEFAULT_FLAGS }
+      const baseline: FlagMap = isDev ? { ...ALL_ON } : { ...DEFAULT_FLAGS }
       HIDDEN_MODULES.forEach((m) => { baseline[m] = false })
       setFlags(baseline)
     }
     setLoaded(true)
   }
 
-  async function toggleFlag(module) {
+  async function toggleFlag(module: string): Promise<ToggleFlagResult> {
     const newValue = !flags[module]
     // Optimistically update UI
     setFlags((prev) => ({ ...prev, [module]: newValue }))
 
     // ─── Primary path: edge function with service role ────────
-    // Bypasses RLS + CHECK constraints entirely. Works regardless
-    // of whether migration 058 has been applied, regardless of
-    // what RLS policies exist, regardless of what modules are
-    // in the CHECK constraint. See supabase/functions/
-    // set-feature-flag/index.ts for the server side.
     try {
       const { data: efData, error: efErr } = await supabase.functions.invoke('set-feature-flag', {
         body: { module, enabled: newValue },
@@ -122,25 +122,19 @@ export function FeatureFlagProvider({ children }) {
       }
 
       if (!efErr && efData && efData.success === false) {
-        // Edge function responded but reported failure — log the
-        // specific error it returned
         console.error('[useFeatureFlags] Edge function rejected write:', efData)
         if (efData.hint) console.error('[useFeatureFlags] →', efData.hint)
       }
 
       if (efErr) {
-        // Invocation itself failed — probably the function isn't
-        // deployed yet. Fall through to direct-DB path.
         console.warn('[useFeatureFlags] Edge function unreachable, falling back to direct DB:', efErr.message)
       }
     } catch (err) {
-      console.warn('[useFeatureFlags] Edge function threw, falling back to direct DB:', err?.message || err)
+      const msg = err instanceof Error ? err.message : String(err)
+      console.warn('[useFeatureFlags] Edge function threw, falling back to direct DB:', msg)
     }
 
     // ─── Fallback: direct DB writes ─────────────────────────
-    // Used when the edge function isn't deployed yet. Requires
-    // migration 058 (flags_insert policy + dropped CHECK
-    // constraint) to work for brand-new flag rows.
     try {
       const { data, error } = await supabase
         .from('feature_flags')
@@ -174,26 +168,32 @@ export function FeatureFlagProvider({ children }) {
     } catch (finalErr) {
       console.error('[useFeatureFlags] All save attempts failed for', module, '- reverting UI')
       setFlags((prev) => ({ ...prev, [module]: !newValue }))
-      return {
-        success: false,
-        module,
-        error: finalErr?.message || 'Could not save. Deploy set-feature-flag edge function or apply migration 058.',
-      }
+      const msg = finalErr instanceof Error
+        ? finalErr.message
+        : 'Could not save. Deploy set-feature-flag edge function or apply migration 058.'
+      return { success: false, module, error: msg }
     }
   }
 
   // Overlay tier preset flags when developer is impersonating a tier
-  const effectiveFlags = (isDev && impersonation.tierFlags)
+  const effectiveFlags: FlagMap = (isDev && impersonation.tierFlags)
     ? { ...flags, ...impersonation.tierFlags }
     : flags
 
+  const value: FeatureFlagContextValue = {
+    flags: effectiveFlags,
+    rawFlags: flags,
+    loaded,
+    toggleFlag,
+  }
+
   return (
-    <FeatureFlagContext.Provider value={{ flags: effectiveFlags, rawFlags: flags, loaded, toggleFlag }}>
+    <FeatureFlagContext.Provider value={value}>
       {children}
     </FeatureFlagContext.Provider>
   )
 }
 
-export function useFeatureFlags() {
+export function useFeatureFlags(): FeatureFlagContextValue {
   return useContext(FeatureFlagContext)
 }

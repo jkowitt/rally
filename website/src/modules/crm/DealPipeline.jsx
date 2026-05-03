@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import DealActivityTimeline from '@/components/DealActivityTimeline'
 import SlashInput from '@/components/SlashInput'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail } from '@/lib/claude'
@@ -1674,7 +1675,9 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           )}
 
           {activeTab === 'activity' && (
-            <DealActivityTimeline dealId={deal.id} propertyId={propertyId} />
+            <ErrorBoundary>
+              <DealActivityTimeline dealId={deal.id} propertyId={propertyId} />
+            </ErrorBoundary>
           )}
         </div>
       </div>

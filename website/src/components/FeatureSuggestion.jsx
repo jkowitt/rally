@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { useDialog } from '@/hooks/useDialog'
 
 const CATEGORIES = [
   'Pipeline', 'Contracts', 'Assets', 'Fulfillment', 'Events', 'Valuations',
@@ -12,6 +13,7 @@ const CATEGORIES = [
 export default function FeatureSuggestion({ onClose }) {
   const { profile } = useAuth()
   const { toast } = useToast()
+  const dialogRef = useDialog({ isOpen: true, onClose })
   const [form, setForm] = useState({
     user_name: profile?.full_name || '',
     user_email: profile?.email || '',
@@ -64,10 +66,12 @@ export default function FeatureSuggestion({ onClose }) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="feature-suggestion-title"
-        className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-lg max-h-[90vh] overflow-y-auto"
+        tabIndex={-1}
+        className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-lg max-h-[90vh] overflow-y-auto outline-none"
       >
         <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between">
           <div>

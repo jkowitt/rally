@@ -208,7 +208,7 @@ export const COMPARISON_ROWS = [
   { key: 'contract_upload', label: 'Contract Parse', format: (v) => v >= 999999 ? 'Unlimited' : `${v}/mo` },
   { key: 'features.fulfillment_reports', label: 'Fulfillment Reports' },
   { key: 'prospect_search', label: 'Prospect Searches', format: (v) => v >= 999999 ? 'Unlimited' : `${v}/mo` },
-  { key: 'modules.sportify', label: 'Sportify Events', format: (v, plan) => plan.modules.includes('sportify') },
+  { key: 'modules.sportify', label: 'Activations (Events & Run-of-Show)', format: (v, plan) => plan.modules.includes('sportify') },
   { key: 'modules.valora', label: 'VALORA Valuations', format: (v, plan) => plan.modules.includes('valora') },
   { key: 'features.custom_dashboard', label: 'Custom Dashboards' },
 ]

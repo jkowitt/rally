@@ -69,7 +69,7 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
 
   if (flags.sportify) {
     sections.push({
-      label: moduleLabels.sportify || 'Sportify',
+      label: moduleLabels.sportify || 'Activations',
       items: [{ to: '/app/sportify/events', label: 'Events' }],
     })
   }

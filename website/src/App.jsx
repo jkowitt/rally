@@ -236,7 +236,7 @@ export default function App() {
                             <Route path="/help" element={<HelpCenter />} />
                             <Route path="/custom-dashboard" element={<CustomDashboardRequest />} />
                             <Route path="/custom/:slug" element={<CustomDashboard />} />
-                            {/* Sportify */}
+                            {/* Activations (legacy /sportify path) */}
                             <Route path="/sportify/events" element={<EventManager />} />
                             <Route path="/sportify/events/:eventId" element={<EventDetail />} />
                             {/* VALORA */}

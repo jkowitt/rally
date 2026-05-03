@@ -14,7 +14,7 @@ const MODULES = [
   { id: 'team', label: 'Team' },
   { id: 'settings', label: 'Settings' },
   { id: 'auth', label: 'Auth' },
-  { id: 'sportify', label: 'Sportify' },
+  { id: 'sportify', label: 'Activations' },
   { id: 'valora', label: 'VALORA' },
   { id: 'businessnow', label: 'BusinessNow' },
   { id: 'newsletter', label: 'Newsletter' },

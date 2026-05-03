@@ -691,7 +691,7 @@ function Ecosystem({ industry }) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { name: 'Legacy CRM', icon: '▣', color: 'text-accent', desc: 'Pipeline & partnerships', detail: 'AI-powered prospecting, deal pipeline, contract intelligence, asset inventory, fulfillment tracking, and verified contact enrichment — all connected.' },
-              { name: 'Sportify', icon: '◈', color: 'text-success', desc: 'Events & operations', detail: 'Game day command center with run-of-show, sponsor activations, vendor coordination, attendance tracking, and broadcast analytics.' },
+              { name: 'Activations', icon: '◈', color: 'text-success', desc: 'Events & operations', detail: 'Run-of-show, sponsor activations, vendor coordination, attendance tracking, and broadcast analytics — works for game days, galas, conferences, and launches alike.' },
               { name: 'VALORA', icon: '◇', color: 'text-warning', desc: 'AI valuations', detail: 'Know what every asset is worth. Market position analysis, pricing intelligence, and AI-calculated media values tied to real sponsor data.' },
               { name: 'Business Now', icon: '◆', color: 'text-text-primary', desc: 'Intelligence & metrics', detail: 'Live pipeline alerts, AI daily briefings, sports business newsletters, and team performance dashboards — your real-time command center.' },
             ].map((mod, i) => (
@@ -803,7 +803,7 @@ function Modules({ industry }) {
   }
 
   const EVENTS_FEATURE = {
-    sports: { name: 'Sportify', tagline: 'Event operations, elevated', features: [
+    sports: { name: 'Activations', tagline: 'Event operations, elevated', features: [
       { title: 'Event Command Center', desc: 'Grid and calendar views for every game day, tournament, and banquet.' },
       { title: 'Game Day Checklist', desc: 'Sponsor activation checklist with status tracking and proof photo uploads.' },
       { title: 'Run of Show', desc: 'Minute-by-minute event schedule with completion tracking.' },

@@ -1122,7 +1122,7 @@ export default function DeveloperDashboard() {
             <div className="space-y-1">
               {[
                 { key: 'crm', label: 'Legacy CRM', desc: 'Pipeline, contracts, assets, fulfillment, activities, tasks' },
-                { key: 'sportify', label: 'Sportify', desc: 'Events, activations, run-of-show, broadcast' },
+                { key: 'sportify', label: 'Activations', desc: 'Events, sponsor activations, run-of-show, broadcast — same engine across every industry' },
                 { key: 'valora', label: 'VALORA', desc: 'AI media valuations, market positioning' },
                 { key: 'businessnow', label: 'Business Now', desc: 'Intelligence feed, alerts, AI briefings' },
                 { key: 'newsletter', label: 'Newsletter', desc: 'Weekly digest, afternoon updates, AI content' },
@@ -1783,7 +1783,7 @@ const QA_PAGES = [
   { path: '/app/ops/newsletter', label: 'Newsletter' },
   { path: '/app/ops/team', label: 'Team Manager' },
   { path: '/app/crm/declined', label: 'Declined Deals' },
-  { path: '/app/sportify/events', label: 'Events (Sportify)' },
+  { path: '/app/sportify/events', label: 'Activations · Events' },
   { path: '/app/valora', label: 'VALORA Valuations' },
   { path: '/app/businessnow', label: 'BusinessNow Intelligence' },
   { path: '/app/settings', label: 'Settings' },

@@ -36,7 +36,7 @@ const TRIGGER_COPY = {
     features: ['AI media valuations', 'Broadcast minute analysis', 'Cost-per-point calculations', 'Market positioning insights', 'Training data history'],
   },
   sportify_gated: {
-    headline: 'Sportify Events is a Pro feature',
+    headline: 'Activations is a Pro feature',
     body: 'Manage events, activations, vendors, and run-of-show across your entire season.',
     features: ['Event management', 'Run-of-show planning', 'Vendor tracking', 'Activation coordination'],
   },

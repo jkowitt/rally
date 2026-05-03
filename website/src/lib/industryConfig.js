@@ -328,7 +328,7 @@ function sportsConfig(label) {
   return {
     label,
     industryName: 'Sports',
-    moduleLabels: { sportify: 'Sportify', valora: 'VALORA', businessnow: 'Business Now' },
+    moduleLabels: { sportify: 'Activations', valora: 'VALORA', businessnow: 'Business Now' },
     terminology: { asset: 'Asset', sponsor: 'Sponsor', property: 'Property', deal: 'Deal', prospect: 'Prospect', fulfillment: 'Fulfillment', benefit: 'Benefit' },
     hiddenModules: [],
     assetCategories: [

@@ -1363,11 +1363,16 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
-      <div className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deal-viewer-title"
+        className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-lg max-h-[90vh] overflow-y-auto"
+      >
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-border flex items-start justify-between gap-3 sticky top-0 bg-bg-surface z-10">
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-text-primary truncate">{deal.brand_name}</h2>
+            <h2 id="deal-viewer-title" className="text-lg font-semibold text-text-primary truncate">{deal.brand_name}</h2>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${stageColor[deal.stage] || stageColor.Prospect}`}>{deal.stage}</span>
               {deal.priority && <span className={`text-[10px] font-mono ${priorityColor[deal.priority]}`}>{deal.priority}</span>}
@@ -2164,8 +2169,13 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-bg-surface border border-border rounded-lg p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold text-text-primary mb-1">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deal-form-title"
+        className="bg-bg-surface border border-border rounded-lg p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto"
+      >
+        <h2 id="deal-form-title" className="text-lg font-semibold text-text-primary mb-1">
           {deal ? 'Edit Deal' : 'New Deal'}
         </h2>
 
@@ -3929,17 +3939,22 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
-      <div className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="prospect-finder-title"
+        className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col"
+      >
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-border">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-base sm:text-lg font-semibold text-text-primary">Find Prospects</h2>
+              <h2 id="prospect-finder-title" className="text-base sm:text-lg font-semibold text-text-primary">Find Prospects</h2>
               <p className="text-[10px] sm:text-xs text-text-muted mt-0.5">
                 AI-powered search and suggestions
               </p>
             </div>
-            <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg p-1">&times;</button>
+            <button onClick={onClose} aria-label="Close dialog" className="text-text-muted hover:text-text-primary text-lg p-1">&times;</button>
           </div>
 
           {/* Tabs */}

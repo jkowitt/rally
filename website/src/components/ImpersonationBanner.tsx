@@ -8,7 +8,7 @@ export default function ImpersonationBanner() {
 
   if (!realIsDeveloper || !isActive) return null
 
-  const parts = []
+  const parts: string[] = []
   if (industry) parts.push(`industry: ${industry}`)
   if (role) parts.push(`role: ${role}`)
   if (tier) parts.push(`tier: ${tierPresets[tier]?.label || tier}`)

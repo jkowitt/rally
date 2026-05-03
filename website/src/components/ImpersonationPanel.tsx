@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { useImpersonation } from '@/hooks/useImpersonation'
+import { useImpersonation, type TierId } from '@/hooks/useImpersonation'
 import { setQAIndustry } from '@/hooks/useIndustryConfig'
+import type { Role, PropertyType } from '@/types/db'
 
-const INDUSTRIES = [
+const INDUSTRIES: Array<{ value: '' | PropertyType; label: string }> = [
   { value: '', label: 'Default' },
   { value: 'college', label: 'Sports — College' },
   { value: 'professional', label: 'Sports — Pro' },
@@ -17,7 +18,7 @@ const INDUSTRIES = [
   { value: 'other', label: 'Other' },
 ]
 
-const ROLES = [
+const ROLES: Array<{ value: '' | Role; label: string }> = [
   { value: '', label: 'Default (developer)' },
   { value: 'admin', label: 'Admin' },
   { value: 'businessops', label: 'Business Ops' },
@@ -27,14 +28,18 @@ const ROLES = [
 export default function ImpersonationPanel() {
   const { realIsDeveloper } = useAuth()
   const { industry, role, tier, tierPresets, isActive, setIndustry, setRole, setTier, reset } = useImpersonation()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState<boolean>(false)
 
   if (!realIsDeveloper) return null
 
-  function handleIndustry(value) {
-    setIndustry(value)
-    // Keep legacy QA override key in sync so any direct readers stay aligned
-    setQAIndustry(value || null)
+  function handleIndustry(value: string) {
+    const next = (value || null) as PropertyType | null
+    setIndustry(next)
+    setQAIndustry(next)
+  }
+
+  function handleRole(value: string) {
+    setRole((value || null) as Role | null)
   }
 
   return (
@@ -83,7 +88,7 @@ export default function ImpersonationPanel() {
             <Field label="Role">
               <select
                 value={role || ''}
-                onChange={(e) => setRole(e.target.value)}
+                onChange={(e) => handleRole(e.target.value)}
                 className="w-full bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent"
               >
                 {ROLES.map(opt => (
@@ -104,7 +109,7 @@ export default function ImpersonationPanel() {
                     key={key}
                     label={preset.label}
                     active={tier === key}
-                    onClick={() => setTier(key)}
+                    onClick={() => setTier(key as TierId)}
                   />
                 ))}
               </div>
@@ -121,7 +126,7 @@ export default function ImpersonationPanel() {
   )
 }
 
-function Field({ label, children }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1">{label}</div>
@@ -130,7 +135,7 @@ function Field({ label, children }) {
   )
 }
 
-function TierButton({ label, active, onClick }) {
+function TierButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}

@@ -3,6 +3,10 @@ import { useOnboarding } from '@/hooks/useOnboarding'
 import { useAuth } from '@/hooks/useAuth'
 import { useNowMinute } from '@/hooks/useNow'
 
+// useOnboarding is still a .js file with no type exports.
+// Define the slice we use here so this component is fully typed.
+interface ChecklistItem { key: string; label: string; completed: boolean }
+
 const SNOOZE_KEY = 'll_onboarding_banner_snoozed_until'
 const DISMISS_KEY = 'll_onboarding_banner_dismissed'
 
@@ -17,14 +21,15 @@ export default function OnboardingBanner() {
     progressPercent,
     completedSteps,
     totalSteps,
-    checklistItems,
+    checklistItems: rawChecklistItems,
     resumeOnboarding,
   } = useOnboarding()
+  const checklistItems = (rawChecklistItems || []) as ChecklistItem[]
 
-  const [snoozedUntil, setSnoozedUntil] = useState(() => {
+  const [snoozedUntil, setSnoozedUntil] = useState<number>(() => {
     try { return parseInt(localStorage.getItem(SNOOZE_KEY) || '0', 10) || 0 } catch { return 0 }
   })
-  const [dismissedForever, setDismissedForever] = useState(() => {
+  const [dismissedForever, setDismissedForever] = useState<boolean>(() => {
     try { return localStorage.getItem(DISMISS_KEY) === 'true' } catch { return false }
   })
 

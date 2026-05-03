@@ -1,5 +1,15 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useActiveHub, HUBS, getHubLandingPath } from '@/hooks/useActiveHub'
+import { useActiveHub, HUBS, getHubLandingPath, type HubId } from '@/hooks/useActiveHub'
+
+export interface BreadcrumbItem {
+  label: string
+  to?: string | null
+}
+
+export interface BreadcrumbsProps {
+  items?: BreadcrumbItem[]
+  className?: string
+}
 
 // Reusable breadcrumb trail. Pages can either:
 //   <Breadcrumbs />                                 → auto-derives from URL + active hub
@@ -7,7 +17,7 @@ import { useActiveHub, HUBS, getHubLandingPath } from '@/hooks/useActiveHub'
 //
 // Auto mode finds the active hub, links to its landing page, then
 // renders the current page name from the URL's last segment.
-export default function Breadcrumbs({ items, className = '' }) {
+export default function Breadcrumbs({ items, className = '' }: BreadcrumbsProps) {
   const location = useLocation()
   const { activeHub } = useActiveHub()
 
@@ -41,7 +51,7 @@ export default function Breadcrumbs({ items, className = '' }) {
   )
 }
 
-const SEGMENT_LABELS = {
+const SEGMENT_LABELS: Record<string, string> = {
   app: 'Home',
   crm: 'CRM',
   accounts: 'Account Management',
@@ -74,12 +84,12 @@ const SEGMENT_LABELS = {
   templates: 'Templates',
 }
 
-function autoTrail(pathname, activeHub) {
+function autoTrail(pathname: string, activeHub: HubId): BreadcrumbItem[] {
   const segs = pathname.split('/').filter(Boolean)
   if (segs.length === 0 || segs[0] !== 'app') return []
 
   const hub = HUBS.find(h => h.id === activeHub)
-  const items = []
+  const items: BreadcrumbItem[] = []
 
   if (hub) {
     items.push({ label: hub.label, to: getHubLandingPath(hub.id) })

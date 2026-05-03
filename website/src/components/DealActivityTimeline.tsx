@@ -1,15 +1,40 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useNowMinute } from '@/hooks/useNow'
+
+export interface DealActivityTimelineProps {
+  dealId: string
+  propertyId?: string | null
+  limit?: number
+}
+
+type EventKind =
+  | 'activity'
+  | 'contract_created'
+  | 'contract_archived'
+  | 'contract_version'
+  | 'fulfillment'
+  | 'task_done'
+  | 'task_created'
+
+interface TimelineEvent {
+  kind: EventKind
+  icon: string
+  when: string | null | undefined
+  title: string
+  subtitle?: string | null
+}
 
 // Aggregates events across activities, contracts, contract_versions,
 // fulfillment_records, and tasks for a single deal, then renders
 // a unified chronological feed. Read-only.
-export default function DealActivityTimeline({ dealId, propertyId, limit = 20 }) {
-  const [events, setEvents] = useState([])
+export default function DealActivityTimeline({ dealId, propertyId, limit = 20 }: DealActivityTimelineProps) {
+  const [events, setEvents] = useState<TimelineEvent[]>([])
   // We track "loading" via a key that resets when dealId changes;
   // setLoading(true) inside the effect would violate hook rules.
-  const [loadedKey, setLoadedKey] = useState(null)
+  const [loadedKey, setLoadedKey] = useState<string | null>(null)
   const loading = loadedKey !== dealId
+  const now = useNowMinute()
 
   useEffect(() => {
     if (!dealId) return
@@ -48,76 +73,78 @@ export default function DealActivityTimeline({ dealId, propertyId, limit = 20 })
         .limit(limit),
     ]).then(([acts, contracts, versions, fulfill, tasks]) => {
       if (cancelled) return
-      const merged = []
+      const merged: TimelineEvent[] = []
 
-      for (const a of acts.data || []) {
+      for (const a of (acts.data || []) as Array<Record<string, unknown>>) {
         merged.push({
           kind: 'activity',
           icon: '📞',
-          when: a.occurred_at || a.created_at,
-          title: a.subject || a.activity_type || 'Activity',
-          subtitle: a.description || a.activity_type,
+          when: (a.occurred_at as string) || (a.created_at as string),
+          title: (a.subject as string) || (a.activity_type as string) || 'Activity',
+          subtitle: (a.description as string) || (a.activity_type as string),
         })
       }
 
-      for (const c of contracts.data || []) {
+      for (const c of (contracts.data || []) as Array<Record<string, unknown>>) {
         merged.push({
           kind: 'contract_created',
           icon: '📄',
-          when: c.created_at,
+          when: c.created_at as string,
           title: 'Contract added',
-          subtitle: c.file_name || c.brand_name || 'Contract',
+          subtitle: (c.file_name as string) || (c.brand_name as string) || 'Contract',
         })
         if (c.archived_at) {
           merged.push({
             kind: 'contract_archived',
             icon: '📁',
-            when: c.archived_at,
+            when: c.archived_at as string,
             title: 'Contract archived',
-            subtitle: c.brand_name || 'Contract',
+            subtitle: (c.brand_name as string) || 'Contract',
           })
         }
       }
 
       // contract_versions: filter to ones whose snapshot.contract.deal_id matches
-      for (const v of versions.data || []) {
-        const snapDealId = v.snapshot?.contract?.deal_id
+      for (const v of (versions.data || []) as Array<Record<string, unknown>>) {
+        const snap = v.snapshot as { contract?: { deal_id?: string } } | undefined
+        const snapDealId = snap?.contract?.deal_id
         if (snapDealId !== dealId) continue
         merged.push({
           kind: 'contract_version',
           icon: '🗂',
-          when: v.archived_at,
+          when: v.archived_at as string,
           title: `Contract v${v.version_number} archived`,
-          subtitle: v.archived_reason || 'Prior contract terms preserved',
+          subtitle: (v.archived_reason as string) || 'Prior contract terms preserved',
         })
       }
 
-      for (const f of fulfill.data || []) {
+      for (const f of (fulfill.data || []) as Array<Record<string, unknown>>) {
+        const benefits = f.contract_benefits as { benefit_description?: string } | undefined
         merged.push({
           kind: 'fulfillment',
           icon: '✓',
-          when: f.delivered_at || f.scheduled_date,
+          when: (f.delivered_at as string) || (f.scheduled_date as string),
           title: 'Benefit delivered',
-          subtitle: f.contract_benefits?.benefit_description || 'Benefit',
+          subtitle: benefits?.benefit_description || 'Benefit',
         })
       }
 
-      for (const t of tasks.data || []) {
+      for (const t of (tasks.data || []) as Array<Record<string, unknown>>) {
         if (t.completed_at) {
           merged.push({
             kind: 'task_done',
             icon: '✓',
-            when: t.completed_at,
+            when: t.completed_at as string,
             title: 'Task completed',
-            subtitle: t.title,
+            subtitle: t.title as string,
           })
         } else {
           merged.push({
             kind: 'task_created',
             icon: '◷',
-            when: t.created_at,
+            when: t.created_at as string,
             title: 'Task created',
-            subtitle: t.title,
+            subtitle: t.title as string,
           })
         }
       }
@@ -168,7 +195,7 @@ export default function DealActivityTimeline({ dealId, propertyId, limit = 20 })
                 <div className="text-text-muted truncate">{e.subtitle}</div>
               )}
             </div>
-            <span className="text-text-muted shrink-0 font-mono">{formatRel(e.when)}</span>
+            <span className="text-text-muted shrink-0 font-mono">{formatRel(e.when, now)}</span>
           </li>
         ))}
       </ol>
@@ -176,10 +203,10 @@ export default function DealActivityTimeline({ dealId, propertyId, limit = 20 })
   )
 }
 
-function formatRel(d) {
+function formatRel(d: string | null | undefined, now: number): string {
   if (!d) return ''
   const t = new Date(d).getTime()
-  const ago = Date.now() - t
+  const ago = now - t
   if (ago < 60_000) return 'now'
   if (ago < 3_600_000) return `${Math.floor(ago / 60_000)}m`
   if (ago < 86_400_000) return `${Math.floor(ago / 3_600_000)}h`

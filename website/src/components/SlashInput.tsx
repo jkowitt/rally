@@ -1,22 +1,39 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type TextareaHTMLAttributes } from 'react'
 
 // Notion/Linear-style slash command primitive. Drop-in replacement
 // for a textarea: when the user types "/" at the start of a line
 // (or after whitespace), a popover surfaces matching commands.
-// Each command receives ({ value, setValue, replaceTrigger }) so it
-// can either insert text or run an action.
-//
-// Usage:
-//   <SlashInput
-//     value={text}
-//     onChange={setText}
-//     commands={[
-//       { id: 'task', label: 'Add a task', insert: '[ ] ' },
-//       { id: 'contract', label: 'Link contract', run: ({ replaceTrigger }) => { ... replaceTrigger('') } },
-//     ]}
-//   />
-//
-// Keyboard: ↑/↓ navigate, Enter selects, Esc dismisses.
+
+export interface SlashCommandContext {
+  value: string
+  setValue: (next: string) => void
+  replaceTrigger: (replacement?: string) => void
+}
+
+export interface SlashCommand {
+  id: string
+  label: string
+  hint?: string
+  icon?: string
+  keywords?: string
+  insert?: string
+  run?: (ctx: SlashCommandContext) => void
+}
+
+export interface SlashInputProps {
+  value: string
+  onChange: (next: string) => void
+  commands?: SlashCommand[]
+  placeholder?: string
+  rows?: number
+  className?: string
+  textareaProps?: TextareaHTMLAttributes<HTMLTextAreaElement>
+}
+
+interface TriggerInfo {
+  start: number
+  filter: string
+}
 
 export default function SlashInput({
   value,
@@ -26,12 +43,12 @@ export default function SlashInput({
   rows = 4,
   className = '',
   textareaProps = {},
-}) {
-  const ref = useRef(null)
-  const [open, setOpen] = useState(false)
-  const [triggerStart, setTriggerStart] = useState(-1)
-  const [filter, setFilter] = useState('')
-  const [activeIdx, setActiveIdx] = useState(0)
+}: SlashInputProps) {
+  const ref = useRef<HTMLTextAreaElement | null>(null)
+  const [open, setOpen] = useState<boolean>(false)
+  const [triggerStart, setTriggerStart] = useState<number>(-1)
+  const [filter, setFilter] = useState<string>('')
+  const [activeIdx, setActiveIdx] = useState<number>(0)
 
   // Filter commands by the substring after "/"
   const matched = filter
@@ -41,7 +58,7 @@ export default function SlashInput({
       )
     : commands
 
-  function detectTrigger(text, caret) {
+  function detectTrigger(text: string, caret: number): TriggerInfo | null {
     // Look back from the caret for a "/" that starts a token
     for (let i = caret - 1; i >= 0; i--) {
       const ch = text[i]
@@ -57,7 +74,7 @@ export default function SlashInput({
     return null
   }
 
-  function handleChange(e) {
+  function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const next = e.target.value
     onChange(next)
     const trigger = detectTrigger(next, e.target.selectionStart)
@@ -86,7 +103,7 @@ export default function SlashInput({
     })
   }
 
-  function runCommand(cmd) {
+  function runCommand(cmd: SlashCommand | undefined) {
     if (!cmd) return
     if (typeof cmd.run === 'function') {
       cmd.run({ value, setValue: onChange, replaceTrigger })
@@ -95,7 +112,7 @@ export default function SlashInput({
     replaceTrigger(cmd.insert || '')
   }
 
-  function handleKeyDown(e) {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (!open) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()
@@ -115,8 +132,8 @@ export default function SlashInput({
 
   useEffect(() => {
     if (!open) return
-    function close(e) {
-      if (!ref.current?.contains(e.target)) setOpen(false)
+    function close(e: MouseEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
     }
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)

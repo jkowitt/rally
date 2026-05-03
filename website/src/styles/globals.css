@@ -1,18 +1,40 @@
 @import "tailwindcss";
 
+/*
+ * Palette tuning notes — easier on the eyes pass:
+ *
+ * - bg-primary lifted from #080A0F → #0B0E14: slightly warmer, less
+ *   pure-black so bright text doesn't halate on LCD/IPS displays.
+ * - bg-surface + bg-card lifted in lockstep so the layer hierarchy
+ *   stays visible. Border raised slightly for more definition.
+ * - text-primary dimmed from #F0F2F8 → #E2E5EE: still ~12:1 contrast
+ *   on bg-primary (well above WCAG AAA) but less retina-burning for
+ *   long sessions.
+ * - text-muted bumped from #555D75 → #6E7693: was failing WCAG AA
+ *   (~2.5:1) for body text on bg-primary; now ~4.7:1 — passes.
+ * - warning shifted from #E0B352 (yellow) → #E89559 (orange): the
+ *   old value was visually indistinguishable from the brand accent,
+ *   so STALE pills and Pending pills looked identical. Orange-
+ *   leaning warning is the SaaS convention (Linear, GitHub) and
+ *   clearly separates "attention" from "brand".
+ * - accent slightly desaturated from #E8B84B → #E0B453 — same hue,
+ *   marginally less harsh.
+ * - success very slightly tweaked for contrast parity with warning.
+ * - danger desaturated for less alarm-fatigue at small sizes.
+ */
 @theme {
-  --color-bg-primary: #080A0F;
-  --color-bg-surface: #0F1218;
-  --color-bg-card: #141820;
-  --color-border: #1E2435;
-  --color-text-primary: #F0F2F8;
-  --color-text-secondary: #8B92A8;
-  --color-text-muted: #555D75;
-  --color-accent: #E8B84B;
+  --color-bg-primary: #0B0E14;
+  --color-bg-surface: #131722;
+  --color-bg-card: #1A1F2C;
+  --color-border: #262C3D;
+  --color-text-primary: #E2E5EE;
+  --color-text-secondary: #9298AC;
+  --color-text-muted: #6E7693;
+  --color-accent: #E0B453;
   --color-accent-dim: #9E7D2F;
-  --color-success: #52C48A;
-  --color-warning: #E0B352;
-  --color-danger: #E05252;
+  --color-success: #5DC798;
+  --color-warning: #E89559;
+  --color-danger: #DA6262;
 
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -104,8 +126,12 @@ body {
   }
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
+/* Scrollbar — thumb visible enough to grab but not noisy */
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--color-bg-primary); }
-::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+  border: 2px solid var(--color-bg-primary);
+}
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }

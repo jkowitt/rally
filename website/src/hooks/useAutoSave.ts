@@ -1,7 +1,22 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-// status: 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
-//
+export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+
+export interface AutoSaveOptions<T> {
+  debounceMs?: number
+  enabled?: boolean
+  onSaved?: (value: T, savedAt: Date) => void
+  onError?: (err: Error) => void
+}
+
+export interface AutoSaveAPI {
+  status: SaveStatus
+  save: () => Promise<void>
+  discard: () => void
+  lastSavedAt: Date | null
+  error: Error | null
+}
+
 // Usage:
 //   const { status, save, discard, lastSavedAt, error } = useAutoSave(value, async (v) => {
 //     await supabase.from('...').upsert(v)
@@ -17,7 +32,11 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 // Equality is compared via JSON.stringify, which is fine for plain
 // data shapes used in our forms. Don't pass functions / cycles.
 
-export function useAutoSave(value, saveFn, options = {}) {
+export function useAutoSave<T>(
+  value: T,
+  saveFn: (value: T) => Promise<unknown>,
+  options: AutoSaveOptions<T> = {}
+): AutoSaveAPI {
   const {
     debounceMs = 2000,
     enabled = true,
@@ -25,14 +44,14 @@ export function useAutoSave(value, saveFn, options = {}) {
     onError,
   } = options
 
-  const [status, setStatus] = useState('idle')
-  const [error, setError] = useState(null)
-  const [lastSavedAt, setLastSavedAt] = useState(null)
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  const [error, setError] = useState<Error | null>(null)
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
 
-  const lastSavedRef = useRef(JSON.stringify(value))
-  const timerRef = useRef(null)
-  const savingRef = useRef(false)
-  const pendingValueRef = useRef(value)
+  const lastSavedRef = useRef<string>(JSON.stringify(value))
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savingRef = useRef<boolean>(false)
+  const pendingValueRef = useRef<T>(value)
   pendingValueRef.current = value
 
   const flush = useCallback(async () => {
@@ -53,9 +72,10 @@ export function useAutoSave(value, saveFn, options = {}) {
       setStatus('saved')
       if (onSaved) onSaved(pendingValueRef.current, now)
     } catch (err) {
-      setError(err)
+      const e = err instanceof Error ? err : new Error(String(err))
+      setError(e)
       setStatus('error')
-      if (onError) onError(err)
+      if (onError) onError(e)
     } finally {
       savingRef.current = false
     }
@@ -98,7 +118,7 @@ export function useAutoSave(value, saveFn, options = {}) {
 
   // Warn before unload if dirty
   useEffect(() => {
-    function beforeUnload(e) {
+    function beforeUnload(e: BeforeUnloadEvent) {
       if (status === 'dirty' || status === 'saving') {
         e.preventDefault()
         e.returnValue = ''

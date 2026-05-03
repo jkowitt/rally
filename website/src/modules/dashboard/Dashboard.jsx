@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
+import { useNowMinute } from '@/hooks/useNow'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import OnboardingChecklist from '@/components/OnboardingChecklist'
@@ -126,16 +127,6 @@ export default function Dashboard() {
     enabled: !!propertyId && flags.crm,
   })
 
-  const { data: contracts } = useQuery({
-    queryKey: ['contracts-dashboard', propertyId],
-    queryFn: async () => {
-      if (!propertyId) return []
-      const { data } = await supabase.from('contracts').select('id, deal_id, status, property_id').eq('property_id', propertyId)
-      return data || []
-    },
-    enabled: !!propertyId && flags.crm,
-  })
-
   const { data: events } = useQuery({
     queryKey: ['events-summary', propertyId],
     queryFn: async () => {
@@ -161,14 +152,6 @@ export default function Dashboard() {
     return s
   }, [activities])
 
-  // Build set of deal_ids that have contracts in 'In Review'
-  const dealIdsWithContractInReview = useMemo(() => {
-    const s = new Set()
-    contracts?.forEach(c => {
-      if (c.status === 'In Review' && c.deal_id) s.add(c.deal_id)
-    })
-    return s
-  }, [contracts])
 
   // Categories from deals
   const allCategories = useMemo(() => {
@@ -278,8 +261,12 @@ export default function Dashboard() {
     activeDeals.reduce((acc, d) => { acc[d.stage] = (acc[d.stage] || 0) + 1; return acc }, {})
   ).map(([name, value]) => ({ name, value }))
 
-  // Alerts
-  const today = new Date().toISOString().split('T')[0]
+  // Wall-clock derived from the shared useNowMinute store so render
+  // stays pure (React's purity rules forbid raw Date.now() in render).
+  // Refreshes every minute so "today" and "stale > 14d" stay current
+  // across long sessions.
+  const nowSnapshot = useNowMinute()
+  const today = new Date(nowSnapshot).toISOString().split('T')[0]
   const overdueTasks = tasks?.filter(t => t.due_date && t.due_date < today) || []
   const todayTasks = tasks?.filter(t => t.due_date === today) || []
 
@@ -287,7 +274,7 @@ export default function Dashboard() {
     if (['Contracted', 'In Fulfillment', 'Renewed'].includes(d.stage)) return false
     const lastDate = d.last_contacted || d.date_added || d.created_at
     if (!lastDate) return true
-    const days = Math.floor((Date.now() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24))
+    const days = Math.floor((nowSnapshot - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24))
     return days > 14
   })
 

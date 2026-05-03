@@ -45,9 +45,14 @@ export default function FeatureSuggestion({ onClose }) {
   if (submitted) {
     return (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-        <div className="bg-bg-surface border border-border rounded-lg p-6 sm:p-8 w-full max-w-md text-center">
-          <div className="text-4xl mb-3">💡</div>
-          <h2 className="text-lg font-semibold text-text-primary mb-2">Thank You!</h2>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="feature-suggestion-success-title"
+          className="bg-bg-surface border border-border rounded-lg p-6 sm:p-8 w-full max-w-md text-center"
+        >
+          <div className="text-4xl mb-3" aria-hidden="true">💡</div>
+          <h2 id="feature-suggestion-success-title" className="text-lg font-semibold text-text-primary mb-2">Thank You!</h2>
           <p className="text-sm text-text-secondary mb-4">Your suggestion has been submitted. We review every submission and use them to prioritize what we build next.</p>
           {form.contact_me && <p className="text-xs text-text-muted mb-4">We'll reach out to {form.user_email} if we have questions.</p>}
           <button onClick={onClose} className="bg-accent text-bg-primary px-6 py-2 rounded text-sm font-medium hover:opacity-90">Close</button>
@@ -58,13 +63,18 @@ export default function FeatureSuggestion({ onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
-      <div className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feature-suggestion-title"
+        className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-lg max-h-[90vh] overflow-y-auto"
+      >
         <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between">
           <div>
-            <h2 className="text-base sm:text-lg font-semibold text-text-primary">Suggest a Feature</h2>
+            <h2 id="feature-suggestion-title" className="text-base sm:text-lg font-semibold text-text-primary">Suggest a Feature</h2>
             <p className="text-[10px] sm:text-xs text-text-muted mt-0.5">Help us build what matters to you</p>
           </div>
-          <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg">&times;</button>
+          <button onClick={onClose} aria-label="Close dialog" className="text-text-muted hover:text-text-primary text-lg">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">

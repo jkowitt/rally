@@ -1,34 +1,7 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useState } from 'react'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { useAuth } from '@/hooks/useAuth'
-
-// Wall-clock store: ticks every minute, exposes a stable `Date.now()`
-// snapshot to React via useSyncExternalStore so render stays pure.
-// Interval auto-stops when no listeners remain so we don't leak a
-// global timer when the banner unmounts.
-const tickListeners = new Set()
-let tickInterval = null
-function ensureTick() {
-  if (tickInterval) return
-  tickInterval = setInterval(() => {
-    for (const l of tickListeners) l()
-  }, 60_000)
-}
-function maybeStopTick() {
-  if (tickListeners.size === 0 && tickInterval) {
-    clearInterval(tickInterval)
-    tickInterval = null
-  }
-}
-function subscribeTick(cb) {
-  tickListeners.add(cb)
-  ensureTick()
-  return () => {
-    tickListeners.delete(cb)
-    maybeStopTick()
-  }
-}
-function getNowSnapshot() { return Math.floor(Date.now() / 60_000) * 60_000 }
+import { useNowMinute } from '@/hooks/useNow'
 
 const SNOOZE_KEY = 'll_onboarding_banner_snoozed_until'
 const DISMISS_KEY = 'll_onboarding_banner_dismissed'
@@ -55,7 +28,7 @@ export default function OnboardingBanner() {
     try { return localStorage.getItem(DISMISS_KEY) === 'true' } catch { return false }
   })
 
-  const now = useSyncExternalStore(subscribeTick, getNowSnapshot, getNowSnapshot)
+  const now = useNowMinute()
 
   if (!loaded || !profile || dismissedForever) return null
   if (snoozedUntil > now) return null

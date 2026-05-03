@@ -383,10 +383,13 @@ export default function GlobalSearch({ open, onClose }) {
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
 
       {/* Modal - full width on mobile, constrained on desktop */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search and quick actions"
         className="relative w-full max-w-xl bg-bg-surface border border-border rounded-xl shadow-2xl overflow-hidden sm:max-h-[80vh] max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >

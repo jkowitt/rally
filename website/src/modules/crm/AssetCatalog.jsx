@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
+import { EmptyState } from '@/components/ui'
+import { Target } from 'lucide-react'
 
 const CATEGORIES = [
   'LED Board', 'Jersey Patch', 'Radio Read', 'Social Post', 'Naming Right', 'Signage', 'Activation Space', 'Digital',
@@ -420,9 +422,11 @@ export default function AssetCatalog() {
             </div>
           ))}
           {grouped.length === 0 && (
-            <div className="text-center text-text-muted text-sm py-12">
-              No assets found. Add your first asset or sync from contracts.
-            </div>
+            <EmptyState
+              icon={<Target className="w-8 h-8 text-text-muted" />}
+              title="No assets in your catalog yet"
+              description="Add a sponsorship inventory item — signage, jersey patches, social posts — or sync directly from a signed contract and we'll populate every benefit as a sellable asset."
+            />
           )}
         </div>
       ) : (

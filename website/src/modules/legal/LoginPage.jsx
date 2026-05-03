@@ -347,10 +347,69 @@ export default function LoginPage() {
             <button type="submit" disabled={loading} className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 disabled:opacity-50 text-sm">
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
-            <button type="button" onClick={() => { setMode('signup'); setError('') }} className="w-full text-center text-text-muted text-xs hover:text-text-secondary">
-              Don't have an account? Sign up free
+            <div className="flex items-center justify-between text-xs">
+              <button type="button" onClick={() => { setMode('forgot'); setError('') }} className="text-text-muted hover:text-accent">
+                Forgot password?
+              </button>
+              <button type="button" onClick={() => { setMode('signup'); setError('') }} className="text-text-muted hover:text-text-secondary">
+                Sign up free →
+              </button>
+            </div>
+          </form>
+        )}
+
+        {mode === 'forgot' && (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              setError('')
+              if (!email) return setError('Enter your account email so we can send a reset link.')
+              setLoading(true)
+              try {
+                const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                })
+                if (resetErr) throw resetErr
+                setMode('forgot_sent')
+              } catch (err) {
+                setError(err?.message?.toLowerCase().includes('rate')
+                  ? 'Slow down — wait a minute before requesting another reset email.'
+                  : (err?.message || 'Could not send reset email. Try again in a moment.'))
+              } finally {
+                setLoading(false)
+              }
+            }}
+            className="bg-bg-surface border border-border rounded-lg p-5 sm:p-6 space-y-4"
+          >
+            <h2 className="text-lg font-semibold text-text-primary">Reset your password</h2>
+            <p className="text-sm text-text-secondary">
+              Enter the email you signed up with — we'll send you a link to set a new password.
+            </p>
+            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+            {error && <div className="text-danger text-xs">{error}</div>}
+            <button type="submit" disabled={loading} className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 disabled:opacity-50 text-sm">
+              {loading ? 'Sending...' : 'Send reset link'}
+            </button>
+            <button type="button" onClick={() => { setMode('signin'); setError('') }} className="w-full text-center text-text-muted text-xs hover:text-text-secondary">
+              ← Back to sign in
             </button>
           </form>
+        )}
+
+        {mode === 'forgot_sent' && (
+          <div className="bg-bg-surface border border-border rounded-lg p-5 sm:p-6 space-y-4 text-center">
+            <div className="text-4xl">📧</div>
+            <h2 className="text-lg font-semibold text-text-primary">Check your email</h2>
+            <p className="text-sm text-text-secondary">
+              If an account exists for <strong className="text-accent">{email}</strong>, we just sent a password reset link.
+            </p>
+            <p className="text-xs text-text-muted">
+              The link expires in an hour. Check your spam folder if you don't see it.
+            </p>
+            <button onClick={() => { setMode('signin'); setError('') }} className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 text-sm">
+              Back to sign in
+            </button>
+          </div>
         )}
 
         {/* SIGN UP — single step */}

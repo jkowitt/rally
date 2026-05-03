@@ -134,7 +134,14 @@ export default function DealPipeline() {
   const propertyId = profile?.property_id
   const [showForm, setShowForm] = useState(false)
   const [editingDeal, setEditingDeal] = useState(null)
-  const [viewMode, setViewMode] = useState('kanban')
+  // Default to kanban on desktop, table on mobile — kanban with 6 stages
+  // requires horizontal scrolling on phones, which is bad UX.
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+      return 'table'
+    }
+    return 'kanban'
+  })
   const [showBulkImport, setShowBulkImport] = useState(false)
   const [showProspectFinder, setShowProspectFinder] = useState(false)
   const [sortField, setSortField] = useState(null)

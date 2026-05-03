@@ -25,6 +25,7 @@ function lazyRetry(fn) {
 // Lazy-loaded pages — each loads only when navigated to
 const LandingPage = lazyRetry(() => import('./pages/LandingPage'))
 const LoginPage = lazyRetry(() => import('./modules/legal/LoginPage'))
+const ResetPasswordPage = lazyRetry(() => import('./pages/ResetPasswordPage'))
 const Dashboard = lazyRetry(() => import('./modules/dashboard/Dashboard'))
 const AssetCatalog = lazyRetry(() => import('./modules/crm/AssetCatalog'))
 const DealPipeline = lazyRetry(() => import('./modules/crm/DealPipeline'))
@@ -151,6 +152,7 @@ export default function App() {
             {/* Public */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/sponsor/:token" element={<SponsorPortal />} />
             {/* SEO comparison pages (public) */}
             <Route path="/compare/*" element={<CompareRouter />} />

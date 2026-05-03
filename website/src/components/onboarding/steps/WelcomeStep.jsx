@@ -7,8 +7,10 @@ const INDUSTRY_CHOICES = [
   { id: 'realestate', label: 'Real Estate', icon: '🏢', desc: 'Lease pipeline, tenant management, and property units.' },
 ]
 
-export default function WelcomeStep({ onNext, userName }) {
-  const [selected, setSelected] = useState('sports')
+export default function WelcomeStep({ onNext, userName, initialIndustry }) {
+  // If the user already picked an industry on the landing page,
+  // pre-select it here so they're confirming, not re-entering.
+  const [selected, setSelected] = useState(initialIndustry || 'sports')
 
   return (
     <div className="space-y-6">

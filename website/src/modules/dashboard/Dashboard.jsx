@@ -697,13 +697,53 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Render cards in user-configured order */}
-      {visibleCards.map(id => {
+      {/* First-run empty state — replaces the wall of empty cards
+          when there are literally zero deals so a brand new user
+          gets actionable next steps, not a blank dashboard. */}
+      {!dealsLoading && (deals?.length || 0) === 0 && (
+        <FirstRunPanel onCreateDeal={() => navigate('/app/crm/pipeline?new=1')} />
+      )}
+
+      {/* Render cards in user-configured order — only when there's
+          something to show. Loading state still renders cards (with
+          their own skeletons) so layout doesn't shift. */}
+      {(dealsLoading || (deals?.length || 0) > 0) && visibleCards.map(id => {
         const renderer = cardRenderers[id]
         if (!renderer) return null
         const content = renderer()
         return content
       })}
+    </div>
+  )
+}
+
+// First-run panel — shown on a totally empty dashboard so the user
+// has somewhere to click instead of staring at blank cards.
+function FirstRunPanel({ onCreateDeal }) {
+  return (
+    <div className="bg-gradient-to-br from-accent/10 via-accent/5 to-transparent border border-accent/30 rounded-lg p-6 sm:p-8">
+      <div className="max-w-2xl">
+        <div className="text-xs uppercase tracking-widest text-accent font-mono mb-2">Get Started</div>
+        <h2 className="text-xl sm:text-2xl font-semibold text-text-primary mb-2">
+          Your dashboard is waiting for data
+        </h2>
+        <p className="text-sm text-text-secondary mb-5">
+          Add your first deal and these cards come to life — pipeline value, win rate,
+          revenue forecasts, top deals. Or upload a signed contract and we'll auto-populate
+          your assets and fulfillment tracker.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <a href="/app/crm/pipeline" onClick={(e) => { e.preventDefault(); onCreateDeal() }} className="bg-accent text-bg-primary px-4 py-2.5 rounded text-sm font-medium hover:opacity-90 text-center">
+            + Add your first deal
+          </a>
+          <a href="/app/crm/contracts" className="bg-bg-card border border-border text-text-secondary px-4 py-2.5 rounded text-sm hover:border-accent/40 hover:text-text-primary text-center">
+            Upload a contract
+          </a>
+          <a href="/app/crm/assets" className="bg-bg-card border border-border text-text-secondary px-4 py-2.5 rounded text-sm hover:border-accent/40 hover:text-text-primary text-center">
+            Build asset catalog
+          </a>
+        </div>
+      </div>
     </div>
   )
 }

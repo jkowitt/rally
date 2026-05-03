@@ -4,6 +4,22 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { useIndustryVisibility, shouldShowIndustry } from '@/hooks/useIndustryVisibility'
 
+// Quick-and-dirty password strength check. Not crypto-grade, just
+// gives the user a hint that "asdfasdf" is weak even though it
+// passes the 8-character minimum.
+function passwordStrengthLabel(pw) {
+  let score = 0
+  if (pw.length >= 8) score++
+  if (pw.length >= 12) score++
+  if (/[A-Z]/.test(pw)) score++
+  if (/[0-9]/.test(pw)) score++
+  if (/[^A-Za-z0-9]/.test(pw)) score++
+  if (score <= 2) return 'weak'
+  if (score === 3) return 'okay'
+  if (score === 4) return 'good'
+  return 'strong'
+}
+
 const INDUSTRY_OPTIONS = [
   { value: 'college', label: 'College / University Athletics' },
   { value: 'professional', label: 'Professional Sports Team' },
@@ -62,6 +78,7 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resendSent, setResendSent] = useState(false)
   const [invitation, setInvitation] = useState(null)
 
   // Company setup fields (all on one screen)
@@ -143,7 +160,8 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     if (!fullName || !email || !password) return setError('Full name, email, and password are required')
-    if (password.length < 6) return setError('Password must be at least 6 characters')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError("That doesn't look like a valid email address.")
+    if (password.length < 8) return setError('Password must be at least 8 characters. Mix in a number and a symbol if you can.')
 
     if (invitation) {
       // Invite flow: create account and link to existing property
@@ -207,7 +225,21 @@ export default function LoginPage() {
         email, password,
         options: { data: { full_name: fullName } },
       })
-      if (authErr) throw authErr
+      if (authErr) {
+        // Translate the most common Supabase error messages into
+        // copy that points the user at the next action.
+        const msg = (authErr.message || '').toLowerCase()
+        if (msg.includes('already registered') || msg.includes('already been registered')) {
+          throw new Error(`That email is already registered. Try signing in instead, or use Forgot password if you can't remember it.`)
+        }
+        if (msg.includes('rate limit')) {
+          throw new Error('Too many sign-up attempts in a row. Wait a minute and try again.')
+        }
+        if (msg.includes('weak password') || msg.includes('password should')) {
+          throw new Error('That password is too weak. Try one with at least 8 characters and a mix of letters, numbers, and symbols.')
+        }
+        throw authErr
+      }
       localStorage.setItem('ll-has-account', '1')
 
       // Email confirmation required?
@@ -352,7 +384,25 @@ export default function LoginPage() {
 
             <input type="text" placeholder="Full Name *" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" autoFocus />
             <input type="email" placeholder="Work Email *" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!!invitation} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-60" />
-            <input type="password" placeholder="Password (6+ characters) *" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+            <div className="space-y-1">
+              <input type="password" placeholder="Password *" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+              {password.length > 0 && password.length < 8 && (
+                <div className="text-[11px] text-warning">
+                  {8 - password.length} more character{8 - password.length === 1 ? '' : 's'} needed (8 minimum).
+                </div>
+              )}
+              {password.length >= 8 && (
+                <div className="text-[11px] text-text-muted">
+                  Strength: {passwordStrengthLabel(password)} —
+                  {/[A-Z]/.test(password) ? '' : ' add a capital letter,'}
+                  {/[0-9]/.test(password) ? '' : ' add a number,'}
+                  {/[^A-Za-z0-9]/.test(password) ? '' : ' add a symbol,'}
+                  {/[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)
+                    ? ' you\'re good.'
+                    : ' to make it stronger.'}
+                </div>
+              )}
+            </div>
 
             {!invitation && !teamInviteProperty && (
               <>
@@ -373,7 +423,20 @@ export default function LoginPage() {
               </>
             )}
 
-            {error && <div className="text-danger text-xs">{error}</div>}
+            {error && (
+              <div className="text-danger text-xs space-y-1.5">
+                <div>{error}</div>
+                {error.toLowerCase().includes('already registered') && (
+                  <button
+                    type="button"
+                    onClick={() => { setError(''); setMode('signin') }}
+                    className="text-accent hover:underline font-medium"
+                  >
+                    → Sign in instead
+                  </button>
+                )}
+              </div>
+            )}
             <button type="submit" disabled={loading} className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 disabled:opacity-50 text-sm">
               {loading ? 'Creating your account...' : invitation ? 'Join Team' : 'Get Started Free'}
             </button>
@@ -391,12 +454,34 @@ export default function LoginPage() {
             <p className="text-sm text-text-secondary">
               We sent a confirmation link to <strong className="text-accent">{email}</strong>. Click the link to activate your account, then come back here and sign in.
             </p>
+            <p className="text-xs text-text-muted">
+              Didn't get it? Check your spam folder, or resend below.
+            </p>
             <button
               onClick={() => { setMode('signin'); setError('') }}
               className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 text-sm"
             >
               Go to Sign In
             </button>
+            <button
+              onClick={async () => {
+                setError('')
+                try {
+                  const { error: resendErr } = await supabase.auth.resend({ type: 'signup', email })
+                  if (resendErr) throw resendErr
+                  setError('') // clear any previous error
+                  setResendSent(true)
+                  setTimeout(() => setResendSent(false), 8000)
+                } catch (err) {
+                  setError(err.message?.includes('rate') ? 'Slow down — wait a minute before requesting another email.' : (err.message || 'Could not resend. Try again in a moment.'))
+                }
+              }}
+              disabled={resendSent}
+              className="w-full border border-border text-text-secondary py-2 rounded hover:text-text-primary hover:border-accent/40 text-xs disabled:opacity-50"
+            >
+              {resendSent ? '✓ Sent — check your inbox' : 'Resend confirmation email'}
+            </button>
+            {error && <div className="text-danger text-xs">{error}</div>}
           </div>
         )}
 

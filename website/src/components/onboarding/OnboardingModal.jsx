@@ -9,6 +9,19 @@ import CompletionStep from './steps/CompletionStep'
 import { useAuth } from '@/hooks/useAuth'
 import { trackEvent } from '@/services/onboardingService'
 
+// Map the property.type stored at signup → the 4 buckets the
+// WelcomeStep shows. Saves the user from picking their industry
+// twice (once on the landing page, then again here).
+function mapPropertyTypeToIndustry(type) {
+  if (!type) return 'sports'
+  if (type === 'nonprofit') return 'nonprofit'
+  if (type === 'media') return 'media'
+  if (type === 'realestate') return 'realestate'
+  // college / professional / minor_league / agency / entertainment
+  // / conference / other → roll up to "sports & events"
+  return 'sports'
+}
+
 export default function OnboardingModal() {
   const { profile } = useAuth()
   const {
@@ -74,7 +87,13 @@ export default function OnboardingModal() {
 
         {/* Step content */}
         <div className="flex-1 overflow-y-auto px-5 py-6">
-          {currentStep === 1 && <WelcomeStep onNext={() => handleNext(1)} userName={profile?.full_name} />}
+          {currentStep === 1 && (
+            <WelcomeStep
+              onNext={() => handleNext(1)}
+              userName={profile?.full_name}
+              initialIndustry={mapPropertyTypeToIndustry(profile?.properties?.type)}
+            />
+          )}
           {currentStep === 2 && <CreateDealStep onNext={() => handleNext(2)} onSkip={() => handleSkipStep(2)} />}
           {currentStep === 3 && <ContractUploadStep onNext={() => handleNext(3)} onSkip={() => handleSkipStep(3)} />}
           {currentStep === 4 && <AssetCatalogStep onNext={() => handleNext(4)} onSkip={() => handleSkipStep(4)} />}

@@ -35,19 +35,31 @@ export default function AssetCatalogStep({ onNext, onSkip }) {
     { id: 'd4', name: 'VIP Suite Experience', category: 'Activation Space', base_price: 15000 },
   ]
 
-  const displayAssets = assets.length > 0 ? assets : demoAssets
+  const isShowingDemo = assets.length === 0
+  const displayAssets = isShowingDemo ? demoAssets : assets
 
   return (
     <div className="space-y-5">
       <div className="text-center">
         <div className="text-4xl mb-2">📦</div>
-        <h2 className="text-xl sm:text-2xl font-bold text-text-primary mb-1">Your asset inventory is ready</h2>
-        <p className="text-xs sm:text-sm text-text-secondary">Every benefit from your contract was added to your asset catalog automatically.</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-text-primary mb-1">
+          {isShowingDemo ? "Here's what your asset catalog will look like" : 'Your asset inventory is ready'}
+        </h2>
+        <p className="text-xs sm:text-sm text-text-secondary">
+          {isShowingDemo
+            ? 'Upload a real contract and your benefits become real asset cards — sortable, sellable, and trackable. Below is a preview.'
+            : 'Every benefit from your contract was added to your asset catalog automatically.'}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {displayAssets.map(asset => (
-          <div key={asset.id} className="bg-bg-card border border-border rounded-lg p-3 hover:border-accent/30 transition-colors">
+          <div key={asset.id} className={`relative bg-bg-card border rounded-lg p-3 hover:border-accent/30 transition-colors ${isShowingDemo ? 'border-dashed border-border/60' : 'border-border'}`}>
+            {isShowingDemo && (
+              <span className="absolute -top-1.5 -right-1.5 text-[9px] font-mono uppercase tracking-wider bg-bg-surface border border-border rounded px-1.5 py-0.5 text-text-muted">
+                preview
+              </span>
+            )}
             <div className="flex items-center gap-2 mb-1">
               <span className="text-lg">{CATEGORY_ICONS[asset.category] || '💎'}</span>
               <span className="text-xs text-text-muted">{asset.category || 'Asset'}</span>

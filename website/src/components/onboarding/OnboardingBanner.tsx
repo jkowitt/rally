@@ -51,6 +51,19 @@ export default function OnboardingBanner() {
   const totalChecklist = checklistItems.length
   const checklistDoneCount = checklistItems.filter(i => i.completed).length
 
+  // Combined progress: count BOTH the 5 modal steps AND the post-onboarding
+  // checklist as part of the same setup journey. Without this, a user who
+  // clicked-through the modal would see "Setup 0%" because only the
+  // checklist remains — which feels broken (they thought they finished).
+  // If the user completed the modal, give 100% credit for those 5 steps
+  // even if some were skipped — they explicitly clicked Done.
+  const effectiveStepsDone = isOnboardingComplete ? totalSteps : stepsDone
+  const totalUnits = totalSteps + totalChecklist
+  const doneUnits = effectiveStepsDone + checklistDoneCount
+  const combinedPercent = totalUnits > 0
+    ? Math.round((doneUnits / totalUnits) * 100)
+    : progressPercent
+
   function snoozeOneDay() {
     const until = Date.now() + 24 * 60 * 60 * 1000
     try { localStorage.setItem(SNOOZE_KEY, String(until)) } catch { /* localStorage unavailable */ }
@@ -70,16 +83,16 @@ export default function OnboardingBanner() {
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <span className="text-accent font-mono font-semibold uppercase tracking-wider whitespace-nowrap">
-          Setup {progressPercent}%
+          Setup {combinedPercent}%
         </span>
         <div className="flex-1 max-w-[200px] h-1.5 bg-bg-card rounded-full overflow-hidden">
           <div
             className="h-full bg-accent transition-all"
-            style={{ width: `${progressPercent}%` }}
+            style={{ width: `${combinedPercent}%` }}
           />
         </div>
         <span className="text-text-secondary truncate hidden sm:inline">
-          {stepsDone}/{totalSteps} steps · {checklistDoneCount}/{totalChecklist} checklist items
+          {effectiveStepsDone}/{totalSteps} steps · {checklistDoneCount}/{totalChecklist} checklist items
         </span>
       </div>
       <div className="flex items-center gap-2">

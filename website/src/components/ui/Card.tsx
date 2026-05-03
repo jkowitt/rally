@@ -16,11 +16,14 @@ const VARIANT: Record<CardVariant, string> = {
   dashed:  'bg-bg-surface border border-dashed border-border',
 }
 
+// Responsive padding scales: tighten on mobile, breathe at sm+.
+// Mirrors the existing `p-4 sm:p-5` pattern that's already
+// established across most surfaces.
 const PADDING: Record<CardPadding, string> = {
   none: '',
   sm:   'p-3',
-  md:   'p-4',
-  lg:   'p-5',
+  md:   'p-3 sm:p-4',
+  lg:   'p-4 sm:p-5',
 }
 
 // The 8px-grid card. Replaces 246 ad-hoc

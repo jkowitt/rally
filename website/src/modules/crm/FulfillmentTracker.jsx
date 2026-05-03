@@ -7,6 +7,8 @@ import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import SaveIndicator from '@/components/SaveIndicator'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { EmptyState } from '@/components/ui'
+import { Package } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -725,13 +727,18 @@ export default function FulfillmentTracker() {
             </h2>
 
             {filteredRecords.length === 0 ? (
-              <div className="bg-bg-surface border border-border rounded-lg p-6 sm:p-8 text-center">
-                <p className="text-text-primary text-sm">
-                  {records.length === 0
-                    ? 'No fulfillment records yet. Click "Sync from Contracts" to auto-populate from signed contracts.'
-                    : 'No records match your current filters.'}
-                </p>
-              </div>
+              records.length === 0 ? (
+                <EmptyState
+                  icon={<Package className="w-8 h-8 text-text-muted" />}
+                  title="No fulfillment records yet"
+                  description="Sign a contract in the CRM and benefits will land here automatically. Or click Sync from Contracts above to auto-populate from existing signed contracts."
+                />
+              ) : (
+                <EmptyState
+                  title="No records match your filters"
+                  description="Try clearing the search or status filter to see everything."
+                />
+              )
             ) : (
               <div className="bg-bg-surface border border-border rounded-lg overflow-hidden">
                 {/* Desktop table header */}

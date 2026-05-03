@@ -14,6 +14,8 @@ import {
 import jsPDF from 'jspdf'
 import { isAIFeatureEnabled } from '@/lib/featureCheck'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { EmptyState } from '@/components/ui'
+import { FileText } from 'lucide-react'
 import { on } from '@/lib/appEvents'
 
 /* Guess asset category from benefit description */
@@ -650,11 +652,13 @@ function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpe
         </div>
       ))}
       {contracts?.length === 0 && (
-        <div className="text-center py-12 space-y-4">
-          <div className="text-text-muted text-sm">
-            No contracts yet. Create one manually, use the AI Editor, or upload a template.
-          </div>
-          <div className="inline-block bg-gradient-to-br from-accent/10 to-transparent border border-accent/30 rounded-lg p-4 max-w-md">
+        <div className="space-y-4">
+          <EmptyState
+            icon={<FileText className="w-8 h-8 text-text-muted" />}
+            title="No contracts yet"
+            description="Sign a deal in the CRM and the contract lands here automatically. Or create one manually with the AI Editor or upload a template above."
+          />
+          <div className="bg-gradient-to-br from-accent/10 to-transparent border border-accent/30 rounded-lg p-4 max-w-md mx-auto text-center">
             <div className="text-xs text-text-secondary mb-2">
               Bringing contracts in from another system?
             </div>

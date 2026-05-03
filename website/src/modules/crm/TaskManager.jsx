@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { EmptyState } from '@/components/ui'
+import { CheckSquare } from 'lucide-react'
 
 const PRIORITIES = ['High', 'Medium', 'Low']
 const STATUSES = ['Pending', 'In Progress', 'Done']
@@ -488,9 +490,11 @@ export default function TaskManager() {
           )}
 
           {tasks?.length === 0 && (
-            <div className="bg-bg-surface border border-border rounded-lg px-4 py-12 text-center">
-              <p className="text-text-muted text-sm">No scheduled activities yet. Create one to start tracking.</p>
-            </div>
+            <EmptyState
+              icon={<CheckSquare className="w-8 h-8 text-text-muted" />}
+              title="No tasks scheduled"
+              description="Add a task to track follow-ups, due dates, and assigned work tied to your deals."
+            />
           )}
         </>
       )}

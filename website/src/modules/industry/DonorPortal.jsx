@@ -1,8 +1,9 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { EmptyState } from '@/components/ui'
+import { Heart } from 'lucide-react'
 
 export default function DonorPortal() {
   const { profile } = useAuth()
@@ -90,7 +91,15 @@ export default function DonorPortal() {
               </div>
             )
           })}
-          {(!deals || deals.length === 0) && <div className="text-xs text-text-muted text-center py-4">No donors yet. Add deals to your pipeline first.</div>}
+          {(!deals || deals.length === 0) && (
+            <div className="py-4">
+              <EmptyState
+                icon={<Heart className="w-8 h-8 text-text-muted" />}
+                title="No donors yet"
+                description="Add a deal to your pipeline first — it'll appear here once attached as a donor."
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

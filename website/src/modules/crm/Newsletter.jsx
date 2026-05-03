@@ -6,6 +6,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { generateWeeklyNewsletter, generateAfternoonUpdate } from '@/lib/claude'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
+import { Button, EmptyState } from '@/components/ui'
+import { Newspaper } from 'lucide-react'
 import { isAIFeatureEnabled } from '@/lib/featureCheck'
 
 function getMonday(date = new Date()) {
@@ -428,20 +430,20 @@ export default function Newsletter() {
               <NewsletterReader newsletter={displayNewsletter} />
             </div>
           ) : !isGenerating && (
-            <div className="bg-bg-surface border border-border rounded-lg p-8 sm:p-12 text-center">
-              <div className="text-3xl mb-3">📰</div>
-              <p className="text-text-secondary text-sm mb-1">No newsletter yet for this week</p>
-              <p className="text-text-muted text-xs mb-4">
-                The weekly digest auto-generates every Monday at 6:00 AM ET
-              </p>
-              <button
-                onClick={() => weeklyMutation.mutate()}
-                disabled={weeklyMutation.isPending}
-                className="bg-accent text-bg-primary px-5 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
-              >
-                Generate Now
-              </button>
-            </div>
+            <EmptyState
+              icon={<Newspaper className="w-8 h-8 text-text-muted" />}
+              title="No newsletter yet for this week"
+              description="The weekly digest auto-generates every Monday at 6:00 AM ET. Generate it now to preview."
+              primaryAction={
+                <Button
+                  size="lg"
+                  onClick={() => weeklyMutation.mutate()}
+                  disabled={weeklyMutation.isPending}
+                >
+                  Generate Now
+                </Button>
+              }
+            />
           )}
         </>
       )}

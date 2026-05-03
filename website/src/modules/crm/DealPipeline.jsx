@@ -8,6 +8,7 @@ import DealActivityTimeline from '@/components/DealActivityTimeline'
 import SlashInput from '@/components/SlashInput'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { Button, EmptyState } from '@/components/ui'
+import { Search } from 'lucide-react'
 import { on } from '@/lib/appEvents'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
@@ -1369,8 +1370,8 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
-            <button onClick={handleEnrichCompany} disabled={enrichingCompany} className="border border-border text-text-secondary px-2 py-1.5 rounded text-[10px] font-mono hover:border-accent/50 hover:text-accent disabled:opacity-50" title="Enrich company data with Apollo (1 token)">
-              {enrichingCompany ? '...' : '🔍 Enrich'}
+            <button onClick={handleEnrichCompany} disabled={enrichingCompany} className="inline-flex items-center gap-1 border border-border text-text-secondary px-2 py-1.5 rounded text-[11px] hover:border-accent/50 hover:text-accent disabled:opacity-50 transition-colors" title="Enrich company data with Apollo (1 token)">
+              {enrichingCompany ? <span className="font-mono">...</span> : <><Search className="w-3 h-3" /> Enrich</>}
             </button>
             <button onClick={handleShare} disabled={sharing} className="border border-accent text-accent px-3 py-1.5 rounded text-xs font-medium hover:bg-accent/10 disabled:opacity-50">
               {sharing ? '...' : shareCopied ? 'Copied!' : 'Share'}

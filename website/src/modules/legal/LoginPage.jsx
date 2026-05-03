@@ -145,13 +145,29 @@ export default function LoginPage() {
   async function handleSignIn(e) {
     e.preventDefault()
     setError('')
+    if (!email || !password) {
+      return setError('Email and password are both required.')
+    }
     setLoading(true)
     try {
       await signIn(email, password)
       localStorage.setItem('ll-has-account', '1')
       navigate('/app', { replace: true })
     } catch (err) {
-      setError(err.message)
+      // Translate the most common Supabase auth errors into copy
+      // that points the user at the next action.
+      const msg = (err?.message || '').toLowerCase()
+      if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
+        setError("That email and password don't match. Try again, or use Forgot password if you can't remember it.")
+      } else if (msg.includes('email not confirmed') || msg.includes('not confirmed')) {
+        setError('Your email is not confirmed yet. Check your inbox for the confirmation link, or sign up again to resend.')
+      } else if (msg.includes('rate limit') || msg.includes('too many')) {
+        setError('Too many sign-in attempts. Wait a minute before trying again.')
+      } else if (msg.includes('user not found')) {
+        setError("We don't have an account for that email. Want to sign up?")
+      } else {
+        setError(err?.message || 'Something went wrong signing in. Try again in a moment.')
+      }
     }
     setLoading(false)
   }
@@ -343,7 +359,29 @@ export default function LoginPage() {
             <h2 className="text-lg font-semibold text-text-primary">Sign In</h2>
             <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
             <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full bg-bg-card border border-border rounded px-3 py-2.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
-            {error && <div className="text-danger text-xs">{error}</div>}
+            {error && (
+              <div className="text-danger text-xs space-y-1.5">
+                <div>{error}</div>
+                {error.toLowerCase().includes("don't have an account") && (
+                  <button
+                    type="button"
+                    onClick={() => { setError(''); setMode('signup') }}
+                    className="text-accent hover:underline font-medium"
+                  >
+                    → Create an account
+                  </button>
+                )}
+                {(error.toLowerCase().includes('forgot password') || error.toLowerCase().includes("don't match")) && (
+                  <button
+                    type="button"
+                    onClick={() => { setError(''); setMode('forgot') }}
+                    className="text-accent hover:underline font-medium"
+                  >
+                    → Reset password
+                  </button>
+                )}
+              </div>
+            )}
             <button type="submit" disabled={loading} className="w-full bg-accent text-bg-primary font-semibold py-2.5 rounded hover:opacity-90 disabled:opacity-50 text-sm">
               {loading ? 'Signing in...' : 'Sign In'}
             </button>

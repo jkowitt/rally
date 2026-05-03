@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { humanError } from '@/lib/humanError'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import SaveIndicator from '@/components/SaveIndicator'
@@ -554,7 +555,7 @@ export default function FulfillmentTracker() {
       })
     },
     onError: (err) =>
-      toast({ title: 'Error populating records', description: err.message, type: 'error' }),
+      toast({ title: 'Error populating records', description: humanError(err), type: 'error' }),
   })
 
   // Toggle delivered status with notes
@@ -571,7 +572,7 @@ export default function FulfillmentTracker() {
     },
     onSuccess: () => invalidateAll(),
     onError: (err) =>
-      toast({ title: 'Error updating record', description: err.message, type: 'error' }),
+      toast({ title: 'Error updating record', description: humanError(err), type: 'error' }),
   })
 
   function handleRefresh() {

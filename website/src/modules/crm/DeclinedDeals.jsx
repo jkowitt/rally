@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { humanError } from '@/lib/humanError'
 import { EmptyState } from '@/components/ui'
 import { XCircle } from 'lucide-react'
 
@@ -36,7 +37,7 @@ export default function DeclinedDeals() {
       queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
       toast({ title: 'Deal restored to pipeline', type: 'success' })
     },
-    onError: (err) => toast({ title: 'Error restoring deal', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Error restoring deal', description: humanError(err), type: 'error' }),
   })
 
   const deleteMutation = useMutation({
@@ -49,7 +50,7 @@ export default function DeclinedDeals() {
       queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
       toast({ title: 'Deal permanently deleted', type: 'success' })
     },
-    onError: (err) => toast({ title: 'Error deleting deal', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Error deleting deal', description: humanError(err), type: 'error' }),
   })
 
   const totalLostValue = deals?.reduce((sum, d) => sum + (Number(d.value) || 0), 0) || 0

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { humanError } from '@/lib/humanError'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { EmptyState } from '@/components/ui'
 import { Target } from 'lucide-react'
@@ -159,7 +160,7 @@ export default function AssetCatalog() {
       setShowForm(false)
       setEditingAsset(null)
     },
-    onError: (err) => toast({ title: 'Error saving asset', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Error saving asset', description: humanError(err), type: 'error' }),
   })
 
   const deleteMutation = useMutation({
@@ -171,7 +172,7 @@ export default function AssetCatalog() {
       queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
       toast({ title: 'Asset deleted', type: 'success' })
     },
-    onError: (err) => toast({ title: 'Error deleting asset', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Error deleting asset', description: humanError(err), type: 'error' }),
   })
 
   // Update inventory (total_available)

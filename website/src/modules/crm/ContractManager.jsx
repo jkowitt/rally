@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { humanError } from '@/lib/humanError'
 import {
   generateContract,
   editContractText,
@@ -259,7 +260,7 @@ export default function ContractManager() {
       setShowForm(false)
       if (data) setSelectedContract(data)
     },
-    onError: (err) => toast({ title: 'Error saving contract', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Error saving contract', description: humanError(err), type: 'error' }),
   })
 
   const deleteMutation = useMutation({
@@ -279,7 +280,7 @@ export default function ContractManager() {
       toast({ title: 'Contract deleted', type: 'success' })
       setSelectedContract(null)
     },
-    onError: (err) => toast({ title: 'Error deleting contract', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Error deleting contract', description: humanError(err), type: 'error' }),
   })
 
   function handleViewPdf(contract) {

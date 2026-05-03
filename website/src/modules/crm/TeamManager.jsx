@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { humanError } from '@/lib/humanError'
 
 export default function TeamManager() {
   const { profile } = useAuth()
@@ -80,7 +81,7 @@ export default function TeamManager() {
       queryClient.invalidateQueries({ queryKey: ['team-members'] })
       toast({ title: 'Team created', type: 'success' })
     },
-    onError: (err) => toast({ title: 'Error', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Error', description: humanError(err), type: 'error' }),
   })
 
   // Invite member — creates invitation record + optionally adds existing user
@@ -154,7 +155,7 @@ export default function TeamManager() {
       setInviteEmail('')
       setInviteLink('')
     },
-    onError: (err) => toast({ title: 'Invite failed', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Invite failed', description: humanError(err), type: 'error' }),
   })
 
   // Update member role

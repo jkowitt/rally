@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { humanError } from '@/lib/humanError'
 import { EmptyState } from '@/components/ui'
 import { CheckSquare } from 'lucide-react'
 
@@ -243,7 +244,7 @@ export default function TaskManager() {
       setShowForm(false)
       setEditingTask(null)
     },
-    onError: (err) => toast({ title: 'Error saving task', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Error saving task', description: humanError(err), type: 'error' }),
   })
 
   const markDoneMutation = useMutation({
@@ -292,7 +293,7 @@ export default function TaskManager() {
       queryClient.invalidateQueries({ queryKey: ['tasks', propertyId] })
       toast({ title: 'Task deleted', type: 'success' })
     },
-    onError: (err) => toast({ title: 'Error deleting task', description: err.message, type: 'error' }),
+    onError: (err) => toast({ title: 'Error deleting task', description: humanError(err), type: 'error' }),
   })
 
   // Categorize tasks

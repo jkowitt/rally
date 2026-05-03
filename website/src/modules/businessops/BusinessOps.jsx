@@ -28,11 +28,13 @@ const TABS = [
 ]
 
 export default function BusinessOps() {
-  const { profile } = useAuth()
+  const { profile, realIsDeveloper } = useAuth()
   const [tab, setTab] = useState('pipeline')
 
-  // Only developer and businessops can access
-  const hasAccess = profile?.role === 'developer' || profile?.role === 'businessops'
+  // Real developer always has access; businessops role does too.
+  // Using realIsDeveloper means the dev keeps access while impersonating
+  // a different role.
+  const hasAccess = realIsDeveloper || profile?.role === 'businessops'
   if (!hasAccess) return <Navigate to="/app" replace />
 
   return (

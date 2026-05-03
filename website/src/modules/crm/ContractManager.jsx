@@ -14,7 +14,7 @@ import {
 import jsPDF from 'jspdf'
 import { isAIFeatureEnabled } from '@/lib/featureCheck'
 import Breadcrumbs from '@/components/Breadcrumbs'
-import { EmptyState } from '@/components/ui'
+import { Badge, EmptyState } from '@/components/ui'
 import { FileText } from 'lucide-react'
 import { on } from '@/lib/appEvents'
 
@@ -42,12 +42,24 @@ function guessAssetCategory(description) {
   return 'Digital'
 }
 
-const STATUS_COLORS = {
+const STATUS_TONE = {
+  Draft: 'neutral',
+  'In Review': 'warning',
+  Final: 'accent',
+  Signed: 'success',
+  Expired: 'danger',
+  active: 'success',
+}
+
+// For the inline <select> editor — Tailwind-literal classes that
+// match each tone. Can't drop in <Badge> for a form control.
+const STATUS_SELECT_CLASS = {
   Draft: 'bg-bg-card text-text-secondary',
   'In Review': 'bg-warning/10 text-warning',
   Final: 'bg-accent/10 text-accent',
   Signed: 'bg-success/10 text-success',
   Expired: 'bg-danger/10 text-danger',
+  active: 'bg-success/10 text-success',
 }
 
 import AssetMatchQueue from './AssetMatchQueue'
@@ -553,9 +565,9 @@ function PDFViewerModal({ contract, onClose }) {
           <h3 className="text-sm font-medium text-text-primary">
             {contract.pdf_file_name || contract.brand_name || 'Contract PDF'}
           </h3>
-          <span className={`text-xs font-mono px-2 py-0.5 rounded ${STATUS_COLORS[contract.status] || STATUS_COLORS.Draft}`}>
+          <Badge tone={STATUS_TONE[contract.status] || 'neutral'}>
             {contract.status || 'Draft'}
-          </span>
+          </Badge>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleDownload} className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium hover:opacity-90">
@@ -597,14 +609,14 @@ function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpe
                 {contract.contract_number && (
                   <span className="text-xs text-text-muted font-mono">#{contract.contract_number}</span>
                 )}
-                <span className={`text-xs font-mono px-2 py-0.5 rounded ${STATUS_COLORS[contract.status] || STATUS_COLORS.Draft}`}>
+                <Badge tone={STATUS_TONE[contract.status] || 'neutral'}>
                   {contract.status || 'Draft'}
-                </span>
+                </Badge>
                 {contract.is_template && (
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-accent/10 text-accent">Template</span>
+                  <Badge tone="accent">Template</Badge>
                 )}
                 {contract.pdf_file_data && (
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-success/10 text-success">PDF Stored</span>
+                  <Badge tone="success">PDF Stored</Badge>
                 )}
               </div>
               {/* Assignment */}
@@ -638,7 +650,7 @@ function ContractList({ contracts, isLoading, onEdit, onViewPdf, onDelete, onOpe
               <select
                 value={contract.status || 'Draft'}
                 onChange={(e) => onStatusChange(contract.id, e.target.value)}
-                className={`text-xs font-mono px-2 py-1 rounded focus:outline-none focus:border-accent ${STATUS_COLORS[contract.status] || STATUS_COLORS.Draft}`}
+                className={`text-xs font-mono px-2 py-1 rounded focus:outline-none focus:border-accent ${STATUS_SELECT_CLASS[contract.status] || STATUS_SELECT_CLASS.Draft}`}
               >
                 {['Draft', 'In Review', 'Final', 'Signed', 'Expired'].map(s => <option key={s} value={s}>{s}</option>)}
               </select>

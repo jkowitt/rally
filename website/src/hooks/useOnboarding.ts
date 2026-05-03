@@ -13,34 +13,71 @@ import {
 
 const TOTAL_STEPS = 5
 
-export function useOnboarding() {
+export interface OnboardingProgressRow {
+  current_step?: number
+  completed_steps?: number[]
+  onboarding_completed?: boolean
+  skipped_at?: string | null
+}
+
+export interface ChecklistItem {
+  key: string
+  label: string
+  link?: string
+  completed: boolean
+  completed_at?: string | null
+}
+
+export interface UseOnboardingAPI {
+  loaded: boolean
+  currentStep: number
+  completedSteps: number[]
+  totalSteps: number
+  progressPercent: number
+  isOnboardingComplete: boolean
+  isOnboardingSkipped: boolean
+  isOnboardingVisible: boolean
+  setIsOnboardingVisible: (v: boolean) => void
+  advanceStep: (stepNumber: number) => Promise<void>
+  markStepComplete: (stepNumber: number) => Promise<void>
+  skipOnboarding: () => Promise<void>
+  completeOnboarding: () => Promise<void>
+  resumeOnboarding: () => void
+  checklistItems: ChecklistItem[]
+  updateChecklistItem: (itemKey: string) => Promise<void>
+}
+
+export function useOnboarding(): UseOnboardingAPI {
   const { profile, session } = useAuth()
-  const [progress, setProgress] = useState(null)
-  const [currentStep, setCurrentStep] = useState(1)
-  const [completedSteps, setCompletedSteps] = useState([])
-  const [checklistItems, setChecklistItems] = useState([])
-  const [isOnboardingVisible, setIsOnboardingVisible] = useState(false)
-  const [loaded, setLoaded] = useState(false)
+  const [progress, setProgress] = useState<OnboardingProgressRow | null>(null)
+  const [currentStep, setCurrentStep] = useState<number>(1)
+  const [completedSteps, setCompletedSteps] = useState<number[]>([])
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([])
+  const [isOnboardingVisible, setIsOnboardingVisible] = useState<boolean>(false)
+  const [loaded, setLoaded] = useState<boolean>(false)
 
   const userId = session?.user?.id || profile?.id
   const propertyId = profile?.property_id
-  const isOnboardingComplete = profile?.onboarding_completed || progress?.onboarding_completed || false
-  const isOnboardingSkipped = profile?.onboarding_skipped || !!progress?.skipped_at
+  const isOnboardingComplete: boolean =
+    Boolean((profile as { onboarding_completed?: boolean } | null)?.onboarding_completed) ||
+    Boolean(progress?.onboarding_completed)
+  const isOnboardingSkipped: boolean =
+    Boolean((profile as { onboarding_skipped?: boolean } | null)?.onboarding_skipped) ||
+    Boolean(progress?.skipped_at)
 
   // Load progress and checklist on mount
   useEffect(() => {
     if (!userId) return
     let cancelled = false
     async function load() {
-      const p = await getOrCreateProgress(userId, propertyId)
+      const p = (await getOrCreateProgress(userId, propertyId)) as OnboardingProgressRow | null
       if (cancelled) return
       setProgress(p)
       setCurrentStep(p?.current_step || 1)
       setCompletedSteps(p?.completed_steps || [])
-      const cl = await fetchChecklist(userId)
+      const cl = (await fetchChecklist(userId)) as ChecklistItem[]
       if (!cancelled) setChecklistItems(cl)
       setLoaded(true)
-      // Auto-open onboarding for new users
       if (!isOnboardingComplete && !isOnboardingSkipped && !p?.onboarding_completed && !p?.skipped_at) {
         setIsOnboardingVisible(true)
       }
@@ -49,14 +86,14 @@ export function useOnboarding() {
     return () => { cancelled = true }
   }, [userId, propertyId, isOnboardingComplete, isOnboardingSkipped])
 
-  const advanceStep = useCallback(async (stepNumber) => {
+  const advanceStep = useCallback(async (stepNumber: number) => {
     if (!userId) return
     const next = Math.min(stepNumber, TOTAL_STEPS)
     setCurrentStep(next)
     await advanceStepSvc(userId, next)
   }, [userId])
 
-  const markStepComplete = useCallback(async (stepNumber) => {
+  const markStepComplete = useCallback(async (stepNumber: number) => {
     if (!userId) return
     const updated = Array.from(new Set([...completedSteps, stepNumber]))
     setCompletedSteps(updated)
@@ -77,9 +114,7 @@ export function useOnboarding() {
     setIsOnboardingVisible(false)
     // Session-scoped trigger so TooltipTour runs the feature tour
     // exactly once after onboarding completes in THIS session.
-    // Returning users never see the tour because they don't have
-    // this flag set.
-    try { sessionStorage.setItem('ll_tour_trigger', 'true') } catch {}
+    try { sessionStorage.setItem('ll_tour_trigger', 'true') } catch { /* sessionStorage unavailable */ }
     trackEvent('onboarding_completed', {})
   }, [userId])
 
@@ -88,7 +123,7 @@ export function useOnboarding() {
     trackEvent('onboarding_resumed', {})
   }, [])
 
-  const updateChecklistItem = useCallback(async (itemKey) => {
+  const updateChecklistItem = useCallback(async (itemKey: string) => {
     if (!userId) return
     await markChecklistItem(userId, propertyId, itemKey)
     setChecklistItems(prev => prev.map(i => i.key === itemKey ? { ...i, completed: true, completed_at: new Date().toISOString() } : i))

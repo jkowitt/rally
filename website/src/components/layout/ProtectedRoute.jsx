@@ -2,7 +2,7 @@ import { Navigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 
 export default function ProtectedRoute({ children }) {
-  const { session, loading, profile, signOut } = useAuth()
+  const { session, loading, profile, realIsDeveloper, signOut } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -21,9 +21,10 @@ export default function ProtectedRoute({ children }) {
   const accessUntil = profile?.properties?.access_until
   const isExpired = accessUntil && new Date(accessUntil) < new Date()
   const isSettingsPage = location.pathname.includes('/settings')
-  const isDeveloper = profile?.role === 'developer'
 
-  if (isExpired && !isSettingsPage && !isDeveloper) {
+  // realIsDeveloper bypasses the expired screen even while
+  // impersonating, so the dev can keep accessing the app to debug.
+  if (isExpired && !isSettingsPage && !realIsDeveloper) {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center p-6">
         <div className="max-w-md text-center space-y-5">

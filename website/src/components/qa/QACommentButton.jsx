@@ -19,7 +19,7 @@ import * as qaComments from '@/services/qaCommentService'
  * on submit — no manual entry required.
  */
 export default function QACommentButton() {
-  const { profile, session } = useAuth()
+  const { profile, realIsDeveloper, session } = useAuth()
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [qaMode, setQaMode] = useState(false)
@@ -33,8 +33,9 @@ export default function QACommentButton() {
   // Don't render anything until auth is resolved
   if (!session || !profile) return null
 
-  const isDeveloper = profile.role === 'developer'
-  if (!isDeveloper && !qaMode) return null
+  // Real developer status — survives impersonation so QA capture stays
+  // available while the dev is previewing the app as a different role.
+  if (!realIsDeveloper && !qaMode) return null
 
   return (
     <>

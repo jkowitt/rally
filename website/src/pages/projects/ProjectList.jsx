@@ -111,7 +111,7 @@ function ProjectCard({ project: p }) {
 
   return (
     <Link
-      to={`/app/crm/projects/${p.id}`}
+      to={`/app/ops/projects/${p.id}`}
       className="bg-bg-card border border-border rounded-lg p-4 hover:border-accent/50 transition-colors block"
     >
       <div className={`border-l-2 ${priorityColors[p.priority] || 'border-l-accent'} pl-3`}>

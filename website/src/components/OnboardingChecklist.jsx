@@ -8,7 +8,7 @@ const STEPS = [
   { id: 'deal', label: 'Create your first deal', desc: 'Add a prospect to your pipeline', href: '/app/crm/pipeline', check: (data) => (data.deals || 0) > 0 },
   { id: 'contact', label: 'Research contacts', desc: 'Use AI to find decision-makers', href: '/app/crm/pipeline', check: (data) => (data.contacts || 0) > 0 },
   { id: 'contract', label: 'Upload a contract', desc: 'Import an existing agreement', href: '/app/crm/contracts', check: (data) => (data.contracts || 0) > 0 },
-  { id: 'team', label: 'Invite a teammate', desc: 'Grow your team', href: '/app/crm/team', check: (data) => (data.teamMembers || 0) > 1 },
+  { id: 'team', label: 'Invite a teammate', desc: 'Grow your team', href: '/app/ops/team', check: (data) => (data.teamMembers || 0) > 1 },
 ]
 
 export default function OnboardingChecklist() {

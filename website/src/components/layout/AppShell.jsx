@@ -123,7 +123,7 @@ function MobileBottomNav() {
     { to: '/app/crm/contracts', label: 'Contracts', icon: '📄' },
     { to: '/app/crm/fulfillment', label: 'Fulfill', icon: '📦' },
     { to: '/app/ops', label: 'Ops', icon: '⚙' },
-    { to: '/app/crm/team', label: 'Team', icon: '👥' },
+    { to: '/app/ops/team', label: 'Team', icon: '👥' },
     { to: '/app/settings', label: 'Settings', icon: '⚙' },
   ]
 

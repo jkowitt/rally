@@ -84,7 +84,7 @@ export default function ProjectDetail() {
   if (!project) return (
     <div className="p-6 text-center">
       <p className="text-sm text-text-muted">Project not found.</p>
-      <Link to="/app/crm/projects" className="text-accent text-xs hover:underline">← All projects</Link>
+      <Link to="/app/ops/projects" className="text-accent text-xs hover:underline">← All projects</Link>
     </div>
   )
 
@@ -94,7 +94,7 @@ export default function ProjectDetail() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       {/* Header */}
       <header>
-        <Link to="/app/crm/projects" className="text-[10px] text-text-muted hover:text-accent">← All projects</Link>
+        <Link to="/app/ops/projects" className="text-[10px] text-text-muted hover:text-accent">← All projects</Link>
         <div className="flex items-start justify-between gap-4 mt-2">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-semibold text-text-primary">{project.name}</h1>

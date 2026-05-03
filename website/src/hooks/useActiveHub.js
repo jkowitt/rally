@@ -17,7 +17,6 @@ export function detectHub(pathname) {
   if (pathname.startsWith('/app/accounts')) return 'accounts'
   if (pathname.startsWith('/app/crm/contracts')) return 'accounts'
   if (pathname.startsWith('/app/crm/fulfillment')) return 'accounts'
-  if (pathname.startsWith('/app/crm/projects')) return 'ops'
   if (pathname.startsWith('/app/marketing')) return 'ops'
   if (pathname.startsWith('/app/ops')) return 'ops'
   if (pathname.startsWith('/app/admin')) return 'ops'
@@ -25,9 +24,11 @@ export function detectHub(pathname) {
   if (pathname.startsWith('/app/developer')) return 'ops'
   if (pathname.startsWith('/app/settings')) return 'ops'
   if (pathname.startsWith('/app/growth')) return 'ops'
+  // Backwards-compat: old /crm/* paths that have been moved to /ops/*
   if (pathname.startsWith('/app/crm/team')) return 'ops'
   if (pathname.startsWith('/app/crm/newsletter')) return 'ops'
   if (pathname.startsWith('/app/crm/automations')) return 'ops'
+  if (pathname.startsWith('/app/crm/projects')) return 'ops'
   return 'crm'
 }
 

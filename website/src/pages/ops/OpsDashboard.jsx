@@ -101,7 +101,7 @@ export default function OpsDashboard() {
         <QuickAction
           label="Manage Team"
           description={`${data.team} member${data.team !== 1 ? 's' : ''} on the ${data.plan} plan`}
-          to="/app/crm/team"
+          to="/app/ops/team"
         />
         <QuickAction
           label="Plan & Billing"

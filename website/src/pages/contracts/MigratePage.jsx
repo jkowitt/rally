@@ -627,7 +627,7 @@ function CompleteView({ session }) {
         <NextCard to="/app/crm/pipeline" label="Review pipeline" desc={`${session.deals_created} deals ready`} />
         <NextCard to="/app/crm/fulfillment" label="Fulfillment" desc={`${session.fulfillment_records_created} items`} />
         <NextCard to="/app/crm/assets" label="Asset catalog" desc="Verify inventory" />
-        <NextCard to="/app/crm/team" label="Invite team" desc="Give them access" />
+        <NextCard to="/app/ops/team" label="Invite team" desc="Give them access" />
       </div>
     </div>
   )

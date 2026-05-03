@@ -119,7 +119,7 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing) {
     marketingItems.push({ to: '/app/marketing/email/subscribers', label: 'Subscribers' })
     marketingItems.push({ to: '/app/marketing/email/templates', label: 'Templates' })
   }
-  marketingItems.push({ to: '/app/crm/newsletter', label: 'Newsletter' })
+  marketingItems.push({ to: '/app/ops/newsletter', label: 'Newsletter' })
   marketingItems.push({ to: '/app/developer/digest', label: 'The Digest' })
   if (flags.client_growth_hub) {
     marketingItems.push({ to: '/app/growth', label: 'Growth Hub' })
@@ -130,7 +130,7 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing) {
   sections.push({
     label: 'Projects',
     items: [
-      { to: '/app/crm/projects', label: 'All Projects' },
+      { to: '/app/ops/projects', label: 'All Projects' },
     ],
   })
 
@@ -146,7 +146,7 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing) {
   sections.push({
     label: 'Team',
     items: [
-      { to: '/app/crm/team', label: 'Team Manager' },
+      { to: '/app/ops/team', label: 'Team Manager' },
     ],
   })
 
@@ -154,7 +154,7 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing) {
     sections.push({
       label: 'Automations',
       items: [
-        { to: '/app/crm/automations', label: 'Sequences' },
+        { to: '/app/ops/automations', label: 'Sequences' },
         { to: '/app/admin/automation', label: 'Control Center' },
         { to: '/app/admin/social-queue', label: 'Social Queue' },
         { to: '/app/admin/email-queue', label: 'Email Queue' },

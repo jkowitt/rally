@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import { FeatureFlagProvider } from './hooks/useFeatureFlags'
 import { ImpersonationProvider } from './hooks/useImpersonation'
@@ -117,6 +117,12 @@ function PageLoader() {
   )
 }
 
+// Preserves the :id param when redirecting old /crm/projects/:id to /ops/projects/:id
+function RedirectProjectDetail() {
+  const { id } = useParams()
+  return <Navigate to={`/app/ops/projects/${id}`} replace />
+}
+
 export default function App() {
   // Register service worker for PWA
   useEffect(() => {
@@ -189,16 +195,23 @@ export default function App() {
                             <Route path="/crm/migrate" element={<MigratePage />} />
                             <Route path="/crm/fulfillment" element={<FulfillmentTracker />} />
                             <Route path="/crm/report/:dealId" element={<BrandReport />} />
-                            <Route path="/crm/projects" element={<ProjectList />} />
-                            <Route path="/crm/projects/:id" element={<ProjectDetail />} />
                             <Route path="/crm/declined" element={<DeclinedDeals />} />
                             <Route path="/crm/activities" element={<ActivityTimeline />} />
                             <Route path="/crm/tasks" element={<TaskManager />} />
                             <Route path="/crm/insights" element={<DealInsights />} />
                             <Route path="/crm/analytics" element={<SalesDashboard />} />
-                            <Route path="/crm/newsletter" element={<Newsletter />} />
-                            <Route path="/crm/team" element={<TeamManager />} />
-                            <Route path="/crm/automations" element={<Automations />} />
+                            {/* Operations hub canonical paths */}
+                            <Route path="/ops/team" element={<TeamManager />} />
+                            <Route path="/ops/newsletter" element={<Newsletter />} />
+                            <Route path="/ops/automations" element={<Automations />} />
+                            <Route path="/ops/projects" element={<ProjectList />} />
+                            <Route path="/ops/projects/:id" element={<ProjectDetail />} />
+                            {/* Backwards-compat redirects from old /crm/* paths */}
+                            <Route path="/crm/team" element={<Navigate to="/app/ops/team" replace />} />
+                            <Route path="/crm/newsletter" element={<Navigate to="/app/ops/newsletter" replace />} />
+                            <Route path="/crm/automations" element={<Navigate to="/app/ops/automations" replace />} />
+                            <Route path="/crm/projects" element={<Navigate to="/app/ops/projects" replace />} />
+                            <Route path="/crm/projects/:id" element={<RedirectProjectDetail />} />
                             {/* Industry-specific modules */}
                             <Route path="/industry/impact" element={<ImpactMetrics />} />
                             <Route path="/industry/grants" element={<GrantTracker />} />

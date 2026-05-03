@@ -9,6 +9,7 @@
     "start": "node server.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run lint",
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",

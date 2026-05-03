@@ -35,9 +35,9 @@ export default function NotificationCenter() {
     queryFn: async () => {
       if (!propertyId) return { deals: [], tasks: [], contracts: [] }
       const [deals, tasks, contracts] = await Promise.all([
-        supabase.from('deals').select('id, brand_name, stage, last_contacted, end_date, renewal_date').eq('property_id', propertyId),
-        supabase.from('tasks').select('id, title, due_date, status, deals(brand_name)').eq('property_id', propertyId).neq('status', 'Done'),
-        supabase.from('contracts').select('id, brand_name, expiration_date, status').eq('property_id', propertyId),
+        supabase.from('deals').select('id, brand_name, stage, last_contacted, end_date, renewal_date').eq('property_id', propertyId).order('created_at', { ascending: false }).limit(1000),
+        supabase.from('tasks').select('id, title, due_date, status, deals(brand_name)').eq('property_id', propertyId).neq('status', 'Done').limit(500),
+        supabase.from('contracts').select('id, brand_name, expiration_date, status').eq('property_id', propertyId).order('created_at', { ascending: false }).limit(500),
       ])
       return { deals: deals.data || [], tasks: tasks.data || [], contracts: contracts.data || [] }
     },

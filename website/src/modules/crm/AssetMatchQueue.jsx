@@ -28,7 +28,7 @@ export default function AssetMatchQueue({ contractId, propertyId, dealId, onComp
     queryKey: ['property-assets', propertyId],
     queryFn: async () => {
       if (!propertyId) return []
-      const { data } = await supabase.from('assets').select('id, name, category, base_price').eq('property_id', propertyId).eq('active', true).order('name')
+      const { data } = await supabase.from('assets').select('id, name, category, base_price').eq('property_id', propertyId).eq('active', true).order('name').limit(1000)
       return data || []
     },
     enabled: !!propertyId,

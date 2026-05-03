@@ -446,7 +446,7 @@ export default function DeveloperDashboard() {
   const { data: allDeals } = useQuery({
     queryKey: ['dev-all-deals'],
     queryFn: async () => {
-      const { data } = await supabase.from('deals').select('id, brand_name, value, stage, property_id, created_at, assigned_to, is_multi_year, annual_values').order('created_at', { ascending: false })
+      const { data } = await supabase.from('deals').select('id, brand_name, value, stage, property_id, created_at, assigned_to, is_multi_year, annual_values').order('created_at', { ascending: false }).limit(5000)
       return data || []
     },
   })
@@ -454,7 +454,7 @@ export default function DeveloperDashboard() {
   const { data: allContracts } = useQuery({
     queryKey: ['dev-all-contracts'],
     queryFn: async () => {
-      const { data } = await supabase.from('contracts').select('id, brand_name, total_value, status, signed, property_id, created_at').order('created_at', { ascending: false })
+      const { data } = await supabase.from('contracts').select('id, brand_name, total_value, status, signed, property_id, created_at').order('created_at', { ascending: false }).limit(5000)
       return data || []
     },
   })
@@ -478,7 +478,7 @@ export default function DeveloperDashboard() {
   const { data: allAssets } = useQuery({
     queryKey: ['dev-all-assets'],
     queryFn: async () => {
-      const { data } = await supabase.from('assets').select('id, name, category, base_price, quantity, property_id, from_contract, active')
+      const { data } = await supabase.from('assets').select('id, name, category, base_price, quantity, property_id, from_contract, active').limit(5000)
       return data || []
     },
   })

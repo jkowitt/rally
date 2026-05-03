@@ -147,7 +147,7 @@ export default function DealPipeline() {
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals', propertyId],
     queryFn: async () => {
-      let query = supabase.from('deals').select('*').order('created_at', { ascending: false })
+      let query = supabase.from('deals').select('*').order('created_at', { ascending: false }).limit(2000)
       // Developer sees all deals if no property assigned
       if (propertyId) query = query.eq('property_id', propertyId)
       const { data, error } = await query

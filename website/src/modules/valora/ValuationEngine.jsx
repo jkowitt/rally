@@ -47,7 +47,7 @@ export default function ValuationEngine() {
   const { data: assets } = useQuery({
     queryKey: ['assets-list', propertyId],
     queryFn: async () => {
-      const { data } = await supabase.from('assets').select('id, name, category, base_price, quantity').eq('property_id', propertyId).eq('active', true)
+      const { data } = await supabase.from('assets').select('id, name, category, base_price, quantity').eq('property_id', propertyId).eq('active', true).limit(1000)
       return data || []
     },
     enabled: !!propertyId,

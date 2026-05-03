@@ -13,7 +13,7 @@ export default function MediaKitBuilder() {
   const { data: assets } = useQuery({
     queryKey: ['mediakit-assets', propertyId],
     queryFn: async () => {
-      const { data } = await supabase.from('assets').select('*').eq('property_id', propertyId).eq('active', true).order('category')
+      const { data } = await supabase.from('assets').select('*').eq('property_id', propertyId).eq('active', true).order('category').limit(1000)
       return data || []
     },
     enabled: !!propertyId,

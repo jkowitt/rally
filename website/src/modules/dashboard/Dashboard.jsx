@@ -93,7 +93,7 @@ export default function Dashboard() {
     queryKey: ['deals', propertyId],
     queryFn: async () => {
       if (!propertyId) return []
-      const { data } = await supabase.from('deals').select('*').eq('property_id', propertyId)
+      const { data } = await supabase.from('deals').select('*').eq('property_id', propertyId).order('created_at', { ascending: false }).limit(2000)
       return data || []
     },
     enabled: !!propertyId && flags.crm,
@@ -111,7 +111,7 @@ export default function Dashboard() {
     queryKey: ['tasks-dashboard', propertyId],
     queryFn: async () => {
       if (!propertyId) return []
-      const { data } = await supabase.from('tasks').select('id, title, due_date, priority, status, deal_id').eq('property_id', propertyId).neq('status', 'Done').order('due_date')
+      const { data } = await supabase.from('tasks').select('id, title, due_date, priority, status, deal_id').eq('property_id', propertyId).neq('status', 'Done').order('due_date').limit(500)
       return data || []
     },
     enabled: !!propertyId && flags.crm,

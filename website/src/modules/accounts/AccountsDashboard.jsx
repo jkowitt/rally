@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { Card, EmptyState } from '@/components/ui'
 
 export default function AccountsDashboard() {
   const { profile } = useAuth()
@@ -100,31 +101,31 @@ export default function AccountsDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Link
           to="/app/crm/contracts"
-          className="block p-5 rounded-lg bg-bg-surface border border-border hover:border-accent/40 transition-colors"
+          className="block rounded-lg bg-bg-surface border border-border p-5 hover:border-accent/40 transition-colors"
         >
-          <div className="text-sm text-text-muted font-mono uppercase tracking-wider mb-1">Manage</div>
+          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">Manage</div>
           <div className="text-lg font-semibold text-text-primary">Contracts</div>
-          <div className="text-xs text-text-muted mt-2">
+          <div className="text-sm text-text-muted mt-2">
             Upload, view, parse benefits, and archive prior versions.
           </div>
         </Link>
         <Link
           to="/app/crm/fulfillment"
-          className="block p-5 rounded-lg bg-bg-surface border border-border hover:border-accent/40 transition-colors"
+          className="block rounded-lg bg-bg-surface border border-border p-5 hover:border-accent/40 transition-colors"
         >
-          <div className="text-sm text-text-muted font-mono uppercase tracking-wider mb-1">Track</div>
+          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">Track</div>
           <div className="text-lg font-semibold text-text-primary">Fulfillment</div>
-          <div className="text-xs text-text-muted mt-2">
+          <div className="text-sm text-text-muted mt-2">
             Status of every benefit promised in every signed contract.
           </div>
         </Link>
       </div>
 
-      <div>
-        <div className="text-xs uppercase tracking-widest text-text-muted font-mono mb-2">
+      <section>
+        <div className="text-xs uppercase tracking-widest text-text-muted mb-2">
           Recent Active Contracts
         </div>
-        <div className="bg-bg-surface border border-border rounded-lg divide-y divide-border">
+        <Card padding="none" className="divide-y divide-border overflow-hidden">
           {loading && (
             <ul className="divide-y divide-border" aria-label="Loading recent contracts">
               {[0, 1, 2].map(i => (
@@ -139,9 +140,11 @@ export default function AccountsDashboard() {
             </ul>
           )}
           {!loading && recentContracts.length === 0 && (
-            <div className="p-4 text-sm text-text-muted">
-              No contracts yet. Sign one in the CRM and it will land here automatically.
-            </div>
+            <EmptyState
+              title="No active contracts yet"
+              description="Sign a deal in the CRM and the contract will land here automatically — benefits parsed, fulfillment tracked, archives kept on every update."
+              className="border-0"
+            />
           )}
           {!loading && recentContracts.map(c => (
             <Link
@@ -160,15 +163,15 @@ export default function AccountsDashboard() {
               <span className="text-xs text-accent">View →</span>
             </Link>
           ))}
-        </div>
-      </div>
+        </Card>
+      </section>
 
       {recentVersions.length > 0 && (
-        <div>
-          <div className="text-xs uppercase tracking-widest text-text-muted font-mono mb-2">
+        <section>
+          <div className="text-xs uppercase tracking-widest text-text-muted mb-2">
             Recent Archived Versions
           </div>
-          <div className="bg-bg-surface border border-border rounded-lg divide-y divide-border">
+          <Card padding="none" className="divide-y divide-border overflow-hidden">
             {recentVersions.map(v => {
               const snap = v.snapshot?.contract || {}
               return (
@@ -185,8 +188,8 @@ export default function AccountsDashboard() {
                 </div>
               )
             })}
-          </div>
-        </div>
+          </Card>
+        </section>
       )}
     </div>
   )
@@ -199,11 +202,11 @@ function StatCard({ label, value, loading, accent }) {
     accent === 'accent' ? 'text-accent' :
     'text-text-primary'
   return (
-    <div className="bg-bg-surface border border-border rounded-lg p-4">
-      <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted">{label}</div>
-      <div className={`text-2xl font-semibold mt-1 ${accentClass}`}>
+    <Card>
+      <div className="text-[11px] uppercase tracking-widest text-text-muted">{label}</div>
+      <div className={`text-2xl font-semibold mt-1 font-mono ${accentClass}`}>
         {loading ? '…' : value}
       </div>
-    </div>
+    </Card>
   )
 }

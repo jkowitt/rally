@@ -1,11 +1,21 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
+import { Search, Menu, X } from 'lucide-react'
 import NotificationCenter from '../NotificationCenter'
 import AutomationStatusBadge from '../automation/AutomationStatusBadge'
 import { APIUsageCompact } from './../../components/APIUsageBanner'
 import ImpersonationPanel from '../ImpersonationPanel'
 import { useActiveHub, HUBS, getHubLandingPath } from '@/hooks/useActiveHub'
+import { LayoutGrid, Handshake, Settings as SettingsIcon } from 'lucide-react'
+
+// Map hub id → lucide icon. Keeps HUBS data shape free of JSX so it
+// can stay typed and reused everywhere.
+const HUB_ICONS = {
+  crm: LayoutGrid,
+  accounts: Handshake,
+  ops: SettingsIcon,
+}
 
 export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
   const { profile, realIsDeveloper, isDeveloper, signOut } = useAuth()
@@ -59,10 +69,10 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
         <div className="flex items-center gap-3">
           <button
             onClick={onMenuToggle}
-            className="md:hidden text-text-muted hover:text-text-primary text-lg p-1 -ml-1"
+            className="md:hidden text-text-muted hover:text-text-primary p-1 -ml-1"
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? '✕' : '☰'}
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
           <button onClick={() => navigate('/app')} className="md:hidden font-mono font-bold text-accent text-xs cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</button>
@@ -84,6 +94,7 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
             onClick={openSearch}
             className="hidden sm:flex items-center gap-2 bg-bg-card border border-border rounded-lg px-3 py-1.5 text-xs text-text-muted hover:text-text-secondary hover:border-accent/30 transition-colors"
           >
+            <Search className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Search...</span>
             <kbd className="text-[10px] font-mono bg-bg-surface px-1.5 py-0.5 rounded border border-border">Ctrl+K</kbd>
           </button>
@@ -92,7 +103,7 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
             className="sm:hidden text-text-muted hover:text-text-primary p-1"
             aria-label="Search"
           >
-            ⌕
+            <Search className="w-5 h-5" />
           </button>
 
           <div className="hidden lg:block">
@@ -136,7 +147,10 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
                     className={`w-1.5 h-1.5 rounded-full ${hubDotClass(hub.accent)}`}
                     aria-hidden="true"
                   />
-                  <span className="text-base leading-none">{hub.icon}</span>
+                  {(() => {
+                    const Icon = HUB_ICONS[hub.id]
+                    return Icon ? <Icon className="w-4 h-4" aria-hidden="true" /> : null
+                  })()}
                   <span>{hub.label}</span>
                 </button>
               )

@@ -8,6 +8,10 @@ import OnboardingBanner from '../onboarding/OnboardingBanner'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useSessionTimeout } from '@/hooks/useSessionTimeout'
 import { on } from '@/lib/appEvents'
+import {
+  Home, LayoutGrid, Target, CheckSquare, Handshake,
+  FileText, Package, Settings, Users, SlidersHorizontal,
+} from 'lucide-react'
 
 const FeatureSuggestion = lazy(() => import('../FeatureSuggestion'))
 
@@ -110,18 +114,18 @@ function MobileBottomNav() {
   // each hub the user has access to. Scrolls horizontally on small
   // phones so we never have to truncate or hide entries.
   const tabs = [
-    { to: '/app', label: 'Home', icon: '⌂', exact: true },
+    { to: '/app', label: 'Home', icon: Home, exact: true },
     ...(flags.crm ? [
-      { to: '/app/crm/pipeline', label: 'Pipeline', icon: '📊' },
-      { to: '/app/crm/assets', label: 'Assets', icon: '🎯' },
-      { to: '/app/crm/tasks', label: 'Tasks', icon: '✓' },
+      { to: '/app/crm/pipeline', label: 'Pipeline', icon: LayoutGrid },
+      { to: '/app/crm/assets', label: 'Assets', icon: Target },
+      { to: '/app/crm/tasks', label: 'Tasks', icon: CheckSquare },
     ] : []),
-    { to: '/app/accounts', label: 'Accounts', icon: '🤝' },
-    { to: '/app/crm/contracts', label: 'Contracts', icon: '📄' },
-    { to: '/app/crm/fulfillment', label: 'Fulfill', icon: '📦' },
-    { to: '/app/ops', label: 'Ops', icon: '⚙' },
-    { to: '/app/ops/team', label: 'Team', icon: '👥' },
-    { to: '/app/settings', label: 'Settings', icon: '⚙' },
+    { to: '/app/accounts', label: 'Accounts', icon: Handshake },
+    { to: '/app/crm/contracts', label: 'Contracts', icon: FileText },
+    { to: '/app/crm/fulfillment', label: 'Fulfill', icon: Package },
+    { to: '/app/ops', label: 'Ops', icon: Settings },
+    { to: '/app/ops/team', label: 'Team', icon: Users },
+    { to: '/app/settings', label: 'Settings', icon: SlidersHorizontal },
   ]
 
   return (
@@ -132,16 +136,17 @@ function MobileBottomNav() {
       <div className="flex items-center gap-1 py-2 px-2 overflow-x-auto scroll-smooth">
         {tabs.map(tab => {
           const isActive = tab.exact ? (path === '/app' || path === '/app/') : path.startsWith(tab.to)
+          const Icon = tab.icon
           return (
             <NavLink
               key={tab.to + tab.label}
               to={tab.to}
               end={tab.exact}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded text-[10px] font-mono whitespace-nowrap transition-colors ${
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded text-[10px] whitespace-nowrap transition-colors ${
                 isActive ? 'text-accent bg-accent/10' : 'text-text-muted active:text-text-secondary'
               }`}
             >
-              <span className="text-base leading-none" aria-hidden="true">{tab.icon}</span>
+              <Icon className="w-4 h-4" aria-hidden="true" />
               <span>{tab.label}</span>
             </NavLink>
           )

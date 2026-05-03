@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { useActiveHub, detectHub } from '@/hooks/useActiveHub'
 import { emit } from '@/lib/appEvents'
+import { Lightbulb } from 'lucide-react'
 
 function getCrmSections(t, propertyType, flags, moduleLabels) {
   const industryItems = []
@@ -279,9 +280,10 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
         <div className="border-t border-border px-4 py-3 space-y-2">
           <button
             onClick={() => emit('open-suggestion')}
-            className="w-full text-left text-[10px] text-text-muted hover:text-accent font-mono transition-colors"
+            className="w-full flex items-center gap-1.5 text-left text-[11px] text-text-muted hover:text-accent transition-colors"
           >
-            💡 Suggest a Feature
+            <Lightbulb className="w-3.5 h-3.5" aria-hidden="true" />
+            Suggest a Feature
           </button>
           <div className="text-[10px] text-text-muted font-mono">v1.0.0</div>
         </div>

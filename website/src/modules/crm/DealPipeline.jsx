@@ -7,6 +7,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import DealActivityTimeline from '@/components/DealActivityTimeline'
 import SlashInput from '@/components/SlashInput'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import { Button, EmptyState } from '@/components/ui'
 import { on } from '@/lib/appEvents'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
@@ -607,8 +608,8 @@ export default function DealPipeline() {
         </div>
         <div className="flex gap-2 flex-wrap items-center">
           <div className="flex bg-bg-card rounded overflow-hidden border border-border">
-            <button onClick={() => setViewMode('kanban')} className={`px-3 py-1.5 text-xs font-mono ${viewMode === 'kanban' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Board</button>
-            <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 text-xs font-mono ${viewMode === 'table' ? 'bg-accent text-bg-primary' : 'text-text-muted'}`}>Table</button>
+            <button onClick={() => setViewMode('kanban')} className={`px-3 py-1.5 text-xs font-medium ${viewMode === 'kanban' ? 'bg-accent text-bg-primary' : 'text-text-muted hover:text-text-primary'}`}>Board</button>
+            <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 text-xs font-medium ${viewMode === 'table' ? 'bg-accent text-bg-primary' : 'text-text-muted hover:text-text-primary'}`}>Table</button>
           </div>
           <select
             value={filterCategory}
@@ -759,28 +760,20 @@ export default function DealPipeline() {
       {isLoading ? (
         <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="skeleton h-16" />)}</div>
       ) : (deals?.length || 0) === 0 ? (
-        <div className="bg-bg-surface border border-dashed border-border rounded-lg p-8 sm:p-12 text-center">
-          <div className="text-3xl mb-3">📊</div>
-          <div className="text-lg font-semibold text-text-primary mb-1">No deals yet</div>
-          <div className="text-sm text-text-muted max-w-md mx-auto mb-5">
-            Your pipeline starts here. Add a prospect manually, or use Find Prospects
-            to surface real companies that match your ICP.
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <button
-              onClick={() => { setEditingDeal(null); setShowForm(true) }}
-              className="bg-accent text-bg-primary text-sm font-medium px-4 py-2 rounded hover:opacity-90 transition-opacity"
-            >
+        <EmptyState
+          title="No deals yet"
+          description="Your pipeline starts here. Add a prospect manually, or use Find Prospects to surface real companies that match your ICP."
+          primaryAction={
+            <Button size="lg" onClick={() => { setEditingDeal(null); setShowForm(true) }}>
               + Add your first deal
-            </button>
-            <button
-              onClick={() => setShowProspectFinder(true)}
-              className="bg-bg-card border border-border text-sm text-text-secondary px-4 py-2 rounded hover:border-accent/40 hover:text-text-primary transition-colors"
-            >
-              🔍 Find Prospects
-            </button>
-          </div>
-        </div>
+            </Button>
+          }
+          secondaryAction={
+            <Button size="lg" variant="secondary" onClick={() => setShowProspectFinder(true)}>
+              Find Prospects
+            </Button>
+          }
+        />
       ) : viewMode === 'kanban' ? (
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex gap-3 overflow-x-auto pb-4 -mx-3 px-3 sm:mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none">
@@ -1387,28 +1380,46 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           </div>
         </div>
 
-        {/* Tab strip */}
-        <div className="px-4 sm:px-5 pt-3 border-b border-border flex gap-1 overflow-x-auto bg-bg-surface sticky top-[60px] z-[5]">
-          {[
+        {/* Tab strip — dropdown on mobile, inline tabs on tablet+ */}
+        {(() => {
+          const tabs = [
             { id: 'overview',     label: 'Overview' },
             { id: 'contracts',    label: `Contracts${dealContracts?.length ? ` (${dealContracts.length})` : ''}` },
             { id: 'fulfillment',  label: `Fulfillment${fulfillmentTotal ? ` (${fulfillmentDelivered}/${fulfillmentTotal})` : ''}` },
             { id: 'activity',     label: 'Activity' },
-          ].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`text-xs font-mono uppercase tracking-wider px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${
-                activeTab === t.id
-                  ? 'text-accent border-accent'
-                  : 'text-text-muted border-transparent hover:text-text-primary'
-              }`}
-              aria-current={activeTab === t.id ? 'page' : undefined}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+          ]
+          return (
+            <>
+              <div className="px-4 sm:hidden pt-3 pb-2 border-b border-border bg-bg-surface sticky top-[60px] z-[5]">
+                <label className="sr-only" htmlFor="deal-viewer-tab-select">Section</label>
+                <select
+                  id="deal-viewer-tab-select"
+                  value={activeTab}
+                  onChange={(e) => setActiveTab(e.target.value)}
+                  className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                >
+                  {tabs.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+              <div className="hidden sm:flex px-5 pt-3 border-b border-border gap-1 bg-bg-surface sticky top-[60px] z-[5]">
+                {tabs.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setActiveTab(t.id)}
+                    className={`text-sm font-medium px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${
+                      activeTab === t.id
+                        ? 'text-accent border-accent'
+                        : 'text-text-muted border-transparent hover:text-text-primary'
+                    }`}
+                    aria-current={activeTab === t.id ? 'page' : undefined}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )
+        })()}
 
         <div className="p-4 sm:p-5 space-y-4">
           {activeTab === 'overview' && <>

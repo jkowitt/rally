@@ -7,6 +7,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import DealActivityTimeline from '@/components/DealActivityTimeline'
 import SlashInput from '@/components/SlashInput'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import { on } from '@/lib/appEvents'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail } from '@/lib/claude'
@@ -186,14 +187,9 @@ export default function DealPipeline() {
   // the prospect finder. Stays robust if Pipeline isn't mounted —
   // dispatchers fire after navigate() so this listener is alive.
   useEffect(() => {
-    function onNewDeal() { setEditingDeal(null); setShowForm(true) }
-    function onFindProspects() { setShowProspectFinder(true) }
-    window.addEventListener('open-new-deal', onNewDeal)
-    window.addEventListener('open-find-prospects', onFindProspects)
-    return () => {
-      window.removeEventListener('open-new-deal', onNewDeal)
-      window.removeEventListener('open-find-prospects', onFindProspects)
-    }
+    const offNew = on('open-new-deal', () => { setEditingDeal(null); setShowForm(true) })
+    const offFind = on('open-find-prospects', () => setShowProspectFinder(true))
+    return () => { offNew(); offFind() }
   }, [])
 
   // Auto-open deal from URL param (?deal=<id>) or filter by stage (?stage=<name>)

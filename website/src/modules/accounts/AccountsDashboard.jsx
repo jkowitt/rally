@@ -125,7 +125,19 @@ export default function AccountsDashboard() {
           Recent Active Contracts
         </div>
         <div className="bg-bg-surface border border-border rounded-lg divide-y divide-border">
-          {loading && <div className="p-4 text-sm text-text-muted">Loading…</div>}
+          {loading && (
+            <ul className="divide-y divide-border" aria-label="Loading recent contracts">
+              {[0, 1, 2].map(i => (
+                <li key={i} className="p-3 flex items-center justify-between">
+                  <div className="space-y-1.5 flex-1 mr-4">
+                    <div className="h-3 w-1/2 bg-bg-card rounded" />
+                    <div className="h-2 w-1/3 bg-bg-card/60 rounded" />
+                  </div>
+                  <span className="w-10 h-3 bg-bg-card rounded" />
+                </li>
+              ))}
+            </ul>
+          )}
           {!loading && recentContracts.length === 0 && (
             <div className="p-4 text-sm text-text-muted">
               No contracts yet. Sign one in the CRM and it will land here automatically.

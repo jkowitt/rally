@@ -4,6 +4,7 @@ import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/hooks/useAuth'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { useActiveHub, detectHub } from '@/hooks/useActiveHub'
+import { emit } from '@/lib/appEvents'
 
 function getCrmSections(t, propertyType, flags, moduleLabels) {
   const industryItems = []
@@ -277,7 +278,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
       {showLabels && (
         <div className="border-t border-border px-4 py-3 space-y-2">
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent('open-suggestion'))}
+            onClick={() => emit('open-suggestion')}
             className="w-full text-left text-[10px] text-text-muted hover:text-accent font-mono transition-colors"
           >
             💡 Suggest a Feature

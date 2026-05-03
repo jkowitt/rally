@@ -166,8 +166,22 @@ export default function DealActivityTimeline({ dealId, propertyId, limit = 20 }:
 
   if (loading) {
     return (
-      <div className="bg-bg-card border border-border rounded-lg p-3 text-xs text-text-muted">
-        Loading activity…
+      <div className="bg-bg-card border border-border rounded-lg p-3 space-y-2">
+        <div className="text-[10px] uppercase tracking-widest text-text-muted font-mono mb-1">
+          Recent activity
+        </div>
+        <ol className="space-y-2" aria-label="Loading recent activity">
+          {[0, 1, 2, 3].map(i => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="w-3 h-3 rounded-full bg-bg-surface shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="h-2 w-2/3 bg-bg-surface rounded" />
+                <div className="h-2 w-1/2 bg-bg-surface/60 rounded" />
+              </div>
+              <span className="w-6 h-2 bg-bg-surface rounded shrink-0" />
+            </li>
+          ))}
+        </ol>
       </div>
     )
   }

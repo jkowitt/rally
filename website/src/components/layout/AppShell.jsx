@@ -7,6 +7,7 @@ import ImpersonationBanner from '../ImpersonationBanner'
 import OnboardingBanner from '../onboarding/OnboardingBanner'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useSessionTimeout } from '@/hooks/useSessionTimeout'
+import { on } from '@/lib/appEvents'
 
 const FeatureSuggestion = lazy(() => import('../FeatureSuggestion'))
 
@@ -45,11 +46,7 @@ export default function AppShell({ children }) {
   }, [mobileMenuOpen])
 
   // Listen for suggestion modal trigger
-  useEffect(() => {
-    const handler = () => setShowSuggestion(true)
-    window.addEventListener('open-suggestion', handler)
-    return () => window.removeEventListener('open-suggestion', handler)
-  }, [])
+  useEffect(() => on('open-suggestion', () => setShowSuggestion(true)), [])
 
   return (
     <div className="min-h-screen bg-bg-primary flex">

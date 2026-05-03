@@ -1,5 +1,14 @@
 import { useEffect } from 'react'
 
+export interface SeoOptions {
+  title?: string
+  description?: string
+  canonical?: string
+  ogTitle?: string
+  ogDescription?: string
+  schema?: unknown
+}
+
 /**
  * Tiny SEO helper for SPA pages — sets document title, meta description,
  * canonical URL, OG tags, and optional JSON-LD schema on mount, and
@@ -10,7 +19,7 @@ import { useEffect } from 'react'
  * execute JS (Googlebot, Bingbot, Facebook, LinkedIn) — they see the
  * updated tags after the page renders.
  */
-export function useSeo({ title, description, canonical, ogTitle, ogDescription, schema }) {
+export function useSeo({ title, description, canonical, ogTitle, ogDescription, schema }: SeoOptions): void {
   useEffect(() => {
     const prev = {
       title: document.title,
@@ -24,11 +33,11 @@ export function useSeo({ title, description, canonical, ogTitle, ogDescription, 
     if (title) document.title = title
     if (description) setMeta('name', 'description', description)
     if (canonical) setLink('canonical', canonical)
-    if (ogTitle || title) setMeta('property', 'og:title', ogTitle || title)
-    if (ogDescription || description) setMeta('property', 'og:description', ogDescription || description)
+    if (ogTitle || title) setMeta('property', 'og:title', ogTitle || title || '')
+    if (ogDescription || description) setMeta('property', 'og:description', ogDescription || description || '')
     if (canonical) setMeta('property', 'og:url', canonical)
 
-    let schemaScript = null
+    let schemaScript: HTMLScriptElement | null = null
     if (schema) {
       schemaScript = document.createElement('script')
       schemaScript.type = 'application/ld+json'
@@ -49,11 +58,11 @@ export function useSeo({ title, description, canonical, ogTitle, ogDescription, 
   }, [title, description, canonical, ogTitle, ogDescription, JSON.stringify(schema || {})])
 }
 
-function getMeta(attr, value) {
+function getMeta(attr: 'name' | 'property', value: string): string {
   return document.querySelector(`meta[${attr}="${value}"]`)?.getAttribute('content') || ''
 }
 
-function setMeta(attr, value, content) {
+function setMeta(attr: 'name' | 'property', value: string, content: string): void {
   let el = document.querySelector(`meta[${attr}="${value}"]`)
   if (!el) {
     el = document.createElement('meta')
@@ -63,11 +72,11 @@ function setMeta(attr, value, content) {
   el.setAttribute('content', content)
 }
 
-function getLink(rel) {
+function getLink(rel: string): string {
   return document.querySelector(`link[rel="${rel}"]`)?.getAttribute('href') || ''
 }
 
-function setLink(rel, href) {
+function setLink(rel: string, href: string): void {
   let el = document.querySelector(`link[rel="${rel}"]`)
   if (!el) {
     el = document.createElement('link')

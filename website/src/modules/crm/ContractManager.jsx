@@ -14,6 +14,7 @@ import {
 import jsPDF from 'jspdf'
 import { isAIFeatureEnabled } from '@/lib/featureCheck'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { on } from '@/lib/appEvents'
 
 /* Guess asset category from benefit description */
 function guessAssetCategory(description) {
@@ -58,11 +59,7 @@ export default function ContractManager() {
 
   // Listen for command-palette "Upload contract" event so the
   // palette can deep-link straight to the upload tab.
-  useEffect(() => {
-    function onOpenUpload() { setView('upload') }
-    window.addEventListener('open-upload-contract', onOpenUpload)
-    return () => window.removeEventListener('open-upload-contract', onOpenUpload)
-  }, [])
+  useEffect(() => on('open-upload-contract', () => setView('upload')), [])
   const [selectedContract, setSelectedContract] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [showPdfViewer, setShowPdfViewer] = useState(null)

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { emit } from '@/lib/appEvents'
 
 const RECENT_SEARCHES_KEY = 'rally_recent_searches'
 const MAX_RECENT_SEARCHES = 5
@@ -207,9 +208,9 @@ export default function GlobalSearch({ open, onClose }) {
     { id: 'goto-tasks',     label: 'Go to Tasks',              hint: 'Open task list',                  keywords: 'tasks todo to-do', run: () => navigate('/app/crm/tasks') },
     { id: 'goto-fulfillment', label: 'Go to Fulfillment',      hint: 'Track delivered benefits',        keywords: 'fulfillment delivered benefits', run: () => navigate('/app/crm/fulfillment') },
     { id: 'goto-contracts', label: 'Go to Contracts',          hint: 'Upload + manage contracts',       keywords: 'contracts upload', run: () => navigate('/app/crm/contracts') },
-    { id: 'create-deal',    label: 'Create new deal',          hint: 'Open the new deal form',          keywords: 'new deal create add', run: () => { navigate('/app/crm/pipeline'); setTimeout(() => window.dispatchEvent(new CustomEvent('open-new-deal')), 60) } },
-    { id: 'find-prospects', label: 'Find Prospects',           hint: 'AI-powered prospect search',      keywords: 'find prospects search ai', run: () => { navigate('/app/crm/pipeline'); setTimeout(() => window.dispatchEvent(new CustomEvent('open-find-prospects')), 60) } },
-    { id: 'upload-contract', label: 'Upload contract',         hint: 'Send a signed contract to AM',    keywords: 'upload contract sign signed', run: () => { navigate('/app/crm/contracts'); setTimeout(() => window.dispatchEvent(new CustomEvent('open-upload-contract')), 60) } },
+    { id: 'create-deal',    label: 'Create new deal',          hint: 'Open the new deal form',          keywords: 'new deal create add', run: () => { navigate('/app/crm/pipeline'); setTimeout(() => emit('open-new-deal'), 60) } },
+    { id: 'find-prospects', label: 'Find Prospects',           hint: 'AI-powered prospect search',      keywords: 'find prospects search ai', run: () => { navigate('/app/crm/pipeline'); setTimeout(() => emit('open-find-prospects'), 60) } },
+    { id: 'upload-contract', label: 'Upload contract',         hint: 'Send a signed contract to AM',    keywords: 'upload contract sign signed', run: () => { navigate('/app/crm/contracts'); setTimeout(() => emit('open-upload-contract'), 60) } },
     { id: 'goto-settings',  label: 'Open Settings',            hint: 'Plan, billing, addons',           keywords: 'settings plan billing addons', run: () => navigate('/app/settings') },
   ]
 

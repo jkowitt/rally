@@ -197,10 +197,35 @@ export default function GlobalSearch({ open, onClose }) {
   const navigate = useNavigate()
   const { profile } = useAuth()
 
-  // Build flat list of all results for keyboard navigation
-  const flatResults = CATEGORIES.flatMap((cat) =>
-    (results[cat.key] || []).map((r) => ({ ...r, _category: cat }))
-  )
+  // Quick-action commands that run instead of navigating to a specific
+  // record. Matched against the query string by label + keywords; also
+  // shown when the search is empty so users can discover them.
+  const QUICK_ACTIONS = [
+    { id: 'goto-pipeline',  label: 'Go to Pipeline',           hint: 'Open the deal kanban',           keywords: 'pipeline deals kanban', run: () => navigate('/app/crm/pipeline') },
+    { id: 'goto-accounts',  label: 'Go to Account Management', hint: 'Contracts + fulfillment',         keywords: 'accounts contracts fulfillment', run: () => navigate('/app/accounts') },
+    { id: 'goto-ops',       label: 'Go to Operations',         hint: 'Marketing, finance, team',        keywords: 'ops operations marketing finance team', run: () => navigate('/app/ops') },
+    { id: 'goto-tasks',     label: 'Go to Tasks',              hint: 'Open task list',                  keywords: 'tasks todo to-do', run: () => navigate('/app/crm/tasks') },
+    { id: 'goto-fulfillment', label: 'Go to Fulfillment',      hint: 'Track delivered benefits',        keywords: 'fulfillment delivered benefits', run: () => navigate('/app/crm/fulfillment') },
+    { id: 'goto-contracts', label: 'Go to Contracts',          hint: 'Upload + manage contracts',       keywords: 'contracts upload', run: () => navigate('/app/crm/contracts') },
+    { id: 'create-deal',    label: 'Create new deal',          hint: 'Open the new deal form',          keywords: 'new deal create add', run: () => { navigate('/app/crm/pipeline'); setTimeout(() => window.dispatchEvent(new CustomEvent('open-new-deal')), 60) } },
+    { id: 'find-prospects', label: 'Find Prospects',           hint: 'AI-powered prospect search',      keywords: 'find prospects search ai', run: () => { navigate('/app/crm/pipeline'); setTimeout(() => window.dispatchEvent(new CustomEvent('open-find-prospects')), 60) } },
+    { id: 'upload-contract', label: 'Upload contract',         hint: 'Send a signed contract to AM',    keywords: 'upload contract sign signed', run: () => { navigate('/app/crm/contracts'); setTimeout(() => window.dispatchEvent(new CustomEvent('open-upload-contract')), 60) } },
+    { id: 'goto-settings',  label: 'Open Settings',            hint: 'Plan, billing, addons',           keywords: 'settings plan billing addons', run: () => navigate('/app/settings') },
+  ]
+
+  const q = query.trim().toLowerCase()
+  const matchedActions = q
+    ? QUICK_ACTIONS.filter(a => a.label.toLowerCase().includes(q) || a.keywords.includes(q))
+    : QUICK_ACTIONS.slice(0, 5)
+
+  // Build flat list of all results for keyboard navigation. Actions
+  // come first so Enter on an empty query runs the top action.
+  const flatResults = [
+    ...matchedActions.map(a => ({ ...a, _action: true })),
+    ...CATEGORIES.flatMap((cat) =>
+      (results[cat.key] || []).map((r) => ({ ...r, _category: cat }))
+    ),
+  ]
 
   // Total result count
   const totalCount = flatResults.length
@@ -282,11 +307,12 @@ export default function GlobalSearch({ open, onClose }) {
 
   const handleSelect = useCallback(
     (item) => {
-      // Save to recent searches on selection
-      if (query.trim()) {
-        saveRecentSearch(query.trim())
-      }
+      if (query.trim()) saveRecentSearch(query.trim())
       onClose()
+      if (item._action) {
+        try { item.run() } catch (e) { console.warn('Action failed:', e) }
+        return
+      }
       navigate(item._category.route)
     },
     [onClose, navigate, query]
@@ -519,6 +545,42 @@ export default function GlobalSearch({ open, onClose }) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Quick actions — always render at top when matches exist */}
+          {matchedActions.length > 0 && (
+            <div>
+              <div className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider bg-bg-primary/50 sticky top-0 flex items-center justify-between">
+                <span>Actions</span>
+                <span className="text-[10px] font-normal text-text-muted bg-bg-card px-1.5 py-0.5 rounded-full border border-border">
+                  {matchedActions.length}
+                </span>
+              </div>
+              {matchedActions.map((a, i) => {
+                itemIndex++
+                const currentIndex = itemIndex
+                const isActive = currentIndex === activeIndex
+                return (
+                  <button
+                    key={a.id}
+                    data-active={isActive}
+                    onClick={() => handleSelect({ ...a, _action: true })}
+                    onMouseEnter={() => setActiveIndex(currentIndex)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors min-h-[48px] sm:min-h-0 ${
+                      isActive ? 'bg-accent/10 text-accent' : 'text-text-primary hover:bg-bg-card'
+                    }`}
+                  >
+                    <span className={`text-sm shrink-0 ${isActive ? 'text-accent' : 'text-text-muted'}`}>
+                      ⌘
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{a.label}</div>
+                      {a.hint && <div className="text-xs text-text-muted truncate">{a.hint}</div>}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
 

@@ -6,6 +6,7 @@ import { useToast } from '@/components/Toast'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import SaveIndicator from '@/components/SaveIndicator'
+import Breadcrumbs from '@/components/Breadcrumbs'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -617,6 +618,10 @@ export default function FulfillmentTracker() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <Breadcrumbs items={[
+        { label: 'Account Management', to: '/app/accounts' },
+        { label: `${fulfillmentLabel} Tracker` },
+      ]} />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>

@@ -57,6 +57,7 @@ import {
 } from '@/lib/claude'
 import jsPDF from 'jspdf'
 import { isAIFeatureEnabled } from '@/lib/featureCheck'
+import Breadcrumbs from '@/components/Breadcrumbs'
 
 /* Guess asset category from benefit description */
 function guessAssetCategory(description) {
@@ -98,6 +99,14 @@ export default function ContractManager() {
   const { toast } = useToast()
   const propertyId = profile?.property_id
   const [view, setView] = useState('list')
+
+  // Listen for command-palette "Upload contract" event so the
+  // palette can deep-link straight to the upload tab.
+  useEffect(() => {
+    function onOpenUpload() { setView('upload') }
+    window.addEventListener('open-upload-contract', onOpenUpload)
+    return () => window.removeEventListener('open-upload-contract', onOpenUpload)
+  }, [])
   const [selectedContract, setSelectedContract] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [showPdfViewer, setShowPdfViewer] = useState(null)
@@ -341,6 +350,10 @@ export default function ContractManager() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <Breadcrumbs items={[
+        { label: 'Account Management', to: '/app/accounts' },
+        { label: 'Contracts' },
+      ]} />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Contract Manager</h1>

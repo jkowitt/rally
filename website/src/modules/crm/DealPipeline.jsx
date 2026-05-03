@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import Breadcrumbs from '@/components/Breadcrumbs'
+import DealActivityTimeline from '@/components/DealActivityTimeline'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail } from '@/lib/claude'
@@ -177,6 +179,20 @@ export default function DealPipeline() {
     enabled: !!propertyId,
   })
   const userNameMap = (teamUsers || []).reduce((m, u) => { m[u.id] = u.full_name || u.email || u.id.slice(0, 6); return m }, {})
+
+  // Listen for command-palette events that open the deal form or
+  // the prospect finder. Stays robust if Pipeline isn't mounted —
+  // dispatchers fire after navigate() so this listener is alive.
+  useEffect(() => {
+    function onNewDeal() { setEditingDeal(null); setShowForm(true) }
+    function onFindProspects() { setShowProspectFinder(true) }
+    window.addEventListener('open-new-deal', onNewDeal)
+    window.addEventListener('open-find-prospects', onFindProspects)
+    return () => {
+      window.removeEventListener('open-new-deal', onNewDeal)
+      window.removeEventListener('open-find-prospects', onFindProspects)
+    }
+  }, [])
 
   // Auto-open deal from URL param (?deal=<id>) or filter by stage (?stage=<name>)
   useEffect(() => {
@@ -579,6 +595,10 @@ export default function DealPipeline() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <Breadcrumbs items={[
+        { label: 'CRM & Prospecting', to: '/app' },
+        { label: `${t.deal || 'Deal'} Pipeline` },
+      ]} />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">{t.deal || 'Deal'} Pipeline</h1>
@@ -1609,6 +1629,8 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
               </div>
             </div>
           )}
+
+          <DealActivityTimeline dealId={deal.id} propertyId={propertyId} />
         </div>
       </div>
     </div>

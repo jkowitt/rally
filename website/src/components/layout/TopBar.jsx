@@ -37,6 +37,19 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
     navigate(getHubLandingPath(hubId))
   }
 
+  function activeHubClass(accent) {
+    // Tailwind needs literal class names — can't compose them at runtime.
+    if (accent === 'emerald') return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/50 shadow-sm'
+    if (accent === 'amber')   return 'bg-amber-500/15 text-amber-300 border-amber-500/50 shadow-sm'
+    return 'bg-sky-500/15 text-sky-300 border-sky-500/50 shadow-sm'
+  }
+
+  function hubDotClass(accent) {
+    if (accent === 'emerald') return 'bg-emerald-400'
+    if (accent === 'amber')   return 'bg-amber-400'
+    return 'bg-sky-400'
+  }
+
   return (
     <header className="border-b border-border bg-bg-surface">
       <div className="h-14 flex items-center justify-between px-3 sm:px-4 md:px-6">
@@ -112,12 +125,14 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
                   key={hub.id}
                   onClick={() => switchHub(hub.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
-                    active
-                      ? 'bg-accent/15 text-accent border-accent/40 shadow-sm'
-                      : 'bg-bg-card text-text-secondary border-border hover:text-text-primary hover:border-accent/30'
+                    active ? activeHubClass(hub.accent) : 'bg-bg-card text-text-secondary border-border hover:text-text-primary hover:border-accent/30'
                   }`}
                   aria-current={active ? 'page' : undefined}
                 >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${hubDotClass(hub.accent)}`}
+                    aria-hidden="true"
+                  />
                   <span className="text-base leading-none">{hub.icon}</span>
                   <span>{hub.label}</span>
                 </button>

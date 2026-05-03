@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import Breadcrumbs from '@/components/Breadcrumbs'
 
 export default function AccountsDashboard() {
   const { profile } = useAuth()
@@ -72,6 +73,9 @@ export default function AccountsDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      <Breadcrumbs items={[
+        { label: 'Account Management' },
+      ]} />
       <div>
         <h1 className="text-2xl font-bold text-text-primary">Account Management</h1>
         <p className="text-sm text-text-muted mt-1">

@@ -3,10 +3,13 @@ import { useEffect, useState } from 'react'
 const STORAGE_KEY = 'll_active_hub'
 const CHANGE_EVENT = 'll-active-hub-change'
 
+// `accent` is a Tailwind color stem we use to theme each hub's
+// active-state pill in the TopBar. Keep these to colors that are
+// clearly distinguishable for color-vision-deficient users.
 export const HUBS = [
-  { id: 'crm', label: 'CRM & Prospecting', icon: '📊' },
-  { id: 'accounts', label: 'Account Management', icon: '🤝' },
-  { id: 'ops', label: 'Business Operations', icon: '⚙' },
+  { id: 'crm',      label: 'CRM & Prospecting',    icon: '📊', accent: 'sky' },
+  { id: 'accounts', label: 'Account Management',   icon: '🤝', accent: 'emerald' },
+  { id: 'ops',      label: 'Business Operations',  icon: '⚙',  accent: 'amber' },
 ]
 
 export function detectHub(pathname) {

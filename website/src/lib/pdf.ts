@@ -9,20 +9,26 @@
 //
 // onStatus(msg) is optional — useful for showing progress in a UI.
 import * as pdfjsLib from 'pdfjs-dist'
+// @ts-expect-error -- vite ?url import returns a string but lacks types
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker as string
 
 const OCR_PAGE_CAP = 10
 
-export async function extractPdfText(arrayBuffer, onStatus) {
+export type StatusFn = (msg: string) => void
+
+export async function extractPdfText(
+  arrayBuffer: ArrayBuffer,
+  onStatus?: StatusFn
+): Promise<string> {
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
   let text = ''
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const content = await page.getTextContent()
-    text += content.items.map(item => item.str).join(' ') + '\n\n'
+    text += content.items.map((item: any) => item.str).join(' ') + '\n\n'
   }
 
   if (text.trim().length > 20) return text.trim()
@@ -42,7 +48,7 @@ export async function extractPdfText(arrayBuffer, onStatus) {
       const canvas = document.createElement('canvas')
       canvas.width = viewport.width
       canvas.height = viewport.height
-      const ctx = canvas.getContext('2d')
+      const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
       await page.render({ canvasContext: ctx, viewport }).promise
       const { data } = await worker.recognize(canvas)
       ocrText += data.text + '\n\n'
@@ -51,7 +57,7 @@ export async function extractPdfText(arrayBuffer, onStatus) {
     await worker.terminate()
     return ocrText.trim()
   } catch (err) {
-    console.warn('OCR failed:', err.message)
+    console.warn('OCR failed:', (err as Error).message)
     return text.trim()
   }
 }

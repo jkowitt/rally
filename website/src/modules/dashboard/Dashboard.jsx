@@ -27,12 +27,28 @@ const ALL_CARDS = [
   { id: 'activity-tasks', label: 'Recent Activity & Tasks' },
 ]
 
-function loadSettings() {
+// Per-role default visibility. The order field is the SAME across
+// roles so the visual layout is consistent — only `hidden` changes
+// based on what each role typically cares about. Users can still
+// override via the dashboard settings panel; localStorage wins.
+const ROLE_DEFAULTS = {
+  developer:   { hidden: [] },
+  admin:       { hidden: ['win-rate', 'revenue-by-year'] },
+  businessops: { hidden: ['alerts', 'top-deals'] },
+  rep:         { hidden: ['win-rate', 'revenue-by-year', 'pipeline-charts'] },
+}
+
+function defaultSettingsForRole(role) {
+  const cfg = ROLE_DEFAULTS[role] || { hidden: [] }
+  return { order: ALL_CARDS.map(c => c.id), hidden: cfg.hidden }
+}
+
+function loadSettings(role) {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return JSON.parse(raw)
-  } catch {}
-  return { order: ALL_CARDS.map(c => c.id), hidden: [] }
+  } catch { /* localStorage unavailable */ }
+  return defaultSettingsForRole(role)
 }
 
 function saveSettings(settings) {
@@ -45,13 +61,21 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const propertyId = profile?.property_id
 
-  const [settings, setSettings] = useState(loadSettings)
+  // Initialise from localStorage if present, otherwise from the
+  // role-specific defaults. After this, role changes (e.g. dev
+  // impersonating) only affect default for fresh installs.
+  const [settings, setSettings] = useState(() => loadSettings(profile?.role))
   const [showSettings, setShowSettings] = useState(false)
   const [filterCategory, setFilterCategory] = useState('')
   const [sortField, setSortField] = useState('value')
   const [sortDir, setSortDir] = useState('desc')
 
   useEffect(() => { saveSettings(settings) }, [settings])
+
+  function resetToRoleDefault() {
+    const next = defaultSettingsForRole(profile?.role)
+    setSettings(next)
+  }
 
   // Ensure new cards are always present in order
   useEffect(() => {
@@ -645,8 +669,22 @@ export default function Dashboard() {
       {/* Settings Panel */}
       {showSettings && (
         <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
-          <h3 className="text-sm font-medium text-text-primary mb-3">Customize Dashboard</h3>
-          <p className="text-xs text-text-muted mb-4">Reorder or hide dashboard sections. Changes are saved automatically.</p>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <h3 className="text-sm font-medium text-text-primary">Customize Dashboard</h3>
+              <p className="text-xs text-text-muted mt-1">
+                Reorder or hide sections. Defaults are tuned to your role
+                ({profile?.role || 'user'}). Saved automatically.
+              </p>
+            </div>
+            <button
+              onClick={resetToRoleDefault}
+              className="text-[11px] font-mono text-accent hover:underline whitespace-nowrap"
+              title="Reset card visibility to the default for your role"
+            >
+              Reset to {profile?.role || 'user'} default
+            </button>
+          </div>
           <div className="space-y-1">
             {settings.order.map((id, idx) => {
               const card = ALL_CARDS.find(c => c.id === id)

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import DealActivityTimeline from '@/components/DealActivityTimeline'
+import SlashInput from '@/components/SlashInput'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail } from '@/lib/claude'
@@ -1190,6 +1191,7 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   const [sharing, setSharing] = useState(false)
   const [enrichingCompany, setEnrichingCompany] = useState(false)
   const [verifyingEmail, setVerifyingEmail] = useState(null)
+  const [activeTab, setActiveTab] = useState('overview')
   const queryClient = useQueryClient()
   const viewerPlanLimits = usePlanLimits()
   const propertyId = deal.property_id
@@ -1383,7 +1385,31 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           </div>
         </div>
 
+        {/* Tab strip */}
+        <div className="px-4 sm:px-5 pt-3 border-b border-border flex gap-1 overflow-x-auto bg-bg-surface sticky top-[60px] z-[5]">
+          {[
+            { id: 'overview',     label: 'Overview' },
+            { id: 'contracts',    label: `Contracts${dealContracts?.length ? ` (${dealContracts.length})` : ''}` },
+            { id: 'fulfillment',  label: `Fulfillment${fulfillmentTotal ? ` (${fulfillmentDelivered}/${fulfillmentTotal})` : ''}` },
+            { id: 'activity',     label: 'Activity' },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={`text-xs font-mono uppercase tracking-wider px-3 py-2 border-b-2 whitespace-nowrap transition-colors ${
+                activeTab === t.id
+                  ? 'text-accent border-accent'
+                  : 'text-text-muted border-transparent hover:text-text-primary'
+              }`}
+              aria-current={activeTab === t.id ? 'page' : undefined}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         <div className="p-4 sm:p-5 space-y-4">
+          {activeTab === 'overview' && <>
           {/* Value + Dates */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">            <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
               <div className="text-[10px] text-text-muted font-mono">Value</div>
@@ -1519,7 +1545,9 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
               </div>
             </div>
           )}
+          </>}
 
+          {activeTab === 'contracts' && <>
           {/* Contracts */}
           {dealContracts?.length > 0 && (
             <div>
@@ -1586,7 +1614,9 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
               </div>
             </div>
           )}
+          </>}
 
+          {activeTab === 'fulfillment' && <>
           {/* Fulfillment */}
           {dealFulfillment?.length > 0 && (
             <div>
@@ -1618,9 +1648,9 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
               </div>
             </div>
           )}
+          </>}
 
-          {/* Quick links when no data yet */}
-          {!dealContracts?.length && !dealAssets?.length && !dealFulfillment?.length && (
+          {activeTab === 'overview' && !dealContracts?.length && !dealAssets?.length && !dealFulfillment?.length && (
             <div className="bg-bg-card border border-border rounded-lg p-3 text-center space-y-2">
               <div className="text-xs text-text-muted">No contracts, assets, or fulfillment linked yet.</div>
               <div className="flex justify-center gap-3">
@@ -1630,7 +1660,22 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
             </div>
           )}
 
-          <DealActivityTimeline dealId={deal.id} propertyId={propertyId} />
+          {activeTab === 'fulfillment' && !dealFulfillment?.length && (
+            <div className="bg-bg-card border border-border rounded-lg p-3 text-center text-xs text-text-muted">
+              No fulfillment records yet. Sign and upload a contract to start tracking benefits.
+            </div>
+          )}
+
+          {activeTab === 'contracts' && !dealContracts?.length && (
+            <div className="bg-bg-card border border-border rounded-lg p-3 text-center space-y-2">
+              <div className="text-xs text-text-muted">No contracts on this deal yet.</div>
+              <button onClick={() => { onClose(); navigate('/app/crm/contracts') }} className="text-[10px] text-accent hover:underline">Upload contract</button>
+            </div>
+          )}
+
+          {activeTab === 'activity' && (
+            <DealActivityTimeline dealId={deal.id} propertyId={propertyId} />
+          )}
         </div>
       </div>
     </div>
@@ -2957,13 +3002,20 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                 </div>
               </div>
 
-              {/* Notes */}
-              <textarea
-                placeholder="Deal notes..."
+              {/* Notes — supports slash commands (try typing "/") */}
+              <SlashInput
                 value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                rows={2}
-                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent resize-none"
+                onChange={(notes) => setForm({ ...form, notes })}
+                placeholder="Deal notes... (type / for commands)"
+                rows={3}
+                commands={[
+                  { id: 'task',     icon: '✓', label: 'Add task',          hint: 'Insert a checklist item',     insert: '[ ] ' },
+                  { id: 'next',     icon: '→', label: 'Next step',         hint: 'Insert "Next:"',              insert: 'Next: ' },
+                  { id: 'blocker',  icon: '⚠', label: 'Blocker',           hint: 'Insert "Blocker:"',           insert: 'Blocker: ' },
+                  { id: 'meeting',  icon: '📅', label: 'Meeting note',     hint: 'Insert "Meeting:"',           insert: `Meeting (${new Date().toLocaleDateString()}): ` },
+                  { id: 'pricing',  icon: '$',  label: 'Pricing context',  hint: 'Insert "Proposed:"',          insert: 'Proposed: $' },
+                  { id: 'contact',  icon: '👤', label: 'Reference contact', hint: 'Insert "Contact:"',           insert: 'Contact: ' },
+                ]}
               />
 
               {/* Activity Log */}

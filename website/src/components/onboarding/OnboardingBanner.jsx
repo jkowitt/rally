@@ -4,18 +4,29 @@ import { useAuth } from '@/hooks/useAuth'
 
 // Wall-clock store: ticks every minute, exposes a stable `Date.now()`
 // snapshot to React via useSyncExternalStore so render stays pure.
-let tickListeners = new Set()
+// Interval auto-stops when no listeners remain so we don't leak a
+// global timer when the banner unmounts.
+const tickListeners = new Set()
 let tickInterval = null
-function startTick() {
+function ensureTick() {
   if (tickInterval) return
   tickInterval = setInterval(() => {
     for (const l of tickListeners) l()
   }, 60_000)
 }
+function maybeStopTick() {
+  if (tickListeners.size === 0 && tickInterval) {
+    clearInterval(tickInterval)
+    tickInterval = null
+  }
+}
 function subscribeTick(cb) {
   tickListeners.add(cb)
-  startTick()
-  return () => tickListeners.delete(cb)
+  ensureTick()
+  return () => {
+    tickListeners.delete(cb)
+    maybeStopTick()
+  }
 }
 function getNowSnapshot() { return Math.floor(Date.now() / 60_000) * 60_000 }
 

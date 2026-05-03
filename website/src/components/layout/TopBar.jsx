@@ -33,6 +33,9 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
   }
 
   function switchHub(hubId) {
+    // Clicking the hub you're already on shouldn't reset you to the
+    // landing page — that would lose the user's place inside the hub.
+    if (hubId === activeHub) return
     setActiveHub(hubId)
     navigate(getHubLandingPath(hubId))
   }

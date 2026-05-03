@@ -22,6 +22,10 @@ const NEW_HUB_ROUTES = [
   '/app/ops/newsletter',
   '/app/ops/automations',
   '/app/ops/projects',
+  // Dev tools wired up in Phase 62 — orphans before, reachable now.
+  '/app/developer/qa-tasks',
+  '/app/developer/qa-test-suite',
+  '/app/developer/qa-usage',
 ]
 
 const LEGACY_REDIRECT_ROUTES = [

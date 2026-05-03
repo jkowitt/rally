@@ -26,6 +26,8 @@ function lazyRetry(fn) {
 const LandingPage = lazyRetry(() => import('./pages/LandingPage'))
 const LoginPage = lazyRetry(() => import('./modules/legal/LoginPage'))
 const ResetPasswordPage = lazyRetry(() => import('./pages/ResetPasswordPage'))
+const OutlookOAuthCallback = lazyRetry(() => import('./pages/auth/OutlookOAuthCallback'))
+const GmailOAuthCallback = lazyRetry(() => import('./pages/auth/GmailOAuthCallback'))
 const InboxView = lazyRetry(() => import('./modules/inbox/InboxView'))
 const InboxConnect = lazyRetry(() => import('./modules/inbox/InboxConnect'))
 const Dashboard = lazyRetry(() => import('./modules/dashboard/Dashboard'))
@@ -155,6 +157,8 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/auth/outlook/callback" element={<OutlookOAuthCallback />} />
+            <Route path="/auth/gmail/callback" element={<GmailOAuthCallback />} />
             <Route path="/sponsor/:token" element={<SponsorPortal />} />
             {/* SEO comparison pages (public) */}
             <Route path="/compare/*" element={<CompareRouter />} />

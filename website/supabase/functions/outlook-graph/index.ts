@@ -45,6 +45,11 @@ Deno.serve(async (req: Request) => {
     if (action === "get_message") return await handleGetMessage(token, body.messageId);
     if (action === "delta_sync") return await handleDeltaSync(sb, userId, token);
     if (action === "full_sync") return await handleFullSync(sb, userId, token, body.days ?? 90);
+    if (action === "send") return await handleSend(token, body);
+    if (action === "sync") {
+      // Alias used by the customer-facing UI; map to delta_sync.
+      return await handleDeltaSync(sb, userId, token);
+    }
 
     return new Response("Not Found", { status: 404 });
   } catch (err) {
@@ -312,4 +317,48 @@ async function upsertEmail(sb: any, userId: string, m: any, folder: string, sour
   }
 
   return { linked: autoLinked };
+}
+
+// ---- Send via Microsoft Graph ----
+//
+// Builds a Graph "sendMail" payload:
+//   POST /me/sendMail { message: {...}, saveToSentItems: true }
+// Attachments are inline base64 with name + contentType.
+async function handleSend(accessToken: string, body: any) {
+  const to = Array.isArray(body.to) ? body.to : (body.to ? [body.to] : []);
+  const cc = Array.isArray(body.cc) ? body.cc : (body.cc ? [body.cc] : []);
+  const subject = body.subject || "";
+  const messageBody = body.body || "";
+  const attachments: Array<{ filename: string; mimeType: string; data: string }> = body.attachments || [];
+
+  const message: any = {
+    subject,
+    body: { contentType: "Text", content: messageBody },
+    toRecipients: to.map((addr: string) => ({ emailAddress: { address: addr } })),
+  };
+  if (cc.length > 0) {
+    message.ccRecipients = cc.map((addr: string) => ({ emailAddress: { address: addr } }));
+  }
+  if (attachments.length > 0) {
+    message.attachments = attachments.map(a => ({
+      "@odata.type": "#microsoft.graph.fileAttachment",
+      name: a.filename,
+      contentType: a.mimeType,
+      contentBytes: a.data,   // already base64
+    }));
+  }
+
+  const sendRes = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ message, saveToSentItems: true }),
+  });
+  if (!sendRes.ok) {
+    const errText = await sendRes.text();
+    return jsonResponse({ success: false, error: `Outlook send failed: ${errText}` }, 200);
+  }
+  return jsonResponse({ success: true });
 }

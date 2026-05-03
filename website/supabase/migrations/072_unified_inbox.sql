@@ -300,7 +300,14 @@ $$;
 grant execute on function autocreate_contact_from_email(uuid, text, text, text) to authenticated;
 
 -- ────────────────────────────────────────────────────────────
--- 5. INBOX FEATURE FLAGS
+-- 5. EMAIL SIGNATURE (per-profile)
+-- ────────────────────────────────────────────────────────────
+-- The user's outbound signature, auto-appended by Compose.
+-- Plain text or markdown — no rich HTML for v1 (kept simple).
+alter table profiles add column if not exists email_signature text;
+
+-- ────────────────────────────────────────────────────────────
+-- 6. INBOX FEATURE FLAGS
 -- ────────────────────────────────────────────────────────────
 -- Two new flags so customer-facing inbox can be greenlit per
 -- provider. Default OFF so nothing leaks before OAuth apps are

@@ -1,10 +1,27 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
 import { useDialog } from '@/hooks/useDialog'
+import { Paperclip, X } from 'lucide-react'
+
+const MAX_FILE_BYTES = 25 * 1024 * 1024 // 25 MB per Gmail/Outlook
+
+// Read a File object and return its bytes as base64 (no data:URL prefix).
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result
+      const base64 = result.split(',')[1] || ''
+      resolve(base64)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
 
 // Compose-and-send email modal. Routes through the connected
 // provider (Outlook → outlook-graph 'send' action; Gmail →
@@ -16,13 +33,51 @@ export default function ComposeEmail({ open, onClose, defaultTo, defaultSubject,
   const { profile } = useAuth()
   const { toast } = useToast()
   const dialogRef = useDialog({ isOpen: open, onClose })
+  const fileInputRef = useRef(null)
+
   const [to, setTo] = useState(defaultTo || '')
+  const [cc, setCc] = useState('')
+  const [showCc, setShowCc] = useState(false)
   const [subject, setSubject] = useState(defaultSubject || '')
   const [body, setBody] = useState('')
+  const [attachments, setAttachments] = useState([])    // [{ name, type, size, data }]
   const [provider, setProvider] = useState('outlook')   // 'outlook' | 'gmail'
   const [sending, setSending] = useState(false)
 
+  // Auto-append signature on first open. Pull from profile.email_signature.
+  useEffect(() => {
+    if (!open || !profile) return
+    const sig = profile?.email_signature
+    if (sig && !body.includes(sig)) {
+      setBody(prev => prev ? `${prev}\n\n${sig}` : `\n\n${sig}`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, profile?.email_signature])
+
   if (!open) return null
+
+  async function handleAttach(e) {
+    const files = Array.from(e.target.files || [])
+    const next = []
+    for (const f of files) {
+      if (f.size > MAX_FILE_BYTES) {
+        toast({ title: 'File too large', description: `${f.name} is over the 25 MB limit.`, type: 'warning' })
+        continue
+      }
+      try {
+        const data = await fileToBase64(f)
+        next.push({ name: f.name, type: f.type || 'application/octet-stream', size: f.size, data })
+      } catch (err) {
+        toast({ title: 'Couldn\'t read file', description: humanError(err), type: 'error' })
+      }
+    }
+    setAttachments(prev => [...prev, ...next])
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function removeAttachment(name) {
+    setAttachments(prev => prev.filter(a => a.name !== name))
+  }
 
   async function handleSend() {
     if (!to.trim()) {
@@ -36,8 +91,14 @@ export default function ComposeEmail({ open, onClose, defaultTo, defaultSubject,
         body: {
           action: 'send',
           to: to.split(',').map(s => s.trim()).filter(Boolean),
+          cc: cc ? cc.split(',').map(s => s.trim()).filter(Boolean) : undefined,
           subject,
           body,
+          attachments: attachments.map(a => ({
+            filename: a.name,
+            mimeType: a.type,
+            data: a.data,
+          })),
           deal_id: dealId,
           user_id: profile?.id,
         },
@@ -97,7 +158,18 @@ export default function ComposeEmail({ open, onClose, defaultTo, defaultSubject,
           </div>
 
           <div>
-            <label className="text-[11px] text-text-muted uppercase tracking-wider">To</label>
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] text-text-muted uppercase tracking-wider">To</label>
+              {!showCc && (
+                <button
+                  type="button"
+                  onClick={() => setShowCc(true)}
+                  className="text-[11px] text-text-muted hover:text-accent"
+                >
+                  + Cc
+                </button>
+              )}
+            </div>
             <input
               type="email"
               multiple
@@ -108,6 +180,29 @@ export default function ComposeEmail({ open, onClose, defaultTo, defaultSubject,
               autoFocus
             />
           </div>
+
+          {showCc && (
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] text-text-muted uppercase tracking-wider">Cc</label>
+                <button
+                  type="button"
+                  onClick={() => { setShowCc(false); setCc('') }}
+                  className="text-[11px] text-text-muted hover:text-text-primary"
+                >
+                  Remove Cc
+                </button>
+              </div>
+              <input
+                type="email"
+                multiple
+                value={cc}
+                onChange={(e) => setCc(e.target.value)}
+                placeholder="cc@example.com (comma-separate multiple)"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent mt-1"
+              />
+            </div>
+          )}
 
           <div>
             <label className="text-[11px] text-text-muted uppercase tracking-wider">Subject</label>
@@ -127,9 +222,33 @@ export default function ComposeEmail({ open, onClose, defaultTo, defaultSubject,
               onChange={(e) => setBody(e.target.value)}
               placeholder="Write your message…"
               rows={10}
-              className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent mt-1 resize-none"
+              className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent mt-1 resize-none font-mono"
             />
           </div>
+
+          {/* Attachments */}
+          {attachments.length > 0 && (
+            <div className="space-y-1">
+              <label className="text-[11px] text-text-muted uppercase tracking-wider">Attachments ({attachments.length})</label>
+              <ul className="space-y-1">
+                {attachments.map(a => (
+                  <li key={a.name} className="flex items-center justify-between bg-bg-card border border-border rounded px-2 py-1.5 text-xs">
+                    <span className="text-text-primary truncate">
+                      📎 {a.name} <span className="text-text-muted">({(a.size / 1024).toFixed(0)} KB)</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(a.name)}
+                      aria-label={`Remove ${a.name}`}
+                      className="text-text-muted hover:text-danger ml-2"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {dealId && (
             <div className="text-xs text-text-muted">
@@ -138,13 +257,32 @@ export default function ComposeEmail({ open, onClose, defaultTo, defaultSubject,
           )}
         </div>
 
-        <div className="p-4 sm:p-5 border-t border-border flex items-center justify-end gap-2">
-          <Button variant="ghost" onClick={onClose} disabled={sending}>
-            Cancel
-          </Button>
-          <Button onClick={handleSend} disabled={sending || !to.trim()}>
-            {sending ? 'Sending…' : 'Send'}
-          </Button>
+        <div className="p-4 sm:p-5 border-t border-border flex items-center justify-between gap-2 flex-wrap">
+          <div>
+            <input
+              type="file"
+              multiple
+              ref={fileInputRef}
+              onChange={handleAttach}
+              className="hidden"
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              type="button"
+            >
+              <Paperclip className="w-3.5 h-3.5" /> Attach files
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={onClose} disabled={sending}>
+              Cancel
+            </Button>
+            <Button onClick={handleSend} disabled={sending || !to.trim()}>
+              {sending ? 'Sending…' : 'Send'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -73,3 +73,33 @@ export const jsonResponse = (body: unknown, status = 200) =>
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+
+// Customer-facing guard. Any authenticated user passes.
+// Used by /auth/* customer flows (Outlook + Gmail inbox connect).
+// Optional flag check — pass `flag: 'inbox_outlook'` etc. to gate
+// behind feature flags.
+export async function requireUser(req: Request, { flag }: { flag?: string } = {}) {
+  try {
+    const authHeader = req.headers.get("Authorization") || "";
+    const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!jwt) return { ok: false as const, response: jsonResponse({ error: "Unauthorized" }, 401) };
+
+    const sb = createClient(SUPABASE_URL, SERVICE_KEY);
+    const { data: userRes, error: userErr } = await sb.auth.getUser(jwt);
+    if (userErr || !userRes?.user) {
+      return { ok: false as const, response: jsonResponse({ error: "Unauthorized" }, 401) };
+    }
+    const userId = userRes.user.id;
+
+    if (flag) {
+      const { data } = await sb.from("feature_flags").select("enabled").eq("module", flag).maybeSingle();
+      if (!data?.enabled) {
+        return { ok: false as const, response: jsonResponse({ error: "Feature not enabled" }, 403) };
+      }
+    }
+
+    return { ok: true as const, userId, sb };
+  } catch (err) {
+    return { ok: false as const, response: jsonResponse({ error: String(err) }, 500) };
+  }
+}

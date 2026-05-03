@@ -1,17 +1,20 @@
 // ============================================================
-// OUTLOOK-AUTH EDGE FUNCTION (developer-only)
+// OUTLOOK-AUTH EDGE FUNCTION (multi-tenant customer)
 // ============================================================
 // Actions:
+//   - authorize       : returns Microsoft consent URL → frontend redirects
 //   - exchange_code   : OAuth code → tokens → store encrypted
 //   - refresh_token   : refresh access token if expiring
 //   - disconnect      : clear stored tokens
 //
-// Every request is 404'd for non-developers via requireDeveloper.
+// Was developer-only (migration 053); now multi-tenant per
+// migration 072. Any authenticated user can connect their own
+// Outlook mailbox; RLS scopes data to their property.
 // Tokens are stored in outlook_auth as base64-wrapped AES-GCM
 // ciphertext keyed on OUTLOOK_TOKEN_SECRET (Supabase env).
 // ============================================================
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { requireDeveloper, corsHeaders, jsonResponse } from "../_shared/devGuard.ts";
+import { requireUser, corsHeaders, jsonResponse } from "../_shared/devGuard.ts";
 import { encryptToken, decryptToken } from "../_shared/cryptoTokens.ts";
 
 const CLIENT_ID = Deno.env.get("OUTLOOK_CLIENT_ID") ?? "";
@@ -27,13 +30,31 @@ const GRAPH_ME = "https://graph.microsoft.com/v1.0/me";
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const guard = await requireDeveloper(req);
+  const guard = await requireUser(req);
   if (!guard.ok) return guard.response;
   const { userId, sb } = guard;
+
+  if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+    return jsonResponse({
+      success: false,
+      error: "Outlook OAuth not configured. Set OUTLOOK_CLIENT_ID, OUTLOOK_CLIENT_SECRET, OUTLOOK_REDIRECT_URI in Supabase secrets.",
+    }, 200);
+  }
 
   try {
     const { action, code } = await req.json();
 
+    if (action === "authorize") {
+      const url = new URL(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize`);
+      url.searchParams.set("client_id", CLIENT_ID);
+      url.searchParams.set("redirect_uri", REDIRECT_URI);
+      url.searchParams.set("response_type", "code");
+      url.searchParams.set("response_mode", "query");
+      url.searchParams.set("scope", SCOPES);
+      url.searchParams.set("state", userId);
+      url.searchParams.set("prompt", "consent");
+      return jsonResponse({ url: url.toString() });
+    }
     if (action === "exchange_code") {
       return await handleExchange(sb, userId, code);
     }
@@ -96,9 +117,17 @@ async function handleExchange(sb: any, userId: string, code: string) {
   const encAccess = await encryptToken(tok.access_token);
   const encRefresh = tok.refresh_token ? await encryptToken(tok.refresh_token) : null;
 
+  // Look up the user's property so the row is multi-tenant scoped.
+  const { data: prof } = await sb
+    .from("profiles")
+    .select("property_id")
+    .eq("id", userId)
+    .maybeSingle();
+
   // Upsert
   const { error } = await sb.from("outlook_auth").upsert({
     user_id: userId,
+    property_id: prof?.property_id || null,
     access_token: encAccess,
     refresh_token: encRefresh,
     token_expires_at: expiresAt,

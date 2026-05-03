@@ -26,6 +26,8 @@ function lazyRetry(fn) {
 const LandingPage = lazyRetry(() => import('./pages/LandingPage'))
 const LoginPage = lazyRetry(() => import('./modules/legal/LoginPage'))
 const ResetPasswordPage = lazyRetry(() => import('./pages/ResetPasswordPage'))
+const InboxView = lazyRetry(() => import('./modules/inbox/InboxView'))
+const InboxConnect = lazyRetry(() => import('./modules/inbox/InboxConnect'))
 const Dashboard = lazyRetry(() => import('./modules/dashboard/Dashboard'))
 const AssetCatalog = lazyRetry(() => import('./modules/crm/AssetCatalog'))
 const DealPipeline = lazyRetry(() => import('./modules/crm/DealPipeline'))
@@ -196,6 +198,8 @@ export default function App() {
                             {/* CRM */}
                             <Route path="/crm/assets" element={<AssetCatalog />} />
                             <Route path="/crm/pipeline" element={<DealPipeline />} />
+                            <Route path="/crm/inbox" element={<InboxView />} />
+                            <Route path="/crm/inbox/connect" element={<InboxConnect />} />
                             <Route path="/crm/contracts" element={<ContractManager />} />
                             <Route path="/crm/migrate" element={<MigratePage />} />
                             <Route path="/crm/fulfillment" element={<FulfillmentTracker />} />

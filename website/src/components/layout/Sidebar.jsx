@@ -52,6 +52,7 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
       label: 'Activity',
       flag: 'crm',
       items: [
+        { to: '/app/crm/inbox', label: 'Inbox' },
         { to: '/app/crm/activities', label: 'Timeline' },
         { to: '/app/crm/tasks', label: 'Tasks' },
         { to: '/app/crm/insights', label: 'AI Insights' },

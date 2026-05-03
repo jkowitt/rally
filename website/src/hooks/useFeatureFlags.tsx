@@ -38,6 +38,9 @@ const ALL_MODULES: readonly string[] = [
   'client_growth_workbook',
   'client_report_builder',
   'client_strategic_workbooks',
+  // Inbox integrations (greenlit per provider once OAuth apps are registered)
+  'inbox_outlook',
+  'inbox_gmail',
 ]
 
 // Hidden modules: flags that must NEVER appear in the standard Dev Tools

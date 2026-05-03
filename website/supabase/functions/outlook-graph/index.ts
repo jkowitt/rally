@@ -237,6 +237,29 @@ async function upsertEmail(sb: any, userId: string, m: any, folder: string, sour
       autoLinked = true;
       break;
     }
+    // Fallback: incoming mail from an unknown sender becomes a new
+    // contact automatically. Only for received mail (skip our own
+    // outgoing) and only when we have a property to scope it to.
+    if (!isSent && fromEmail) {
+      const { data: profile } = await sb
+        .from("profiles")
+        .select("property_id")
+        .eq("id", userId)
+        .maybeSingle();
+      const propertyId = profile?.property_id;
+      if (propertyId) {
+        const { data: newId } = await sb.rpc("autocreate_contact_from_email", {
+          p_property_id: propertyId,
+          p_from_email: fromEmail,
+          p_from_name: fromName,
+          p_subject: m.subject,
+        });
+        if (newId) {
+          linkedContactId = newId as string;
+          autoLinked = true;
+        }
+      }
+    }
   }
 
   const row = {

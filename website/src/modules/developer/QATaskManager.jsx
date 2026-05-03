@@ -33,6 +33,7 @@ export default function QATaskManager() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [moduleFilter, setModuleFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [expanded, setExpanded] = useState(null)
   const [notesDraft, setNotesDraft] = useState({})
@@ -145,8 +146,16 @@ export default function QATaskManager() {
       const staleDate = new Date(Date.now() - 14 * 86400000)
       filtered = filtered.filter(t => t.last_attempted && new Date(t.last_attempted) < staleDate)
     }
+    const q = searchQuery.trim().toLowerCase()
+    if (q) {
+      filtered = filtered.filter(t =>
+        (t.title || '').toLowerCase().includes(q) ||
+        (t.steps || '').toLowerCase().includes(q) ||
+        (t.module || '').toLowerCase().includes(q)
+      )
+    }
     return filtered
-  }, [tasks, moduleFilter, statusFilter])
+  }, [tasks, moduleFilter, statusFilter, searchQuery])
 
   // Stats
   const stats = useMemo(() => {
@@ -330,6 +339,15 @@ export default function QATaskManager() {
 
       {/* Filters */}
       <div className="space-y-2">
+        {/* Title search */}
+        <input
+          type="search"
+          placeholder="Search tasks by title, steps, or module…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+        />
+
         {/* Module filter — mobile dropdown, desktop buttons */}
         <div className="sm:hidden">
           <select value={moduleFilter} onChange={e => setModuleFilter(e.target.value)} className="w-full bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary">

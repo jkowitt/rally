@@ -405,24 +405,34 @@ export default function ClaudeTerminal() {
           <h3 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">Session History ({(sessions || []).length})</h3>
           <div className="space-y-2 max-h-[250px] overflow-y-auto">
             {(sessions || []).map(s => (
-              <div key={s.id} className="bg-bg-card border border-border rounded p-3">
+              <div
+                key={s.id}
+                className="bg-bg-card border border-border rounded p-3"
+                title={s.prompt}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <p className="text-sm text-text-primary truncate font-medium">
+                      {s.prompt || '(empty prompt)'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {s.status === 'generating' && (
+                        <span className="inline-block w-2 h-2 rounded-full border-[1.5px] border-accent border-t-transparent animate-spin" aria-hidden="true" />
+                      )}
                       <span className={`text-[10px] font-mono ${statusColors[s.status]}`}>{s.status}</span>
-                      <span className="text-[10px] text-text-muted font-mono">{new Date(s.created_at).toLocaleString()}</span>
+                      <span className="text-[10px] text-text-muted">·</span>
+                      <span className="text-[10px] text-text-muted">{new Date(s.created_at).toLocaleString()}</span>
                     </div>
-                    <p className="text-xs text-text-primary mt-1 truncate">{s.prompt}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {s.status === 'review' && (
                       <>
-                        <button onClick={() => updateSessionStatus(s.id, 'approved')} className="text-[9px] font-mono bg-success/10 text-success px-2 py-0.5 rounded">Approve</button>
-                        <button onClick={() => updateSessionStatus(s.id, 'rejected')} className="text-[9px] font-mono bg-danger/10 text-danger px-2 py-0.5 rounded">Reject</button>
+                        <button onClick={() => updateSessionStatus(s.id, 'approved')} className="text-[10px] bg-success/10 text-success px-2 py-0.5 rounded hover:bg-success/20">Approve</button>
+                        <button onClick={() => updateSessionStatus(s.id, 'rejected')} className="text-[10px] bg-danger/10 text-danger px-2 py-0.5 rounded hover:bg-danger/20">Reject</button>
                       </>
                     )}
-                    {s.response && <button onClick={() => { setHistory(prev => [...prev, { role: 'user', content: s.prompt }, { role: 'assistant', content: s.response }]) }} className="text-[9px] font-mono text-accent hover:underline">Load</button>}
-                    {s.response && <button onClick={() => copyToClipboard(s.response)} className="text-[9px] font-mono text-text-muted hover:text-text-primary">Copy</button>}
+                    {s.response && <button onClick={() => { setHistory(prev => [...prev, { role: 'user', content: s.prompt }, { role: 'assistant', content: s.response }]) }} className="text-[10px] text-accent hover:underline">Load</button>}
+                    {s.response && <button onClick={() => copyToClipboard(s.response)} className="text-[10px] text-text-muted hover:text-text-primary">Copy</button>}
                   </div>
                 </div>
               </div>

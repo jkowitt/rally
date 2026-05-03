@@ -105,7 +105,11 @@ function getAccountsSections(t) {
   ]
 }
 
-function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing) {
+function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing, realIsDeveloper) {
+  // `isDeveloper` is the impersonated value; `realIsDeveloper` is the
+  // actual developer flag. Dev-only tools (Automations, Admin, the
+  // raw Business Ops page) gate on realIsDeveloper so the developer
+  // can keep using them while previewing the app as another role.
   const sections = [
     {
       label: 'Overview',
@@ -137,9 +141,9 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing) {
   })
 
   // Finance
-  if (flags.client_finance_dashboard || flags.client_financial_projections || isDeveloper) {
+  if (flags.client_finance_dashboard || flags.client_financial_projections || realIsDeveloper) {
     const finItems = []
-    if (isDeveloper) finItems.push({ to: '/app/businessops', label: 'Business Ops' })
+    if (realIsDeveloper) finItems.push({ to: '/app/businessops', label: 'Business Ops' })
     if (flags.client_finance_dashboard) finItems.push({ to: '/app/growth', label: 'Finance' })
     if (flags.client_goal_tracker) finItems.push({ to: '/app/growth', label: 'Goals' })
     if (finItems.length > 0) sections.push({ label: 'Finance', items: finItems })
@@ -152,7 +156,7 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing) {
     ],
   })
 
-  if (isDeveloper) {
+  if (realIsDeveloper) {
     sections.push({
       label: 'Automations',
       items: [
@@ -173,13 +177,17 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing) {
     ],
   })
 
-  if (isDeveloper || hasAdminRole) {
+  if (realIsDeveloper || hasAdminRole) {
     const adminItems = [
       { to: '/app/developer', label: 'Dev Tools' },
     ]
-    if (isDeveloper) {
+    if (realIsDeveloper) {
       adminItems.push({ to: '/app/developer/qa-comments', label: 'QA Reports' })
       adminItems.push({ to: '/app/developer/auto-qa', label: 'Auto QA' })
+      adminItems.push({ to: '/app/developer/qa-tasks', label: 'QA Tasks' })
+      adminItems.push({ to: '/app/developer/qa-test-suite', label: 'QA Test Suite' })
+      adminItems.push({ to: '/app/developer/qa-usage', label: 'Usage Simulator' })
+      adminItems.push({ to: '/app/developer/digest', label: 'Change Log' })
       adminItems.push({ to: '/app/admin/trials', label: 'Trials' })
       adminItems.push({ to: '/app/admin/ads', label: 'Ads' })
       adminItems.push({ to: '/app/admin/notifications', label: 'Notifications' })
@@ -193,7 +201,7 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing) {
 
 export default function Sidebar({ collapsed, onToggle, mobile }) {
   const { flags } = useFeatureFlags()
-  const { isDeveloper, profile } = useAuth()
+  const { isDeveloper, realIsDeveloper, profile } = useAuth()
   const config = useIndustryConfig()
   const moduleLabels = config.moduleLabels || {}
   const t = config.terminology || {}
@@ -224,7 +232,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
   } else if (activeHub === 'accounts') {
     navSections = getAccountsSections(t)
   } else if (activeHub === 'ops') {
-    navSections = getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing)
+    navSections = getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing, realIsDeveloper)
   }
 
   const width = mobile ? 'w-[280px]' : collapsed ? 'w-16' : 'w-[220px]'

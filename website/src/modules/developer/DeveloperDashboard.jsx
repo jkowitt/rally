@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatureFlags, HIDDEN_MODULES } from '@/hooks/useFeatureFlags'
 import { useToast } from '@/components/Toast'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import APIUsageBanner from '@/components/APIUsageBanner'
 import { logAudit } from '@/lib/audit'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line } from 'recharts'
@@ -31,11 +31,23 @@ const HIDDEN_FLAG_DESCRIPTIONS = {
 }
 
 export default function DeveloperDashboard() {
-  const { isDeveloper, profile } = useAuth()
+  // Use REAL developer status (not the impersonated overlay) so the
+  // developer can keep the dashboard accessible while previewing the
+  // app as a rep / admin / businessops via the impersonation panel.
+  const { realIsDeveloper, realProfile, profile } = useAuth()
   const { flags, toggleFlag } = useFeatureFlags()
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState('overview')
+  // Tab state in the URL so refreshes + bookmarks land on the right tab.
+  // ?tab=qa  →  active tab "qa"; missing or unknown falls back to "overview".
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'overview'
+  const setActiveTab = (id) => {
+    const next = new URLSearchParams(searchParams)
+    if (id === 'overview') next.delete('tab')
+    else next.set('tab', id)
+    setSearchParams(next, { replace: true })
+  }
   const [editingUser, setEditingUser] = useState(null)
   const [showInvite, setShowInvite] = useState(false)
   const [runningAnalysis, setRunningAnalysis] = useState(false)
@@ -166,7 +178,7 @@ export default function DeveloperDashboard() {
   }
   const [newPropPlan, setNewPropPlan] = useState('free')
 
-  if (!isDeveloper) return <Navigate to="/app" replace />
+  if (!realIsDeveloper) return <Navigate to="/app" replace />
 
   const { data: properties } = useQuery({
     queryKey: ['dev-properties'],

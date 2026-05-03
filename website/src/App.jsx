@@ -71,6 +71,9 @@ const DeveloperDashboard = lazyRetry(() => import('./modules/developer/Developer
 const QACommentsReport = lazyRetry(() => import('./pages/developer/QACommentsReport'))
 const AutoQAEngine = lazyRetry(() => import('./pages/developer/AutoQAEngine'))
 const QARepairPrompts = lazyRetry(() => import('./pages/developer/QARepairPrompts'))
+const QATaskManager = lazyRetry(() => import('./modules/developer/QATaskManager'))
+const QATestSuite = lazyRetry(() => import('./modules/developer/QATestSuite'))
+const QAUsageSimulator = lazyRetry(() => import('./modules/developer/QAUsageSimulator'))
 const DigestAdminList = lazyRetry(() => import('./pages/developer/digest/DigestAdminList'))
 const DigestEditor = lazyRetry(() => import('./pages/developer/digest/DigestEditor'))
 const SponsorPortal = lazyRetry(() => import('./modules/crm/SponsorPortal'))
@@ -245,6 +248,9 @@ export default function App() {
                             <Route path="/developer/qa-comments" element={<QACommentsReport />} />
                             <Route path="/developer/auto-qa" element={<AutoQAEngine />} />
                             <Route path="/developer/repair-prompts" element={<QARepairPrompts />} />
+                            <Route path="/developer/qa-tasks" element={<QATaskManager />} />
+                            <Route path="/developer/qa-test-suite" element={<QATestSuite />} />
+                            <Route path="/developer/qa-usage" element={<QAUsageSimulator />} />
                             <Route path="/developer/digest" element={<DigestAdminList />} />
                             <Route path="/developer/digest/:id" element={<DigestEditor />} />
                             <Route path="/admin/upgrade-offer" element={<UpgradeOffer />} />

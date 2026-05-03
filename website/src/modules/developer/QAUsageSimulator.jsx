@@ -449,9 +449,21 @@ export default function QAUsageSimulator() {
             active ? 'bg-danger/15 text-danger hover:bg-danger/25 border border-danger/30' : 'bg-accent text-bg-primary hover:opacity-90'
           }`}
         >
-          {loading ? progress || 'Working...' : active ? 'Turn OFF' : 'Turn ON'}
+          {loading ? 'Working…' : active ? 'Turn OFF' : 'Turn ON'}
         </button>
       </div>
+
+      {/* Live progress strip — visible whenever the simulator is doing
+          a long-running insert pass. Without this, the UI feels frozen
+          on big datasets (60-90s) and devs assume it's hung. */}
+      {loading && (
+        <div className="bg-bg-card border border-accent/30 rounded-lg p-3 flex items-center gap-3" role="status" aria-live="polite">
+          <div className="w-3 h-3 rounded-full border-2 border-accent border-t-transparent animate-spin" aria-hidden="true" />
+          <div className="text-xs text-text-primary font-mono flex-1">
+            {progress || 'Starting…'}
+          </div>
+        </div>
+      )}
 
       {/* Config (only when inactive) */}
       {!active && !loading && (

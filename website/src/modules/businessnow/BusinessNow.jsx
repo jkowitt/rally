@@ -53,10 +53,10 @@ export default function BusinessNow() {
     queryKey: ['businessnow-pipeline', propertyId],
     queryFn: async () => {
       const [deals, contracts, activities, tasks] = await Promise.all([
-        supabase.from('deals').select('*').eq('property_id', propertyId),
-        supabase.from('contracts').select('*').eq('property_id', propertyId),
+        supabase.from('deals').select('*').eq('property_id', propertyId).order('created_at', { ascending: false }).limit(500),
+        supabase.from('contracts').select('*').eq('property_id', propertyId).order('created_at', { ascending: false }).limit(500),
         supabase.from('activities').select('*').eq('property_id', propertyId).order('occurred_at', { ascending: false }).limit(100),
-        supabase.from('tasks').select('*').eq('property_id', propertyId).neq('status', 'Done'),
+        supabase.from('tasks').select('*').eq('property_id', propertyId).neq('status', 'Done').limit(500),
       ])
       return {
         deals: deals.data || [],

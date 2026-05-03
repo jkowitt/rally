@@ -740,6 +740,29 @@ export default function DealPipeline() {
 
       {isLoading ? (
         <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="skeleton h-16" />)}</div>
+      ) : (deals?.length || 0) === 0 ? (
+        <div className="bg-bg-surface border border-dashed border-border rounded-lg p-8 sm:p-12 text-center">
+          <div className="text-3xl mb-3">📊</div>
+          <div className="text-lg font-semibold text-text-primary mb-1">No deals yet</div>
+          <div className="text-sm text-text-muted max-w-md mx-auto mb-5">
+            Your pipeline starts here. Add a prospect manually, or use Find Prospects
+            to surface real companies that match your ICP.
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              onClick={() => { setEditingDeal(null); setShowForm(true) }}
+              className="bg-accent text-bg-primary text-sm font-medium px-4 py-2 rounded hover:opacity-90 transition-opacity"
+            >
+              + Add your first deal
+            </button>
+            <button
+              onClick={() => setShowProspectFinder(true)}
+              className="bg-bg-card border border-border text-sm text-text-secondary px-4 py-2 rounded hover:border-accent/40 hover:text-text-primary transition-colors"
+            >
+              🔍 Find Prospects
+            </button>
+          </div>
+        </div>
       ) : viewMode === 'kanban' ? (
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex gap-3 overflow-x-auto pb-4 -mx-3 px-3 sm:mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none">

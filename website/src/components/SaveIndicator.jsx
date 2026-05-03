@@ -29,7 +29,14 @@ export default function SaveIndicator({
 
   return (
     <div className={`inline-flex items-center gap-3 text-xs font-mono ${className}`}>
-      <span className={toneClass}>{current.text}</span>
+      <span
+        className={toneClass}
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {current.text}
+      </span>
       {showManualButton && (status === 'dirty' || status === 'error') && (
         <button
           type="button"

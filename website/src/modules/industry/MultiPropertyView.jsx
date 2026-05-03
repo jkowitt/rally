@@ -18,7 +18,7 @@ export default function MultiPropertyView() {
   const { data: allDeals } = useQuery({
     queryKey: ['multi-prop-deals'],
     queryFn: async () => {
-      const { data } = await supabase.from('deals').select('id, brand_name, value, stage, property_id, assigned_to, created_at')
+      const { data } = await supabase.from('deals').select('id, brand_name, value, stage, property_id, assigned_to, created_at').order('created_at', { ascending: false }).limit(2000)
       return data || []
     },
     enabled: isDev,
@@ -27,7 +27,7 @@ export default function MultiPropertyView() {
   const { data: allContracts } = useQuery({
     queryKey: ['multi-prop-contracts'],
     queryFn: async () => {
-      const { data } = await supabase.from('contracts').select('id, total_value, status, signed, property_id')
+      const { data } = await supabase.from('contracts').select('id, total_value, status, signed, property_id').order('created_at', { ascending: false }).limit(2000)
       return data || []
     },
     enabled: isDev,

@@ -56,7 +56,7 @@ export default function ValuationEngine() {
   const { data: deals } = useQuery({
     queryKey: ['deals-for-valora', propertyId],
     queryFn: async () => {
-      const { data } = await supabase.from('deals').select('id, brand_name, annual_revenue, employees, sub_industry, stage').eq('property_id', propertyId).order('brand_name')
+      const { data } = await supabase.from('deals').select('id, brand_name, annual_revenue, employees, sub_industry, stage').eq('property_id', propertyId).order('brand_name').limit(1000)
       return data || []
     },
     enabled: !!propertyId,

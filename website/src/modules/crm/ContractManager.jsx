@@ -119,7 +119,7 @@ export default function ContractManager() {
   const { data: deals } = useQuery({
     queryKey: ['deals-list', propertyId],
     queryFn: async () => {
-      const { data } = await supabase.from('deals').select('id, brand_name, value, contact_first_name, contact_last_name, contact_email, contact_company, start_date, end_date').eq('property_id', propertyId)
+      const { data } = await supabase.from('deals').select('id, brand_name, value, contact_first_name, contact_last_name, contact_email, contact_company, start_date, end_date').eq('property_id', propertyId).order('created_at', { ascending: false }).limit(500)
       return data || []
     },
     enabled: !!propertyId,

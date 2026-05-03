@@ -107,33 +107,47 @@ function MobileBottomNav() {
   const location = useLocation()
   const path = location.pathname
 
+  // Tabs are hub-aware: we show Home + the most-used destination in
+  // each hub the user has access to. Scrolls horizontally on small
+  // phones so we never have to truncate or hide entries.
   const tabs = [
-    { to: '/app', label: 'Home', exact: true },
+    { to: '/app', label: 'Home', icon: '⌂', exact: true },
     ...(flags.crm ? [
-      { to: '/app/crm/pipeline', label: 'Pipeline' },
-      { to: '/app/crm/contracts', label: 'Contracts' },
-      { to: '/app/crm/team', label: 'Team' },
-      { to: '/app/settings', label: 'Settings' },
+      { to: '/app/crm/pipeline', label: 'Pipeline', icon: '📊' },
+      { to: '/app/crm/assets', label: 'Assets', icon: '🎯' },
+      { to: '/app/crm/tasks', label: 'Tasks', icon: '✓' },
     ] : []),
+    { to: '/app/accounts', label: 'Accounts', icon: '🤝' },
+    { to: '/app/crm/contracts', label: 'Contracts', icon: '📄' },
+    { to: '/app/crm/fulfillment', label: 'Fulfill', icon: '📦' },
+    { to: '/app/ops', label: 'Ops', icon: '⚙' },
+    { to: '/app/crm/team', label: 'Team', icon: '👥' },
+    { to: '/app/settings', label: 'Settings', icon: '⚙' },
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-bg-surface border-t border-border flex items-center justify-around py-2 safe-pb z-40 md:hidden">
-      {tabs.map(tab => {
-        const isActive = tab.exact ? (path === '/app' || path === '/app/') : path.startsWith(tab.to)
-        return (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.exact}
-            className={`px-3 py-1.5 rounded text-[10px] font-mono transition-colors ${
-              isActive ? 'text-accent bg-accent/5' : 'text-text-muted active:text-text-secondary'
-            }`}
-          >
-            {tab.label}
-          </NavLink>
-        )
-      })}
+    <nav
+      className="fixed bottom-0 left-0 right-0 bg-bg-surface border-t border-border safe-pb z-40 md:hidden"
+      aria-label="Primary mobile navigation"
+    >
+      <div className="flex items-center gap-1 py-2 px-2 overflow-x-auto scroll-smooth">
+        {tabs.map(tab => {
+          const isActive = tab.exact ? (path === '/app' || path === '/app/') : path.startsWith(tab.to)
+          return (
+            <NavLink
+              key={tab.to + tab.label}
+              to={tab.to}
+              end={tab.exact}
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded text-[10px] font-mono whitespace-nowrap transition-colors ${
+                isActive ? 'text-accent bg-accent/10' : 'text-text-muted active:text-text-secondary'
+              }`}
+            >
+              <span className="text-base leading-none" aria-hidden="true">{tab.icon}</span>
+              <span>{tab.label}</span>
+            </NavLink>
+          )
+        })}
+      </div>
     </nav>
   )
 }

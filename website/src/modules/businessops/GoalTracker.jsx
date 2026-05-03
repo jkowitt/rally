@@ -24,9 +24,9 @@ export default function GoalTracker() {
     queryFn: async () => {
       const thisMonth = new Date().toISOString().slice(0, 7)
       const [profiles, properties, deals] = await Promise.all([
-        supabase.from('profiles').select('id, created_at', { count: 'exact', head: false }),
-        supabase.from('properties').select('id, plan, created_at'),
-        supabase.from('deals').select('id, stage, value, created_at'),
+        supabase.from('profiles').select('id, created_at', { count: 'exact', head: false }).limit(2000),
+        supabase.from('properties').select('id, plan, created_at').limit(2000),
+        supabase.from('deals').select('id, stage, value, created_at').order('created_at', { ascending: false }).limit(2000),
       ])
       const monthSignups = (profiles.data || []).filter(p => p.created_at?.startsWith(thisMonth)).length
       const totalUsers = profiles.data?.length || 0

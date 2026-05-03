@@ -49,8 +49,8 @@ export default function TeamManager() {
   const { data: memberStats } = useQuery({
     queryKey: ['member-stats', propertyId],
     queryFn: async () => {
-      const { data: deals } = await supabase.from('deals').select('id, brand_name, value, stage, created_by').eq('property_id', propertyId)
-      const { data: activities } = await supabase.from('activities').select('id, created_by, activity_type').eq('property_id', propertyId)
+      const { data: deals } = await supabase.from('deals').select('id, brand_name, value, stage, created_by').eq('property_id', propertyId).order('created_at', { ascending: false }).limit(1000)
+      const { data: activities } = await supabase.from('activities').select('id, created_by, activity_type').eq('property_id', propertyId).order('occurred_at', { ascending: false }).limit(1000)
       return { deals: deals || [], activities: activities || [] }
     },
     enabled: !!propertyId,

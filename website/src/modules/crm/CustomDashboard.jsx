@@ -30,7 +30,7 @@ export default function CustomDashboard() {
   const { data: dealData } = useQuery({
     queryKey: ['custom-dashboard-deals', propertyId],
     queryFn: async () => {
-      const { data } = await supabase.from('deals').select('*').eq('property_id', propertyId)
+      const { data } = await supabase.from('deals').select('*').eq('property_id', propertyId).order('created_at', { ascending: false }).limit(500)
       return data || []
     },
     enabled: !!propertyId && !!dashboard,
@@ -39,7 +39,7 @@ export default function CustomDashboard() {
   const { data: contractData } = useQuery({
     queryKey: ['custom-dashboard-contracts', propertyId],
     queryFn: async () => {
-      const { data } = await supabase.from('contracts').select('*, contract_benefits(*)').eq('property_id', propertyId)
+      const { data } = await supabase.from('contracts').select('*, contract_benefits(*)').eq('property_id', propertyId).order('created_at', { ascending: false }).limit(200)
       return data || []
     },
     enabled: !!propertyId && !!dashboard,

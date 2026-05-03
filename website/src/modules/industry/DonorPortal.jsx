@@ -12,7 +12,7 @@ export default function DonorPortal() {
   const { data: deals } = useQuery({
     queryKey: ['donor-portal-deals', propertyId],
     queryFn: async () => {
-      const { data } = await supabase.from('deals').select('id, brand_name, value, stage, start_date, end_date, contact_first_name, contact_last_name, contact_email').eq('property_id', propertyId).order('value', { ascending: false })
+      const { data } = await supabase.from('deals').select('id, brand_name, value, stage, start_date, end_date, contact_first_name, contact_last_name, contact_email').eq('property_id', propertyId).order('value', { ascending: false }).limit(500)
       return data || []
     },
     enabled: !!propertyId,

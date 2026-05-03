@@ -22,12 +22,12 @@ export default function ReportBuilder() {
   // Gather platform data for Claude context
   async function gatherPlatformContext() {
     const [profiles, properties, deals, contracts, pipeline, finances] = await Promise.all([
-      supabase.from('profiles').select('id, role, created_at', { count: 'exact', head: false }),
-      supabase.from('properties').select('id, name, plan, type, created_at'),
-      supabase.from('deals').select('id, brand_name, value, stage, created_at'),
-      supabase.from('contracts').select('id, total_value, status, signed'),
-      supabase.from('biz_pipeline').select('*'),
-      supabase.from('biz_finances').select('*'),
+      supabase.from('profiles').select('id, role, created_at', { count: 'exact', head: false }).limit(2000),
+      supabase.from('properties').select('id, name, plan, type, created_at').limit(2000),
+      supabase.from('deals').select('id, brand_name, value, stage, created_at').order('created_at', { ascending: false }).limit(2000),
+      supabase.from('contracts').select('id, total_value, status, signed').order('created_at', { ascending: false }).limit(2000),
+      supabase.from('biz_pipeline').select('*').limit(1000),
+      supabase.from('biz_finances').select('*').order('date', { ascending: false }).limit(1000),
     ])
 
     const totalUsers = profiles.data?.length || 0

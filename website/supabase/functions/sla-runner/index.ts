@@ -57,6 +57,17 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       if (existing) continue;
 
+      // Skip if the rep has been actively touching the deal in the
+      // last 7 days. Static stage-entered_at can lie when the rep is
+      // working a deal but hasn't progressed it yet (waiting on the
+      // prospect's response, etc.).
+      const { data: touchCount } = await sb
+        .rpc("recent_outreach_touch_count", { p_deal_id: d.id, p_window_days: 7 });
+      if ((touchCount as number) >= 2) {
+        // Active deal — don't flag this round.
+        continue;
+      }
+
       await sb.from("sla_breaches").insert({
         property_id: policy.property_id,
         deal_id: d.id,

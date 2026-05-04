@@ -141,6 +141,32 @@ export default function Lookalikes() {
 
   const addAsDeal = useMutation({
     mutationFn: async (l) => {
+      // First, ask the DB if any existing account name resembles
+      // this candidate brand — if confidence is high, surface it
+      // and let the rep opt into linking.
+      let suggestedAccountId = null
+      try {
+        const { data: suggestions } = await supabase.rpc('suggest_account_for_brand', {
+          p_property_id: profile.property_id,
+          p_brand: l.candidate_company,
+        })
+        const top = (suggestions || [])[0]
+        if (top && Number(top.similarity) >= 0.5) {
+          const ok = window.confirm(
+            `Looks similar to existing account "${top.account_name}". ` +
+            `Link this new deal under that account?`
+          )
+          if (ok) suggestedAccountId = top.account_id
+        }
+      } catch { /* RPC may not be deployed yet — proceed without suggestion */ }
+
+      // Build a richer notes blob: rationale + similarity score +
+      // any structured fields from the candidate payload.
+      const noteLines = []
+      noteLines.push(`Lookalike from ${l.seed_kind === 'deal' ? 'a seed deal' : 'closed-won ICP'}.`)
+      if (l.rationale) noteLines.push(`Rationale: ${l.rationale}`)
+      if (l.similarity_score != null) noteLines.push(`Similarity: ${Math.round(Number(l.similarity_score) * 100)}%`)
+
       const { error } = await supabase.from('deals').insert({
         property_id: profile.property_id,
         brand_name: l.candidate_company,
@@ -150,7 +176,8 @@ export default function Lookalikes() {
         city: l.candidate_city,
         state: l.candidate_state,
         stage: 'Prospect',
-        notes: `Lookalike from ${l.seed_kind === 'deal' ? 'a seed deal' : 'closed-won ICP'}: ${l.rationale || ''}`,
+        notes: noteLines.join('\n'),
+        account_id: suggestedAccountId,
       })
       if (error) throw error
       await supabase.from('prospect_lookalikes')

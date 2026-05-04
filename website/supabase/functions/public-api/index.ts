@@ -58,6 +58,19 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET" && !id)  return await listContacts(sb, propertyId, url.searchParams);
     if (req.method === "POST" && !id) return await createContact(sb, propertyId, await req.json());
   }
+  if (resource === "signals") {
+    if (req.method === "GET" && !id)  return await listSignals(sb, propertyId, url.searchParams);
+  }
+  if (resource === "sequences") {
+    if (req.method === "GET" && !id)  return await listSequences(sb, propertyId);
+  }
+  if (resource === "enrollments") {
+    if (req.method === "GET" && !id)  return await listEnrollments(sb, propertyId, url.searchParams);
+    if (req.method === "POST" && !id) return await createEnrollment(sb, propertyId, await req.json());
+  }
+  if (resource === "outreach") {
+    if (req.method === "GET" && !id)  return await listOutreach(sb, propertyId, url.searchParams);
+  }
 
   return jsonResponse({ error: "not found" }, 404);
 });
@@ -102,6 +115,77 @@ async function listContacts(sb: any, propertyId: string, q: URLSearchParams) {
   const dealId = q.get("deal_id");
   let query = sb.from("contacts").select("*").eq("property_id", propertyId).order("created_at", { ascending: false }).limit(limit);
   if (dealId) query = query.eq("deal_id", dealId);
+  const { data, error } = await query;
+  if (error) return jsonResponse({ error: error.message }, 500);
+  return jsonResponse({ data });
+}
+
+async function listSignals(sb: any, propertyId: string, q: URLSearchParams) {
+  const limit = Math.min(Number(q.get("limit") || 50), 200);
+  const onlyActive = q.get("active") !== "false";
+  let query = sb.from("prospect_signals").select("*").eq("property_id", propertyId)
+    .order("surfaced_at", { ascending: false }).limit(limit);
+  if (onlyActive) query = query.is("dismissed_at", null).is("acted_on_at", null);
+  const type = q.get("type");
+  if (type) query = query.eq("signal_type", type);
+  const { data, error } = await query;
+  if (error) return jsonResponse({ error: error.message }, 500);
+  return jsonResponse({ data });
+}
+
+async function listSequences(sb: any, propertyId: string) {
+  const { data, error } = await sb.from("prospect_sequences")
+    .select("id, name, description, total_steps, is_active")
+    .eq("property_id", propertyId)
+    .eq("is_active", true)
+    .order("name");
+  if (error) return jsonResponse({ error: error.message }, 500);
+  return jsonResponse({ data });
+}
+
+async function listEnrollments(sb: any, propertyId: string, q: URLSearchParams) {
+  const limit = Math.min(Number(q.get("limit") || 50), 200);
+  const seqId = q.get("sequence_id");
+  let query = sb.from("prospect_sequence_enrollments")
+    .select("id, sequence_id, contact_id, deal_id, current_step, completed, paused, paused_reason, last_sent_at, next_send_at")
+    .eq("property_id", propertyId)
+    .order("enrolled_at", { ascending: false })
+    .limit(limit);
+  if (seqId) query = query.eq("sequence_id", seqId);
+  const { data, error } = await query;
+  if (error) return jsonResponse({ error: error.message }, 500);
+  return jsonResponse({ data });
+}
+
+async function createEnrollment(sb: any, propertyId: string, body: any) {
+  if (!body?.sequence_id || !body?.contact_id) {
+    return jsonResponse({ error: "sequence_id + contact_id required" }, 400);
+  }
+  const { data, error } = await sb.from("prospect_sequence_enrollments").upsert({
+    sequence_id: body.sequence_id,
+    property_id: propertyId,
+    contact_id: body.contact_id,
+    deal_id: body.deal_id || null,
+    enrolled_by: body.enrolled_by || null,
+    current_step: 0,
+    next_send_at: body.next_send_at || new Date().toISOString(),
+  }, { onConflict: "sequence_id,contact_id", ignoreDuplicates: false })
+    .select().single();
+  if (error) return jsonResponse({ error: error.message }, 500);
+  return jsonResponse({ data }, 201);
+}
+
+async function listOutreach(sb: any, propertyId: string, q: URLSearchParams) {
+  const limit = Math.min(Number(q.get("limit") || 50), 200);
+  const dealId = q.get("deal_id");
+  const contactId = q.get("contact_id");
+  let query = sb.from("outreach_log")
+    .select("id, contact_id, deal_id, provider, direction, subject, sent_at, opened_at, clicked_at, replied_at, sequence_enrollment_id, variant_id")
+    .eq("property_id", propertyId)
+    .order("sent_at", { ascending: false })
+    .limit(limit);
+  if (dealId) query = query.eq("deal_id", dealId);
+  if (contactId) query = query.eq("contact_id", contactId);
   const { data, error } = await query;
   if (error) return jsonResponse({ error: error.message }, 500);
   return jsonResponse({ data });

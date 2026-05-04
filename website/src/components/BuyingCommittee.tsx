@@ -4,7 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { Button, Badge, EmptyState } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
-import { Users, Crown, Shield, AlertTriangle, Wallet, Briefcase, Eye, Trash2, Pencil } from 'lucide-react'
+import { Users, Crown, Shield, AlertTriangle, Wallet, Briefcase, Eye, Trash2, Pencil, Zap } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 // ROLE_META describes how each committee role renders.
 // Order matters: drives the priority badge color + sort order.
@@ -60,8 +61,10 @@ interface Props {
 export default function BuyingCommittee({ dealId, propertyId, contacts }: Props) {
   const qc = useQueryClient()
   const { toast } = useToast()
+  const { profile } = useAuth()
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<CommitteeRow | null>(null)
+  const [enrolling, setEnrolling] = useState(false)
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['deal-committee', dealId],
@@ -114,6 +117,49 @@ export default function BuyingCommittee({ dealId, propertyId, contacts }: Props)
     onSuccess: () => qc.invalidateQueries({ queryKey: ['deal-committee', dealId] }),
   })
 
+  // Bulk-enroll the entire committee into the property's default
+  // 3-touch sequence. Uses ensure_default_prospect_sequence (created
+  // in 073) and one upsert per contact_id (idempotent).
+  async function enrollCommittee() {
+    if (!profile?.id || rows.length === 0) return
+    setEnrolling(true)
+    try {
+      const { data: seqId, error: seqErr } = await supabase
+        .rpc('ensure_default_prospect_sequence', { p_property_id: propertyId })
+      if (seqErr) throw seqErr
+      const inserts = rows
+        .filter(r => r.contacts?.email)
+        .map(r => ({
+          sequence_id: seqId,
+          property_id: propertyId,
+          contact_id: r.contact_id,
+          deal_id: dealId,
+          enrolled_by: profile.id,
+          current_step: 0,
+          next_send_at: new Date().toISOString(),
+        }))
+      if (inserts.length === 0) {
+        toast({ title: 'No emails on file', description: 'Add emails to the committee contacts first.', type: 'warning' })
+        return
+      }
+      // ON CONFLICT (sequence_id, contact_id) DO NOTHING handles
+      // anyone already in the sequence — idempotent.
+      const { error } = await supabase
+        .from('prospect_sequence_enrollments')
+        .upsert(inserts, { onConflict: 'sequence_id,contact_id', ignoreDuplicates: true })
+      if (error) throw error
+      toast({
+        title: `Enrolled ${inserts.length} stakeholder${inserts.length === 1 ? '' : 's'}`,
+        description: 'First touches will go out within 15 minutes.',
+        type: 'success',
+      })
+    } catch (e: any) {
+      toast({ title: 'Could not enroll', description: humanError(e), type: 'error' })
+    } finally {
+      setEnrolling(false)
+    }
+  }
+
   const sorted = [...rows].sort((a, b) => {
     const ra = ROLE_META[a.role]?.sort ?? 99
     const rb = ROLE_META[b.role]?.sort ?? 99
@@ -132,11 +178,28 @@ export default function BuyingCommittee({ dealId, propertyId, contacts }: Props)
           <h3 className="text-sm font-semibold text-text-primary">Buying Committee</h3>
           {rows.length > 0 && <Badge tone="info">{rows.length}</Badge>}
         </div>
-        {!adding && available.length > 0 && (
-          <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
-            + Add stakeholder
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {rows.length > 0 && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                if (confirm(`Enroll ${rows.length} stakeholder${rows.length === 1 ? '' : 's'} in the 3-touch warm-intro sequence?`)) {
+                  enrollCommittee()
+                }
+              }}
+              disabled={enrolling}
+              title="Bulk-enroll the whole committee in the default sequence"
+            >
+              <Zap className="w-3.5 h-3.5" /> {enrolling ? 'Enrolling…' : 'Enroll committee'}
+            </Button>
+          )}
+          {!adding && available.length > 0 && (
+            <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
+              + Add stakeholder
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading && (

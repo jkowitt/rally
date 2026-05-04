@@ -77,10 +77,35 @@ export default function AccountBrief({ deal, contacts }: { deal: DealRow; contac
     },
   })
 
+  // Pull active prospect_signals for this deal so the AI can lead
+  // with "why now" — funding rounds, job changes, hiring signals,
+  // earnings mentions. Only fresh + unacted signals count.
+  const { data: activeSignals = [] } = useQuery({
+    queryKey: ['deal-signals-brief', deal.id],
+    enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('prospect_signals')
+        .select('signal_type, severity, title, description, surfaced_at, payload')
+        .eq('deal_id', deal.id)
+        .is('dismissed_at', null)
+        .is('acted_on_at', null)
+        .order('surfaced_at', { ascending: false })
+        .limit(10)
+      return data || []
+    },
+  })
+
   async function run() {
     setGenerating(true)
     try {
-      const news_snippet = inboundSnippets.map(s => `${s.subject}: ${s.preview}`).join('\n').slice(0, 1000)
+      // Compose the news_snippet from inbound mail PLUS active
+      // signals so the brief leads with the freshest context.
+      const signalLines = activeSignals.map((s: any) =>
+        `[${s.severity} signal · ${s.signal_type}] ${s.title}${s.description ? ' — ' + s.description : ''}`
+      ).join('\n')
+      const inboundLines = inboundSnippets.map(s => `${s.subject}: ${s.preview}`).join('\n')
+      const news_snippet = [signalLines, inboundLines].filter(Boolean).join('\n\n').slice(0, 2000)
       const result = await generateAccountBrief({ deal, contacts, activities, news_snippet })
       if (!result) throw new Error('Brief generator returned nothing')
       setBrief(result)
@@ -94,9 +119,14 @@ export default function AccountBrief({ deal, contacts }: { deal: DealRow; contac
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <FileText className="w-4 h-4 text-accent" />
           <h3 className="text-sm font-semibold text-text-primary">Account Brief</h3>
+          {activeSignals.length > 0 && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent">
+              {activeSignals.length} active signal{activeSignals.length === 1 ? '' : 's'} feeding the brief
+            </span>
+          )}
         </div>
         {!open ? (
           <Button size="sm" variant="secondary" onClick={() => { setOpen(true); if (!brief) run() }}>

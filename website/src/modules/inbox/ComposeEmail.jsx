@@ -5,7 +5,7 @@ import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
 import { useDialog } from '@/hooks/useDialog'
-import { Paperclip, X, Calendar, AlertTriangle } from 'lucide-react'
+import { Paperclip, X, Calendar, AlertTriangle, Brain } from 'lucide-react'
 import { lintEmail, hasBlockers } from '@/lib/deliverability'
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024 // 25 MB per Gmail/Outlook
@@ -58,6 +58,36 @@ export default function ComposeEmail({
   const [provider, setProvider] = useState(defaultProvider || 'outlook')   // 'outlook' | 'gmail'
   const [sending, setSending] = useState(false)
   const [drafting, setDrafting] = useState(false)
+  // Personality-aware tone hint. Looks up the recipient's
+  // contact_personalities row by email + property; renders a
+  // one-line nudge ("direct + fast pace · prefers data over story").
+  const [tonePersonality, setTonePersonality] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const recipient = (to || '').split(',')[0]?.trim().toLowerCase()
+      if (!recipient || !profile?.property_id) {
+        setTonePersonality(null)
+        return
+      }
+      const { data: contact } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('property_id', profile.property_id)
+        .ilike('email', recipient)
+        .maybeSingle()
+      if (cancelled || !contact?.id) { setTonePersonality(null); return }
+      const { data } = await supabase
+        .from('contact_personalities')
+        .select('disc_type, communication_style, preferred_pace, decision_drivers, recommended_phrases, avoid_phrases')
+        .eq('contact_id', contact.id)
+        .maybeSingle()
+      if (!cancelled) setTonePersonality(data || null)
+    }
+    if (open) load()
+    return () => { cancelled = true }
+  }, [open, to, profile?.property_id])
 
   // Reset state when the modal opens with new defaults.
   useEffect(() => {
@@ -333,6 +363,34 @@ export default function ComposeEmail({
           {dealId && (
             <div className="text-xs text-text-muted">
               This message will be logged to the deal timeline automatically.
+            </div>
+          )}
+
+          {/* Personality-aware tone hint. Renders only when the
+              recipient has a contact_personalities row. Hint is a
+              suggestion — author keeps full control. */}
+          {tonePersonality && (
+            <div className="bg-accent/5 border border-accent/30 rounded p-2 flex items-start gap-2">
+              <Brain className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
+              <div className="text-[11px] text-text-secondary flex-1">
+                <span className="font-medium text-text-primary">Tone hint:</span>{' '}
+                {tonePersonality.disc_type && <span className="font-mono text-accent">{tonePersonality.disc_type}</span>}
+                {tonePersonality.communication_style && (
+                  <span className="ml-1">· {tonePersonality.communication_style}</span>
+                )}
+                {tonePersonality.preferred_pace && (
+                  <span className="ml-1">· {tonePersonality.preferred_pace} pace</span>
+                )}
+                {tonePersonality.decision_drivers?.length > 0 && (
+                  <span className="ml-1">· prioritizes {tonePersonality.decision_drivers.slice(0, 2).join(', ')}</span>
+                )}
+                {tonePersonality.recommended_phrases?.length > 0 && (
+                  <div className="mt-0.5 text-text-muted">Use: <span className="italic">{tonePersonality.recommended_phrases.slice(0, 2).join('; ')}</span></div>
+                )}
+                {tonePersonality.avoid_phrases?.length > 0 && (
+                  <div className="text-text-muted">Avoid: <span className="italic">{tonePersonality.avoid_phrases.slice(0, 2).join('; ')}</span></div>
+                )}
+              </div>
             </div>
           )}
 

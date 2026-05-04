@@ -5,8 +5,9 @@ import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
 import { useDialog } from '@/hooks/useDialog'
-import { Paperclip, X, Calendar, AlertTriangle, Brain } from 'lucide-react'
+import { Paperclip, X, Calendar, AlertTriangle, Brain, Sparkles } from 'lucide-react'
 import { lintEmail, hasBlockers } from '@/lib/deliverability'
+import EmailCoachPanel from '@/components/EmailCoachPanel'
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024 // 25 MB per Gmail/Outlook
 
@@ -58,6 +59,7 @@ export default function ComposeEmail({
   const [provider, setProvider] = useState(defaultProvider || 'outlook')   // 'outlook' | 'gmail'
   const [sending, setSending] = useState(false)
   const [drafting, setDrafting] = useState(false)
+  const [coachOpen, setCoachOpen] = useState(false)
   // Personality-aware tone hint. Looks up the recipient's
   // contact_personalities row by email + property; renders a
   // one-line nudge ("direct + fast pace · prefers data over story").
@@ -459,6 +461,16 @@ export default function ComposeEmail({
                 {drafting ? 'Drafting…' : '✨ Draft with AI'}
               </Button>
             )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setCoachOpen(true)}
+              type="button"
+              title="Open the email coach — goal-oriented rewrites + live score"
+              disabled={sending}
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Coach
+            </Button>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={onClose} disabled={sending}>
@@ -470,6 +482,14 @@ export default function ComposeEmail({
           </div>
         </div>
       </div>
+
+      <EmailCoachPanel
+        open={coachOpen}
+        onClose={() => setCoachOpen(false)}
+        draft={body}
+        onChangeDraft={setBody}
+        subject={subject}
+      />
     </div>
   )
 }

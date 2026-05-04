@@ -7,6 +7,7 @@ import { useComposeEmail } from '@/hooks/useComposeEmail'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { Button, Card, EmptyState, Badge } from '@/components/ui'
 import { Mail, Inbox as InboxIcon, Send, Reply, Sparkles } from 'lucide-react'
+import EmailCoachPanel from '@/components/EmailCoachPanel'
 import { draftReplyEmail, classifyReplyIntent, draftReplyVariants } from '@/lib/claude'
 
 // Maps the classifier's intent string → user-facing label + tone.
@@ -217,6 +218,8 @@ function MessageDetail({ message }) {
   const { profile } = useAuth()
   const composeEmail = useComposeEmail()
   const isInbound = !message.is_sent
+  const [coachOpen, setCoachOpen] = useState(false)
+  const [coachDraft, setCoachDraft] = useState('')
 
   // Auto-classify inbound messages on first open. Cached on the
   // outreach_log row that was created when the email was synced —
@@ -399,6 +402,50 @@ function MessageDetail({ message }) {
           </Button>
           <Button size="sm" variant="ghost" onClick={() => openReply({ withVariants: true })} title="Generate 3 tones (direct / friendly / concise), then pick">
             <Sparkles className="w-3.5 h-3.5" /> 3 tones
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => { setCoachDraft(coachDraft || ''); setCoachOpen(true) }}
+            title="Open the email coach — workshop your reply with goal-oriented rewrites + live score"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Coach
+          </Button>
+        </div>
+      )}
+
+      {/* Inbox-side coach. Lets the user workshop a reply against
+          the inbound message before handing the polished draft to
+          ComposeEmail. */}
+      <EmailCoachPanel
+        open={coachOpen}
+        onClose={() => setCoachOpen(false)}
+        draft={coachDraft}
+        onChangeDraft={setCoachDraft}
+        incomingEmail={message.body_text || message.preview || ''}
+        subject={message.subject || ''}
+      />
+
+      {coachOpen && coachDraft.trim() && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-bg-surface border border-accent/40 rounded-lg shadow-xl p-3 flex items-center gap-2">
+          <span className="text-xs text-text-secondary">Ready to send?</span>
+          <Button
+            size="sm"
+            onClick={() => {
+              const subj = (message.subject || '').replace(/^re:\s*/i, '')
+              composeEmail.open({
+                to: message.from_email,
+                defaultSubject: `Re: ${subj || '(no subject)'}`,
+                defaultBody: coachDraft,
+                dealId: message.linked_deal_id || null,
+                inReplyToMessageId: message.message_id,
+                threadId: message.thread_id,
+                provider: message.provider,
+              })
+              setCoachOpen(false)
+            }}
+          >
+            Open in Compose
           </Button>
         </div>
       )}

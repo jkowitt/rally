@@ -5,7 +5,7 @@ import { useAddons } from '@/hooks/useAddons'
 import { useToast } from '@/components/Toast'
 import { Card, Button, Badge } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
-import { Check, MessageCircle } from 'lucide-react'
+import { Check, MessageCircle, ShoppingCart, Loader2 } from 'lucide-react'
 
 interface CatalogRow {
   key: string
@@ -16,6 +16,10 @@ interface CatalogRow {
   icon: string | null
   price_hint: string | null
   position: number
+  purchase_mode?: 'contact_sales' | 'self_serve'
+  unit_price_cents?: number | null
+  billing_interval?: string | null
+  per_seat?: boolean
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -41,6 +45,40 @@ export default function AddonsCatalog({ embedded = false }: { embedded?: boolean
   const [loading, setLoading] = useState(true)
   const [requestModal, setRequestModal] = useState<CatalogRow | null>(null)
   const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set())
+  const [checkingOut, setCheckingOut] = useState<string | null>(null)
+
+  // Self-serve buy: opens Stripe Checkout via the existing stripe-billing
+  // edge function (extended with action='addon_checkout' in 082). On
+  // checkout.session.completed, the webhook flips property_addons →
+  // realtime → useAddons → UI unlocks instantly.
+  async function handleBuyNow(row: CatalogRow) {
+    if (!profile?.property_id) {
+      toast({ title: 'Sign in first', type: 'warning' })
+      return
+    }
+    setCheckingOut(row.key)
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-billing', {
+        body: {
+          action: 'addon_checkout',
+          property_id: profile.property_id,
+          addon_key: row.key,
+          return_url: window.location.origin,
+        },
+      })
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+      if (data?.url) {
+        window.location.href = data.url
+        return
+      }
+      throw new Error('No checkout URL returned')
+    } catch (e: any) {
+      toast({ title: 'Could not start checkout', description: humanError(e), type: 'error' })
+    } finally {
+      setCheckingOut(null)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -121,18 +159,41 @@ export default function AddonsCatalog({ embedded = false }: { embedded?: boolean
                       {row.long_description && (
                         <p className="text-[11px] text-text-muted leading-relaxed mb-3">{row.long_description}</p>
                       )}
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-[11px] font-mono text-text-muted">
                           {row.price_hint || 'Contact sales'}
                         </span>
                         {!active && !pending && (
-                          <Button
-                            size="sm"
-                            variant={profile ? 'primary' : 'secondary'}
-                            onClick={() => setRequestModal(row)}
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" /> Contact sales
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            {row.purchase_mode === 'self_serve' && row.unit_price_cents ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleBuyNow(row)}
+                                  disabled={checkingOut === row.key || !profile}
+                                  title={profile ? 'Buy now via Stripe' : 'Sign in to buy'}
+                                >
+                                  {checkingOut === row.key
+                                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Opening…</>
+                                    : <><ShoppingCart className="w-3.5 h-3.5" /> Buy now</>}
+                                </Button>
+                                <button
+                                  onClick={() => setRequestModal(row)}
+                                  className="text-[11px] text-text-muted hover:text-accent underline"
+                                >
+                                  or contact sales
+                                </button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant={profile ? 'primary' : 'secondary'}
+                                onClick={() => setRequestModal(row)}
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" /> Contact sales
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </Card>

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useAddons } from '@/hooks/useAddons'
@@ -6,7 +6,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { useActiveHub, detectHub } from '@/hooks/useActiveHub'
 import { emit } from '@/lib/appEvents'
-import { Lightbulb } from 'lucide-react'
+import { Lightbulb, Sparkles } from 'lucide-react'
+import AdditionalFeaturesPanel from '@/components/AdditionalFeaturesPanel'
 
 function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
   const industryItems = []
@@ -269,6 +270,7 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing, re
 export default function Sidebar({ collapsed, onToggle, mobile }) {
   const { flags } = useFeatureFlags()
   const addons = useAddons()
+  const [addonPanelOpen, setAddonPanelOpen] = useState(false)
   const { isDeveloper, realIsDeveloper, profile } = useAuth()
   const config = useIndustryConfig()
   const moduleLabels = config.moduleLabels || {}
@@ -357,6 +359,13 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
       {showLabels && (
         <div className="border-t border-border px-4 py-3 space-y-2">
           <button
+            onClick={() => setAddonPanelOpen(true)}
+            className="w-full flex items-center gap-1.5 text-left text-[11px] text-accent hover:opacity-80 transition-opacity font-medium"
+          >
+            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+            Additional Features
+          </button>
+          <button
             onClick={() => emit('open-suggestion')}
             className="w-full flex items-center gap-1.5 text-left text-[11px] text-text-muted hover:text-accent transition-colors"
           >
@@ -366,6 +375,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
           <div className="text-[10px] text-text-muted font-mono">v1.0.0</div>
         </div>
       )}
+      <AdditionalFeaturesPanel open={addonPanelOpen} onClose={() => setAddonPanelOpen(false)} />
     </aside>
   )
 }

@@ -68,6 +68,89 @@ Deno.serve(async (req: Request) => {
       });
 
       return json({ url: session.url });
+    } else if (action === "addon_checkout") {
+      // Self-serve add-on checkout. Body: { property_id, addon_key, return_url }.
+      // Creates a Stripe Checkout Session for the addon's stripe_price_id,
+      // stashes a row in addon_checkout_sessions so the webhook can flip
+      // property_addons on completion.
+      const { addon_key } = body;
+      if (!property_id || !addon_key) throw new Error("property_id + addon_key required");
+
+      const { data: addon } = await supabase
+        .from("addon_catalog")
+        .select("key, name, purchase_mode, stripe_price_id, per_seat, unit_price_cents, billing_interval")
+        .eq("key", addon_key)
+        .maybeSingle();
+      if (!addon) throw new Error("Add-on not found");
+      if (addon.purchase_mode !== "self_serve") {
+        throw new Error("This add-on is contact-sales only. Submit a request from the catalog.");
+      }
+      if (!addon.stripe_price_id) {
+        throw new Error("Stripe price not configured for this add-on. Set stripe_price_id in addon_catalog.");
+      }
+
+      // Get or create Stripe customer
+      const { data: property } = await supabase
+        .from("properties")
+        .select("stripe_customer_id, billing_email, name")
+        .eq("id", property_id)
+        .single();
+      let customerId = property?.stripe_customer_id;
+      if (!customerId) {
+        const customerResp = await stripeRequest("POST", "/customers", {
+          email: property?.billing_email || "",
+          name: property?.name || "",
+          metadata: { property_id },
+        });
+        customerId = customerResp.id;
+        await supabase.from("properties")
+          .update({ stripe_customer_id: customerId })
+          .eq("id", property_id);
+      }
+
+      // For per-seat pricing, count active users on the property.
+      let qty = "1";
+      if (addon.per_seat) {
+        const { count } = await supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("property_id", property_id);
+        qty = String(Math.max(1, count || 1));
+      }
+
+      // Resolve the user invoking this for initiated_by attribution.
+      const auth = req.headers.get("Authorization") || "";
+      const jwt = auth.replace(/^Bearer\s+/i, "").trim();
+      let initiatedBy: string | null = null;
+      if (jwt) {
+        const { data: u } = await supabase.auth.getUser(jwt);
+        initiatedBy = u?.user?.id ?? null;
+      }
+
+      const session = await stripeRequest("POST", "/checkout/sessions", {
+        customer: customerId,
+        mode: "subscription",
+        "line_items[0][price]": addon.stripe_price_id,
+        "line_items[0][quantity]": qty,
+        success_url: `${return_url || APP_URL}/app/settings#addons?addon=${addon_key}&result=success`,
+        cancel_url: `${return_url || APP_URL}/app/settings#addons?addon=${addon_key}&result=cancelled`,
+        "metadata[purchase_kind]": "addon",
+        "metadata[property_id]": property_id,
+        "metadata[addon_key]": addon_key,
+      });
+
+      // Stash the in-flight checkout so the webhook can flip the
+      // property_addons row on completion.
+      await supabase.from("addon_checkout_sessions").insert({
+        stripe_session_id: session.id,
+        property_id,
+        addon_key,
+        initiated_by: initiatedBy,
+        amount_cents: addon.unit_price_cents,
+        status: "pending",
+      });
+
+      return json({ url: session.url });
     } else if (action === "create_portal") {
       const { data: property } = await supabase.from("properties").select("stripe_customer_id").eq("id", property_id).single();
       if (!property?.stripe_customer_id) throw new Error("No billing account. Subscribe first.");
@@ -95,6 +178,21 @@ async function handleWebhook(req: Request, supabase: any) {
   const data = event.data?.object;
 
   if (type === "checkout.session.completed") {
+    const purchaseKind = data.metadata?.purchase_kind;
+
+    // Branch: this checkout was for an add-on, not a base plan.
+    // Update addon_checkout_sessions → trigger flips property_addons
+    // → useAddons subscriber sees the new addon in real time.
+    if (purchaseKind === "addon") {
+      const sessionId = data.id;
+      await supabase.from("addon_checkout_sessions").update({
+        status: "completed",
+        stripe_subscription_id: data.subscription || null,
+        completed_at: new Date().toISOString(),
+      }).eq("stripe_session_id", sessionId);
+      return new Response("ok");
+    }
+
     const propertyId = data.metadata?.property_id;
     const plan = data.metadata?.plan;
     if (propertyId && plan) {

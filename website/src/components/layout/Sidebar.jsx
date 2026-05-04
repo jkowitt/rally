@@ -45,6 +45,7 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
       items: [
         { to: '/app/crm/assets', label: t?.asset ? `${t.asset}s` : 'Assets' },
         { to: '/app/crm/pipeline', label: `${t?.deal || 'Deal'} Pipeline` },
+        { to: '/app/crm/accounts', label: 'Accounts' },
         { to: '/app/crm/priority', label: 'Priority Queue' },
         { to: '/app/crm/signals', label: 'Signal Radar' },
         { to: '/app/crm/lookalikes', label: 'Lookalikes' },
@@ -54,6 +55,14 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
         { to: '/app/crm/postmortems', label: 'Postmortems' },
         { to: '/app/crm/relationships', label: 'Relationship Search' },
         { to: '/app/crm/declined', label: 'Declined' },
+      ],
+    },
+    {
+      label: 'Admin',
+      flag: 'crm',
+      items: [
+        { to: '/app/crm/audit', label: 'Audit Log' },
+        { to: '/app/crm/integrations', label: 'Integrations' },
       ],
     },
     {

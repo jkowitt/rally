@@ -50,3 +50,7 @@ verify_jwt = false
 
 [functions.unsubscribe]
 verify_jwt = false
+
+# public-api authenticates via X-Rally-API-Key header, not JWT.
+[functions.public-api]
+verify_jwt = false

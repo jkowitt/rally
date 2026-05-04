@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { usePlanLimits } from '@/hooks/usePlanLimits'
+import CustomFieldsEditor from '@/components/CustomFieldsEditor'
 
 const PLANS = [
   { id: 'free', name: 'Free', price: '$0', period: '7-day trial', users: 2, features: ['CRM Pipeline (15 deals)', '3 prospect searches/mo', '2 contract uploads/mo', 'Basic CSV export', 'No verified contact lookups'] },
@@ -17,6 +18,8 @@ const PLANS = [
 
 export default function Settings() {
   const { profile, fetchProfile, signOut } = useAuth()
+  // CustomFieldsEditor lives here for the property-admin tab.
+  // Imported from components/CustomFieldsEditor.tsx
   const { toast } = useToast()
   const config = useIndustryConfig()
   const navigate = useNavigate()
@@ -225,6 +228,17 @@ export default function Settings() {
       <DigestSubscriptionSection userId={profile?.id} propertyId={propertyId} userEmail={profile?.email} />
 
       <DncDomainsSection propertyId={propertyId} userId={profile?.id} />
+
+      <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
+        <h2 className="text-sm font-mono text-text-muted uppercase mb-3">Custom fields</h2>
+        <p className="text-xs text-text-muted mb-3">
+          Add property-specific columns to deals or contacts. Values save to a jsonb column and surface in the deal viewer.
+        </p>
+        <div className="space-y-3">
+          <CustomFieldsEditor propertyId={propertyId} appliesTo="deal" />
+          <CustomFieldsEditor propertyId={propertyId} appliesTo="contact" />
+        </div>
+      </div>
 
       <EmailPreferencesSection userEmail={profile?.email} />
 

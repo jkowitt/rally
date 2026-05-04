@@ -43,6 +43,9 @@ const Sequences = lazyRetry(() => import('./modules/crm/Sequences'))
 const OutreachAnalytics = lazyRetry(() => import('./modules/crm/OutreachAnalytics'))
 const Postmortems = lazyRetry(() => import('./modules/crm/Postmortems'))
 const SalesVelocity = lazyRetry(() => import('./modules/crm/SalesVelocity'))
+const Accounts = lazyRetry(() => import('./modules/crm/Accounts'))
+const AuditLog = lazyRetry(() => import('./modules/crm/AuditLog'))
+const Integrations = lazyRetry(() => import('./modules/crm/Integrations'))
 const MigratePage = lazyRetry(() => import('./pages/contracts/MigratePage'))
 const FulfillmentTracker = lazyRetry(() => import('./modules/crm/FulfillmentTracker'))
 const AccountsDashboard = lazyRetry(() => import('./modules/accounts/AccountsDashboard'))
@@ -222,6 +225,9 @@ export default function App() {
                             <Route path="/crm/outreach-analytics" element={<OutreachAnalytics />} />
                             <Route path="/crm/postmortems" element={<Postmortems />} />
                             <Route path="/crm/velocity" element={<SalesVelocity />} />
+                            <Route path="/crm/accounts" element={<Accounts />} />
+                            <Route path="/crm/audit" element={<AuditLog />} />
+                            <Route path="/crm/integrations" element={<Integrations />} />
                             <Route path="/crm/contracts" element={<ContractManager />} />
                             <Route path="/crm/migrate" element={<MigratePage />} />
                             <Route path="/crm/fulfillment" element={<FulfillmentTracker />} />

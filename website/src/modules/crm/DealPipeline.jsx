@@ -10,6 +10,10 @@ import AccountBrief from '@/components/AccountBrief'
 import WarmPathFinder from '@/components/WarmPathFinder'
 import PersonalityProfile from '@/components/PersonalityProfile'
 import PortalEngagement from '@/components/PortalEngagement'
+import CustomFieldsEditor, { CustomFieldsRenderer } from '@/components/CustomFieldsEditor'
+import SavedViewsBar from '@/components/SavedViewsBar'
+import BulkEditBar from '@/components/BulkEditBar'
+import DealComments from '@/components/DealComments'
 import SlashInput from '@/components/SlashInput'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { Badge, Button, EmptyState } from '@/components/ui'
@@ -159,6 +163,7 @@ export default function DealPipeline() {
   const [showCSVImport, setShowCSVImport] = useState(false)
   const [viewingDeal, setViewingDeal] = useState(null)
   const [columnFilters, setColumnFilters] = useState({})
+  const [bulkSelectedIds, setBulkSelectedIds] = useState(new Set())
   const [showColumnFilters, setShowColumnFilters] = useState(false)
   const [showCRMImporter, setShowCRMImporter] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -618,6 +623,17 @@ export default function DealPipeline() {
         { label: 'CRM & Prospecting', to: '/app' },
         { label: `${t.deal || 'Deal'} Pipeline` },
       ]} />
+
+      <SavedViewsBar
+        appliesTo="deal"
+        currentFilters={columnFilters}
+        onApply={(filters) => setColumnFilters(filters || {})}
+      />
+
+      <BulkEditBar
+        selectedIds={Array.from(bulkSelectedIds)}
+        onClear={() => setBulkSelectedIds(new Set())}
+      />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">{t.deal || 'Deal'} Pipeline</h1>
@@ -847,9 +863,12 @@ export default function DealPipeline() {
                                   <span className={`text-[10px] font-mono ${priorityColor[deal.priority]}`}>{deal.priority}</span>
                                 )}
                               </div>
-                              {/* Score bar */}
-                              <div className="mt-1.5 w-full bg-bg-surface rounded-full h-1" title={`Deal score: ${getDealScore(deal)}/100`}>
-                                <div className="bg-accent rounded-full h-1 transition-all" style={{ width: `${getDealScore(deal)}%` }} />
+                              {/* Score bar — pill on the right shows the numeric value */}
+                              <div className="mt-1.5 flex items-center gap-1.5">
+                                <div className="flex-1 bg-bg-surface rounded-full h-1" title={`Deal score: ${getDealScore(deal)}/100`}>
+                                  <div className="bg-accent rounded-full h-1 transition-all" style={{ width: `${getDealScore(deal)}%` }} />
+                                </div>
+                                <span className="text-[9px] font-mono text-text-muted shrink-0 tabular-nums">{getDealScore(deal)}</span>
                               </div>
                               <div className="flex gap-1 mt-1">
                                 {deal.renewal_flag && (
@@ -1675,6 +1694,11 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
             <PortalEngagement dealId={deal.id} />
           </div>
 
+          {/* Team comments — threaded discussion + @-mentions */}
+          <div>
+            <DealComments dealId={deal.id} propertyId={propertyId} />
+          </div>
+
           {/* Company Info */}
           {(deal.city || deal.state || deal.website || deal.linkedin || deal.sub_industry) && (
             <div>
@@ -1919,6 +1943,42 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
     enabled: !!propertyId,
   })
 
+  // Fetch parent accounts + agencies so the deal form can link
+  // a deal to its parent company / agency-of-record. Both are
+  // optional; null is fine.
+  const { data: accountsList = [] } = useQuery({
+    queryKey: ['accounts-list', propertyId],
+    enabled: !!propertyId,
+    queryFn: async () => {
+      const { data } = await supabase.from('accounts').select('id, name').eq('property_id', propertyId).order('name')
+      return data || []
+    },
+  })
+  const { data: agenciesList = [] } = useQuery({
+    queryKey: ['agencies-list', propertyId],
+    enabled: !!propertyId,
+    queryFn: async () => {
+      const { data } = await supabase.from('agencies').select('id, name').eq('property_id', propertyId).order('name')
+      return data || []
+    },
+  })
+
+  // Fetch custom field defs for the property so we can render
+  // any property-specific columns inline in the form.
+  const { data: customFieldDefs = [] } = useQuery({
+    queryKey: ['custom-field-defs', propertyId, 'deal'],
+    enabled: !!propertyId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('custom_field_defs')
+        .select('*')
+        .eq('property_id', propertyId)
+        .eq('applies_to', 'deal')
+        .order('position', { ascending: true })
+      return data || []
+    },
+  })
+
   // Fetch team members for assignment dropdown
   const { data: teamProfiles } = useQuery({
     queryKey: ['team-profiles', propertyId],
@@ -2043,6 +2103,9 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
     logo_url: deal?.logo_url || '',
     assigned_to: deal?.assigned_to || '',
     account_lead_id: deal?.account_lead_id || '',
+    custom_fields: deal?.custom_fields || {},
+    account_id: deal?.account_id || '',
+    agency_id: deal?.agency_id || '',
     ...(deal?.id ? { id: deal.id } : {}),
   })
 
@@ -2053,6 +2116,22 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
   function addContact() {
     setContacts(prev => [...prev, { ...EMPTY_CONTACT, company: form.brand_name }])
   }
+
+  // Duplicate detection: when the user types a brand_name, fetch
+  // existing open deals at that brand from the property. Shown as
+  // a soft warning above the form. Only fires when creating new.
+  const isNewDeal = !deal?.id
+  const { data: dupes = [] } = useQuery({
+    queryKey: ['deal-dupes', propertyId, form?.brand_name],
+    enabled: isNewDeal && !!propertyId && !!(form?.brand_name && form.brand_name.trim().length >= 3),
+    queryFn: async () => {
+      const { data } = await supabase.rpc('find_duplicate_deals', {
+        p_property_id: propertyId,
+        p_brand_name: form.brand_name.trim(),
+      })
+      return data || []
+    },
+  })
 
   async function aiResearchDealContacts() {
     if (!form.brand_name) return
@@ -2398,7 +2477,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
         </h2>
 
         {/* Brand name with Apollo enrich button */}
-        <div className="flex gap-2 mt-3 mb-4">
+        <div className="flex gap-2 mt-3">
           <input
             placeholder="Brand / Company Name"
             value={form.brand_name}
@@ -2449,6 +2528,30 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
             {enriching === 'company' ? '...' : '✦ Enrich'}
           </button>
         </div>
+
+        {/* Duplicate detection — soft warning when a brand_name
+            matches an open deal already in the pipeline. */}
+        {isNewDeal && dupes && dupes.length > 0 && (
+          <div className="mt-2 mb-4 bg-warning/10 border border-warning/30 rounded p-2.5 text-xs">
+            <div className="font-medium text-warning mb-1">
+              Heads up — {dupes.length} open deal{dupes.length === 1 ? '' : 's'} already targeting "{form.brand_name}":
+            </div>
+            <ul className="space-y-0.5 text-text-secondary">
+              {dupes.slice(0, 5).map(d => (
+                <li key={d.deal_id} className="font-mono">
+                  · {d.brand_name} — {d.stage}
+                  {d.value && <span> · ${Number(d.value).toLocaleString()}</span>}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-text-muted mt-1">
+              You can still create this deal — but consider linking to an existing one or assigning a single owner.
+            </p>
+          </div>
+        )}
+
+        {!isNewDeal && <div className="mb-4" />}
+        {isNewDeal && (!dupes || dupes.length === 0) && <div className="mb-4" />}
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border mb-4">
@@ -3249,6 +3352,50 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                   />
                 </div>
               </div>
+
+              {/* Account / Agency — link this deal to a parent
+                  company or agency-of-record. Both optional. */}
+              {(accountsList.length > 0 || agenciesList.length > 0) && (
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                  <div>
+                    <label className="text-xs text-text-muted">Parent account</label>
+                    <p className="text-[10px] text-text-muted/70 mt-0.5 mb-1">Roll up many deals under one company.</p>
+                    <select
+                      value={form.account_id}
+                      onChange={(e) => setForm({ ...form, account_id: e.target.value || null })}
+                      className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                    >
+                      <option value="">— none —</option>
+                      {accountsList.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-text-muted">Agency of record</label>
+                    <p className="text-[10px] text-text-muted/70 mt-0.5 mb-1">Third-party representing this brand.</p>
+                    <select
+                      value={form.agency_id}
+                      onChange={(e) => setForm({ ...form, agency_id: e.target.value || null })}
+                      className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                    >
+                      <option value="">— none —</option>
+                      {agenciesList.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Custom fields — property-specific columns rendered
+                  from custom_field_defs. Empty = nothing shows. */}
+              {customFieldDefs.length > 0 && (
+                <div className="pt-3 border-t border-border">
+                  <div className="text-xs text-text-muted font-mono uppercase tracking-wider mb-2">Custom fields</div>
+                  <CustomFieldsRenderer
+                    defs={customFieldDefs}
+                    value={form.custom_fields}
+                    onChange={(custom_fields) => setForm({ ...form, custom_fields })}
+                  />
+                </div>
+              )}
 
               {/* Notes — supports slash commands (try typing "/") */}
               <SlashInput

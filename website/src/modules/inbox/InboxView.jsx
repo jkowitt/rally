@@ -32,9 +32,11 @@ export default function InboxView() {
   const { profile } = useAuth()
   const [folder, setFolder] = useState('inbox')   // 'inbox' | 'sent'
   const [selected, setSelected] = useState(null)
+  const [search, setSearch] = useState('')
+  const [intentFilter, setIntentFilter] = useState('all')
 
   const { data: messages = [], isLoading } = useQuery({
-    queryKey: ['email-messages-unified', profile?.property_id, folder],
+    queryKey: ['email-messages-unified', profile?.property_id, folder, search, intentFilter],
     queryFn: async () => {
       if (!profile?.property_id) return []
       let q = supabase
@@ -46,8 +48,26 @@ export default function InboxView() {
         .limit(200)
       if (folder === 'inbox') q = q.eq('is_sent', false)
       if (folder === 'sent') q = q.eq('is_sent', true)
+      // Postgres OR + ilike across subject, from_email, from_name, preview.
+      if (search.trim()) {
+        const s = search.trim().replace(/[%,]/g, '')
+        q = q.or(`subject.ilike.%${s}%,from_email.ilike.%${s}%,from_name.ilike.%${s}%,preview.ilike.%${s}%`)
+      }
       const { data } = await q
-      return data || []
+      let rows = data || []
+
+      // Intent filter is applied client-side because the classification
+      // lives on a separate table (reply_intent_classifications) and
+      // joining via the view is expensive. Fetch + filter only when set.
+      if (intentFilter !== 'all' && rows.length > 0) {
+        const { data: ints } = await supabase
+          .from('reply_intent_classifications')
+          .select('outreach_log_id, intent, outreach_log:outreach_log_id(message_id)')
+          .eq('intent', intentFilter)
+        const matchedMsgIds = new Set((ints || []).map(i => i.outreach_log?.message_id).filter(Boolean))
+        rows = rows.filter(r => matchedMsgIds.has(r.message_id))
+      }
+      return rows
     },
     enabled: !!profile?.property_id,
   })
@@ -76,9 +96,32 @@ export default function InboxView() {
         </div>
       </div>
 
-      <div className="flex gap-1 bg-bg-card rounded-lg p-1 w-fit">
-        <FolderTab id="inbox" label="Inbox" icon={InboxIcon} active={folder === 'inbox'} onClick={() => setFolder('inbox')} />
-        <FolderTab id="sent" label="Sent" icon={Send} active={folder === 'sent'} onClick={() => setFolder('sent')} />
+      <div className="flex gap-2 flex-wrap items-center">
+        <div className="flex gap-1 bg-bg-card rounded-lg p-1 w-fit">
+          <FolderTab id="inbox" label="Inbox" icon={InboxIcon} active={folder === 'inbox'} onClick={() => setFolder('inbox')} />
+          <FolderTab id="sent" label="Sent" icon={Send} active={folder === 'sent'} onClick={() => setFolder('sent')} />
+        </div>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search subject + sender + body…"
+          className="flex-1 min-w-[200px] bg-bg-card border border-border rounded px-3 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+        />
+        <select
+          value={intentFilter}
+          onChange={(e) => setIntentFilter(e.target.value)}
+          className="bg-bg-card border border-border rounded px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+          title="Filter by AI-classified intent (inbox only)"
+        >
+          <option value="all">All intents</option>
+          <option value="interested">Interested</option>
+          <option value="meeting_request">Meeting request</option>
+          <option value="objection">Objection</option>
+          <option value="not_now">Not now</option>
+          <option value="unsubscribe">Unsubscribe</option>
+          <option value="out_of_office">Out of office</option>
+        </select>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[60vh]">

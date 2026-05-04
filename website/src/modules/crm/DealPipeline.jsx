@@ -27,6 +27,7 @@ import { lazy, Suspense } from 'react'
 const CRMDataImporter = lazy(() => import('@/components/CRMDataImporter'))
 import { checkRateLimit } from '@/lib/rateLimit'
 import { sanitizeText } from '@/lib/sanitize'
+import { humanError } from '@/lib/humanError'
 import { runAutomations } from '@/lib/automations'
 
 const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
@@ -1257,6 +1258,40 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
     setEnrichingCompany(false)
   }
 
+  // Enroll a contact into the property's default 3-touch sequence.
+  // Lazily creates the sequence the first time. Sets next_send_at = now()
+  // so the cron picks it up on the next run; pauses automatically if
+  // the contact replies (handled by the autopause_sequence_on_reply trigger).
+  async function handleStartSequence(contactId) {
+    if (!contactId) return
+    try {
+      const { data: seqId, error: seqErr } = await supabase
+        .rpc('ensure_default_prospect_sequence', { p_property_id: propertyId })
+      if (seqErr) throw seqErr
+      const { error: enrErr } = await supabase
+        .from('prospect_sequence_enrollments')
+        .insert({
+          sequence_id: seqId,
+          property_id: propertyId,
+          contact_id: contactId,
+          deal_id: deal.id || null,
+          enrolled_by: profile?.id,
+          current_step: 0,
+          next_send_at: new Date().toISOString(),
+        })
+      if (enrErr) {
+        if (enrErr.code === '23505') {
+          toast({ title: 'Already enrolled', description: 'This contact is already in the 3-touch sequence.', type: 'info' })
+          return
+        }
+        throw enrErr
+      }
+      toast({ title: 'Sequence started', description: 'First email will go out within 15 minutes.', type: 'success' })
+    } catch (e) {
+      toast({ title: 'Could not start sequence', description: humanError(e), type: 'error' })
+    }
+  }
+
   async function handleVerifyEmail(contactId, email) {
     if (!viewerPlanLimits.canUse('contact_research')) {
       toast({ title: 'Upgrade required', description: 'Email verification requires a paid plan.', type: 'warning' })
@@ -1510,6 +1545,16 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
                           title="Verify email with Hunter (1 token)"
                         >
                           {verifyingEmail === c.id ? '...' : '✉️ verify'}
+                        </button>
+                      )}
+                      {c.email && c.id && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartSequence(c.id)}
+                          className="text-[10px] font-mono text-text-muted hover:text-accent"
+                          title="Enroll in the 3-touch warm-intro sequence"
+                        >
+                          ⚡ Start sequence
                         </button>
                       )}
                       {c.phone && <a href={`tel:${c.phone}`} className="text-xs text-accent hover:underline">{c.phone}</a>}
@@ -3656,6 +3701,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   const { profile } = useAuth()
   const planLimits = usePlanLimits()
   const composeEmail = useComposeEmail()
+  const { toast } = useToast()
   const effectivePropertyId = propertyId || profile?.property_id
   const [tab, setTab] = useState('search') // search | suggestions
   const [searchQuery, setSearchQuery] = useState('')
@@ -3669,6 +3715,15 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   const [addingIdx, setAddingIdx] = useState(null)
   const [addedIdxs, setAddedIdxs] = useState(new Set())
   const [useVerified, setUseVerified] = useState(true)
+  // Bulk send state — selectedContacts keyed by `${idx}:${ci}`.
+  // Each entry is { prospect, contact } so we can send + draft with full context.
+  const [selectedContacts, setSelectedContacts] = useState(new Map())
+  const [bulkSending, setBulkSending] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState({ sent: 0, failed: 0, total: 0 })
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
+  const [bulkProvider, setBulkProvider] = useState('outlook')
+
+  const MAX_BULK_SEND = 25
 
   const propertyType = profile?.properties?.type
   const industryKey = ({ college: 'sports', professional: 'sports', minor_league: 'sports', nonprofit: 'nonprofit', conference: 'conference', media: 'media', realestate: 'realestate', entertainment: 'entertainment' })[propertyType] || 'sports'
@@ -4005,6 +4060,103 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     }
   }
 
+  function toggleSelected(idx, ci, prospect, contact) {
+    const key = `${idx}:${ci}`
+    setSelectedContacts(prev => {
+      const next = new Map(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        if (next.size >= MAX_BULK_SEND) {
+          toast({
+            title: `Cap reached`,
+            description: `You can select at most ${MAX_BULK_SEND} contacts at a time. Send this batch first.`,
+            type: 'warning',
+          })
+          return prev
+        }
+        next.set(key, { prospect, contact })
+      }
+      return next
+    })
+  }
+
+  function clearSelection() {
+    setSelectedContacts(new Map())
+  }
+
+  function selectAllForProspect(idx) {
+    const research = researchedContacts[idx]
+    if (!research?.contacts?.length) return
+    const prospect = results[idx]
+    setSelectedContacts(prev => {
+      const next = new Map(prev)
+      for (let ci = 0; ci < research.contacts.length; ci++) {
+        const c = research.contacts[ci]
+        if (!c.email && !c.email_pattern) continue
+        const key = `${idx}:${ci}`
+        if (!next.has(key) && next.size < MAX_BULK_SEND) {
+          next.set(key, { prospect, contact: c })
+        }
+      }
+      return next
+    })
+  }
+
+  // Personalized bulk send. For each selected contact:
+  //   1. Generate AI first-touch draft
+  //   2. Invoke the connected provider (outlook | gmail) 'send' action
+  //   3. Track per-contact progress for the UI
+  async function handleBulkSend() {
+    const entries = Array.from(selectedContacts.values())
+    if (!entries.length) return
+    if (entries.length > MAX_BULK_SEND) {
+      toast({ title: `Too many selected (${entries.length})`, description: `Max ${MAX_BULK_SEND} per batch.`, type: 'warning' })
+      return
+    }
+    setBulkSending(true)
+    setBulkConfirmOpen(false)
+    setBulkProgress({ sent: 0, failed: 0, total: entries.length })
+    const fnName = bulkProvider === 'gmail' ? 'gmail-graph' : 'outlook-graph'
+    let sent = 0, failed = 0
+    for (const { prospect, contact } of entries) {
+      const to = contact.email || contact.email_pattern
+      if (!to) { failed++; continue }
+      try {
+        const draft = await draftFirstTouchEmail({
+          prospect,
+          contact,
+          senderName: profile?.full_name,
+          senderProperty: profile?.properties?.name,
+        })
+        const subject = draft?.subject || `Sponsorship opportunity with ${prospect.company_name || ''}`.trim()
+        const body = draft?.body || ''
+        const { error } = await supabase.functions.invoke(fnName, {
+          body: {
+            action: 'send',
+            to: [to],
+            subject,
+            body,
+            user_id: profile?.id,
+          },
+        })
+        if (error) throw error
+        sent++
+      } catch (e) {
+        console.warn('bulk send failed for', to, e)
+        failed++
+      }
+      setBulkProgress({ sent, failed, total: entries.length })
+    }
+    setBulkSending(false)
+    if (sent > 0) {
+      toast({ title: `Sent ${sent} email${sent === 1 ? '' : 's'}`, description: failed ? `${failed} failed.` : `via ${bulkProvider}.`, type: failed ? 'warning' : 'success' })
+    } else {
+      toast({ title: 'Bulk send failed', description: `0 of ${entries.length} sent. Check your provider connection.`, type: 'error' })
+    }
+    clearSelection()
+  }
+
   const SEARCH_CATEGORIES = [
     'Automotive', 'Banking & Financial Services', 'Beverage & Alcohol',
     'Consumer Packaged Goods', 'Energy & Utilities', 'Entertainment & Media',
@@ -4227,23 +4379,45 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                   {/* Researched Contacts */}
                   {research && !research.error && research.contacts?.length > 0 && (
                     <div className="border-t border-border bg-bg-surface/50 p-3 sm:p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
-                          Top {research.contacts.length} Contacts
-                        </span>
-                        {research.source === 'apollo' && (
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-success/10 text-success border border-success/30">✓ Apollo Verified</span>
-                        )}
-                        {research.source === 'claude' && (
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-bg-card text-text-muted">AI Researched</span>
-                        )}
-                        {research._fromCache && (
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent">Cached — no token used</span>
-                        )}
+                      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+                            Top {research.contacts.length} Contacts
+                          </span>
+                          {research.source === 'apollo' && (
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-success/10 text-success border border-success/30">✓ Apollo Verified</span>
+                          )}
+                          {research.source === 'claude' && (
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-bg-card text-text-muted">AI Researched</span>
+                          )}
+                          {research._fromCache && (
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent">Cached — no token used</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => selectAllForProspect(idx)}
+                          className="text-[10px] font-mono text-accent hover:underline"
+                        >
+                          Select all
+                        </button>
                       </div>
                       <div className="space-y-2">
-                        {research.contacts.map((contact, ci) => (
-                          <div key={ci} className="flex items-start gap-2 sm:gap-3 bg-bg-card border border-border rounded p-2.5 sm:p-3">
+                        {research.contacts.map((contact, ci) => {
+                          const selKey = `${idx}:${ci}`
+                          const isSelected = selectedContacts.has(selKey)
+                          const canSelect = !!(contact.email || contact.email_pattern)
+                          return (
+                          <div key={ci} className={`flex items-start gap-2 sm:gap-3 bg-bg-card border rounded p-2.5 sm:p-3 transition-colors ${isSelected ? 'border-accent' : 'border-border'}`}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              disabled={!canSelect}
+                              onChange={() => toggleSelected(idx, ci, prospect, contact)}
+                              aria-label={`Select ${contact.first_name || 'contact'} for bulk send`}
+                              className="accent-accent mt-1 w-3.5 h-3.5 shrink-0 disabled:opacity-30"
+                              title={canSelect ? 'Include in bulk send' : 'No email available'}
+                            />
                             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[10px] sm:text-xs font-mono shrink-0">
                               {ci + 1}
                             </div>
@@ -4304,7 +4478,8 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                               )}
                             </div>
                           </div>
-                        ))}
+                          )
+                        })}
                       </div>
                       {/* Find More Contacts button */}
                       <button
@@ -4362,6 +4537,84 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                   : 'Get AI-powered prospect suggestions based on your pipeline'
                 }
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk-send action bar */}
+        {selectedContacts.size > 0 && (
+          <div className="p-3 border-t border-accent/40 bg-accent/5 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs font-medium text-text-primary">
+                {selectedContacts.size} contact{selectedContacts.size === 1 ? '' : 's'} selected
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setBulkProvider('outlook')}
+                  className={`text-[10px] px-2 py-0.5 rounded font-mono ${bulkProvider === 'outlook' ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-muted'}`}
+                >
+                  Outlook
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkProvider('gmail')}
+                  className={`text-[10px] px-2 py-0.5 rounded font-mono ${bulkProvider === 'gmail' ? 'bg-accent text-bg-primary' : 'bg-bg-card text-text-muted'}`}
+                >
+                  Gmail
+                </button>
+              </div>
+              <button type="button" onClick={clearSelection} className="text-[11px] text-text-muted hover:text-text-primary">
+                Clear
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBulkConfirmOpen(true)}
+              disabled={bulkSending}
+              className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50"
+            >
+              {bulkSending
+                ? `Sending… ${bulkProgress.sent + bulkProgress.failed}/${bulkProgress.total}`
+                : `Send personalized to ${selectedContacts.size}`}
+            </button>
+          </div>
+        )}
+
+        {/* Bulk-send confirm dialog */}
+        {bulkConfirmOpen && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4" onClick={() => setBulkConfirmOpen(false)}>
+            <div onClick={(e) => e.stopPropagation()} className="bg-bg-surface border border-border rounded-lg max-w-md w-full p-5">
+              <h3 className="text-base font-semibold text-text-primary mb-2">Send {selectedContacts.size} personalized emails?</h3>
+              <p className="text-xs text-text-muted mb-3">
+                Each contact will receive an AI-drafted first-touch email via {bulkProvider === 'gmail' ? 'Gmail' : 'Outlook'}. This counts toward
+                your daily send quota and cannot be undone.
+              </p>
+              <div className="bg-bg-card border border-border rounded p-2 max-h-40 overflow-y-auto mb-4">
+                <ul className="text-[11px] text-text-secondary font-mono space-y-1">
+                  {Array.from(selectedContacts.values()).map(({ contact, prospect }, i) => (
+                    <li key={i} className="truncate">
+                      {contact.email || contact.email_pattern} <span className="text-text-muted">— {prospect.company_name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkConfirmOpen(false)}
+                  className="px-3 py-1.5 bg-bg-card text-text-secondary text-xs rounded hover:text-text-primary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkSend}
+                  className="px-3 py-1.5 bg-accent text-bg-primary text-xs rounded font-medium hover:opacity-90"
+                >
+                  Send all
+                </button>
+              </div>
             </div>
           </div>
         )}

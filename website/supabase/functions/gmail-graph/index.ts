@@ -24,6 +24,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encryptToken, decryptToken } from "../_shared/cryptoTokens.ts";
+import { logOutreach, generateTrackingToken, injectTrackingPixel, rewriteLinksForTracking } from "../_shared/outreachLog.ts";
+
+const TRACKING_BASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me";
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
@@ -408,6 +411,27 @@ async function upsertGmailMessage(sb: any, userId: string, msg: any) {
       .eq("id", linkedContactId);
   }
 
+  // Record into outreach_log so the response_count + sequence
+  // auto-pause triggers fire. Dedup on (provider, message_id).
+  if (linkedContactId) {
+    await logOutreach({
+      sb,
+      propertyId,
+      userId,
+      provider: "gmail",
+      direction: isSent ? "outbound" : "inbound",
+      messageId: msg.id,
+      threadId: msg.threadId,
+      contactId: linkedContactId,
+      dealId: linkedDealId,
+      toEmail: isSent ? (toEmails[0] || null) : fromEmail,
+      toName: isSent ? null : fromName,
+      subject,
+      bodyPreview: msg.snippet || null,
+      sentAt: dateRaw ? new Date(dateRaw).toISOString() : new Date().toISOString(),
+    });
+  }
+
   return true;
 }
 
@@ -417,28 +441,39 @@ async function handleSend(sb: any, userId: string, body: any) {
   const accessToken = await getFreshAccessToken(sb, userId);
   if (!accessToken) return jsonResponse({ success: false, error: "Not connected" }, 200);
 
-  const to = Array.isArray(body.to) ? body.to.join(", ") : body.to;
-  const cc = Array.isArray(body.cc) ? body.cc.join(", ") : body.cc;
+  const toArr = Array.isArray(body.to) ? body.to : (body.to ? [body.to] : []);
+  const ccArr = Array.isArray(body.cc) ? body.cc : (body.cc ? [body.cc] : []);
+  const to = toArr.join(", ");
+  const cc = ccArr.join(", ");
   const subject = body.subject || "";
-  const messageBody = body.body || "";
+  let messageBody = body.body || "";
   const attachments: Array<{ filename: string; mimeType: string; data: string }> = body.attachments || [];
+  const dealId: string | null = body.deal_id || null;
+  const sequenceEnrollmentId: string | null = body.sequence_enrollment_id || null;
+  const sequenceStepIndex: number | null = (typeof body.sequence_step_index === "number") ? body.sequence_step_index : null;
+
+  // Tracking: only inject when body looks like HTML.
+  const trackingEnabled = body.tracking !== false;
+  const isHtml = /<\/?(html|body|p|div|br|table|span|a)\b/i.test(messageBody);
+  const trackingToken = trackingEnabled && isHtml ? generateTrackingToken() : null;
+  if (trackingToken && TRACKING_BASE_URL) {
+    messageBody = rewriteLinksForTracking(messageBody, TRACKING_BASE_URL, trackingToken);
+    messageBody = injectTrackingPixel(messageBody, TRACKING_BASE_URL, trackingToken);
+  }
+  const bodyMimeType = isHtml ? "text/html" : "text/plain";
 
   let raw: string;
   if (attachments.length === 0) {
-    // Simple plain-text message
     raw = [
       `To: ${to}`,
       cc ? `Cc: ${cc}` : "",
       `Subject: ${subject}`,
-      "Content-Type: text/plain; charset=\"UTF-8\"",
+      `Content-Type: ${bodyMimeType}; charset="UTF-8"`,
       "MIME-Version: 1.0",
       "",
       messageBody,
     ].filter(Boolean).join("\r\n");
   } else {
-    // multipart/mixed with the body as the first part and each
-    // attachment as a base64 part. data is expected to be raw
-    // base64 of the file (caller responsible for encoding).
     const boundary = "ll_mime_" + Math.random().toString(36).slice(2);
     const lines = [
       `To: ${to}`,
@@ -448,7 +483,7 @@ async function handleSend(sb: any, userId: string, body: any) {
       `Content-Type: multipart/mixed; boundary="${boundary}"`,
       "",
       `--${boundary}`,
-      "Content-Type: text/plain; charset=\"UTF-8\"",
+      `Content-Type: ${bodyMimeType}; charset="UTF-8"`,
       "Content-Transfer-Encoding: 7bit",
       "",
       messageBody,
@@ -487,6 +522,49 @@ async function handleSend(sb: any, userId: string, body: any) {
     const errText = await sendRes.text();
     return jsonResponse({ success: false, error: `Gmail send failed: ${errText}` }, 200);
   }
+  const sendJson = await sendRes.json().catch(() => ({}));
 
-  return jsonResponse({ success: true });
+  try {
+    const { data: prof } = await sb
+      .from("profiles")
+      .select("property_id")
+      .eq("id", userId)
+      .maybeSingle();
+    const propertyId = prof?.property_id ?? null;
+
+    let contactId: string | null = null;
+    let resolvedDealId: string | null = dealId;
+    if (toArr.length && propertyId) {
+      const { data: contact } = await sb
+        .from("contacts")
+        .select("id, deal_id")
+        .eq("property_id", propertyId)
+        .ilike("email", toArr[0])
+        .maybeSingle();
+      if (contact) {
+        contactId = contact.id;
+        if (!resolvedDealId) resolvedDealId = contact.deal_id || null;
+      }
+    }
+
+    await logOutreach({
+      sb,
+      propertyId,
+      userId,
+      provider: "gmail",
+      direction: "outbound",
+      messageId: sendJson?.id || null,
+      threadId: sendJson?.threadId || null,
+      contactId,
+      dealId: resolvedDealId,
+      toEmail: toArr[0] || null,
+      subject,
+      bodyPreview: (body.body || "").slice(0, 500),
+      trackingToken,
+      sequenceEnrollmentId,
+      sequenceStepIndex,
+    });
+  } catch { /* best-effort */ }
+
+  return jsonResponse({ success: true, tracking_token: trackingToken, message_id: sendJson?.id || null });
 }

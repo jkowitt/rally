@@ -182,6 +182,41 @@ export async function draftFirstTouchEmail({ prospect, contact, senderName, send
   }
 }
 
+// AI-suggested reply for an inbound email. Wraps the existing
+// contract-ai 'draft_email' action with email_type='reply' and
+// passes the inbound message as context.
+//   incoming  — { subject, body, from_name, from_email }
+//   deal      — optional linked deal (so the AI can use deal context)
+//   senderName / senderProperty — used for sign-off
+//   tone      — 'professional' | 'friendly' | 'concise'
+export async function draftReplyEmail({ incoming, deal, senderName, senderProperty, tone = 'professional' }) {
+  try {
+    const dealLike = deal || {
+      brand_name: incoming?.from_name || incoming?.from_email,
+    }
+    const context = {
+      sender_name: senderName,
+      sender_property: senderProperty,
+      tone,
+      incoming_subject: incoming?.subject,
+      incoming_body: incoming?.body || incoming?.preview,
+      incoming_from: incoming?.from_name || incoming?.from_email,
+    }
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'draft_email',
+      deal: dealLike,
+      context,
+      email_type: 'reply',
+    })
+    const email = result?.email || result
+    if (!email?.body) return null
+    return { subject: email.subject, body: email.body }
+  } catch (e) {
+    console.warn('draftReplyEmail failed:', e?.message)
+    return null
+  }
+}
+
 export async function analyzeLostDeal({ deal, activities }) {
   try {
     return await invokeEdgeFunction('contract-ai', { action: 'analyze_lost_deal', deal, activities })

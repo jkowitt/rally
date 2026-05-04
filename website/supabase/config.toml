@@ -38,3 +38,12 @@ enable_signup = true
 [edge_runtime]
 enabled = true
 policy = "oneshot"
+
+# Public endpoints — no JWT required because email clients
+# can't supply auth headers when fetching tracking pixels
+# or following click-through links.
+[functions.track-open]
+verify_jwt = false
+
+[functions.track-click]
+verify_jwt = false

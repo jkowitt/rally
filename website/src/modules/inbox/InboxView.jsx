@@ -3,9 +3,11 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useComposeEmail } from '@/hooks/useComposeEmail'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { Button, Card, EmptyState, Badge } from '@/components/ui'
-import { Mail, Inbox as InboxIcon, Send } from 'lucide-react'
+import { Mail, Inbox as InboxIcon, Send, Reply, Sparkles } from 'lucide-react'
+import { draftReplyEmail } from '@/lib/claude'
 
 // Customer-facing unified inbox. Reads from the email_messages_unified
 // view so Outlook + Gmail messages render side-by-side without
@@ -156,6 +158,38 @@ function FolderTab({ label, icon: Icon, active, onClick }) {
 }
 
 function MessageDetail({ message }) {
+  const { profile } = useAuth()
+  const composeEmail = useComposeEmail()
+  const isInbound = !message.is_sent
+
+  // Build the reply Compose payload. The "Suggest reply" button
+  // routes the inbound message through contract-ai's draft_email
+  // action with email_type='reply' and prefills the body before
+  // the user clicks Send.
+  function openReply({ withDraft } = {}) {
+    if (!message.from_email && !isInbound) return
+    const replyTo = isInbound ? message.from_email : (message.to_emails?.[0] || '')
+    const subj = (message.subject || '').replace(/^re:\s*/i, '')
+    composeEmail.open({
+      to: replyTo,
+      defaultSubject: `Re: ${subj || '(no subject)'}`,
+      defaultBody: '',
+      dealId: message.linked_deal_id || null,
+      generateDraft: withDraft
+        ? async () => await draftReplyEmail({
+            incoming: {
+              subject: message.subject,
+              body: message.body_text || message.preview,
+              from_name: message.from_name,
+              from_email: message.from_email,
+            },
+            senderName: profile?.full_name,
+            senderProperty: profile?.properties?.name,
+          })
+        : undefined,
+    })
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -176,6 +210,18 @@ function MessageDetail({ message }) {
           </Link>
         )}
       </div>
+
+      {isInbound && message.from_email && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" variant="secondary" onClick={() => openReply({ withDraft: false })}>
+            <Reply className="w-3.5 h-3.5" /> Reply
+          </Button>
+          <Button size="sm" onClick={() => openReply({ withDraft: true })} title="AI will draft a personalized reply using the inbound message + linked deal context">
+            <Sparkles className="w-3.5 h-3.5" /> Suggest reply
+          </Button>
+        </div>
+      )}
+
       <div className="text-sm text-text-secondary whitespace-pre-wrap">
         {message.body_text || message.preview || '(no body content available)'}
       </div>

@@ -460,7 +460,46 @@ async function pipelineForecast(body: any) {
 
 async function draftEmailFn(body: any) {
   const d = body.deal || {};
-  const prompt = "You are a professional sports sponsorship sales executive. Draft a " + (body.email_type || "follow-up") + " email.\n\nDeal: " + d.brand_name + ", Stage: " + d.stage + ", Contact: " + (d.contact_name || "") + " (" + (d.contact_position || "") + "), Value: $" + (d.value || 0) + "\nContext: " + (body.context || "Standard follow-up") + "\n\nReturn JSON:\n{\"subject\": \"email subject\",\n\"body\": \"email body text\",\n\"tone\": \"professional/casual/urgent\"}\n\nReturn ONLY valid JSON.";
+  const ctx = body.context;
+  const emailType = body.email_type || "follow-up";
+
+  // Context can be a freeform string (legacy) or an object with fields
+  // like sender_name, sender_property, incoming_subject, incoming_body,
+  // tone, why_good_fit, outreach_tip. Normalize both.
+  let contextLines = "";
+  let incomingSection = "";
+  if (typeof ctx === "string") {
+    contextLines = ctx || "Standard follow-up";
+  } else if (ctx && typeof ctx === "object") {
+    const parts: string[] = [];
+    if (ctx.sender_name) parts.push(`Sender name: ${ctx.sender_name}`);
+    if (ctx.sender_property) parts.push(`Sender property: ${ctx.sender_property}`);
+    if (ctx.tone) parts.push(`Desired tone: ${ctx.tone}`);
+    if (ctx.why_good_fit) parts.push(`Why this prospect is a fit: ${ctx.why_good_fit}`);
+    if (ctx.outreach_tip) parts.push(`Outreach hook: ${ctx.outreach_tip}`);
+    if (ctx.estimated_budget) parts.push(`Estimated budget: ${ctx.estimated_budget}`);
+    contextLines = parts.join("\n") || "Standard follow-up";
+
+    if (emailType === "reply" && (ctx.incoming_subject || ctx.incoming_body)) {
+      incomingSection =
+        `\n\nINBOUND MESSAGE (you are replying to this):\n` +
+        `From: ${ctx.incoming_from || "the prospect"}\n` +
+        `Subject: ${ctx.incoming_subject || "(no subject)"}\n\n` +
+        `${(ctx.incoming_body || "").slice(0, 1500)}\n\n` +
+        `Write a thoughtful reply that addresses their points specifically. Sign off with the sender's name.`;
+    }
+  } else {
+    contextLines = "Standard follow-up";
+  }
+
+  const prompt =
+    `You are a professional sports sponsorship sales executive. Draft a ${emailType} email.\n\n` +
+    `Deal: ${d.brand_name || ""}, Stage: ${d.stage || ""}, ` +
+    `Contact: ${d.contact_name || ""} (${d.contact_position || ""}), Value: $${d.value || 0}\n` +
+    `Context:\n${contextLines}` +
+    incomingSection +
+    `\n\nReturn JSON:\n{"subject": "email subject", "body": "email body text", "tone": "professional/casual/urgent"}\n\n` +
+    `Return ONLY valid JSON.`;
   const text = await callClaude(prompt, 1024);
   return { email: extractJSON(text) };
 }

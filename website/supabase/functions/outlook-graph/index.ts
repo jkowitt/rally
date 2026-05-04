@@ -17,6 +17,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { requireDeveloper, corsHeaders, jsonResponse } from "../_shared/devGuard.ts";
 import { decryptToken, encryptToken } from "../_shared/cryptoTokens.ts";
+import { logOutreach, generateTrackingToken, injectTrackingPixel, rewriteLinksForTracking } from "../_shared/outreachLog.ts";
+
+const TRACKING_BASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 
 const CLIENT_ID = Deno.env.get("OUTLOOK_CLIENT_ID") ?? "";
 const CLIENT_SECRET = Deno.env.get("OUTLOOK_CLIENT_SECRET") ?? "";
@@ -45,7 +48,7 @@ Deno.serve(async (req: Request) => {
     if (action === "get_message") return await handleGetMessage(token, body.messageId);
     if (action === "delta_sync") return await handleDeltaSync(sb, userId, token);
     if (action === "full_sync") return await handleFullSync(sb, userId, token, body.days ?? 90);
-    if (action === "send") return await handleSend(token, body);
+    if (action === "send") return await handleSend(token, body, sb, userId);
     if (action === "sync") {
       // Alias used by the customer-facing UI; map to delta_sync.
       return await handleDeltaSync(sb, userId, token);
@@ -316,6 +319,32 @@ async function upsertEmail(sb: any, userId: string, m: any, folder: string, sour
       .eq("id", linkedContactId);
   }
 
+  // Record into outreach_log so the response_count + sequence
+  // auto-pause triggers fire. Dedup on (provider, message_id).
+  if (linkedContactId) {
+    const { data: prof } = await sb
+      .from("profiles")
+      .select("property_id")
+      .eq("id", userId)
+      .maybeSingle();
+    await logOutreach({
+      sb,
+      propertyId: prof?.property_id ?? null,
+      userId,
+      provider: "outlook",
+      direction: isSent ? "outbound" : "inbound",
+      messageId: m.id,
+      threadId: m.conversationId,
+      contactId: linkedContactId,
+      dealId: linkedDealId,
+      toEmail: isSent ? (toEmails[0] || null) : fromEmail,
+      toName: isSent ? null : fromName,
+      subject: m.subject,
+      bodyPreview: row.body_preview,
+      sentAt: row.received_at || row.sent_at,
+    });
+  }
+
   return { linked: autoLinked };
 }
 
@@ -324,16 +353,29 @@ async function upsertEmail(sb: any, userId: string, m: any, folder: string, sour
 // Builds a Graph "sendMail" payload:
 //   POST /me/sendMail { message: {...}, saveToSentItems: true }
 // Attachments are inline base64 with name + contentType.
-async function handleSend(accessToken: string, body: any) {
+async function handleSend(accessToken: string, body: any, sb: any, userId: string) {
   const to = Array.isArray(body.to) ? body.to : (body.to ? [body.to] : []);
   const cc = Array.isArray(body.cc) ? body.cc : (body.cc ? [body.cc] : []);
   const subject = body.subject || "";
-  const messageBody = body.body || "";
+  let messageBody = body.body || "";
   const attachments: Array<{ filename: string; mimeType: string; data: string }> = body.attachments || [];
+  const dealId: string | null = body.deal_id || null;
+  const sequenceEnrollmentId: string | null = body.sequence_enrollment_id || null;
+  const sequenceStepIndex: number | null = (typeof body.sequence_step_index === "number") ? body.sequence_step_index : null;
+
+  // Optionally inject tracking pixel + rewrite links for click tracking
+  // only when the body looks like HTML. For plain text, no pixel.
+  const trackingEnabled = body.tracking !== false;
+  const trackingToken = trackingEnabled ? generateTrackingToken() : null;
+  const isHtml = /<\/?(html|body|p|div|br|table|span|a)\b/i.test(messageBody);
+  if (trackingEnabled && trackingToken && isHtml && TRACKING_BASE_URL) {
+    messageBody = rewriteLinksForTracking(messageBody, TRACKING_BASE_URL, trackingToken);
+    messageBody = injectTrackingPixel(messageBody, TRACKING_BASE_URL, trackingToken);
+  }
 
   const message: any = {
     subject,
-    body: { contentType: "Text", content: messageBody },
+    body: { contentType: isHtml ? "HTML" : "Text", content: messageBody },
     toRecipients: to.map((addr: string) => ({ emailAddress: { address: addr } })),
   };
   if (cc.length > 0) {
@@ -344,7 +386,7 @@ async function handleSend(accessToken: string, body: any) {
       "@odata.type": "#microsoft.graph.fileAttachment",
       name: a.filename,
       contentType: a.mimeType,
-      contentBytes: a.data,   // already base64
+      contentBytes: a.data,
     }));
   }
 
@@ -360,5 +402,49 @@ async function handleSend(accessToken: string, body: any) {
     const errText = await sendRes.text();
     return jsonResponse({ success: false, error: `Outlook send failed: ${errText}` }, 200);
   }
-  return jsonResponse({ success: true });
+
+  // Log outbound to outreach_log so contact counters bump + tracking
+  // pixel has somewhere to land its open event.
+  try {
+    const { data: prof } = await sb
+      .from("profiles")
+      .select("property_id")
+      .eq("id", userId)
+      .maybeSingle();
+    const propertyId = prof?.property_id ?? null;
+
+    // Best-effort contact lookup by recipient email
+    let contactId: string | null = null;
+    let resolvedDealId: string | null = dealId;
+    if (to.length && propertyId) {
+      const { data: contact } = await sb
+        .from("contacts")
+        .select("id, deal_id")
+        .eq("property_id", propertyId)
+        .ilike("email", to[0])
+        .maybeSingle();
+      if (contact) {
+        contactId = contact.id;
+        if (!resolvedDealId) resolvedDealId = contact.deal_id || null;
+      }
+    }
+
+    await logOutreach({
+      sb,
+      propertyId,
+      userId,
+      provider: "outlook",
+      direction: "outbound",
+      contactId,
+      dealId: resolvedDealId,
+      toEmail: to[0] || null,
+      subject,
+      bodyPreview: (body.body || "").slice(0, 500),
+      trackingToken,
+      sequenceEnrollmentId,
+      sequenceStepIndex,
+    });
+  } catch { /* logging is best-effort */ }
+
+  return jsonResponse({ success: true, tracking_token: trackingToken });
 }

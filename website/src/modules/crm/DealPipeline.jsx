@@ -216,10 +216,19 @@ export default function DealPipeline() {
     return () => { offNew(); offFind() }
   }, [])
 
-  // Auto-open deal from URL param (?deal=<id>) or filter by stage (?stage=<name>)
+  // Auto-open deal from URL param (?deal=<id>), filter by stage
+  // (?stage=<name>), or open the prospect-finder modal (?find=1).
+  // The find param lets the Prospecting hub's "Find Prospects"
+  // sidebar entry deep-link directly into the modal.
   useEffect(() => {
     const dealId = searchParams.get('deal')
     const stageParam = searchParams.get('stage')
+    const findParam = searchParams.get('find')
+    if (findParam === '1') {
+      setShowProspectFinder(true)
+      setSearchParams({}, { replace: true })
+      return
+    }
     if (dealId && deals?.length) {
       const found = deals.find(d => d.id === dealId)
       if (found) {

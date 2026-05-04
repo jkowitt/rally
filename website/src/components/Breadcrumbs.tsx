@@ -53,6 +53,7 @@ export default function Breadcrumbs({ items, className = '' }: BreadcrumbsProps)
 
 const SEGMENT_LABELS: Record<string, string> = {
   app: 'Home',
+  prospect: 'Prospecting',
   crm: 'CRM',
   accounts: 'Account Management',
   ops: 'Operations',

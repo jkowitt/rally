@@ -40,40 +40,36 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
       items: [{ to: '/app', label: 'Dashboard' }],
     },
     {
-      label: 'Prospecting & Pipeline',
-      flag: 'crm',
+      label: 'Pipeline',
       items: [
-        { to: '/app/crm/assets', label: t?.asset ? `${t.asset}s` : 'Assets' },
         { to: '/app/crm/pipeline', label: `${t?.deal || 'Deal'} Pipeline` },
         { to: '/app/crm/accounts', label: 'Accounts' },
-        { to: '/app/crm/priority', label: 'Priority Queue' },
-        { to: '/app/crm/signals', label: 'Signal Radar' },
-        { to: '/app/crm/lookalikes', label: 'Lookalikes' },
-        { to: '/app/crm/sequences', label: 'Sequences' },
-        { to: '/app/crm/outreach-analytics', label: 'Outreach Analytics' },
-        { to: '/app/crm/velocity', label: 'Sales Velocity' },
-        { to: '/app/crm/postmortems', label: 'Postmortems' },
-        { to: '/app/crm/relationships', label: 'Relationship Search' },
+        { to: '/app/crm/assets', label: t?.asset ? `${t.asset}s` : 'Assets' },
         { to: '/app/crm/declined', label: 'Declined' },
       ],
     },
     {
-      label: 'Admin',
-      flag: 'crm',
+      label: 'Performance',
       items: [
-        { to: '/app/crm/audit', label: 'Audit Log' },
-        { to: '/app/crm/integrations', label: 'Integrations' },
+        { to: '/app/crm/velocity', label: 'Sales Velocity' },
+        { to: '/app/crm/analytics', label: 'Sales Analytics' },
+        { to: '/app/crm/insights', label: 'AI Insights' },
+        { to: '/app/crm/postmortems', label: 'Postmortems' },
       ],
     },
     {
       label: 'Activity',
-      flag: 'crm',
       items: [
-        { to: '/app/crm/inbox', label: 'Inbox' },
+        { to: '/app/crm/inbox', label: 'Inbox', shared: true },
         { to: '/app/crm/activities', label: 'Timeline' },
         { to: '/app/crm/tasks', label: 'Tasks' },
-        { to: '/app/crm/insights', label: 'AI Insights' },
-        { to: '/app/crm/analytics', label: 'Sales Analytics' },
+      ],
+    },
+    {
+      label: 'Admin',
+      items: [
+        { to: '/app/crm/audit', label: 'Audit Log' },
+        { to: '/app/crm/integrations', label: 'Integrations' },
       ],
     },
   ]
@@ -105,6 +101,45 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
   }
 
   return sections
+}
+
+// Prospecting hub: top-of-funnel work — discovering prospects,
+// running cadences, monitoring signals, and the inbox where
+// replies first land. Inbox is "shared" — it appears in CRM too
+// because both audiences need it.
+function getProspectingSections() {
+  return [
+    {
+      label: 'Overview',
+      items: [{ to: '/app', label: 'Dashboard' }],
+    },
+    {
+      label: 'Find',
+      items: [
+        // The "Find Prospects" entry routes to the pipeline page
+        // with ?find=1 so the existing modal opens automatically.
+        // Keeps the search UX in one place without duplicating it.
+        { to: '/app/crm/pipeline?find=1', label: 'Find Prospects' },
+        { to: '/app/crm/lookalikes', label: 'Lookalikes' },
+        { to: '/app/crm/signals', label: 'Signal Radar' },
+        { to: '/app/crm/relationships', label: 'Relationship Search' },
+      ],
+    },
+    {
+      label: 'Engage',
+      items: [
+        { to: '/app/crm/sequences', label: 'Sequences' },
+        { to: '/app/crm/priority', label: 'Priority Queue' },
+        { to: '/app/crm/inbox', label: 'Inbox', shared: true },
+      ],
+    },
+    {
+      label: 'Measure',
+      items: [
+        { to: '/app/crm/outreach-analytics', label: 'Outreach Analytics' },
+      ],
+    },
+  ]
 }
 
 function getAccountsSections(t) {
@@ -245,7 +280,9 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
   }, [location.pathname])
 
   let navSections = []
-  if (activeHub === 'crm') {
+  if (activeHub === 'prospect') {
+    navSections = getProspectingSections()
+  } else if (activeHub === 'crm') {
     navSections = getCrmSections(t, propertyType, flags, moduleLabels)
   } else if (activeHub === 'accounts') {
     navSections = getAccountsSections(t)

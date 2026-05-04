@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 const STORAGE_KEY = 'll_active_hub'
 const CHANGE_EVENT = 'll-active-hub-change'
 
-export type HubId = 'crm' | 'accounts' | 'ops'
-export type HubAccent = 'sky' | 'emerald' | 'amber'
+export type HubId = 'prospect' | 'crm' | 'accounts' | 'ops'
+export type HubAccent = 'sky' | 'violet' | 'emerald' | 'amber'
 
 export interface Hub {
   id: HubId
@@ -17,9 +17,25 @@ export interface Hub {
 // active-state pill in the TopBar. Keep these to colors that are
 // clearly distinguishable for color-vision-deficient users.
 export const HUBS: readonly Hub[] = [
-  { id: 'crm',      label: 'CRM & Prospecting',    icon: '📊', accent: 'sky' },
-  { id: 'accounts', label: 'Account Management',   icon: '🤝', accent: 'emerald' },
-  { id: 'ops',      label: 'Business Operations',  icon: '⚙',  accent: 'amber' },
+  { id: 'prospect', label: 'Prospecting',           icon: '🎯', accent: 'violet' },
+  { id: 'crm',      label: 'CRM',                   icon: '📊', accent: 'sky' },
+  { id: 'accounts', label: 'Account Management',    icon: '🤝', accent: 'emerald' },
+  { id: 'ops',      label: 'Business Operations',   icon: '⚙',  accent: 'amber' },
+]
+
+// PROSPECT_PATHS lists URL prefixes that belong to the Prospecting
+// hub. Order matters — anything not matched here falls through to
+// the existing CRM detection so deep links to /app/crm/pipeline
+// still land in CRM (not Prospecting).
+const PROSPECT_PATHS = [
+  '/app/crm/signals',
+  '/app/crm/lookalikes',
+  '/app/crm/priority',
+  '/app/crm/sequences',
+  '/app/crm/outreach-analytics',
+  '/app/crm/relationships',
+  '/app/crm/inbox',
+  '/app/prospect',
 ]
 
 export function detectHub(pathname: string | null | undefined): HubId {
@@ -39,6 +55,8 @@ export function detectHub(pathname: string | null | undefined): HubId {
   if (pathname.startsWith('/app/crm/newsletter')) return 'ops'
   if (pathname.startsWith('/app/crm/automations')) return 'ops'
   if (pathname.startsWith('/app/crm/projects')) return 'ops'
+  // Prospecting routes (subset of /app/crm/*) split out into their own hub.
+  if (PROSPECT_PATHS.some(p => pathname.startsWith(p))) return 'prospect'
   return 'crm'
 }
 
@@ -86,5 +104,6 @@ export function useActiveHub(): ActiveHubAPI {
 export function getHubLandingPath(hubId: HubId): string {
   if (hubId === 'accounts') return '/app/accounts'
   if (hubId === 'ops') return '/app/ops'
+  if (hubId === 'prospect') return '/app/crm/priority'
   return '/app'
 }

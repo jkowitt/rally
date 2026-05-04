@@ -54,12 +54,14 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
     // Tailwind needs literal class names — can't compose them at runtime.
     if (accent === 'emerald') return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/50 shadow-sm'
     if (accent === 'amber')   return 'bg-amber-500/15 text-amber-300 border-amber-500/50 shadow-sm'
+    if (accent === 'violet')  return 'bg-violet-500/15 text-violet-300 border-violet-500/50 shadow-sm'
     return 'bg-sky-500/15 text-sky-300 border-sky-500/50 shadow-sm'
   }
 
   function hubDotClass(accent) {
     if (accent === 'emerald') return 'bg-emerald-400'
     if (accent === 'amber')   return 'bg-amber-400'
+    if (accent === 'violet')  return 'bg-violet-400'
     return 'bg-sky-400'
   }
 

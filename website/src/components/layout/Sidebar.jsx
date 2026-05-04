@@ -1,13 +1,14 @@
 import { useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
+import { useAddons } from '@/hooks/useAddons'
 import { useAuth } from '@/hooks/useAuth'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { useActiveHub, detectHub } from '@/hooks/useActiveHub'
 import { emit } from '@/lib/appEvents'
 import { Lightbulb } from 'lucide-react'
 
-function getCrmSections(t, propertyType, flags, moduleLabels) {
+function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
   const industryItems = []
   if (propertyType === 'nonprofit') {
     industryItems.push({ to: '/app/industry/impact', label: 'Impact Metrics' })
@@ -81,19 +82,25 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
     })
   }
 
-  if (flags.sportify) {
+  // Specialty modules are now add-ons. The sidebar gates them via
+  // useAddons (read at render time below) AND keeps the legacy
+  // feature_flags fallback so any property that had these enabled
+  // before migration 081 doesn't lose access. The 081 backfill
+  // already inserted property_addons rows for everyone who had
+  // the flag, so steady-state we're reading from useAddons.
+  if (addons.has('activations') || flags.sportify) {
     sections.push({
       label: moduleLabels.sportify || 'Activations',
       items: [{ to: '/app/sportify/events', label: 'Events' }],
     })
   }
-  if (flags.valora) {
+  if (addons.has('valora') || flags.valora) {
     sections.push({
       label: moduleLabels.valora || 'VALORA',
       items: [{ to: '/app/valora', label: 'Valuations' }],
     })
   }
-  if (flags.businessnow) {
+  if (addons.has('businessnow') || flags.businessnow) {
     sections.push({
       label: moduleLabels.businessnow || 'Business Now',
       items: [{ to: '/app/businessnow', label: 'Intelligence' }],
@@ -261,6 +268,7 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing, re
 
 export default function Sidebar({ collapsed, onToggle, mobile }) {
   const { flags } = useFeatureFlags()
+  const addons = useAddons()
   const { isDeveloper, realIsDeveloper, profile } = useAuth()
   const config = useIndustryConfig()
   const moduleLabels = config.moduleLabels || {}
@@ -290,7 +298,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
   if (activeHub === 'prospect') {
     navSections = getProspectingSections()
   } else if (activeHub === 'crm') {
-    navSections = getCrmSections(t, propertyType, flags, moduleLabels)
+    navSections = getCrmSections(t, propertyType, flags, moduleLabels, addons)
   } else if (activeHub === 'accounts') {
     navSections = getAccountsSections(t)
   } else if (activeHub === 'ops') {

@@ -343,7 +343,7 @@ async function generateContract(sb: any, body: any): Promise<any> {
     }
   }
 
-  const prompt = "You are a professional sports sponsorship contract writer. Generate a formal sponsorship contract.\n\nDeal:\n- Brand: " + (deal?.brand_name || "TBD") + "\n- Contact: " + (deal?.contact_first_name || "") + " " + (deal?.contact_last_name || "") + ", " + (deal?.contact_position || "") + " at " + (deal?.contact_company || "") + "\n- Email: " + (deal?.contact_email || "") + "\n- Value: $" + Number(deal?.value || 0).toLocaleString() + "\n- Start: " + (deal?.start_date || "TBD") + "\n- End: " + (deal?.end_date || "TBD") + "\n\nAssets:\n" + assetLines + "\n\nAdditional Terms: " + (body.terms || "Standard terms") + "\n\nGenerate a complete contract with: parties, term, sponsorship benefits, financial terms, IP rights, termination, general provisions. Return only the contract text.";
+  const prompt = "You are a professional B2B partnership contract writer. Generate a formal sponsorship contract.\n\nDeal:\n- Brand: " + (deal?.brand_name || "TBD") + "\n- Contact: " + (deal?.contact_first_name || "") + " " + (deal?.contact_last_name || "") + ", " + (deal?.contact_position || "") + " at " + (deal?.contact_company || "") + "\n- Email: " + (deal?.contact_email || "") + "\n- Value: $" + Number(deal?.value || 0).toLocaleString() + "\n- Start: " + (deal?.start_date || "TBD") + "\n- End: " + (deal?.end_date || "TBD") + "\n\nAssets:\n" + assetLines + "\n\nAdditional Terms: " + (body.terms || "Standard terms") + "\n\nGenerate a complete contract with: parties, term, sponsorship benefits, financial terms, IP rights, termination, general provisions. Return only the contract text.";
 
   const text = await callClaude(prompt, 4096);
   return { contract_text: text };
@@ -462,14 +462,14 @@ async function dealInsights(body: any) {
   const acts = (body.activities || []).slice(0, 10);
   const tasks = (body.tasks || []).slice(0, 5);
   const contracts = (body.contracts || []).slice(0, 3);
-  const prompt = "You are an elite sports sponsorship sales advisor. Analyze this deal and provide actionable insights.\n\nDeal: " + d.brand_name + ", Value: $" + (d.value || 0) + ", Stage: " + d.stage + ", Priority: " + (d.priority || "Medium") + ", Win Prob: " + (d.win_probability || 0) + "%, Contact: " + (d.contact_name || "Unknown") + " (" + (d.contact_position || "") + " at " + (d.contact_company || "") + "), Source: " + (d.source || "Unknown") + ", Added: " + (d.date_added || "Unknown") + ", Last Contacted: " + (d.last_contacted || "Never") + ", Notes: " + (d.notes || "None") + "\n\nRecent Activities: " + JSON.stringify(acts.map((a: any) => a.activity_type + ": " + (a.subject || "") + " (" + a.occurred_at + ")")) + "\n\nOpen Tasks: " + JSON.stringify(tasks.map((t: any) => t.title + " (due: " + t.due_date + ", " + t.priority + ")")) + "\n\nContracts: " + contracts.length + " total\n\nReturn a JSON object with:\n{\"health_score\": 1-10,\n\"next_best_actions\": [\"action1\", \"action2\", \"action3\"],\n\"risk_factors\": [\"risk1\"],\n\"opportunities\": [\"opp1\"],\n\"recommended_talking_points\": [\"point1\", \"point2\"],\n\"suggested_email_subject\": \"string\",\n\"days_to_close_estimate\": number,\n\"coaching_tip\": \"string\"}\n\nReturn ONLY valid JSON.";
+  const prompt = "You are an elite B2B partnership sales advisor. Analyze this deal and provide actionable insights.\n\nDeal: " + d.brand_name + ", Value: $" + (d.value || 0) + ", Stage: " + d.stage + ", Priority: " + (d.priority || "Medium") + ", Win Prob: " + (d.win_probability || 0) + "%, Contact: " + (d.contact_name || "Unknown") + " (" + (d.contact_position || "") + " at " + (d.contact_company || "") + "), Source: " + (d.source || "Unknown") + ", Added: " + (d.date_added || "Unknown") + ", Last Contacted: " + (d.last_contacted || "Never") + ", Notes: " + (d.notes || "None") + "\n\nRecent Activities: " + JSON.stringify(acts.map((a: any) => a.activity_type + ": " + (a.subject || "") + " (" + a.occurred_at + ")")) + "\n\nOpen Tasks: " + JSON.stringify(tasks.map((t: any) => t.title + " (due: " + t.due_date + ", " + t.priority + ")")) + "\n\nContracts: " + contracts.length + " total\n\nReturn a JSON object with:\n{\"health_score\": 1-10,\n\"next_best_actions\": [\"action1\", \"action2\", \"action3\"],\n\"risk_factors\": [\"risk1\"],\n\"opportunities\": [\"opp1\"],\n\"recommended_talking_points\": [\"point1\", \"point2\"],\n\"suggested_email_subject\": \"string\",\n\"days_to_close_estimate\": number,\n\"coaching_tip\": \"string\"}\n\nReturn ONLY valid JSON.";
   const text = await callClaude(prompt, 1024);
   return { insights: extractJSON(text) };
 }
 
 async function pipelineForecast(body: any) {
   const deals = (body.deals || []).map((d: any) => ({ brand: d.brand_name, value: d.value, stage: d.stage, win_prob: d.win_probability, age: d.date_added }));
-  const prompt = "You are a revenue forecasting analyst for sports sponsorships. Analyze this pipeline and forecast.\n\nDeals: " + JSON.stringify(deals) + "\nHistorical Win Rate: " + (body.historical_win_rate || 30) + "%\n\nReturn JSON:\n{\"forecast_30_days\": number,\n\"forecast_60_days\": number,\n\"forecast_90_days\": number,\n\"best_case\": number,\n\"worst_case\": number,\n\"most_likely\": number,\n\"at_risk_deals\": [\"brand names\"],\n\"hot_deals\": [\"brand names\"],\n\"recommendations\": [\"rec1\", \"rec2\", \"rec3\"],\n\"pipeline_health\": \"Healthy\" or \"At Risk\" or \"Critical\",\n\"summary\": \"2 sentence summary\"}\n\nReturn ONLY valid JSON.";
+  const prompt = "You are a revenue forecasting analyst for B2B partnerships. Analyze this pipeline and forecast.\n\nDeals: " + JSON.stringify(deals) + "\nHistorical Win Rate: " + (body.historical_win_rate || 30) + "%\n\nReturn JSON:\n{\"forecast_30_days\": number,\n\"forecast_60_days\": number,\n\"forecast_90_days\": number,\n\"best_case\": number,\n\"worst_case\": number,\n\"most_likely\": number,\n\"at_risk_deals\": [\"brand names\"],\n\"hot_deals\": [\"brand names\"],\n\"recommendations\": [\"rec1\", \"rec2\", \"rec3\"],\n\"pipeline_health\": \"Healthy\" or \"At Risk\" or \"Critical\",\n\"summary\": \"2 sentence summary\"}\n\nReturn ONLY valid JSON.";
   const text = await callClaude(prompt, 1024);
   return { forecast: extractJSON(text) };
 }
@@ -509,7 +509,7 @@ async function draftEmailFn(body: any) {
   }
 
   const prompt =
-    `You are a professional sports sponsorship sales executive. Draft a ${emailType} email.\n\n` +
+    `You are a professional B2B partnership sales executive. Draft a ${emailType} email.\n\n` +
     `Deal: ${d.brand_name || ""}, Stage: ${d.stage || ""}, ` +
     `Contact: ${d.contact_name || ""} (${d.contact_position || ""}), Value: $${d.value || 0}\n` +
     `Context:\n${contextLines}` +
@@ -560,7 +560,7 @@ async function accountBrief(body: any) {
   const activities = (body.activities || []).slice(0, 10);
   const news = body.news_snippet || "";
   const prompt =
-    `You are a senior sales strategist for sports sponsorships. Produce a 1-page brief on this account.\n\n` +
+    `You are a senior sales strategist for B2B partnerships. Produce a 1-page brief on this account.\n\n` +
     `Brand: ${d.brand_name}\n` +
     `Industry: ${d.sub_industry || "unknown"}\n` +
     `Location: ${[d.city, d.state].filter(Boolean).join(", ")}\n` +
@@ -592,7 +592,7 @@ async function findLookalikes(body: any) {
   const d = body.deal || {};
   const recentWins = (body.recent_wins || []).slice(0, 10);
   const prompt =
-    `You are a B2B prospecting strategist for sports sponsorships. Given a seed brand, suggest 10 lookalike brands the property should also pursue.\n\n` +
+    `You are a B2B prospecting strategist. Given a seed brand, suggest 10 lookalike brands the property should also pursue.\n\n` +
     `Seed brand: ${d.brand_name}\n` +
     `Industry: ${d.sub_industry || "unknown"}\n` +
     `Location: ${[d.city, d.state].filter(Boolean).join(", ")}\n` +
@@ -780,20 +780,20 @@ async function transcribeCall(sb: any, body: any) {
 async function analyzeLostDeal(body: any) {
   const d = body.deal || {};
   const acts = (body.activities || []).slice(0, 15);
-  const prompt = "You are a sales loss analyst for sports sponsorships. Analyze why this deal was lost and how to improve.\n\nDeal: " + d.brand_name + ", Value: $" + (d.value || 0) + ", Source: " + (d.source || "Unknown") + ", Stage when lost: " + d.stage + ", Lost Reason: " + (d.lost_reason || "Not specified") + ", Added: " + (d.date_added || "Unknown") + ", Notes: " + (d.notes || "None") + "\n\nActivities: " + JSON.stringify(acts.map((a: any) => a.activity_type + ": " + (a.subject || ""))) + "\n\nReturn JSON:\n{\"likely_reasons\": [\"reason1\", \"reason2\"],\n\"what_went_well\": [\"item1\"],\n\"what_to_improve\": [\"item1\", \"item2\"],\n\"reengagement_possible\": true/false,\n\"reengagement_strategy\": \"string or null\",\n\"lessons_learned\": \"string\",\n\"similar_deal_tips\": [\"tip1\", \"tip2\"]}\n\nReturn ONLY valid JSON.";
+  const prompt = "You are a sales loss analyst for B2B partnerships. Analyze why this deal was lost and how to improve.\n\nDeal: " + d.brand_name + ", Value: $" + (d.value || 0) + ", Source: " + (d.source || "Unknown") + ", Stage when lost: " + d.stage + ", Lost Reason: " + (d.lost_reason || "Not specified") + ", Added: " + (d.date_added || "Unknown") + ", Notes: " + (d.notes || "None") + "\n\nActivities: " + JSON.stringify(acts.map((a: any) => a.activity_type + ": " + (a.subject || ""))) + "\n\nReturn JSON:\n{\"likely_reasons\": [\"reason1\", \"reason2\"],\n\"what_went_well\": [\"item1\"],\n\"what_to_improve\": [\"item1\", \"item2\"],\n\"reengagement_possible\": true/false,\n\"reengagement_strategy\": \"string or null\",\n\"lessons_learned\": \"string\",\n\"similar_deal_tips\": [\"tip1\", \"tip2\"]}\n\nReturn ONLY valid JSON.";
   const text = await callClaude(prompt, 1024);
   return { analysis: extractJSON(text) };
 }
 
 async function enrichContact(body: any) {
-  const prompt = "You are a business intelligence researcher for sports sponsorships. Based on the following contact info, provide enriched data and conversation starters.\n\nName: " + (body.name || "") + "\nCompany: " + (body.company || "") + "\nPosition: " + (body.position || "") + "\n\nReturn JSON:\n{\"industry\": \"string\",\n\"company_type\": \"string\",\n\"likely_budget_range\": \"string\",\n\"sponsorship_interests\": [\"interest1\", \"interest2\"],\n\"conversation_starters\": [\"starter1\", \"starter2\", \"starter3\"],\n\"key_decision_factors\": [\"factor1\", \"factor2\"],\n\"recommended_assets\": [\"LED Board\", \"Social Post\", etc],\n\"engagement_approach\": \"string\"}\n\nReturn ONLY valid JSON.";
+  const prompt = "You are a B2B sales intelligence researcher. Based on the following contact info, provide enriched data and conversation starters.\n\nName: " + (body.name || "") + "\nCompany: " + (body.company || "") + "\nPosition: " + (body.position || "") + "\n\nReturn JSON:\n{\"industry\": \"string\",\n\"company_type\": \"string\",\n\"likely_budget_range\": \"string\",\n\"sponsorship_interests\": [\"interest1\", \"interest2\"],\n\"conversation_starters\": [\"starter1\", \"starter2\", \"starter3\"],\n\"key_decision_factors\": [\"factor1\", \"factor2\"],\n\"recommended_assets\": [\"LED Board\", \"Social Post\", etc],\n\"engagement_approach\": \"string\"}\n\nReturn ONLY valid JSON.";
   const text = await callClaude(prompt, 1024);
   return { enrichment: extractJSON(text) };
 }
 
 async function meetingNotes(body: any) {
   const d = body.deal || {};
-  const prompt = "You are a meeting notes assistant for sports sponsorship sales. Create structured meeting notes.\n\nDeal: " + (d.brand_name || "Unknown") + "\nAttendees: " + (body.attendees || "Not specified") + "\nAgenda: " + (body.agenda || "General discussion") + "\nRaw Notes: " + (body.raw_notes || "No notes provided") + "\n\nReturn JSON:\n{\"summary\": \"2-3 sentence summary\",\n\"key_decisions\": [\"decision1\"],\n\"action_items\": [{\"task\": \"string\", \"owner\": \"string\", \"due\": \"string\"}],\n\"follow_up_email_draft\": \"string\",\n\"next_meeting_agenda\": [\"item1\", \"item2\"],\n\"deal_stage_recommendation\": \"string or null\",\n\"sentiment\": \"Positive/Neutral/Negative\"}\n\nReturn ONLY valid JSON.";
+  const prompt = "You are a meeting notes assistant for B2B partnership sales. Create structured meeting notes.\n\nDeal: " + (d.brand_name || "Unknown") + "\nAttendees: " + (body.attendees || "Not specified") + "\nAgenda: " + (body.agenda || "General discussion") + "\nRaw Notes: " + (body.raw_notes || "No notes provided") + "\n\nReturn JSON:\n{\"summary\": \"2-3 sentence summary\",\n\"key_decisions\": [\"decision1\"],\n\"action_items\": [{\"task\": \"string\", \"owner\": \"string\", \"due\": \"string\"}],\n\"follow_up_email_draft\": \"string\",\n\"next_meeting_agenda\": [\"item1\", \"item2\"],\n\"deal_stage_recommendation\": \"string or null\",\n\"sentiment\": \"Positive/Neutral/Negative\"}\n\nReturn ONLY valid JSON.";
   const text = await callClaude(prompt, 1024);
   return { notes: extractJSON(text) };
 }

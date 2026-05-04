@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSeo } from '@/hooks/useSeo'
 import { supabase } from '@/lib/supabase'
+import AddonsCatalog from '@/components/AddonsCatalog'
 
 /**
  * Public /pricing page. Every piece of content — plans, features, FAQs,
@@ -188,6 +189,10 @@ export default function PricingPage() {
           </div>
         </section>
       )}
+
+      <section id="addons" className="border-t border-border py-12 px-4">
+        <AddonsCatalog />
+      </section>
 
       <footer className="border-t border-border py-10 text-center">
         <div className="text-[10px] text-text-muted">

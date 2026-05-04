@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import { FeatureFlagProvider } from './hooks/useFeatureFlags'
 import { ComposeEmailProvider } from './hooks/useComposeEmail'
+import { AddonsProvider } from './hooks/useAddons'
 import { ImpersonationProvider } from './hooks/useImpersonation'
 import ToastProvider from './components/Toast'
 import ProtectedRoute from './components/layout/ProtectedRoute'
@@ -42,6 +43,7 @@ const RelationshipSearch = lazyRetry(() => import('./modules/crm/RelationshipSea
 const Sequences = lazyRetry(() => import('./modules/crm/Sequences'))
 const OutreachAnalytics = lazyRetry(() => import('./modules/crm/OutreachAnalytics'))
 const Postmortems = lazyRetry(() => import('./modules/crm/Postmortems'))
+const AddonRequests = lazyRetry(() => import('./pages/admin/AddonRequests'))
 const SalesVelocity = lazyRetry(() => import('./modules/crm/SalesVelocity'))
 const Accounts = lazyRetry(() => import('./modules/crm/Accounts'))
 const AuditLog = lazyRetry(() => import('./modules/crm/AuditLog'))
@@ -204,6 +206,7 @@ export default function App() {
                 <ProtectedRoute>
                   <LegalGate>
                   <ComposeEmailProvider>
+                  <AddonsProvider>
                     <AppShell>
                       <Suspense fallback={null}>
                         <OnboardingModal />
@@ -294,6 +297,7 @@ export default function App() {
                             <Route path="/admin/email-queue" element={<EmailQueue />} />
                             <Route path="/admin/social-queue" element={<SocialQueue />} />
                             <Route path="/admin/trials" element={<AdminTrials />} />
+                            <Route path="/admin/addons" element={<AddonRequests />} />
                             <Route path="/admin/ads" element={<AdminAds />} />
                             <Route path="/admin/notifications" element={<AdminNotifications />} />
                             <Route path="/admin/daily-digest" element={<DailyDigestPreview />} />
@@ -315,6 +319,7 @@ export default function App() {
                         </Suspense>
                       </ErrorBoundary>
                     </AppShell>
+                  </AddonsProvider>
                   </ComposeEmailProvider>
                   </LegalGate>
                 </ProtectedRoute>

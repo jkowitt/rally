@@ -102,6 +102,34 @@ Deno.serve(async (req: Request) => {
     const { data: u } = await sb.auth.getUser(jwt);
     if (!u?.user) return jsonResponse({ error: "unauthorized" }, 401);
 
+    // Per-user rate limit: 30 rewrites / 5 minutes. AI calls are
+    // the costly path — anything more is suspicious or a runaway.
+    const { data: allowed } = await sb.rpc("check_rate_limit", {
+      p_scope: "email_coach",
+      p_identifier: u.user.id,
+      p_window_seconds: 300,
+      p_max_hits: 30,
+    });
+    if (allowed === false) {
+      try {
+        await sb.rpc("log_security_event", {
+          p_event_type: "rate_limit_hit",
+          p_severity: "info",
+          p_property_id: null,
+          p_user_id: u.user.id,
+          p_source: "email-coach",
+          p_message: "30 rewrites / 5 min cap reached",
+          p_payload: {},
+        });
+      } catch { /* swallow */ }
+      return jsonResponse({
+        rewritten_text: "",
+        score: 0,
+        rationale: "Rate limit reached.",
+        message_to_user: "Take a breath — try again in a few minutes.",
+      }, 429);
+    }
+
     const body = await req.json();
     const text: string = String(body.text || "").slice(0, MAX_TEXT_LEN);
     const incoming: string = String(body.incoming_email || "").slice(0, MAX_INCOMING_LEN);

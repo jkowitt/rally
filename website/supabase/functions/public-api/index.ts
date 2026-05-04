@@ -34,16 +34,55 @@ Deno.serve(async (req: Request) => {
   const apiKey = req.headers.get("x-rally-api-key");
   if (!apiKey) return jsonResponse({ error: "missing X-Rally-API-Key" }, 401);
 
-  // Look up the property by api_key. The api_keys table is created
-  // lazily in 077 if absent (see fallback below).
-  const { data: keyRow } = await sb
+  // Lookup by hash first (preferred path — 083 backfill ensures
+  // every active key has a token_hash). Falls back to plaintext
+  // lookup for any key not yet hashed (defensive, removable later).
+  const apiKeyHash = await sha256Hex(apiKey);
+  let { data: keyRow } = await sb
     .from("api_keys")
-    .select("property_id, is_active")
-    .eq("token", apiKey)
+    .select("id, property_id, is_active")
+    .eq("token_hash", apiKeyHash)
     .maybeSingle();
-  if (!keyRow || !keyRow.is_active) return jsonResponse({ error: "invalid api key" }, 401);
+  if (!keyRow) {
+    const fallback = await sb
+      .from("api_keys")
+      .select("id, property_id, is_active")
+      .eq("token", apiKey)
+      .maybeSingle();
+    keyRow = fallback.data;
+  }
+  if (!keyRow || !keyRow.is_active) {
+    try {
+      await sb.rpc("log_security_event", {
+        p_event_type: "invalid_api_key",
+        p_severity: "warn",
+        p_property_id: null,
+        p_user_id: null,
+        p_source: "public-api",
+        p_message: "Rejected API request with bad/inactive key",
+        p_payload: { key_prefix: apiKey.slice(0, 8) },
+      });
+    } catch { /* swallow */ }
+    return jsonResponse({ error: "invalid api key" }, 401);
+  }
 
   const propertyId = keyRow.property_id;
+
+  // Per-key rate limit: 600 requests / 5 minutes (~2 req/s sustained).
+  const { data: allowed } = await sb.rpc("check_rate_limit", {
+    p_scope: "public_api",
+    p_identifier: keyRow.id,
+    p_window_seconds: 300,
+    p_max_hits: 600,
+  });
+  if (allowed === false) {
+    return jsonResponse({ error: "rate limit exceeded" }, 429);
+  }
+
+  // Touch last_used_at — best-effort.
+  sb.from("api_keys").update({
+    last_used_at: new Date().toISOString(),
+  }).eq("id", keyRow.id).then(() => {}).catch(() => {});
   const url = new URL(req.url);
   const parts = url.pathname.replace(/^\/functions\/v1\/public-api\/?/, "").split("/").filter(Boolean);
   const resource = parts[0];
@@ -201,6 +240,11 @@ async function createContact(sb: any, propertyId: string, body: any) {
   const { data, error } = await sb.from("contacts").insert(payload).select().single();
   if (error) return jsonResponse({ error: error.message }, 500);
   return jsonResponse({ data }, 201);
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 function jsonResponse(body: unknown, status = 200) {

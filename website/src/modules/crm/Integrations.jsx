@@ -79,13 +79,22 @@ function ApiKeysSection({ propertyId, userId }) {
 
   const create = useMutation({
     mutationFn: async () => {
-      // Generate a 40-char hex token client-side (sufficient for v1; rotate by deleting + creating).
+      // Generate a 40-char hex token client-side. We store both
+      // the plaintext (for backwards compat with any key created
+      // before 083) AND a SHA-256 hash that the public-api uses
+      // for constant-time lookup. Operator can NULL the plaintext
+      // column once they're confident hash-lookup works.
       const arr = new Uint8Array(20)
       crypto.getRandomValues(arr)
       const token = 'rally_' + Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('')
-      const { data, error } = await supabase.from('api_keys').insert({
-        property_id: propertyId, created_by: userId, name: name.trim(), token, is_active: true,
-      }).select().single()
+      const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
+      const tokenHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
+      const { error } = await supabase.from('api_keys').insert({
+        property_id: propertyId, created_by: userId,
+        name: name.trim(), token, token_hash: tokenHash,
+        token_prefix: token.slice(0, 12),
+        is_active: true,
+      })
       if (error) throw error
       setRevealed(token)
     },

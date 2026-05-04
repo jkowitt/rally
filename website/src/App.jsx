@@ -44,6 +44,7 @@ const Sequences = lazyRetry(() => import('./modules/crm/Sequences'))
 const OutreachAnalytics = lazyRetry(() => import('./modules/crm/OutreachAnalytics'))
 const Postmortems = lazyRetry(() => import('./modules/crm/Postmortems'))
 const AddonRequests = lazyRetry(() => import('./pages/admin/AddonRequests'))
+const SystemHealth = lazyRetry(() => import('./pages/admin/SystemHealth'))
 const SalesVelocity = lazyRetry(() => import('./modules/crm/SalesVelocity'))
 const Accounts = lazyRetry(() => import('./modules/crm/Accounts'))
 const AuditLog = lazyRetry(() => import('./modules/crm/AuditLog'))
@@ -298,6 +299,7 @@ export default function App() {
                             <Route path="/admin/social-queue" element={<SocialQueue />} />
                             <Route path="/admin/trials" element={<AdminTrials />} />
                             <Route path="/admin/addons" element={<AddonRequests />} />
+                            <Route path="/admin/health" element={<SystemHealth />} />
                             <Route path="/admin/ads" element={<AdminAds />} />
                             <Route path="/admin/notifications" element={<AdminNotifications />} />
                             <Route path="/admin/daily-digest" element={<DailyDigestPreview />} />

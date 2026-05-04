@@ -171,9 +171,32 @@ Deno.serve(async (req: Request) => {
 
 async function handleWebhook(req: Request, supabase: any) {
   const body = await req.text();
-  // In production, verify webhook signature with STRIPE_WEBHOOK_SECRET
-  const event = JSON.parse(body);
+  const sigHeader = req.headers.get("stripe-signature") || "";
 
+  // HMAC verification: required when STRIPE_WEBHOOK_SECRET is set.
+  // Stripe's signature header is "t=<ts>,v1=<sig>,..." — we sign
+  // "<ts>.<body>" with the webhook secret using HMAC-SHA256 and
+  // constant-time-compare against v1. Tolerance: 5 minutes against
+  // replay. If verification fails, log a security_event and 400.
+  if (STRIPE_WEBHOOK_SECRET) {
+    const ok = await verifyStripeSignature(sigHeader, body, STRIPE_WEBHOOK_SECRET);
+    if (!ok) {
+      try {
+        await supabase.rpc("log_security_event", {
+          p_event_type: "webhook_sig_fail",
+          p_severity: "warn",
+          p_property_id: null,
+          p_user_id: null,
+          p_source: "stripe-billing",
+          p_message: "Stripe webhook signature verification failed",
+          p_payload: { sig_present: !!sigHeader },
+        });
+      } catch { /* swallow logging errors */ }
+      return new Response("Bad signature", { status: 400 });
+    }
+  }
+
+  const event = JSON.parse(body);
   const type = event.type;
   const data = event.data?.object;
 
@@ -230,6 +253,53 @@ async function handleWebhook(req: Request, supabase: any) {
   }
 
   return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
+}
+
+// verifyStripeSignature — port of Stripe's recommended Node SDK
+// signature verification, written for Deno's WebCrypto. Header format:
+//   "t=1234567890,v1=hex_signature[,v0=...]"
+// We sign "<t>.<rawBody>" with HMAC-SHA256, hex-compare against v1.
+// 5-minute tolerance to defend against replay.
+async function verifyStripeSignature(
+  header: string,
+  rawBody: string,
+  secret: string,
+  toleranceSeconds = 300,
+): Promise<boolean> {
+  if (!header || !secret) return false;
+  const parts = header.split(",").map(p => p.trim());
+  let timestamp = "";
+  const sigs: string[] = [];
+  for (const p of parts) {
+    const [k, v] = p.split("=", 2);
+    if (k === "t") timestamp = v;
+    else if (k === "v1" && v) sigs.push(v);
+  }
+  if (!timestamp || sigs.length === 0) return false;
+  const ts = Number(timestamp);
+  if (!Number.isFinite(ts)) return false;
+  if (Math.abs(Date.now() / 1000 - ts) > toleranceSeconds) return false;
+
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const sigBuf = await crypto.subtle.sign("HMAC", key, enc.encode(`${timestamp}.${rawBody}`));
+  const expected = Array.from(new Uint8Array(sigBuf))
+    .map(b => b.toString(16).padStart(2, "0")).join("");
+
+  // Constant-time compare against any of the v1 signatures.
+  return sigs.some(s => timingSafeEqualHex(s, expected));
+}
+
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= (a.charCodeAt(i) ^ b.charCodeAt(i));
+  }
+  return mismatch === 0;
 }
 
 async function stripeRequest(method: string, path: string, params: Record<string, string> = {}) {

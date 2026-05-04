@@ -49,6 +49,8 @@ const Integrations = lazyRetry(() => import('./modules/crm/Integrations'))
 const MigratePage = lazyRetry(() => import('./pages/contracts/MigratePage'))
 const FulfillmentTracker = lazyRetry(() => import('./modules/crm/FulfillmentTracker'))
 const AccountsDashboard = lazyRetry(() => import('./modules/accounts/AccountsDashboard'))
+const RenewalPipeline = lazyRetry(() => import('./modules/accounts/RenewalPipeline'))
+const AccountDetail = lazyRetry(() => import('./modules/accounts/AccountDetail'))
 const BrandReport = lazyRetry(() => import('./modules/crm/BrandReport'))
 const DeclinedDeals = lazyRetry(() => import('./modules/crm/DeclinedDeals'))
 const ActivityTimeline = lazyRetry(() => import('./modules/crm/ActivityTimeline'))
@@ -303,6 +305,8 @@ export default function App() {
                             <Route path="/marketing/email/*" element={<EmailRouter />} />
                             {/* Account Management hub */}
                             <Route path="/accounts" element={<AccountsDashboard />} />
+                            <Route path="/accounts/renewals" element={<RenewalPipeline />} />
+                            <Route path="/accounts/:id" element={<AccountDetail />} />
                             {/* Ops hub dashboard */}
                             <Route path="/ops" element={<OpsDashboard />} />
                             <Route path="/growth" element={<GrowthHub />} />

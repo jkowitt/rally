@@ -8,6 +8,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import { Button, Card, EmptyState, Badge } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
 import { Building, Plus, Trash2, Briefcase } from 'lucide-react'
+import AccountHealthBadge from '@/components/AccountHealthBadge'
 
 // Accounts — the parent-company layer. Each row rolls up open
 // pipeline + won value across all child deals (account_pipeline_summary
@@ -56,6 +57,22 @@ function AccountsTab({ propertyId }) {
         .eq('property_id', propertyId)
         .order('open_pipeline_value', { ascending: false, nullsFirst: false })
       return data || []
+    },
+  })
+
+  // Bulk-load health scores once for all accounts on the page so
+  // each row doesn't fire its own query.
+  const { data: healthByAccount = {} } = useQuery({
+    queryKey: ['accounts-health-bulk', propertyId],
+    enabled: !!propertyId && rows.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('account_health_score')
+        .select('*')
+        .eq('property_id', propertyId)
+      const byId = {}
+      for (const r of (data || [])) byId[r.account_id] = r
+      return byId
     },
   })
 
@@ -112,7 +129,10 @@ function AccountsTab({ propertyId }) {
           <Card key={a.account_id} padding="md" className="flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-text-primary">{a.name}</span>
+                <Link to={`/app/accounts/${a.account_id}`} className="text-sm font-semibold text-text-primary hover:text-accent">
+                  {a.name}
+                </Link>
+                <AccountHealthBadge accountId={a.account_id} health={healthByAccount[a.account_id]} />
                 <Badge tone="info">{a.total_deals || 0} deal{a.total_deals === 1 ? '' : 's'}</Badge>
                 {a.won_deals > 0 && <Badge tone="success">{a.won_deals} won</Badge>}
               </div>

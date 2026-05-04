@@ -98,15 +98,35 @@ export default function AccountsDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link
+          to="/app/accounts/renewals"
+          className="block rounded-lg bg-bg-surface border border-accent/30 p-5 hover:border-accent transition-colors"
+        >
+          <div className="text-xs uppercase tracking-wider text-accent mb-1">Retention</div>
+          <div className="text-lg font-semibold text-text-primary">Renewal Pipeline</div>
+          <div className="text-sm text-text-muted mt-2">
+            Every contract within 90 days of expiry. Start cadences early.
+          </div>
+        </Link>
+        <Link
+          to="/app/crm/accounts"
+          className="block rounded-lg bg-bg-surface border border-border p-5 hover:border-accent/40 transition-colors"
+        >
+          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">Manage</div>
+          <div className="text-lg font-semibold text-text-primary">Accounts</div>
+          <div className="text-sm text-text-muted mt-2">
+            Parent companies + agencies, with health scores + per-account QBRs.
+          </div>
+        </Link>
         <Link
           to="/app/crm/contracts"
           className="block rounded-lg bg-bg-surface border border-border p-5 hover:border-accent/40 transition-colors"
         >
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">Manage</div>
+          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">Deliver</div>
           <div className="text-lg font-semibold text-text-primary">Contracts</div>
           <div className="text-sm text-text-muted mt-2">
-            Upload, view, parse benefits, and archive prior versions.
+            Upload, parse benefits, version, and archive.
           </div>
         </Link>
         <Link

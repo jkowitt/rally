@@ -14,6 +14,7 @@ import CustomFieldsEditor, { CustomFieldsRenderer } from '@/components/CustomFie
 import SavedViewsBar from '@/components/SavedViewsBar'
 import BulkEditBar from '@/components/BulkEditBar'
 import DealComments from '@/components/DealComments'
+import OnboardingPlaybook from '@/components/OnboardingPlaybook'
 import SlashInput from '@/components/SlashInput'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { Badge, Button, EmptyState } from '@/components/ui'
@@ -1707,6 +1708,14 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           <div>
             <DealComments dealId={deal.id} propertyId={propertyId} />
           </div>
+
+          {/* Onboarding playbook — auto-created when deal flips to
+              Contracted (079 trigger). Hidden if no run exists yet. */}
+          {['Contracted', 'In Fulfillment', 'Renewed'].includes(deal.stage) && (
+            <div>
+              <OnboardingPlaybook dealId={deal.id} />
+            </div>
+          )}
 
           {/* Company Info */}
           {(deal.city || deal.state || deal.website || deal.linkedin || deal.sub_industry) && (

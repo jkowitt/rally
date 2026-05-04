@@ -146,10 +146,17 @@ function getAccountsSections(t) {
   return [
     {
       label: 'Overview',
-      items: [{ to: '/app/accounts', label: 'Account Management' }],
+      items: [{ to: '/app/accounts', label: 'Dashboard' }],
     },
     {
-      label: 'Active Accounts',
+      label: 'Retention',
+      items: [
+        { to: '/app/accounts/renewals', label: 'Renewal Pipeline' },
+        { to: '/app/crm/accounts', label: 'Accounts' },
+      ],
+    },
+    {
+      label: 'Delivery',
       items: [
         { to: '/app/crm/contracts', label: 'Contracts' },
         { to: '/app/crm/fulfillment', label: t?.fulfillment || 'Fulfillment' },

@@ -50,6 +50,7 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
         { to: '/app/crm/lookalikes', label: 'Lookalikes' },
         { to: '/app/crm/sequences', label: 'Sequences' },
         { to: '/app/crm/outreach-analytics', label: 'Outreach Analytics' },
+        { to: '/app/crm/velocity', label: 'Sales Velocity' },
         { to: '/app/crm/postmortems', label: 'Postmortems' },
         { to: '/app/crm/relationships', label: 'Relationship Search' },
         { to: '/app/crm/declined', label: 'Declined' },

@@ -1301,6 +1301,30 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
     }
   }
 
+  // Click-to-call via Twilio. Prompts for the rep's phone number
+  // (Twilio bridges from there to the contact). User's phone is
+  // remembered in localStorage so they only enter it once per device.
+  async function handleTwilioCall(contact) {
+    if (!contact?.phone) return
+    let userPhone = ''
+    try { userPhone = localStorage.getItem('ll.user-phone') || '' } catch { /* private mode */ }
+    if (!userPhone) {
+      userPhone = prompt('Your phone number (we call you first, then bridge to the contact):') || ''
+      if (!userPhone) return
+      try { localStorage.setItem('ll.user-phone', userPhone) } catch { /* ignore */ }
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('twilio-call', {
+        body: { to: contact.phone, from: userPhone, contact_id: contact.id, deal_id: deal.id },
+      })
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+      toast({ title: 'Calling…', description: `Twilio is dialing ${userPhone}, then bridging to ${contact.phone}.`, type: 'success' })
+    } catch (e) {
+      toast({ title: 'Call failed', description: humanError(e), type: 'error' })
+    }
+  }
+
   async function handleVerifyEmail(contactId, email) {
     if (!viewerPlanLimits.canUse('contact_research')) {
       toast({ title: 'Upgrade required', description: 'Email verification requires a paid plan.', type: 'warning' })
@@ -1586,7 +1610,19 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
                           🧠 Personality
                         </button>
                       )}
-                      {c.phone && <a href={`tel:${c.phone}`} className="text-xs text-accent hover:underline">{c.phone}</a>}
+                      {c.phone && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <a href={`tel:${c.phone}`} className="text-xs text-accent hover:underline">{c.phone}</a>
+                          <button
+                            type="button"
+                            onClick={() => handleTwilioCall(c)}
+                            className="text-[10px] font-mono text-text-muted hover:text-accent"
+                            title="Place a recorded call via Twilio (auto-transcribed)"
+                          >
+                            📞 Call
+                          </button>
+                        </span>
+                      )}
                       {c.linkedin && (
                         <a href={c.linkedin.startsWith('http') ? c.linkedin : `https://${c.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline">
                           LinkedIn &rarr;

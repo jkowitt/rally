@@ -54,6 +54,21 @@ export default function OutreachAnalytics() {
     },
   })
 
+  // Sender warm-up volume per day. Read from the view (075/076).
+  const { data: warmup = [] } = useQuery({
+    queryKey: ['sender-warmup', profile?.property_id, profile?.id],
+    enabled: !!profile?.property_id && !!profile?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('sender_daily_send_volume')
+        .select('send_day, sends, bounces')
+        .eq('property_id', profile.property_id)
+        .eq('user_id', profile.id)
+        .order('send_day', { ascending: true })
+      return data || []
+    },
+  })
+
   const hourCounts = Array(24).fill(0)
   for (const r of hourly) {
     if (!r.opened_at) continue
@@ -127,6 +142,34 @@ export default function OutreachAnalytics() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+      </Card>
+
+      <Card padding="md">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-text-primary">Your warm-up curve (30d)</h2>
+          <span className="text-[11px] text-text-muted font-mono">
+            keep daily ramp under +20% to protect deliverability
+          </span>
+        </div>
+        {warmup.length === 0 ? (
+          <p className="text-xs text-text-muted">No sends yet from this account.</p>
+        ) : (
+          <div className="flex items-end gap-1 h-24">
+            {warmup.map(d => {
+              const max = Math.max(...warmup.map(x => x.sends), 1)
+              const pct = (d.sends / max) * 100
+              const hasBounce = d.bounces > 0
+              return (
+                <div key={d.send_day} className="flex-1 flex flex-col items-center gap-1" title={`${d.send_day}: ${d.sends} sends${hasBounce ? `, ${d.bounces} bounce(s)` : ''}`}>
+                  <div
+                    className={`w-full rounded-t ${hasBounce ? 'bg-warning' : 'bg-accent'}`}
+                    style={{ height: `${pct}%`, minHeight: d.sends > 0 ? '2px' : 0 }}
+                  />
+                </div>
+              )
+            })}
           </div>
         )}
       </Card>

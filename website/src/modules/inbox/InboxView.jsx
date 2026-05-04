@@ -7,7 +7,7 @@ import { useComposeEmail } from '@/hooks/useComposeEmail'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { Button, Card, EmptyState, Badge } from '@/components/ui'
 import { Mail, Inbox as InboxIcon, Send, Reply, Sparkles } from 'lucide-react'
-import { draftReplyEmail, classifyReplyIntent } from '@/lib/claude'
+import { draftReplyEmail, classifyReplyIntent, draftReplyVariants } from '@/lib/claude'
 
 // Maps the classifier's intent string → user-facing label + tone.
 const INTENT_META = {
@@ -232,10 +232,50 @@ function MessageDetail({ message }) {
   // routes the inbound message through contract-ai's draft_email
   // action with email_type='reply' and prefills the body before
   // the user clicks Send.
-  function openReply({ withDraft } = {}) {
+  function openReply({ withDraft, withVariants } = {}) {
     if (!message.from_email && !isInbound) return
     const replyTo = isInbound ? message.from_email : (message.to_emails?.[0] || '')
     const subj = (message.subject || '').replace(/^re:\s*/i, '')
+
+    // 3-tone variant flow: generate all three in parallel, prompt
+    // the user to pick one, then open Compose with that variant
+    // pre-filled. Done as a follow-up await chain because Compose's
+    // generateDraft callback returns a single draft.
+    if (withVariants) {
+      ;(async () => {
+        const variants = await draftReplyVariants({
+          incoming: {
+            subject: message.subject,
+            body: message.body_text || message.preview,
+            from_name: message.from_name,
+            from_email: message.from_email,
+          },
+          senderName: profile?.full_name,
+          senderProperty: profile?.properties?.name,
+          outreachLogId: null,    // Inbox view doesn't have the outreach_log id handy
+          propertyId: profile?.property_id,
+        })
+        const tones = Object.keys(variants)
+        if (tones.length === 0) return
+        const choice = window.prompt(
+          `Pick a tone:\n${tones.map((t, i) => `${i + 1}. ${t} — ${(variants[t].body || '').slice(0, 80)}…`).join('\n')}\n\nType 1, 2, or 3 (or cancel):`,
+          '1',
+        )
+        const idx = Number(choice) - 1
+        const picked = variants[tones[idx]] || variants[tones[0]]
+        composeEmail.open({
+          to: replyTo,
+          defaultSubject: picked.subject || `Re: ${subj || '(no subject)'}`,
+          defaultBody: picked.body,
+          dealId: message.linked_deal_id || null,
+          inReplyToMessageId: message.message_id,
+          threadId: message.thread_id,
+          provider: message.provider,
+        })
+      })()
+      return
+    }
+
     composeEmail.open({
       to: replyTo,
       defaultSubject: `Re: ${subj || '(no subject)'}`,
@@ -311,8 +351,11 @@ function MessageDetail({ message }) {
           <Button size="sm" variant="secondary" onClick={() => openReply({ withDraft: false })}>
             <Reply className="w-3.5 h-3.5" /> Reply
           </Button>
-          <Button size="sm" onClick={() => openReply({ withDraft: true })} title="AI will draft a personalized reply using the inbound message + linked deal context">
+          <Button size="sm" onClick={() => openReply({ withDraft: true })} title="AI drafts a single personalized reply">
             <Sparkles className="w-3.5 h-3.5" /> Suggest reply
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => openReply({ withVariants: true })} title="Generate 3 tones (direct / friendly / concise), then pick">
+            <Sparkles className="w-3.5 h-3.5" /> 3 tones
           </Button>
         </div>
       )}

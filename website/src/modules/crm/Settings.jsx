@@ -224,6 +224,8 @@ export default function Settings() {
       {/* Email preferences */}
       <DigestSubscriptionSection userId={profile?.id} propertyId={propertyId} userEmail={profile?.email} />
 
+      <DncDomainsSection propertyId={propertyId} userId={profile?.id} />
+
       <EmailPreferencesSection userEmail={profile?.email} />
 
       {/* Data Export */}
@@ -550,6 +552,96 @@ function DigestSubscriptionSection({ userId, propertyId, userEmail }) {
           />
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * DncDomainsSection: per-property domain blocklist. Sequence runner
+ * skips any contact whose email lives at a blocklisted domain.
+ */
+function DncDomainsSection({ propertyId, userId }) {
+  const { toast } = useToast()
+  const [rows, setRows] = useState([])
+  const [domain, setDomain] = useState('')
+  const [reason, setReason] = useState('')
+
+  useEffect(() => {
+    if (!propertyId) return
+    const load = async () => {
+      const { data } = await supabase
+        .from('dnc_domains').select('*')
+        .eq('property_id', propertyId)
+        .order('created_at', { ascending: false })
+      setRows(data || [])
+    }
+    load()
+  }, [propertyId])
+
+  async function add() {
+    const cleaned = domain.trim().toLowerCase().replace(/^@/, '')
+    if (!cleaned) return
+    const { error, data } = await supabase
+      .from('dnc_domains')
+      .insert({ property_id: propertyId, domain: cleaned, reason: reason || null, created_by: userId })
+      .select().single()
+    if (error) {
+      toast({ title: 'Could not add', description: error.message, type: 'error' })
+      return
+    }
+    setRows([data, ...rows])
+    setDomain('')
+    setReason('')
+    toast({ title: `${cleaned} blocked from outreach`, type: 'success' })
+  }
+
+  async function remove(id) {
+    await supabase.from('dnc_domains').delete().eq('id', id)
+    setRows(rows.filter(r => r.id !== id))
+  }
+
+  return (
+    <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
+      <h2 className="text-sm font-mono text-text-muted uppercase mb-3">Do-not-contact domains</h2>
+      <p className="text-xs text-text-muted mb-3">
+        Block entire domains (e.g. an ex-customer's company). Sequences and bulk sends skip them automatically.
+      </p>
+      <div className="flex gap-2 mb-3 flex-wrap">
+        <input
+          type="text" value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          placeholder="example.com"
+          className="flex-1 min-w-[160px] bg-bg-card border border-border rounded px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+        />
+        <input
+          type="text" value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="reason (optional)"
+          className="flex-1 min-w-[160px] bg-bg-card border border-border rounded px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+        />
+        <button
+          onClick={add}
+          disabled={!domain.trim()}
+          className="bg-accent text-bg-primary px-3 py-1.5 rounded text-xs font-medium hover:opacity-90 disabled:opacity-50"
+        >
+          Block
+        </button>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-xs text-text-muted">No domains blocked.</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {rows.map(r => (
+            <li key={r.id} className="flex items-center justify-between py-2 text-sm">
+              <div>
+                <span className="text-text-primary font-mono">@{r.domain}</span>
+                {r.reason && <span className="text-text-muted ml-2 text-xs">— {r.reason}</span>}
+              </div>
+              <button onClick={() => remove(r.id)} className="text-xs text-text-muted hover:text-danger">Remove</button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

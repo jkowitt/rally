@@ -211,6 +211,7 @@ function SequenceEditor({ sequence, onDelete }) {
         subject_template: step.subject_template || null,
         body_template: step.body_template || '',
         task_template: step.task_template || null,
+        use_business_days: !!step.use_business_days,
       }
       if (step.id) {
         const { error } = await supabase.from('prospect_sequence_steps').update(payload).eq('id', step.id)
@@ -301,6 +302,7 @@ function StepRow({ step, stepNumber, isNew, onSave, onCancel, onDelete, saving }
     subject_template: step.subject_template || '',
     body_template: step.body_template || '',
     task_template: step.task_template || '',
+    use_business_days: !!step.use_business_days,
   })
 
   const meta = CHANNEL_META[form.channel] || CHANNEL_META.email
@@ -366,6 +368,15 @@ function StepRow({ step, stepNumber, isNew, onSave, onCancel, onDelete, saving }
           />
         </div>
       </div>
+      <label className="flex items-center gap-2 text-[11px] text-text-muted">
+        <input
+          type="checkbox"
+          checked={form.use_business_days}
+          onChange={(e) => setForm({ ...form, use_business_days: e.target.checked })}
+          className="accent-accent w-3.5 h-3.5"
+        />
+        <span>Skip weekends + US holidays for this step</span>
+      </label>
 
       {isEmail && (
         <>

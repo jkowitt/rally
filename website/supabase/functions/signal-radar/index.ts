@@ -88,8 +88,19 @@ async function scanProperty(sb: any, propertyId: string) {
       const prevCompany = (c.company || "").trim().toLowerCase();
       const newCompany = (fresh.company || "").trim().toLowerCase();
       if (newCompany && prevCompany && newCompany !== prevCompany) {
-        // Insert signal
-        await sb.from("prospect_signals").insert({
+        // Build dedup key — same (contact, new company) won't fire twice.
+        const payload = {
+          previous: { company: c.company, position: c.position, email: c.email },
+          current: { company: fresh.company, position: fresh.title, linkedin_url: fresh.linkedin_url, email: fresh.email },
+        };
+        const { data: dedupKey } = await sb.rpc("build_signal_dedup_key", {
+          p_signal_type: "job_change",
+          p_contact_id: c.id,
+          p_payload: payload,
+        });
+        // Upsert with onConflict on dedup_key — silently no-op if we've
+        // surfaced this exact event already.
+        const { error: insErr } = await sb.from("prospect_signals").insert({
           property_id: propertyId,
           contact_id: c.id,
           signal_type: "job_change",
@@ -97,12 +108,15 @@ async function scanProperty(sb: any, propertyId: string) {
           title: `${[c.first_name, c.last_name].filter(Boolean).join(" ") || c.email} moved to ${fresh.company}`,
           description: `Was at ${c.company || "(unknown)"} as ${c.position || "(no title)"}. Now ${fresh.title || "(role TBD)"} at ${fresh.company}.`,
           source: "apollo",
-          payload: {
-            previous: { company: c.company, position: c.position, email: c.email },
-            current: { company: fresh.company, position: fresh.title, linkedin_url: fresh.linkedin_url, email: fresh.email },
-          },
+          payload,
+          dedup_key: dedupKey,
         });
-        jobChanges++;
+        // 23505 = unique violation = expected when dedup hits; treat as no-op.
+        if (!insErr || (insErr as any).code === "23505") {
+          if (!insErr) jobChanges++;
+        } else {
+          throw insErr;
+        }
       }
       // Update last_enriched_at + write through current title/company
       await sb.from("contacts")

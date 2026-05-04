@@ -274,6 +274,49 @@ export async function generateIcpCluster({ wins }) {
   }
 }
 
+// Generate three tone-specific reply variants in parallel and
+// (best-effort) cache them in reply_draft_variants. Returns
+// { direct, friendly, concise } each shaped { subject, body }.
+export async function draftReplyVariants({ incoming, deal, senderName, senderProperty, outreachLogId, propertyId }) {
+  const tones = ['direct', 'friendly', 'concise']
+  const results = await Promise.all(tones.map(tone =>
+    invokeEdgeFunction('contract-ai', {
+      action: 'draft_email',
+      deal: deal || { brand_name: incoming?.from_name || incoming?.from_email },
+      context: {
+        sender_name: senderName,
+        sender_property: senderProperty,
+        tone,
+        incoming_subject: incoming?.subject,
+        incoming_body: incoming?.body || incoming?.preview,
+        incoming_from: incoming?.from_name || incoming?.from_email,
+      },
+      email_type: 'reply',
+    }).then(r => r?.email).catch(() => null)
+  ))
+  const out = {}
+  for (let i = 0; i < tones.length; i++) {
+    if (results[i]?.body) out[tones[i]] = { subject: results[i].subject, body: results[i].body }
+  }
+  // Best-effort cache.
+  if (outreachLogId && propertyId) {
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const rows = Object.entries(out).map(([tone, v]) => ({
+        property_id: propertyId,
+        outreach_log_id: outreachLogId,
+        tone,
+        subject: v.subject || null,
+        body: v.body,
+      }))
+      if (rows.length > 0) {
+        await supabase.from('reply_draft_variants').upsert(rows, { onConflict: 'outreach_log_id,tone' })
+      }
+    } catch { /* swallow */ }
+  }
+  return out
+}
+
 // AI-suggested reply for an inbound email. Wraps the existing
 // contract-ai 'draft_email' action with email_type='reply' and
 // passes the inbound message as context.

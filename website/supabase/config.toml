@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.track-click]
 verify_jwt = false
+
+[functions.unsubscribe]
+verify_jwt = false

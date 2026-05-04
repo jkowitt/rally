@@ -81,22 +81,31 @@ async function scan(sb: any, propertyId: string) {
     );
     if (!deal) continue;
 
-    await sb.from("prospect_signals").insert({
+    const signalType = mapEventType(s.event_type);
+    const payload = {
+      brand: s.brand,
+      event_type: s.event_type,
+      approx_when: s.approx_when,
+      confidence: s.confidence,
+    };
+    const { data: dedupKey } = await sb.rpc("build_signal_dedup_key", {
+      p_signal_type: signalType,
+      p_contact_id: null,
+      p_payload: payload,
+    });
+    const { error: insErr } = await sb.from("prospect_signals").insert({
       property_id: propertyId,
       deal_id: deal.id,
-      signal_type: mapEventType(s.event_type),
+      signal_type: signalType,
       severity: s.severity || "medium",
       title: s.title || `${s.event_type} at ${s.brand}`,
       description: s.description || null,
       source: "claude",
-      payload: {
-        brand: s.brand,
-        event_type: s.event_type,
-        approx_when: s.approx_when,
-        confidence: s.confidence,
-      },
+      payload,
+      dedup_key: dedupKey,
     });
-    inserted++;
+    if (!insErr) inserted++;
+    else if ((insErr as any).code !== "23505") throw insErr;
   }
   return { brands_checked: brands.length, signals: inserted };
 }

@@ -22,13 +22,14 @@ interface LogArgs {
   trackingToken?: string | null
   sequenceEnrollmentId?: string | null
   sequenceStepIndex?: number | null
+  variantId?: string | null
 }
 
 export async function logOutreach(args: LogArgs): Promise<string | null> {
   const {
     sb, propertyId, userId, provider, direction, messageId, threadId,
     contactId, dealId, toEmail, toName, subject, bodyPreview, sentAt,
-    trackingToken, sequenceEnrollmentId, sequenceStepIndex,
+    trackingToken, sequenceEnrollmentId, sequenceStepIndex, variantId,
   } = args
   if (!propertyId) return null
   const row: any = {
@@ -48,6 +49,7 @@ export async function logOutreach(args: LogArgs): Promise<string | null> {
     tracking_token: trackingToken ?? null,
     sequence_enrollment_id: sequenceEnrollmentId ?? null,
     sequence_step_index: sequenceStepIndex ?? null,
+    variant_id: variantId ?? null,
   }
   // Dedup on (provider, message_id) when present, else plain insert.
   if (messageId) {
@@ -71,20 +73,25 @@ export function generateTrackingToken(): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-// Inject a 1x1 tracking pixel at the end of an HTML body. Safe to
-// call with non-HTML bodies (returns the body unchanged when no
-// closing </body> is found and the body looks like plain text).
+// Inject a 1x1 tracking pixel + a CAN-SPAM-compliant unsubscribe
+// footer at the end of an HTML body. Safe to call with non-HTML
+// bodies (returns unchanged for plain text).
 export function injectTrackingPixel(
   body: string,
   trackingBaseUrl: string,
   token: string,
 ): string {
   const pixelUrl = `${trackingBaseUrl}/functions/v1/track-open?t=${encodeURIComponent(token)}`
+  const unsubUrl = `${trackingBaseUrl}/functions/v1/unsubscribe?t=${encodeURIComponent(token)}`
   const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none" />`
+  const footer =
+    `<div style="font-size:11px;color:#777;margin-top:24px;padding-top:12px;border-top:1px solid #eee;">` +
+    `Don't want to hear from us? <a href="${unsubUrl}" style="color:#777;">Unsubscribe</a>.` +
+    `</div>`
   const looksHtml = /<\/?(html|body|p|div|br|table|span)\b/i.test(body)
   if (!looksHtml) return body
-  if (body.includes('</body>')) return body.replace('</body>', `${pixel}</body>`)
-  return body + pixel
+  if (body.includes('</body>')) return body.replace('</body>', `${footer}${pixel}</body>`)
+  return body + footer + pixel
 }
 
 // Rewrite all <a href="..."> URLs to route through track-click so

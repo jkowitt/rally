@@ -132,10 +132,20 @@ async function deliverDigest(sb: any, sub: any) {
 
   if (sub.channel === "slack") {
     if (!sub.slack_webhook_url) return { skipped: true, reason: "no slack webhook" };
+    const blocks = renderSlackBlocks({
+      name: sub.profiles?.full_name || "there",
+      priority: priority || [],
+      signals: signals || [],
+      nudges: nudges || [],
+    });
     const res = await fetch(sub.slack_webhook_url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      // Most webhook URLs only accept text + blocks (not actions),
+      // but we ship link-buttons that work in any Slack channel via
+      // url-only buttons. This gives the rep one-click jumps to the
+      // right page without needing an interactive Slack app.
+      body: JSON.stringify({ text, blocks }),
     });
     if (!res.ok) return { error: `Slack ${res.status}` };
     return { delivered: true, channel: "slack" };
@@ -182,6 +192,79 @@ function escapeHtml(s: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+// renderSlackBlocks: build a Block Kit message with header,
+// priority/signals sections, and link-buttons that jump to the
+// matching app page. Works in any incoming-webhook setup; doesn't
+// require the interactive Slack app.
+function renderSlackBlocks(args: { name: string; priority: any[]; signals: any[]; nudges: any[] }) {
+  const blocks: any[] = [
+    {
+      type: "header",
+      text: { type: "plain_text", text: `Good morning, ${args.name}` },
+    },
+  ];
+
+  if (args.priority.length > 0) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*🔥 Priority queue (top ${args.priority.length})*\n` +
+          args.priority.map(p => {
+            const name = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email;
+            return `• *${name}* @ ${p.company || ""} — score ${p.priority_score}`;
+          }).join("\n"),
+      },
+    });
+    blocks.push({
+      type: "actions",
+      elements: [
+        { type: "button", text: { type: "plain_text", text: "Open priority queue" }, url: `${APP_BASE_URL}/app/crm/priority` },
+      ],
+    });
+  }
+
+  if (args.signals.length > 0) {
+    blocks.push({ type: "divider" });
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*📡 Active signals (${args.signals.length})*\n` +
+          args.signals.map(s => `• [${s.severity}] ${s.title}`).join("\n"),
+      },
+    });
+    blocks.push({
+      type: "actions",
+      elements: [
+        { type: "button", text: { type: "plain_text", text: "Open signal radar" }, url: `${APP_BASE_URL}/app/crm/signals` },
+      ],
+    });
+  }
+
+  if (args.nudges.length > 0) {
+    blocks.push({ type: "divider" });
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*💡 Nudges (${args.nudges.length})*\n` +
+          args.nudges.slice(0, 6).map(n => `• ${n.message}`).join("\n"),
+      },
+    });
+  }
+
+  blocks.push({ type: "divider" });
+  blocks.push({
+    type: "context",
+    elements: [
+      { type: "mrkdwn", text: `<${APP_BASE_URL}/app|Open Rally>` },
+    ],
+  });
+
+  return blocks;
 }
 
 function jsonResponse(body: unknown, status = 200) {

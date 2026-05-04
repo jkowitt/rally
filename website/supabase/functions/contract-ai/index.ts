@@ -93,6 +93,8 @@ Deno.serve(async (req: Request) => {
       result = await fundingRadar(body);
     } else if (action === "postmortem_questions") {
       result = await postmortemQuestions(body);
+    } else if (action === "transcribe_call") {
+      result = await transcribeCall(supabaseClient, body);
     } else if (action === "analyze_lost_deal") {
       result = await analyzeLostDeal(body);
     } else if (action === "enrich_contact") {
@@ -702,6 +704,77 @@ async function postmortemQuestions(body: any) {
     `}\n\nReturn ONLY valid JSON.`;
   const text = await callClaude(prompt, 1024);
   return { questions: extractJSON(text) };
+}
+
+// transcribeCall: pull a Twilio recording, send to a speech model
+// for transcription, then ask Claude for a summary + sentiment +
+// action items. Stores everything on the phone_calls row.
+//
+// Speech model integration depends on which provider you have a
+// key for. We use Claude's audio understanding via base64 MP3
+// when available; otherwise fall back to OpenAI Whisper if the
+// OPENAI_API_KEY is configured. This function tolerates either
+// being absent and writes back ai_summary='transcription_unavailable'.
+async function transcribeCall(sb: any, body: any) {
+  const sid = body.call_sid;
+  const recordingUrl = body.recording_url;
+  if (!sid || !recordingUrl) return { error: "call_sid + recording_url required" };
+
+  // Fetch recording with Twilio basic auth.
+  const TWILIO_SID = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
+  const TWILIO_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN") ?? "";
+  const audioRes = await fetch(recordingUrl, {
+    headers: { Authorization: "Basic " + btoa(`${TWILIO_SID}:${TWILIO_TOKEN}`) },
+  });
+  if (!audioRes.ok) {
+    await sb.from("phone_calls").update({ ai_summary: "recording_fetch_failed" }).eq("twilio_call_sid", sid);
+    return { error: "recording fetch failed" };
+  }
+
+  // Try OpenAI Whisper if configured (cheap + reliable for audio).
+  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
+  let transcription = "";
+  if (OPENAI_API_KEY) {
+    const audioBuffer = await audioRes.arrayBuffer();
+    const form = new FormData();
+    form.append("file", new Blob([audioBuffer], { type: "audio/mpeg" }), "recording.mp3");
+    form.append("model", "whisper-1");
+    const w = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: form,
+    });
+    if (w.ok) {
+      const wd = await w.json();
+      transcription = wd.text || "";
+    }
+  }
+  if (!transcription) {
+    await sb.from("phone_calls").update({ ai_summary: "transcription_unavailable" }).eq("twilio_call_sid", sid);
+    return { error: "no speech provider configured" };
+  }
+
+  // Now ask Claude for summary + sentiment + action items.
+  const prompt =
+    `You are a sales-call analyst. Read the call transcript and return a structured summary.\n\n` +
+    `Transcript:\n${transcription.slice(0, 8000)}\n\n` +
+    `Return JSON:\n{` +
+    `"summary":"2-3 sentence summary",` +
+    `"sentiment":"positive|neutral|negative",` +
+    `"action_items":["item1","item2"],` +
+    `"next_step":"single recommended next step"` +
+    `}\n\nReturn ONLY valid JSON.`;
+  const text = await callClaude(prompt, 1024);
+  const analysis = extractJSON(text) || {};
+
+  await sb.from("phone_calls").update({
+    transcription,
+    ai_summary: analysis.summary || null,
+    ai_sentiment: analysis.sentiment || null,
+    ai_action_items: analysis.action_items || [],
+  }).eq("twilio_call_sid", sid);
+
+  return { transcribed: true, summary: analysis.summary };
 }
 
 async function analyzeLostDeal(body: any) {

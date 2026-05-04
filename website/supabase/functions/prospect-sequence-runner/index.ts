@@ -103,7 +103,7 @@ async function processEnrollment(sb: any, e: Enrollment) {
 
   // 2. Find contact + enroller
   const { data: contact } = await sb.from("contacts")
-    .select("id, email, first_name, last_name, company, position, do_not_contact_until, best_send_hour")
+    .select("id, email, first_name, last_name, company, position, do_not_contact_until, unsubscribed_at, best_send_hour, timezone")
     .eq("id", e.contact_id).maybeSingle();
 
   const enrollerId = e.enrolled_by;
@@ -111,11 +111,37 @@ async function processEnrollment(sb: any, e: Enrollment) {
     return { error: "no enroller" };
   }
 
+  // 2a-pre. Hard-stop if the contact unsubscribed.
+  if (contact?.unsubscribed_at) {
+    await sb.from("prospect_sequence_enrollments")
+      .update({ paused: true, paused_at: new Date().toISOString(), paused_reason: "unsubscribed" })
+      .eq("id", e.id);
+    return { paused: true, reason: "unsubscribed" };
+  }
+
+  // 2a-pre2. Hard-stop if recipient domain is on the property's DNC list.
+  if (contact?.email) {
+    const domain = contact.email.split("@")[1]?.toLowerCase();
+    if (domain) {
+      const { data: dnc } = await sb
+        .from("dnc_domains")
+        .select("id")
+        .eq("property_id", e.property_id)
+        .eq("domain", domain)
+        .maybeSingle();
+      if (dnc) {
+        await sb.from("prospect_sequence_enrollments")
+          .update({ paused: true, paused_at: new Date().toISOString(), paused_reason: "dnc_domain" })
+          .eq("id", e.id);
+        return { paused: true, reason: "dnc_domain" };
+      }
+    }
+  }
+
   // 2a. Mute / DNC check
   if (contact?.do_not_contact_until) {
     const dncUntil = new Date(contact.do_not_contact_until).getTime();
     if (dncUntil > Date.now()) {
-      // Defer to after DNC ends
       await sb.from("prospect_sequence_enrollments")
         .update({ next_send_at: contact.do_not_contact_until })
         .eq("id", e.id);
@@ -140,21 +166,50 @@ async function processEnrollment(sb: any, e: Enrollment) {
     return { deferred: true, reason: "holiday_window" };
   }
 
-  // 2c. Send-time optimization. If the contact has a best_send_hour
-  // and now is more than 1 hour away from it, defer to today's
-  // best hour (or tomorrow's if it has already passed).
+  // 2c. Send-time optimization with recipient-timezone awareness.
+  // Pull inferred IANA tz; default "America/New_York" if unknown.
+  // best_send_hour is interpreted as a local hour in the recipient's
+  // tz, not UTC. If now (in their tz) isn't within ±1h of that hour,
+  // defer to today's best (or tomorrow's if past).
   if (typeof contact?.best_send_hour === "number") {
-    const now = new Date();
-    const target = new Date(now);
-    target.setUTCHours(contact.best_send_hour, 0, 0, 0);
-    if (target.getTime() < now.getTime() - 60 * 60_000) {
-      target.setUTCDate(target.getUTCDate() + 1);
-    }
-    if (target.getTime() - now.getTime() > 60 * 60_000) {
+    const { data: tzRow } = await sb
+      .from("contact_inferred_timezone")
+      .select("timezone")
+      .eq("contact_id", e.contact_id)
+      .maybeSingle();
+    const tz = tzRow?.timezone || "America/New_York";
+    const target = nextLocalHourUtc(contact.best_send_hour, tz);
+    if (target.getTime() - Date.now() > 60 * 60_000) {
       await sb.from("prospect_sequence_enrollments")
         .update({ next_send_at: target.toISOString() })
         .eq("id", e.id);
-      return { deferred: true, reason: "send_time_optimization", target: target.toISOString() };
+      return { deferred: true, reason: "send_time_optimization", target: target.toISOString(), tz };
+    }
+  }
+
+  // 2d. Business-day cadence — if the step is flagged use_business_days
+  // and we're on a weekend or US holiday, defer to the next business
+  // day at the recipient's local best_send_hour (or 10am default).
+  if (step.use_business_days) {
+    const { data: today } = await sb
+      .from("us_holidays")
+      .select("name")
+      .eq("observed_date", new Date().toISOString().slice(0, 10))
+      .maybeSingle();
+    const dow = new Date().getUTCDay(); // 0=Sun, 6=Sat
+    const isHolidayOrWeekend = !!today || dow === 0 || dow === 6;
+    if (isHolidayOrWeekend) {
+      // Defer 1 business day forward
+      const { data: nextBd } = await sb.rpc("add_business_days", {
+        from_ts: new Date().toISOString(),
+        n_days: 1,
+      });
+      if (nextBd) {
+        await sb.from("prospect_sequence_enrollments")
+          .update({ next_send_at: nextBd })
+          .eq("id", e.id);
+        return { deferred: true, reason: "business_day_skip", target: nextBd };
+      }
     }
   }
 
@@ -186,9 +241,13 @@ async function processEnrollment(sb: any, e: Enrollment) {
     return { paused: true, reason: "contact has no email" };
   }
 
-  // 3. Render template with simple substitutions.
-  const subject = renderTemplate(step.subject_template || "", contact);
-  const body = renderTemplate(step.body_template || "", contact);
+  // 3. Pick a variant if any exist for this step. Falls back to
+  // the step's own subject/body templates if no variants configured.
+  const variant = await pickVariant(sb, step.id);
+  const subjectTpl = variant.subject ?? step.subject_template ?? "";
+  const bodyTpl = variant.body ?? step.body_template ?? "";
+  const subject = renderTemplate(subjectTpl, contact);
+  const body = renderTemplate(bodyTpl, contact);
 
   // 4. Pick provider based on enroller's connections.
   // Prefer Outlook if connected, fall back to Gmail.
@@ -239,6 +298,7 @@ async function processEnrollment(sb: any, e: Enrollment) {
     trackingToken,
     sequenceEnrollmentId: e.id,
     sequenceStepIndex: e.current_step,
+    variantId: variant.variantId,
   });
 
   // 7. Advance enrollment.
@@ -278,6 +338,109 @@ function renderTemplate(tpl: string, contact: any): string {
     .replace(/\{\{last_name\}\}/gi, contact.last_name || "")
     .replace(/\{\{company\}\}/gi, contact.company || "your team")
     .replace(/\{\{position\}\}/gi, contact.position || "");
+}
+
+// Compute the next UTC instant when `hour` lands in the given IANA
+// timezone. Uses Intl.DateTimeFormat to derive the offset for that
+// tz at the candidate moment, accounting for DST.
+function nextLocalHourUtc(hour: number, tz: string): Date {
+  const now = new Date();
+  // First try today; if that's already > 1h past, jump to tomorrow.
+  const candidate = candidateLocalHour(now, hour, tz);
+  if (candidate.getTime() < now.getTime() - 60 * 60_000) {
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60_000);
+    return candidateLocalHour(tomorrow, hour, tz);
+  }
+  return candidate;
+}
+
+function candidateLocalHour(day: Date, hour: number, tz: string): Date {
+  // Build a UTC instant for that day at the desired LOCAL hour.
+  // We compute: targetUtc = utcOfMidnightLocalDay + hour*1h, where
+  // utcOfMidnightLocalDay = utcMidnight - tzOffsetMinutes(tz, day).
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", hour12: false,
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(day).map(p => [p.type, p.value]));
+  const localDay = new Date(Date.UTC(
+    Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+    hour, 0, 0,
+  ));
+  // localDay is "the desired wallclock as if it were UTC". Now find
+  // the actual offset of that wallclock in tz to convert to true UTC.
+  const localOffsetMin = tzOffsetMinutes(tz, localDay);
+  return new Date(localDay.getTime() - localOffsetMin * 60_000);
+}
+
+function tzOffsetMinutes(tz: string, instant: Date): number {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, timeZoneName: "shortOffset", hour12: false,
+  });
+  const parts = fmt.formatToParts(instant);
+  const off = parts.find(p => p.type === "timeZoneName")?.value || "GMT";
+  const m = off.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+  if (!m) return 0;
+  const sign = m[1] === "-" ? -1 : 1;
+  const hh = Number(m[2]);
+  const mm = Number(m[3] || 0);
+  return sign * (hh * 60 + mm);
+}
+
+// Pick a step variant. Round-robin while any variant has < SAMPLE_THRESHOLD
+// sends; once threshold is hit, stick with the highest reply-rate variant
+// and mark it the winner.
+const VARIANT_SAMPLE_THRESHOLD = 30;
+
+async function pickVariant(sb: any, stepId: string): Promise<{ variantId: string | null; subject?: string; body?: string; task?: string }> {
+  const { data: variants } = await sb
+    .from("prospect_sequence_step_variants")
+    .select("*")
+    .eq("step_id", stepId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: true });
+  if (!variants || variants.length === 0) return { variantId: null };
+
+  // Pull per-variant reply rate from the view (already rolled up).
+  const { data: perf } = await sb
+    .from("sequence_step_variant_performance")
+    .select("variant_id, sends, replies, reply_rate")
+    .in("variant_id", variants.map((v: any) => v.id));
+  const perfById = new Map((perf || []).map((p: any) => [p.variant_id, p]));
+
+  // If any variant is already crowned the winner, use it.
+  const winner = variants.find((v: any) => v.is_winner);
+  if (winner) return variantPayload(winner);
+
+  // Round-robin while warming up.
+  const undersampled = variants.filter((v: any) => (perfById.get(v.id)?.sends ?? 0) < VARIANT_SAMPLE_THRESHOLD);
+  if (undersampled.length > 0) {
+    // Pick the variant with the fewest sends so far.
+    undersampled.sort((a: any, b: any) =>
+      (perfById.get(a.id)?.sends ?? 0) - (perfById.get(b.id)?.sends ?? 0)
+    );
+    return variantPayload(undersampled[0]);
+  }
+
+  // All variants have hit threshold — crown the winner by reply rate.
+  const ranked = [...variants].sort((a: any, b: any) =>
+    (perfById.get(b.id)?.reply_rate ?? 0) - (perfById.get(a.id)?.reply_rate ?? 0)
+  );
+  const champ = ranked[0];
+  await sb.from("prospect_sequence_step_variants")
+    .update({ is_winner: true })
+    .eq("id", champ.id);
+  return variantPayload(champ);
+}
+
+function variantPayload(v: any) {
+  return {
+    variantId: v.id,
+    subject: v.subject_template,
+    body: v.body_template,
+    task: v.task_template,
+  };
 }
 
 // ── Outlook ────────────────────────────────────────────────────

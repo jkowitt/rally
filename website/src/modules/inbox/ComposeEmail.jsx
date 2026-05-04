@@ -5,7 +5,8 @@ import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
 import { useDialog } from '@/hooks/useDialog'
-import { Paperclip, X, Calendar } from 'lucide-react'
+import { Paperclip, X, Calendar, AlertTriangle } from 'lucide-react'
+import { lintEmail, hasBlockers } from '@/lib/deliverability'
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024 // 25 MB per Gmail/Outlook
 
@@ -147,6 +148,18 @@ export default function ComposeEmail({
   async function handleSend() {
     if (!to.trim()) {
       toast({ title: 'Add a recipient', type: 'warning' })
+      return
+    }
+    // Pre-send deliverability lint. Hard-blocks on 'block' level
+    // (empty subject/body, invalid email, unrendered merge tags);
+    // warns are visible inline but do not block.
+    const issues = lintEmail({ to, subject, body })
+    if (hasBlockers(issues)) {
+      toast({
+        title: 'Cannot send yet',
+        description: issues.find(i => i.level === 'block')?.message || 'Resolve the blocking issues first.',
+        type: 'error',
+      })
       return
     }
     setSending(true)
@@ -322,6 +335,30 @@ export default function ComposeEmail({
               This message will be logged to the deal timeline automatically.
             </div>
           )}
+
+          {/* Deliverability lint output. Renders inline as the
+              user types so they see warnings before clicking Send. */}
+          {(() => {
+            const issues = lintEmail({ to, subject, body })
+            if (issues.length === 0) return null
+            return (
+              <div className="space-y-1 mt-1">
+                {issues.map((i, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-start gap-2 text-[11px] rounded px-2 py-1.5 ${
+                      i.level === 'block'
+                        ? 'bg-danger/10 text-danger border border-danger/30'
+                        : 'bg-warning/10 text-warning border border-warning/30'
+                    }`}
+                  >
+                    <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                    <span>{i.message}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </div>
 
         <div className="p-4 sm:p-5 border-t border-border flex items-center justify-between gap-2 flex-wrap">

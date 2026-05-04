@@ -45,6 +45,10 @@ function getCrmSections(t, propertyType, flags, moduleLabels) {
       items: [
         { to: '/app/crm/assets', label: t?.asset ? `${t.asset}s` : 'Assets' },
         { to: '/app/crm/pipeline', label: `${t?.deal || 'Deal'} Pipeline` },
+        { to: '/app/crm/priority', label: 'Priority Queue' },
+        { to: '/app/crm/signals', label: 'Signal Radar' },
+        { to: '/app/crm/lookalikes', label: 'Lookalikes' },
+        { to: '/app/crm/relationships', label: 'Relationship Search' },
         { to: '/app/crm/declined', label: 'Declined' },
       ],
     },

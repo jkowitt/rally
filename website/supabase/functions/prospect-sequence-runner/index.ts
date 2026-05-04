@@ -105,16 +105,38 @@ async function processEnrollment(sb: any, e: Enrollment) {
   const { data: contact } = await sb.from("contacts")
     .select("id, email, first_name, last_name, company, position")
     .eq("id", e.contact_id).maybeSingle();
+
+  const enrollerId = e.enrolled_by;
+  if (!enrollerId) {
+    return { error: "no enroller" };
+  }
+
+  const channel = step.channel || "email";
+
+  // ── Non-email channels: create a task instead of sending mail ──
+  if (channel !== "email") {
+    const taskText = renderTemplate(step.task_template || step.body_template || "", contact || {});
+    await sb.from("prospect_sequence_tasks").insert({
+      property_id: e.property_id,
+      enrollment_id: e.id,
+      step_index: e.current_step,
+      channel,
+      contact_id: e.contact_id,
+      deal_id: e.deal_id,
+      assigned_to: enrollerId,
+      due_at: new Date().toISOString(),
+      task_text: taskText || `Action on ${channel} for this contact`,
+    });
+    // Advance enrollment.
+    return await advance(sb, e);
+  }
+
+  // ── Email channel ──
   if (!contact?.email) {
     await sb.from("prospect_sequence_enrollments")
       .update({ paused: true, paused_at: new Date().toISOString(), paused_reason: "no email" })
       .eq("id", e.id);
     return { paused: true, reason: "contact has no email" };
-  }
-
-  const enrollerId = e.enrolled_by;
-  if (!enrollerId) {
-    return { error: "no enroller" };
   }
 
   // 3. Render template with simple substitutions.
@@ -173,6 +195,11 @@ async function processEnrollment(sb: any, e: Enrollment) {
   });
 
   // 7. Advance enrollment.
+  await advance(sb, e);
+  return { sent: true, provider, messageId };
+}
+
+async function advance(sb: any, e: Enrollment) {
   const nextStepIdx = e.current_step + 1;
   const { data: nextStep } = await sb
     .from("prospect_sequence_steps")
@@ -194,8 +221,7 @@ async function processEnrollment(sb: any, e: Enrollment) {
       completed: true,
     }).eq("id", e.id);
   }
-
-  return { sent: true, provider, messageId };
+  return { advanced: true };
 }
 
 // Simple {{first_name}} {{last_name}} {{company}} {{position}} substitution.

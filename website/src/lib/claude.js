@@ -182,6 +182,59 @@ export async function draftFirstTouchEmail({ prospect, contact, senderName, send
   }
 }
 
+// Classify an inbound reply's intent. Returns a 'classification'
+// object: { intent, confidence, rationale, suggested_action }.
+export async function classifyReplyIntent({ subject, body, original_subject }) {
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'classify_reply', subject, body, original_subject,
+    })
+    return result?.classification || null
+  } catch (e) {
+    console.warn('classifyReplyIntent failed:', e?.message)
+    return null
+  }
+}
+
+// Generate a one-page intelligence brief for a deal.
+export async function generateAccountBrief({ deal, contacts, activities, news_snippet }) {
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'account_brief', deal, contacts, activities, news_snippet,
+    })
+    return result?.brief || null
+  } catch (e) {
+    console.warn('generateAccountBrief failed:', e?.message)
+    return null
+  }
+}
+
+// Find lookalike brands for a seed deal. Returns up to 10 matches.
+export async function findLookalikes({ deal, recent_wins }) {
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'find_lookalikes', deal, recent_wins,
+    })
+    return result?.result?.lookalikes || []
+  } catch (e) {
+    console.warn('findLookalikes failed:', e?.message)
+    return []
+  }
+}
+
+// Cluster a property's closed-won deals to derive its ICP.
+export async function generateIcpCluster({ wins }) {
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'icp_cluster', wins,
+    })
+    return result?.cluster || null
+  } catch (e) {
+    console.warn('generateIcpCluster failed:', e?.message)
+    return null
+  }
+}
+
 // AI-suggested reply for an inbound email. Wraps the existing
 // contract-ai 'draft_email' action with email_type='reply' and
 // passes the inbound message as context.

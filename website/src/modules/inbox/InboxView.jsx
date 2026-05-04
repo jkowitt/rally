@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -7,7 +7,20 @@ import { useComposeEmail } from '@/hooks/useComposeEmail'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { Button, Card, EmptyState, Badge } from '@/components/ui'
 import { Mail, Inbox as InboxIcon, Send, Reply, Sparkles } from 'lucide-react'
-import { draftReplyEmail } from '@/lib/claude'
+import { draftReplyEmail, classifyReplyIntent } from '@/lib/claude'
+
+// Maps the classifier's intent string → user-facing label + tone.
+const INTENT_META = {
+  interested:      { label: 'Interested',      tone: 'success' },
+  meeting_request: { label: 'Meeting request', tone: 'success' },
+  objection:       { label: 'Objection',       tone: 'warning' },
+  not_now:         { label: 'Not now',         tone: 'warning' },
+  wrong_person:    { label: 'Wrong person',    tone: 'info' },
+  out_of_office:   { label: 'Out of office',   tone: 'neutral' },
+  unsubscribe:     { label: 'Unsubscribe',     tone: 'danger' },
+  closed_lost:     { label: 'Closed lost',     tone: 'danger' },
+  unclear:         { label: 'Unclear',         tone: 'neutral' },
+}
 
 // Customer-facing unified inbox. Reads from the email_messages_unified
 // view so Outlook + Gmail messages render side-by-side without
@@ -162,6 +175,59 @@ function MessageDetail({ message }) {
   const composeEmail = useComposeEmail()
   const isInbound = !message.is_sent
 
+  // Auto-classify inbound messages on first open. Cached on the
+  // outreach_log row that was created when the email was synced —
+  // we look it up by (provider, message_id) and reuse the existing
+  // classification if present, else call Claude + persist.
+  const { data: intent, isLoading: classifying } = useQuery({
+    queryKey: ['reply-intent', message.id, message.provider, message.message_id],
+    enabled: !!isInbound && !!message.message_id && !!profile?.property_id,
+    staleTime: 1000 * 60 * 60, // 1 hour client-side cache
+    queryFn: async () => {
+      // 1. Look up the outreach_log row for this provider+message_id
+      const { data: log } = await supabase
+        .from('outreach_log')
+        .select('id, contact_id, deal_id')
+        .eq('provider', message.provider)
+        .eq('message_id', message.message_id)
+        .eq('direction', 'inbound')
+        .maybeSingle()
+
+      // 2. Already classified? return the cached row.
+      if (log?.id) {
+        const { data: existing } = await supabase
+          .from('reply_intent_classifications')
+          .select('*')
+          .eq('outreach_log_id', log.id)
+          .order('classified_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (existing) return existing
+      }
+
+      // 3. Otherwise classify + persist. Skip persistence if no log row.
+      const classification = await classifyReplyIntent({
+        subject: message.subject,
+        body: message.body_text || message.preview,
+        original_subject: '',
+      })
+      if (!classification) return null
+      if (log?.id && profile?.property_id) {
+        await supabase.from('reply_intent_classifications').insert({
+          property_id: profile.property_id,
+          outreach_log_id: log.id,
+          contact_id: log.contact_id,
+          deal_id: log.deal_id,
+          intent: classification.intent,
+          confidence: classification.confidence,
+          rationale: classification.rationale,
+          suggested_action: classification.suggested_action,
+        })
+      }
+      return classification
+    },
+  })
+
   // Build the reply Compose payload. The "Suggest reply" button
   // routes the inbound message through contract-ai's draft_email
   // action with email_type='reply' and prefills the body before
@@ -210,6 +276,29 @@ function MessageDetail({ message }) {
           </Link>
         )}
       </div>
+
+      {isInbound && (intent || classifying) && (
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          <span className="text-text-muted">AI read:</span>
+          {classifying ? (
+            <Badge tone="neutral">classifying…</Badge>
+          ) : intent ? (
+            <>
+              <Badge tone={INTENT_META[intent.intent]?.tone || 'neutral'}>
+                {INTENT_META[intent.intent]?.label || intent.intent}
+              </Badge>
+              {intent.confidence != null && (
+                <span className="text-[10px] font-mono text-text-muted">
+                  {Math.round(Number(intent.confidence) * 100)}%
+                </span>
+              )}
+              {intent.rationale && (
+                <span className="text-[11px] text-text-secondary">{intent.rationale}</span>
+              )}
+            </>
+          ) : null}
+        </div>
+      )}
 
       {isInbound && message.from_email && (
         <div className="flex items-center gap-2 flex-wrap">

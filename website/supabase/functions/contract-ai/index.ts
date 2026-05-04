@@ -79,6 +79,14 @@ Deno.serve(async (req: Request) => {
       result = await pipelineForecast(body);
     } else if (action === "draft_email") {
       result = await draftEmailFn(body);
+    } else if (action === "classify_reply") {
+      result = await classifyReply(body);
+    } else if (action === "account_brief") {
+      result = await accountBrief(body);
+    } else if (action === "find_lookalikes") {
+      result = await findLookalikes(body);
+    } else if (action === "icp_cluster") {
+      result = await icpCluster(body);
     } else if (action === "analyze_lost_deal") {
       result = await analyzeLostDeal(body);
     } else if (action === "enrich_contact") {
@@ -502,6 +510,122 @@ async function draftEmailFn(body: any) {
     `Return ONLY valid JSON.`;
   const text = await callClaude(prompt, 1024);
   return { email: extractJSON(text) };
+}
+
+// classifyReply: tag an inbound reply with intent so the UI can
+// route correctly. Returns { intent, confidence (0-1), rationale,
+// suggested_action }. Intents: interested | objection |
+// meeting_request | unsubscribe | out_of_office | wrong_person |
+// not_now | closed_lost | unclear.
+async function classifyReply(body: any) {
+  const subject = (body.subject || "").slice(0, 200);
+  const message = (body.body || "").slice(0, 4000);
+  const original = (body.original_subject || "").slice(0, 200);
+  const prompt =
+    `You are a sales-reply classifier. Read the inbound email and classify the sender's intent.\n\n` +
+    `Original subject we sent: "${original}"\n` +
+    `Reply subject: "${subject}"\n` +
+    `Reply body:\n${message}\n\n` +
+    `Possible intents:\n` +
+    `- interested: positive signal, wants to learn more\n` +
+    `- meeting_request: explicitly asking for a call/meeting\n` +
+    `- objection: pushback, concerns, "not for us right now"\n` +
+    `- not_now: punt to later but not a hard no\n` +
+    `- wrong_person: "I'm not the right person", forwarded to colleague\n` +
+    `- out_of_office: auto-reply\n` +
+    `- unsubscribe: asks to be removed from list\n` +
+    `- closed_lost: hard no, won't reconsider\n` +
+    `- unclear: can't tell\n\n` +
+    `Suggested actions:\n` +
+    `- reply_now | route_to_owner | pause_sequence | mark_lost | snooze_30d | remove_from_lists\n\n` +
+    `Return JSON:\n{"intent":"...","confidence":0.0-1.0,"rationale":"1-2 sentences","suggested_action":"..."}\n\nReturn ONLY valid JSON.`;
+  const text = await callClaude(prompt, 512);
+  return { classification: extractJSON(text) };
+}
+
+// accountBrief: generate a one-page intelligence brief for a deal.
+// Pulls deal + contacts + recent activity + (caller may attach
+// recent news / website excerpt) into a structured brief.
+async function accountBrief(body: any) {
+  const d = body.deal || {};
+  const contacts = (body.contacts || []).slice(0, 8);
+  const activities = (body.activities || []).slice(0, 10);
+  const news = body.news_snippet || "";
+  const prompt =
+    `You are a senior sales strategist for sports sponsorships. Produce a 1-page brief on this account.\n\n` +
+    `Brand: ${d.brand_name}\n` +
+    `Industry: ${d.sub_industry || "unknown"}\n` +
+    `Location: ${[d.city, d.state].filter(Boolean).join(", ")}\n` +
+    `Website: ${d.website || ""}\n` +
+    `Stage: ${d.stage || "Prospect"}\n` +
+    `Deal value: $${d.value || 0}\n` +
+    `Notes: ${(d.notes || "").slice(0, 500)}\n\n` +
+    `Key contacts: ${JSON.stringify(contacts.map((c: any) => ({ name: c.first_name + " " + c.last_name, title: c.position, email: c.email })))}\n` +
+    `Recent activity: ${JSON.stringify(activities.map((a: any) => ({ type: a.activity_type, subject: a.subject, when: a.occurred_at })))}\n` +
+    `External news: ${news.slice(0, 1000)}\n\n` +
+    `Return JSON:\n{` +
+    `"summary":"2-3 sentence executive summary",` +
+    `"why_now":"why this account is timely (3-5 sentences)",` +
+    `"key_decision_makers":[{"name":"","why_they_matter":""}],` +
+    `"recent_signals":["bullet1","bullet2"],` +
+    `"likely_objections":["bullet1","bullet2"],` +
+    `"suggested_angle":"recommended approach in 2-3 sentences",` +
+    `"talking_points":["point1","point2","point3"],` +
+    `"next_best_action":"single most useful next step"` +
+    `}\n\nReturn ONLY valid JSON.`;
+  const text = await callClaude(prompt, 1500);
+  return { brief: extractJSON(text) };
+}
+
+// findLookalikes: given a seed deal (the brand), suggest similar
+// brands the property should also pursue. Best-effort using Claude's
+// general knowledge of brand portfolios + sponsorship history.
+async function findLookalikes(body: any) {
+  const d = body.deal || {};
+  const recentWins = (body.recent_wins || []).slice(0, 10);
+  const prompt =
+    `You are a B2B prospecting strategist for sports sponsorships. Given a seed brand, suggest 10 lookalike brands the property should also pursue.\n\n` +
+    `Seed brand: ${d.brand_name}\n` +
+    `Industry: ${d.sub_industry || "unknown"}\n` +
+    `Location: ${[d.city, d.state].filter(Boolean).join(", ")}\n` +
+    `Estimated revenue: $${d.revenue_thousands || 0}K\n` +
+    `Estimated employees: ${d.employees || 0}\n\n` +
+    `Property's recent won deals (avoid suggesting these — focus on net-new):\n` +
+    `${recentWins.map((w: any) => "- " + w.brand_name + (w.sub_industry ? " (" + w.sub_industry + ")" : "")).join("\n")}\n\n` +
+    `Return JSON:\n{"lookalikes":[{` +
+    `"company":"brand name",` +
+    `"industry":"category",` +
+    `"website":"likely-domain.com",` +
+    `"linkedin":"linkedin.com/company/...",` +
+    `"city":"hq city","state":"hq state",` +
+    `"similarity_score":0.0-1.0,` +
+    `"rationale":"why this is a lookalike, 1-2 sentences"` +
+    `}]}\n\nReturn ONLY valid JSON. Focus on 10 high-quality matches.`;
+  const text = await callClaude(prompt, 2000);
+  return { result: extractJSON(text) };
+}
+
+// icpCluster: analyze a property's closed-won deals and produce an
+// ideal customer profile description + key traits. Used to seed
+// reverse-ICP lookalike scans.
+async function icpCluster(body: any) {
+  const wins = (body.wins || []).slice(0, 50);
+  const prompt =
+    `You are a sales analytics strategist. Given the closed-won deals below, identify the ideal customer profile (ICP).\n\n` +
+    `Won deals:\n${JSON.stringify(wins.map((w: any) => ({
+      brand: w.brand_name, industry: w.sub_industry, value: w.value,
+      city: w.city, state: w.state, employees: w.employees, revenue: w.revenue_thousands,
+    })))}\n\n` +
+    `Return JSON:\n{` +
+    `"summary":"2-3 sentence ICP description",` +
+    `"industries":["top industries that buy"],` +
+    `"size_band":"small (<100 employees) / mid (100-1000) / large (1000+) / mixed",` +
+    `"geography":["regions overrepresented"],` +
+    `"traits":{"avg_deal_value":number,"common_themes":["theme1","theme2"]},` +
+    `"recommended_targets":["3-5 brand archetypes that match"]` +
+    `}\n\nReturn ONLY valid JSON.`;
+  const text = await callClaude(prompt, 1024);
+  return { cluster: extractJSON(text) };
 }
 
 async function analyzeLostDeal(body: any) {

@@ -35,6 +35,10 @@ const Dashboard = lazyRetry(() => import('./modules/dashboard/Dashboard'))
 const AssetCatalog = lazyRetry(() => import('./modules/crm/AssetCatalog'))
 const DealPipeline = lazyRetry(() => import('./modules/crm/DealPipeline'))
 const ContractManager = lazyRetry(() => import('./modules/crm/ContractManager'))
+const SignalFeed = lazyRetry(() => import('./modules/crm/SignalFeed'))
+const PriorityQueue = lazyRetry(() => import('./modules/crm/PriorityQueue'))
+const Lookalikes = lazyRetry(() => import('./modules/crm/Lookalikes'))
+const RelationshipSearch = lazyRetry(() => import('./modules/crm/RelationshipSearch'))
 const MigratePage = lazyRetry(() => import('./pages/contracts/MigratePage'))
 const FulfillmentTracker = lazyRetry(() => import('./modules/crm/FulfillmentTracker'))
 const AccountsDashboard = lazyRetry(() => import('./modules/accounts/AccountsDashboard'))
@@ -206,6 +210,10 @@ export default function App() {
                             <Route path="/crm/pipeline" element={<DealPipeline />} />
                             <Route path="/crm/inbox" element={<InboxView />} />
                             <Route path="/crm/inbox/connect" element={<InboxConnect />} />
+                            <Route path="/crm/signals" element={<SignalFeed />} />
+                            <Route path="/crm/priority" element={<PriorityQueue />} />
+                            <Route path="/crm/lookalikes" element={<Lookalikes />} />
+                            <Route path="/crm/relationships" element={<RelationshipSearch />} />
                             <Route path="/crm/contracts" element={<ContractManager />} />
                             <Route path="/crm/migrate" element={<MigratePage />} />
                             <Route path="/crm/fulfillment" element={<FulfillmentTracker />} />

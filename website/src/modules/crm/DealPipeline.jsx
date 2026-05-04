@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import DealActivityTimeline from '@/components/DealActivityTimeline'
+import BuyingCommittee from '@/components/BuyingCommittee'
+import AccountBrief from '@/components/AccountBrief'
+import WarmPathFinder from '@/components/WarmPathFinder'
 import SlashInput from '@/components/SlashInput'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { Badge, Button, EmptyState } from '@/components/ui'
@@ -289,6 +292,8 @@ export default function DealPipeline() {
 
       const optionalFields = ['start_date', 'end_date', 'value', 'contact_phone', 'contact_position', 'contact_company', 'contact_email', 'last_contacted', 'next_follow_up', 'source', 'expected_close_date']
       optionalFields.forEach((f) => { if (!payload[f]) delete payload[f] })
+      // Account-lead is nullable: send null (not empty string) when unset.
+      if (payload.account_lead_id === '') payload.account_lead_id = null
 
       // Set primary contact on deal from first contact (backward compat)
       if (formContacts?.length > 0) {
@@ -1211,6 +1216,7 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   const [enrichingCompany, setEnrichingCompany] = useState(false)
   const [verifyingEmail, setVerifyingEmail] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
+  const [warmPathContact, setWarmPathContact] = useState(null)
   const queryClient = useQueryClient()
   const viewerPlanLimits = usePlanLimits()
   const propertyId = deal.property_id
@@ -1557,6 +1563,16 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
                           ⚡ Start sequence
                         </button>
                       )}
+                      {c.id && (
+                        <button
+                          type="button"
+                          onClick={() => setWarmPathContact(c)}
+                          className="text-[10px] font-mono text-text-muted hover:text-accent"
+                          title="See if anyone on the team can warm-intro you"
+                        >
+                          🔗 Warm path
+                        </button>
+                      )}
                       {c.phone && <a href={`tel:${c.phone}`} className="text-xs text-accent hover:underline">{c.phone}</a>}
                       {c.linkedin && (
                         <a href={c.linkedin.startsWith('http') ? c.linkedin : `https://${c.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline">
@@ -1591,6 +1607,18 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
             ) : (
               <div className="text-xs text-text-muted bg-bg-card rounded-lg p-3 text-center">No contacts yet</div>
             )}
+          </div>
+
+          {/* Buying Committee — multi-stakeholder map per deal */}
+          {contacts.length > 0 && (
+            <div>
+              <BuyingCommittee dealId={deal.id} propertyId={propertyId} contacts={contacts} />
+            </div>
+          )}
+
+          {/* Account Brief — one-click 1-page intelligence summary */}
+          <div>
+            <AccountBrief deal={deal} contacts={contacts} />
           </div>
 
           {/* Company Info */}
@@ -1634,6 +1662,9 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
               {deal.date_added && <div className="text-xs text-text-secondary"><span className="text-text-muted">Added:</span> {deal.date_added}</div>}
               {deal.assigned_to && (
                 <div className="text-xs text-text-secondary"><span className="text-text-muted">Assigned To:</span> <span className="text-accent">{userNameMap[deal.assigned_to] || deal.assigned_to.slice(0, 8)}</span></div>
+              )}
+              {deal.account_lead_id && (
+                <div className="text-xs text-text-secondary"><span className="text-text-muted">Account Lead:</span> <span className="text-accent">{userNameMap[deal.account_lead_id] || deal.account_lead_id.slice(0, 8)}</span></div>
               )}
               {deal.last_contacted && <div className="text-xs text-text-secondary"><span className="text-text-muted">Last Contacted:</span> {deal.last_contacted}</div>}
             </div>
@@ -1796,6 +1827,13 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           )}
         </div>
       </div>
+
+      <WarmPathFinder
+        open={!!warmPathContact}
+        onClose={() => setWarmPathContact(null)}
+        contact={warmPathContact}
+        propertyId={propertyId}
+      />
     </div>
   )
 }
@@ -1943,6 +1981,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
     renewal_date: deal?.renewal_date || '',
     logo_url: deal?.logo_url || '',
     assigned_to: deal?.assigned_to || '',
+    account_lead_id: deal?.account_lead_id || '',
     ...(deal?.id ? { id: deal.id } : {}),
   })
 
@@ -2686,18 +2725,35 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="text-xs text-text-muted">Assigned To</label>
-                <select
-                  value={form.assigned_to}
-                  onChange={(e) => setForm({ ...form, assigned_to: e.target.value || null })}
-                  className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
-                >
-                  <option value="">Unassigned</option>
-                  {(teamProfiles || []).map(u => (
-                    <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-text-muted">Assigned To</label>
+                  <p className="text-[10px] text-text-muted/70 mt-0.5 mb-1">Who's working the next action.</p>
+                  <select
+                    value={form.assigned_to}
+                    onChange={(e) => setForm({ ...form, assigned_to: e.target.value || null })}
+                    className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                  >
+                    <option value="">Unassigned</option>
+                    {(teamProfiles || []).map(u => (
+                      <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted">Account Lead</label>
+                  <p className="text-[10px] text-text-muted/70 mt-0.5 mb-1">Owns the long-term relationship.</p>
+                  <select
+                    value={form.account_lead_id}
+                    onChange={(e) => setForm({ ...form, account_lead_id: e.target.value || null })}
+                    className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                  >
+                    <option value="">— Pick lead —</option>
+                    {(teamProfiles || []).map(u => (
+                      <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

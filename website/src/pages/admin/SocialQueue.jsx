@@ -12,7 +12,6 @@ export default function SocialQueue() {
   const [editing, setEditing] = useState(null)
 
   const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
-  if (profile && !canAccess) return <Navigate to="/app" replace />
 
   async function load() {
     setLoading(true)
@@ -26,6 +25,9 @@ export default function SocialQueue() {
   }
 
   useEffect(() => { load() }, [])
+
+  // Auth gate AFTER hooks (rules-of-hooks).
+  if (profile && !canAccess) return <Navigate to="/app" replace />
 
   async function publish(id) {
     await supabase.from('automation_social_posts').update({

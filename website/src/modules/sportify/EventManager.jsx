@@ -277,6 +277,7 @@ export default function EventManager() {
             <h2 className="text-lg font-semibold text-text-primary mb-4">{editingEvent?.id ? 'Edit Event' : 'New Event'}</h2>
             <EventForm
               event={editingEvent}
+              eventTypes={EVENT_TYPES}
               onSave={(data) => saveMutation.mutate(data)}
               onCancel={() => { setShowForm(false); setEditingEvent(null) }}
               saving={saveMutation.isPending}
@@ -355,12 +356,17 @@ function CalendarView({ events, onCreate }) {
   )
 }
 
-function EventForm({ event, onSave, onCancel, saving }) {
+// EventForm previously referenced EVENT_TYPES from the parent
+// component's lexical scope — but it's a sibling function, not a
+// nested closure, so EVENT_TYPES was undefined at runtime and the
+// form crashed with ReferenceError. Now passed in as a prop with
+// DEFAULT_EVENT_TYPES as a safe fallback.
+function EventForm({ event, eventTypes = DEFAULT_EVENT_TYPES, onSave, onCancel, saving }) {
   const [form, setForm] = useState({
     name: event?.name || '',
     event_date: event?.event_date ? new Date(event.event_date).toISOString().slice(0, 16) : '',
     venue: event?.venue || '',
-    event_type: event?.event_type || EVENT_TYPES[0],
+    event_type: event?.event_type || eventTypes[0],
     status: event?.status || 'Planning',
     notes: event?.notes || '',
     ...(event?.id ? { id: event.id } : {}),
@@ -373,7 +379,7 @@ function EventForm({ event, onSave, onCancel, saving }) {
       <input placeholder="Venue" value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
       <div className="grid grid-cols-2 gap-3">
         <select value={form.event_type} onChange={(e) => setForm({ ...form, event_type: e.target.value })} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
-          {EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          {eventTypes.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
         <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}

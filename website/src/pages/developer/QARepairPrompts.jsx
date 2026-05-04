@@ -17,16 +17,17 @@ export default function QARepairPrompts() {
   const [filters, setFilters] = useState({ status: 'all', pattern: 'all' })
   const [expanded, setExpanded] = useState(null)
 
-  if (profile && profile.role !== 'developer') return <Navigate to="/app" replace />
-
-  useEffect(() => { reload() }, [filters])
-
   async function reload() {
     setLoading(true)
     const { prompts } = await promptService.listPrompts(filters)
     setPrompts(prompts)
     setLoading(false)
   }
+
+  // Auth gate AFTER hooks (rules-of-hooks).
+  useEffect(() => { reload() }, [filters])
+
+  if (profile && profile.role !== 'developer') return <Navigate to="/app" replace />
 
   async function copyPrompt(p) {
     try {

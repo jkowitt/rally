@@ -178,7 +178,9 @@ export default function DeveloperDashboard() {
   }
   const [newPropPlan, setNewPropPlan] = useState('free')
 
-  if (!realIsDeveloper) return <Navigate to="/app" replace />
+  // Auth gate moved AFTER hook calls (rules-of-hooks). All useQuery
+  // calls below are gated with enabled:!!realIsDeveloper so RLS-bound
+  // requests don't fire for non-developers.
 
   const { data: properties } = useQuery({
     queryKey: ['dev-properties'],
@@ -534,6 +536,10 @@ export default function DeveloperDashboard() {
   ]
 
   const roleColor = { developer: 'bg-accent/20 text-accent', admin: 'bg-warning/20 text-warning', rep: 'bg-bg-card text-text-muted' }
+
+  // Final auth gate — all hooks above run once; if the user isn't
+  // a developer we redirect after the hook count is established.
+  if (!realIsDeveloper) return <Navigate to="/app" replace />
 
   return (
     <div className="space-y-4 sm:space-y-6">

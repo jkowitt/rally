@@ -152,31 +152,9 @@ export default function SponsorPortal() {
     enabled: !!portalLink?.deal_id,
   })
 
-  // --- Invalid / expired link ---
-  if (linkError || (!linkLoading && !portalLink)) {
-    return (
-      <div className="min-h-screen bg-[#0D1117] flex items-center justify-center p-4">
-        <div className="text-center space-y-4 max-w-md">
-          <div className="text-4xl">🔒</div>
-          <h1 className="text-xl font-semibold text-text-primary">This link is invalid or has expired</h1>
-          <p className="text-sm text-text-muted">Please contact the property for a new sponsor portal link.</p>
-        </div>
-      </div>
-    )
-  }
-
-  // --- Loading ---
-  if (linkLoading || !deal) {
-    return (
-      <div className="min-h-screen bg-[#0D1117] flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-[#E8B84B] border-t-transparent rounded-full" />
-      </div>
-    )
-  }
-
-  // Session start / end telemetry. Note: RLS allows anonymous insert
-  // is governed by the service-role write path on the proposal_view_events
-  // table — public portal RLS policy must allow insert with no auth.
+  // Session start / end telemetry. Hooks MUST run before any
+  // early-return below (rules of hooks). The effect short-circuits
+  // internally when portalLink isn't loaded yet.
   const sessionStartedRef = useRef(false)
   useEffect(() => {
     if (!portalLink?.id || sessionStartedRef.current) return
@@ -199,6 +177,28 @@ export default function SponsorPortal() {
     window.addEventListener('beforeunload', onUnload)
     return () => window.removeEventListener('beforeunload', onUnload)
   }, [portalLink?.id, portalLink?.property_id, portalLink?.deal_id])
+
+  // --- Invalid / expired link ---
+  if (linkError || (!linkLoading && !portalLink)) {
+    return (
+      <div className="min-h-screen bg-[#0D1117] flex items-center justify-center p-4">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="text-4xl">🔒</div>
+          <h1 className="text-xl font-semibold text-text-primary">This link is invalid or has expired</h1>
+          <p className="text-sm text-text-muted">Please contact the property for a new sponsor portal link.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // --- Loading ---
+  if (linkLoading || !deal) {
+    return (
+      <div className="min-h-screen bg-[#0D1117] flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-[#E8B84B] border-t-transparent rounded-full" />
+      </div>
+    )
+  }
 
   const fulfillmentDelivered = (fulfillment || []).filter(f => f.delivered).length || 0
   const fulfillmentTotal = fulfillment?.length || 0

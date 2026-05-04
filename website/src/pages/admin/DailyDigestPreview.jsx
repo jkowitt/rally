@@ -9,12 +9,13 @@ export default function DailyDigestPreview() {
   const [loading, setLoading] = useState(true)
 
   const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
-  if (profile && !canAccess) return <Navigate to="/app" replace />
 
   useEffect(() => {
     buildDailyDigest().then(d => { setDigest(d); setLoading(false) })
   }, [])
 
+  // Auth + state gates AFTER hooks (rules-of-hooks).
+  if (profile && !canAccess) return <Navigate to="/app" replace />
   if (loading) return <div className="p-6 text-center text-text-muted">Building digest...</div>
   if (!digest) return null
 

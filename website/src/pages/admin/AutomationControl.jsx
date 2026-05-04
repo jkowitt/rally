@@ -23,9 +23,9 @@ export default function AutomationControl() {
   const [health, setHealth] = useState(null)
 
   const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
-  if (profile && !canAccess) return <Navigate to="/app" replace />
 
-  // Load health metrics
+  // Load health metrics — hook must run before any early-return
+  // (rules-of-hooks); auth gate moved below.
   useEffect(() => {
     async function loadHealth() {
       const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
@@ -59,6 +59,8 @@ export default function AutomationControl() {
     })
   }
 
+  // Auth gate AFTER hooks (rules-of-hooks).
+  if (profile && !canAccess) return <Navigate to="/app" replace />
   if (!loaded) {
     return <div className="p-6 text-center text-text-muted">Loading automation settings...</div>
   }

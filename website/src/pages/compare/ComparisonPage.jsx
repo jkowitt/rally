@@ -11,12 +11,16 @@ const SITE = 'https://loud-legacy.com'
  */
 export default function ComparisonPage({ slug }) {
   const data = COMPARISONS.find(c => c.slug === slug)
-  if (!data) return null
-
+  // Compute SEO values defensively so useSeo can be called with
+  // valid (or empty) inputs even when data is missing — moving the
+  // null-return below useSeo would otherwise violate rules-of-hooks.
   const canonical = `${SITE}/compare/${slug}`
 
-  // JSON-LD schema: ItemList of compared products + FAQPage-style "who should choose"
-  const schema = {
+  // JSON-LD schema is only meaningful when data exists. Building it
+  // unguarded threw when slug was missing because every reference
+  // is data.X. Guard with a ternary; useSeo() called below will see
+  // a clean undefined when data is null and no-op.
+  const schema = !data ? null : {
     '@context': 'https://schema.org',
     '@graph': [
       {
@@ -64,11 +68,14 @@ export default function ComparisonPage({ slug }) {
   }
 
   useSeo({
-    title: data.metaTitle,
-    description: data.metaDescription,
+    title: data?.metaTitle,
+    description: data?.metaDescription,
     canonical,
-    schema,
+    schema: data ? schema : undefined,
   })
+
+  // Hook order is now stable; safe to early-return on missing slug.
+  if (!data) return null
 
   const otherComparisons = COMPARISONS.filter(c => c.slug !== slug)
 

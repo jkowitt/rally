@@ -11,7 +11,6 @@ export default function Ads() {
   const [loading, setLoading] = useState(true)
 
   const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
-  if (profile && !canAccess) return <Navigate to="/app" replace />
 
   useEffect(() => {
     async function load() {
@@ -21,6 +20,11 @@ export default function Ads() {
     }
     load()
   }, [])
+
+  // Auth gate AFTER hooks (rules-of-hooks). Without this ordering,
+  // React saw a different hook count when the page first rendered
+  // for a not-yet-loaded profile vs. after the profile arrived.
+  if (profile && !canAccess) return <Navigate to="/app" replace />
 
   function getAlerts(c) {
     const alerts = []

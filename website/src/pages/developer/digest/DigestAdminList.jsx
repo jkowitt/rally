@@ -19,10 +19,6 @@ export default function DigestAdminList() {
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(true)
 
-  if (profile && profile.role !== 'developer') return <Navigate to="/app" replace />
-
-  useEffect(() => { reload() }, [filter])
-
   async function reload() {
     setLoading(true)
     const [{ issues }, s] = await Promise.all([
@@ -33,6 +29,11 @@ export default function DigestAdminList() {
     setStats(s)
     setLoading(false)
   }
+
+  // Auth gate AFTER hooks (rules-of-hooks).
+  useEffect(() => { reload() }, [filter])
+
+  if (profile && profile.role !== 'developer') return <Navigate to="/app" replace />
 
   async function createNew() {
     const r = await digest.createIssue({

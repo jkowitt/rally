@@ -13,7 +13,6 @@ export default function EmailQueue() {
   const [processing, setProcessing] = useState(false)
 
   const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
-  if (profile && !canAccess) return <Navigate to="/app" replace />
 
   async function load() {
     setLoading(true)
@@ -27,6 +26,9 @@ export default function EmailQueue() {
   }
 
   useEffect(() => { load() }, [])
+
+  // Auth gate AFTER hooks (rules-of-hooks).
+  if (profile && !canAccess) return <Navigate to="/app" replace />
 
   async function sendNow(sendId) {
     setProcessing(true)

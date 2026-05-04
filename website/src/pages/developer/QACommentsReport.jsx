@@ -19,10 +19,7 @@ export default function QACommentsReport() {
   const [selected, setSelected] = useState(null)
   const [resolutionNote, setResolutionNote] = useState('')
 
-  if (profile && profile.role !== 'developer') return <Navigate to="/app" replace />
-
-  useEffect(() => { reload() }, [filters])
-
+  // reload declared before useEffect so the lint's TDZ check passes.
   async function reload() {
     setLoading(true)
     const [{ comments }, s] = await Promise.all([
@@ -33,6 +30,11 @@ export default function QACommentsReport() {
     setStats(s)
     setLoading(false)
   }
+
+  // Auth gate AFTER hooks (rules-of-hooks).
+  useEffect(() => { reload() }, [filters])
+
+  if (profile && profile.role !== 'developer') return <Navigate to="/app" replace />
 
   async function resolve(id) {
     await qaComments.resolveComment(id, profile.id, resolutionNote)

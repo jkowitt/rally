@@ -21,12 +21,14 @@ export default function DevConsole() {
   const [statusCounts, setStatusCounts] = useState({})
   const [trialsCount, setTrialsCount] = useState(0)
 
-  if (profile?.role !== 'developer') return <Navigate to="/app" replace />
+  // Auth gate moved below hooks (rules-of-hooks).
 
   useEffect(() => {
     if (!outlookOn) return
     loadAll()
   }, [outlookOn])
+
+  if (profile?.role !== 'developer') return <Navigate to="/app" replace />
 
   async function loadAll() {
     const today = new Date().toISOString().slice(0, 10)

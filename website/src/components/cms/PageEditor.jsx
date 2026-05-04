@@ -5,6 +5,12 @@ import { useCMS } from '@/hooks/useCMS'
 // Format toolbar that appears above the selected element
 function FormatToolbar({ target, onClose }) {
   const [pos, setPos] = useState({ top: 0, left: 0 })
+  // showSection used to be declared AFTER the early-return below.
+  // That violated the rules of hooks: when target was null, this
+  // useState wasn't called → on next render with target present
+  // it WAS, so React saw a different hook count and crashed.
+  // Moved above the early-return.
+  const [showSection, setShowSection] = useState(false)
   const { setDraft, uploadImage } = useCMS()
   const fileRef = useRef(null)
 
@@ -18,7 +24,6 @@ function FormatToolbar({ target, onClose }) {
 
   const isImage = target.tagName?.toLowerCase() === 'img'
   const computed = window.getComputedStyle(target)
-  const [showSection, setShowSection] = useState(false)
 
   // Find the nearest section/container parent
   const section = target.closest('section, [class*="bg-bg"], [class*="rounded-lg"], [class*="border"]') || target.parentElement

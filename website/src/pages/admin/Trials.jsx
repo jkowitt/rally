@@ -21,7 +21,7 @@ export default function Trials() {
   const [scoring, setScoring] = useState(false)
 
   const canAccess = realIsDeveloper || profile?.role === 'businessops' || profile?.role === 'admin'
-  if (profile && !canAccess) return <Navigate to="/app" replace />
+  // Auth-gate moved BELOW hook calls so we don't violate rules-of-hooks.
 
   async function load() {
     setLoading(true)
@@ -51,6 +51,9 @@ export default function Trials() {
   }
 
   useEffect(() => { load() }, [])
+
+  // Auth gate — runs AFTER hooks per rules-of-hooks.
+  if (profile && !canAccess) return <Navigate to="/app" replace />
 
   async function runScoring() {
     setScoring(true)

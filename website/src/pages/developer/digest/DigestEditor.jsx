@@ -35,9 +35,11 @@ export default function DigestEditor() {
   const textareaRef = useRef(null)
   const autoSaveTimer = useRef(null)
 
-  if (profile && profile.role !== 'developer') return <Navigate to="/app" replace />
+  // Auth gate moved below hooks (rules-of-hooks).
 
   useEffect(() => { load() }, [id])
+
+  if (profile && profile.role !== 'developer') return <Navigate to="/app" replace />
 
   async function load() {
     setLoading(true)

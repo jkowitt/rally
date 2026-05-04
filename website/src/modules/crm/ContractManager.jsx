@@ -1184,6 +1184,9 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
 
 /* ============ Upload Template (replaces PDF Import) ============ */
 function UploadTemplate({ deals, propertyId, profileId, onImported }) {
+  // toast was used at line ~1445 (smart-match notice) without ever
+  // being declared — would throw ReferenceError in production.
+  const { toast } = useToast()
   const [pdfText, setPdfText] = useState('')
   const [pdfBase64, setPdfBase64] = useState(null)
   const [pdfFileName, setPdfFileName] = useState('')

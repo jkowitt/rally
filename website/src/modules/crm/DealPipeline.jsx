@@ -15,7 +15,8 @@ import {
 import { on } from '@/lib/appEvents'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail } from '@/lib/claude'
+import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail, draftFirstTouchEmail } from '@/lib/claude'
+import { useComposeEmail } from '@/hooks/useComposeEmail'
 import { usePlanLimits } from '@/hooks/usePlanLimits'
 import UpgradeGate, { UsageBadge } from '@/components/UpgradeGate'
 import ICPFilter from '@/components/ICPFilter'
@@ -1184,8 +1185,24 @@ function EditableCell({ value, dealId, field, onSave, className, format, type = 
 }
 
 /* ============ Deal Viewer (Read-Only) ============ */
+
+// Compact relative-time helper for "Last emailed N ago" labels.
+// Keeps the call-site terse; not exported because every other
+// surface that needs this would re-derive from useNowMinute().
+function relTime(iso) {
+  if (!iso) return ''
+  const t = new Date(iso).getTime()
+  const ago = Date.now() - t
+  if (ago < 60_000) return 'just now'
+  if (ago < 3_600_000) return `${Math.floor(ago / 60_000)}m ago`
+  if (ago < 86_400_000) return `${Math.floor(ago / 3_600_000)}h ago`
+  if (ago < 7 * 86_400_000) return `${Math.floor(ago / 86_400_000)}d ago`
+  return new Date(iso).toLocaleDateString()
+}
+
 function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   const navigate = useNavigate()
+  const composeEmail = useComposeEmail()
   const { toast } = useToast()
   const { profile } = useAuth()
   const [shareCopied, setShareCopied] = useState(false)
@@ -1465,8 +1482,26 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
                       {c.email_verified === 'risky' && <span className="text-[9px] font-mono text-warning">⚠ risky</span>}
                     </div>
                     {c.position && <div className="text-xs text-text-secondary mt-0.5">{c.position}</div>}
+                    {c.last_contacted_at && (
+                      <div className="text-[10px] text-text-muted mt-0.5">
+                        Last emailed {relTime(c.last_contacted_at)}
+                      </div>
+                    )}
                     <div className="flex gap-3 mt-1.5 flex-wrap items-center">
-                      {c.email && <a href={`mailto:${c.email}`} className="text-xs text-accent hover:underline">{c.email}</a>}
+                      {c.email && (
+                        <button
+                          type="button"
+                          onClick={() => composeEmail.open({
+                            to: c.email,
+                            dealId: deal.id,
+                            defaultSubject: `Re: ${deal.brand_name || 'Sponsorship'}`,
+                          })}
+                          className="text-xs text-accent hover:underline font-medium"
+                          title="Compose email"
+                        >
+                          ✉ {c.email}
+                        </button>
+                      )}
                       {c.email && c.id && !c.email_verified && (
                         <button
                           onClick={() => handleVerifyEmail(c.id, c.email)}
@@ -1492,7 +1527,19 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
                 <span className="text-sm text-text-primary">{deal.contact_name}</span>
                 {deal.contact_position && <div className="text-xs text-text-secondary mt-0.5">{deal.contact_position}</div>}
                 <div className="flex gap-3 mt-1.5 flex-wrap">
-                  {deal.contact_email && <a href={`mailto:${deal.contact_email}`} className="text-xs text-accent hover:underline">{deal.contact_email}</a>}
+                  {deal.contact_email && (
+                    <button
+                      type="button"
+                      onClick={() => composeEmail.open({
+                        to: deal.contact_email,
+                        dealId: deal.id,
+                        defaultSubject: `Re: ${deal.brand_name || 'Sponsorship'}`,
+                      })}
+                      className="text-xs text-accent hover:underline font-medium"
+                    >
+                      ✉ {deal.contact_email}
+                    </button>
+                  )}
                   {deal.contact_phone && <a href={`tel:${deal.contact_phone}`} className="text-xs text-accent hover:underline">{deal.contact_phone}</a>}
                 </div>
               </div>
@@ -3608,6 +3655,7 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
 function ProspectFinder({ propertyId, onClose, onAdded }) {
   const { profile } = useAuth()
   const planLimits = usePlanLimits()
+  const composeEmail = useComposeEmail()
   const effectivePropertyId = propertyId || profile?.property_id
   const [tab, setTab] = useState('search') // search | suggestions
   const [searchQuery, setSearchQuery] = useState('')
@@ -4235,6 +4283,24 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                               )}
                               {contact.outreach_tip && (
                                 <p className="text-[10px] sm:text-[11px] text-accent/80 mt-0.5 italic">{contact.outreach_tip}</p>
+                              )}
+                              {(contact.email || contact.email_pattern) && (
+                                <button
+                                  type="button"
+                                  onClick={() => composeEmail.open({
+                                    to: contact.email || contact.email_pattern,
+                                    defaultSubject: `Sponsorship opportunity with ${prospect.company_name || prospect.brand_name || ''}`.trim(),
+                                    generateDraft: () => draftFirstTouchEmail({
+                                      prospect,
+                                      contact,
+                                      senderName: profile?.full_name,
+                                      senderProperty: profile?.properties?.name,
+                                    }),
+                                  })}
+                                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-accent hover:underline font-medium"
+                                >
+                                  ✉ Email {contact.first_name || 'this contact'}
+                                </button>
                               )}
                             </div>
                           </div>

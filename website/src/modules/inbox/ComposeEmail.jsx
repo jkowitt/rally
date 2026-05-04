@@ -28,21 +28,44 @@ function fileToBase64(file) {
 // gmail-graph 'send' action).
 //
 // Used standalone via the inbox compose button, or in-context from
-// a deal/contact card with `to` pre-filled.
-export default function ComposeEmail({ open, onClose, defaultTo, defaultSubject, dealId }) {
+// a deal/contact card with `to` pre-filled. `generateDraft` enables
+// an AI-draft button that replaces the body with personalized copy.
+export default function ComposeEmail({
+  open,
+  onClose,
+  defaultTo,
+  defaultCc,
+  defaultSubject,
+  defaultBody,
+  dealId,
+  generateDraft,
+}) {
   const { profile } = useAuth()
   const { toast } = useToast()
   const dialogRef = useDialog({ isOpen: open, onClose })
   const fileInputRef = useRef(null)
 
   const [to, setTo] = useState(defaultTo || '')
-  const [cc, setCc] = useState('')
-  const [showCc, setShowCc] = useState(false)
+  const [cc, setCc] = useState(defaultCc || '')
+  const [showCc, setShowCc] = useState(!!defaultCc)
   const [subject, setSubject] = useState(defaultSubject || '')
-  const [body, setBody] = useState('')
+  const [body, setBody] = useState(defaultBody || '')
   const [attachments, setAttachments] = useState([])    // [{ name, type, size, data }]
   const [provider, setProvider] = useState('outlook')   // 'outlook' | 'gmail'
   const [sending, setSending] = useState(false)
+  const [drafting, setDrafting] = useState(false)
+
+  // Reset state when the modal opens with new defaults.
+  useEffect(() => {
+    if (!open) return
+    setTo(defaultTo || '')
+    setCc(defaultCc || '')
+    setShowCc(!!defaultCc)
+    setSubject(defaultSubject || '')
+    setBody(defaultBody || '')
+    setAttachments([])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   // Auto-append signature on first open. Pull from profile.email_signature.
   useEffect(() => {
@@ -55,6 +78,28 @@ export default function ComposeEmail({ open, onClose, defaultTo, defaultSubject,
   }, [open, profile?.email_signature])
 
   if (!open) return null
+
+  async function handleDraft() {
+    if (!generateDraft) return
+    setDrafting(true)
+    try {
+      const result = await generateDraft()
+      if (result) {
+        if (result.subject && !subject) setSubject(result.subject)
+        // Replace body but keep signature if it was already there
+        const sig = profile?.email_signature
+        const draft = sig && !result.body.includes(sig)
+          ? `${result.body}\n\n${sig}`
+          : result.body
+        setBody(draft)
+        toast({ title: 'Draft generated', type: 'success' })
+      }
+    } catch (err) {
+      toast({ title: 'Could not draft email', description: humanError(err), type: 'error' })
+    } finally {
+      setDrafting(false)
+    }
+  }
 
   async function handleAttach(e) {
     const files = Array.from(e.target.files || [])
@@ -274,6 +319,18 @@ export default function ComposeEmail({ open, onClose, defaultTo, defaultSubject,
             >
               <Paperclip className="w-3.5 h-3.5" /> Attach files
             </Button>
+            {generateDraft && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleDraft}
+                disabled={drafting || sending}
+                type="button"
+                title="AI-generate a personalized first draft from the prospect's data"
+              >
+                {drafting ? 'Drafting…' : '✨ Draft with AI'}
+              </Button>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={onClose} disabled={sending}>

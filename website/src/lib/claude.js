@@ -143,6 +143,45 @@ export async function draftEmail({ deal, context, email_type }) {
   }
 }
 
+// Personalized first-touch outreach for a prospect. Returns a
+// { subject, body } pair the Compose modal can drop in.
+//   prospect — the row from searchProspects / suggestProspects
+//   contact  — optional contact returned by researchContacts
+//   senderName / senderProperty — used for the sign-off
+export async function draftFirstTouchEmail({ prospect, contact, senderName, senderProperty }) {
+  try {
+    const dealLike = {
+      brand_name: prospect?.company_name || prospect?.brand_name,
+      sub_industry: prospect?.sub_industry || prospect?.category,
+      website: prospect?.website,
+      city: prospect?.headquarters_city,
+      state: prospect?.headquarters_state,
+      contact_name: contact ? `${contact.first_name || ''} ${contact.last_name || ''}`.trim() : null,
+      contact_position: contact?.position,
+      contact_email: contact?.email || contact?.email_pattern,
+    }
+    const context = {
+      sender_name: senderName,
+      sender_property: senderProperty,
+      why_good_fit: prospect?.why_good_fit,
+      outreach_tip: contact?.outreach_tip,
+      estimated_budget: prospect?.estimated_sponsorship_budget,
+    }
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'draft_email',
+      deal: dealLike,
+      context,
+      email_type: 'first_touch',
+    })
+    const email = result?.email || result
+    if (!email?.body) return null
+    return { subject: email.subject, body: email.body }
+  } catch (e) {
+    console.warn('draftFirstTouchEmail failed:', e?.message)
+    return null
+  }
+}
+
 export async function analyzeLostDeal({ deal, activities }) {
   try {
     return await invokeEdgeFunction('contract-ai', { action: 'analyze_lost_deal', deal, activities })

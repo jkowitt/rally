@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { AuthProvider } from './hooks/useAuth'
 import { FeatureFlagProvider } from './hooks/useFeatureFlags'
+import { ComposeEmailProvider } from './hooks/useComposeEmail'
 import { ImpersonationProvider } from './hooks/useImpersonation'
 import ToastProvider from './components/Toast'
 import ProtectedRoute from './components/layout/ProtectedRoute'
@@ -189,6 +190,7 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <LegalGate>
+                  <ComposeEmailProvider>
                     <AppShell>
                       <Suspense fallback={null}>
                         <OnboardingModal />
@@ -287,6 +289,7 @@ export default function App() {
                         </Suspense>
                       </ErrorBoundary>
                     </AppShell>
+                  </ComposeEmailProvider>
                   </LegalGate>
                 </ProtectedRoute>
               }

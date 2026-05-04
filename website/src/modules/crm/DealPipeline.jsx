@@ -8,6 +8,8 @@ import DealActivityTimeline from '@/components/DealActivityTimeline'
 import BuyingCommittee from '@/components/BuyingCommittee'
 import AccountBrief from '@/components/AccountBrief'
 import WarmPathFinder from '@/components/WarmPathFinder'
+import PersonalityProfile from '@/components/PersonalityProfile'
+import PortalEngagement from '@/components/PortalEngagement'
 import SlashInput from '@/components/SlashInput'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { Badge, Button, EmptyState } from '@/components/ui'
@@ -1217,6 +1219,7 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   const [verifyingEmail, setVerifyingEmail] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [warmPathContact, setWarmPathContact] = useState(null)
+  const [personalityContact, setPersonalityContact] = useState(null)
   const queryClient = useQueryClient()
   const viewerPlanLimits = usePlanLimits()
   const propertyId = deal.property_id
@@ -1573,6 +1576,16 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
                           🔗 Warm path
                         </button>
                       )}
+                      {c.id && (
+                        <button
+                          type="button"
+                          onClick={() => setPersonalityContact(c)}
+                          className="text-[10px] font-mono text-text-muted hover:text-accent"
+                          title="Generate a Crystal-style personality read"
+                        >
+                          🧠 Personality
+                        </button>
+                      )}
                       {c.phone && <a href={`tel:${c.phone}`} className="text-xs text-accent hover:underline">{c.phone}</a>}
                       {c.linkedin && (
                         <a href={c.linkedin.startsWith('http') ? c.linkedin : `https://${c.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline">
@@ -1619,6 +1632,11 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           {/* Account Brief — one-click 1-page intelligence summary */}
           <div>
             <AccountBrief deal={deal} contacts={contacts} />
+          </div>
+
+          {/* Portal engagement — time on each portal section */}
+          <div>
+            <PortalEngagement dealId={deal.id} />
           </div>
 
           {/* Company Info */}
@@ -1832,6 +1850,13 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
         open={!!warmPathContact}
         onClose={() => setWarmPathContact(null)}
         contact={warmPathContact}
+        propertyId={propertyId}
+      />
+
+      <PersonalityProfile
+        open={!!personalityContact}
+        onClose={() => setPersonalityContact(null)}
+        contact={personalityContact}
         propertyId={propertyId}
       />
     </div>

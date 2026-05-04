@@ -5,7 +5,7 @@ import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
 import { useDialog } from '@/hooks/useDialog'
-import { Paperclip, X } from 'lucide-react'
+import { Paperclip, X, Calendar } from 'lucide-react'
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024 // 25 MB per Gmail/Outlook
 
@@ -39,6 +39,9 @@ export default function ComposeEmail({
   defaultBody,
   dealId,
   generateDraft,
+  inReplyToMessageId,
+  threadId,
+  defaultProvider,
 }) {
   const { profile } = useAuth()
   const { toast } = useToast()
@@ -51,7 +54,7 @@ export default function ComposeEmail({
   const [subject, setSubject] = useState(defaultSubject || '')
   const [body, setBody] = useState(defaultBody || '')
   const [attachments, setAttachments] = useState([])    // [{ name, type, size, data }]
-  const [provider, setProvider] = useState('outlook')   // 'outlook' | 'gmail'
+  const [provider, setProvider] = useState(defaultProvider || 'outlook')   // 'outlook' | 'gmail'
   const [sending, setSending] = useState(false)
   const [drafting, setDrafting] = useState(false)
 
@@ -124,6 +127,23 @@ export default function ComposeEmail({
     setAttachments(prev => prev.filter(a => a.name !== name))
   }
 
+  // Insert the user's booking link at the cursor (or end of body).
+  // Pulled from profile.calendar_booking_url.
+  function insertBookingLink() {
+    const url = profile?.calendar_booking_url
+    if (!url) {
+      toast({
+        title: 'No booking link set',
+        description: 'Add one in Settings → Profile → Calendar booking URL.',
+        type: 'warning',
+      })
+      return
+    }
+    const label = profile?.calendar_booking_label || 'Book a time'
+    const snippet = `\n\n${label}: ${url}\n`
+    setBody(prev => (prev || '') + snippet)
+  }
+
   async function handleSend() {
     if (!to.trim()) {
       toast({ title: 'Add a recipient', type: 'warning' })
@@ -146,6 +166,8 @@ export default function ComposeEmail({
           })),
           deal_id: dealId,
           user_id: profile?.id,
+          in_reply_to_message_id: inReplyToMessageId || undefined,
+          thread_id: threadId || undefined,
         },
       })
       if (error) throw error
@@ -319,6 +341,17 @@ export default function ComposeEmail({
             >
               <Paperclip className="w-3.5 h-3.5" /> Attach files
             </Button>
+            {profile?.calendar_booking_url && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={insertBookingLink}
+                type="button"
+                title="Insert your calendar booking link at the bottom of the message"
+              >
+                <Calendar className="w-3.5 h-3.5" /> Insert booking link
+              </Button>
+            )}
             {generateDraft && (
               <Button
                 variant="secondary"

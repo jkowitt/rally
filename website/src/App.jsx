@@ -39,6 +39,9 @@ const SignalFeed = lazyRetry(() => import('./modules/crm/SignalFeed'))
 const PriorityQueue = lazyRetry(() => import('./modules/crm/PriorityQueue'))
 const Lookalikes = lazyRetry(() => import('./modules/crm/Lookalikes'))
 const RelationshipSearch = lazyRetry(() => import('./modules/crm/RelationshipSearch'))
+const Sequences = lazyRetry(() => import('./modules/crm/Sequences'))
+const OutreachAnalytics = lazyRetry(() => import('./modules/crm/OutreachAnalytics'))
+const Postmortems = lazyRetry(() => import('./modules/crm/Postmortems'))
 const MigratePage = lazyRetry(() => import('./pages/contracts/MigratePage'))
 const FulfillmentTracker = lazyRetry(() => import('./modules/crm/FulfillmentTracker'))
 const AccountsDashboard = lazyRetry(() => import('./modules/accounts/AccountsDashboard'))
@@ -214,6 +217,9 @@ export default function App() {
                             <Route path="/crm/priority" element={<PriorityQueue />} />
                             <Route path="/crm/lookalikes" element={<Lookalikes />} />
                             <Route path="/crm/relationships" element={<RelationshipSearch />} />
+                            <Route path="/crm/sequences" element={<Sequences />} />
+                            <Route path="/crm/outreach-analytics" element={<OutreachAnalytics />} />
+                            <Route path="/crm/postmortems" element={<Postmortems />} />
                             <Route path="/crm/contracts" element={<ContractManager />} />
                             <Route path="/crm/migrate" element={<MigratePage />} />
                             <Route path="/crm/fulfillment" element={<FulfillmentTracker />} />

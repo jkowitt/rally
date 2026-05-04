@@ -462,12 +462,39 @@ async function handleSend(sb: any, userId: string, body: any) {
   }
   const bodyMimeType = isHtml ? "text/html" : "text/plain";
 
+  // Threading: when caller passes in_reply_to_message_id, we look up
+  // the original Gmail message to grab its Message-Id header + thread,
+  // then add In-Reply-To/References on the new MIME and pass threadId
+  // to /messages/send so Gmail keeps the conversation grouped.
+  const inReplyTo: string | null = body.in_reply_to_message_id || null;
+  const threadId: string | null = body.thread_id || null;
+  let inReplyToHeader: string | null = null;
+  let referencesHeader: string | null = null;
+  let resolvedThreadId: string | null = threadId;
+
+  if (inReplyTo) {
+    const orig = await fetch(`${GMAIL_API}/messages/${inReplyTo}?format=metadata&metadataHeaders=Message-Id&metadataHeaders=References`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (orig.ok) {
+      const m = await orig.json();
+      const hdrs = m?.payload?.headers || [];
+      const msgId = hdrs.find((h: any) => h.name?.toLowerCase() === "message-id")?.value;
+      const refs = hdrs.find((h: any) => h.name?.toLowerCase() === "references")?.value;
+      if (msgId) inReplyToHeader = msgId;
+      referencesHeader = [refs, msgId].filter(Boolean).join(" ");
+      if (m.threadId) resolvedThreadId = m.threadId;
+    }
+  }
+
   let raw: string;
   if (attachments.length === 0) {
     raw = [
       `To: ${to}`,
       cc ? `Cc: ${cc}` : "",
       `Subject: ${subject}`,
+      inReplyToHeader ? `In-Reply-To: ${inReplyToHeader}` : "",
+      referencesHeader ? `References: ${referencesHeader}` : "",
       `Content-Type: ${bodyMimeType}; charset="UTF-8"`,
       "MIME-Version: 1.0",
       "",
@@ -479,6 +506,8 @@ async function handleSend(sb: any, userId: string, body: any) {
       `To: ${to}`,
       cc ? `Cc: ${cc}` : "",
       `Subject: ${subject}`,
+      inReplyToHeader ? `In-Reply-To: ${inReplyToHeader}` : "",
+      referencesHeader ? `References: ${referencesHeader}` : "",
       "MIME-Version: 1.0",
       `Content-Type: multipart/mixed; boundary="${boundary}"`,
       "",
@@ -509,13 +538,16 @@ async function handleSend(sb: any, userId: string, body: any) {
     .replace(/\//g, "_")
     .replace(/=+$/, "");
 
+  const sendPayload: any = { raw: encoded };
+  if (resolvedThreadId) sendPayload.threadId = resolvedThreadId;
+
   const sendRes = await fetch(`${GMAIL_API}/messages/send`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ raw: encoded }),
+    body: JSON.stringify(sendPayload),
   });
 
   if (!sendRes.ok) {

@@ -222,6 +222,45 @@ export async function findLookalikes({ deal, recent_wins }) {
   }
 }
 
+// Crystal-style personality profile for a contact.
+export async function generatePersonalityProfile({ contact, email_samples }) {
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'personality_profile', contact, email_samples,
+    })
+    return result?.profile || null
+  } catch (e) {
+    console.warn('generatePersonalityProfile failed:', e?.message)
+    return null
+  }
+}
+
+// Funding/M&A radar — sweep a list of brand names for known events.
+export async function runFundingRadar({ brands }) {
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'funding_radar', brands,
+    })
+    return result?.result?.signals || []
+  } catch (e) {
+    console.warn('runFundingRadar failed:', e?.message)
+    return []
+  }
+}
+
+// Generate post-mortem questions for a won/lost deal.
+export async function generatePostmortemQuestions({ deal, outcome }) {
+  try {
+    const result = await invokeEdgeFunction('contract-ai', {
+      action: 'postmortem_questions', deal, outcome,
+    })
+    return result?.questions || null
+  } catch (e) {
+    console.warn('generatePostmortemQuestions failed:', e?.message)
+    return null
+  }
+}
+
 // Cluster a property's closed-won deals to derive its ICP.
 export async function generateIcpCluster({ wins }) {
   try {

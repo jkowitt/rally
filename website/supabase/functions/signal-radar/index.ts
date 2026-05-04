@@ -68,12 +68,13 @@ function jsonResponse(body: unknown, status = 200) {
 async function scanProperty(sb: any, propertyId: string) {
   // Need an `last_enriched_at` column. We'll try-and-tolerate
   // (some properties may not have run the migration that adds it).
-  // Pull stalest first.
+  // Pull stalest first; include either email-bearing OR linkedin-bearing
+  // contacts so people/match has something to key on.
   const { data: contacts, error } = await sb
     .from("contacts")
-    .select("id, email, first_name, last_name, company, position, last_enriched_at")
+    .select("id, email, linkedin, first_name, last_name, company, position, last_enriched_at")
     .eq("property_id", propertyId)
-    .not("email", "is", null)
+    .or("email.not.is.null,linkedin.not.is.null")
     .order("last_enriched_at", { ascending: true, nullsFirst: true })
     .limit(PER_PROPERTY_BUDGET);
   if (error) return { error: String(error.message || error) };
@@ -123,14 +124,23 @@ async function scanProperty(sb: any, propertyId: string) {
 }
 
 async function apolloPersonMatch(c: any): Promise<{ company: string; title: string; linkedin_url: string; email: string } | null> {
-  if (!c.email) return null;
+  // Prefer email match (most reliable). Fall back to linkedin URL +
+  // name + company if no email available.
+  const payload: any = { reveal_personal_emails: false };
+  if (c.email) {
+    payload.email = c.email;
+  } else if (c.linkedin) {
+    payload.linkedin_url = c.linkedin.startsWith("http") ? c.linkedin : `https://${c.linkedin}`;
+    if (c.first_name) payload.first_name = c.first_name;
+    if (c.last_name) payload.last_name = c.last_name;
+    if (c.company) payload.organization_name = c.company;
+  } else {
+    return null;
+  }
   const res = await fetch(`${APOLLO_BASE}/people/match?api_key=${APOLLO_API_KEY}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: c.email,
-      reveal_personal_emails: false,
-    }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) return null;
   const data = await res.json();
@@ -140,6 +150,6 @@ async function apolloPersonMatch(c: any): Promise<{ company: string; title: stri
     company: p.organization?.name || "",
     title: p.title || "",
     linkedin_url: p.linkedin_url || "",
-    email: p.email || c.email,
+    email: p.email || c.email || "",
   };
 }

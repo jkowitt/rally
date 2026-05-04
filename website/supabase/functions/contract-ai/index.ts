@@ -87,6 +87,12 @@ Deno.serve(async (req: Request) => {
       result = await findLookalikes(body);
     } else if (action === "icp_cluster") {
       result = await icpCluster(body);
+    } else if (action === "personality_profile") {
+      result = await personalityProfile(body);
+    } else if (action === "funding_radar") {
+      result = await fundingRadar(body);
+    } else if (action === "postmortem_questions") {
+      result = await postmortemQuestions(body);
     } else if (action === "analyze_lost_deal") {
       result = await analyzeLostDeal(body);
     } else if (action === "enrich_contact") {
@@ -626,6 +632,76 @@ async function icpCluster(body: any) {
     `}\n\nReturn ONLY valid JSON.`;
   const text = await callClaude(prompt, 1024);
   return { cluster: extractJSON(text) };
+}
+
+// personalityProfile: Crystal-style read of a contact's
+// communication style. Best-effort; uses public signals we have
+// (title, position, company, linkedin) + LinkedIn bio if provided.
+async function personalityProfile(body: any) {
+  const c = body.contact || {};
+  const samples = (body.email_samples || []).slice(0, 3).map((s: string) => s.slice(0, 800)).join("\n---\n");
+  const prompt =
+    `You are a B2B communication strategist. Read what we know about this contact and return a brief style profile that helps a sales rep tune their tone. Be measured — this is a hint, not a diagnosis.\n\n` +
+    `Name: ${c.first_name || ""} ${c.last_name || ""}\n` +
+    `Title: ${c.position || "unknown"}\n` +
+    `Company: ${c.company || "unknown"}\n` +
+    `LinkedIn bio: ${(c.linkedin_bio || "").slice(0, 1000)}\n` +
+    `Recent message samples (if any):\n${samples}\n\n` +
+    `Return JSON:\n{` +
+    `"disc_type":"D|I|S|C|DI|DS|IS|IC|SC|DC",` +
+    `"communication_style":"direct|analytical|expressive|amiable",` +
+    `"preferred_pace":"fast|measured|slow",` +
+    `"decision_drivers":["data","speed","consensus","vision","risk_aversion"],` +
+    `"avoid_phrases":["phrases that pattern poorly"],` +
+    `"recommended_phrases":["phrases that pattern well"],` +
+    `"rationale":"2-3 sentence explanation"` +
+    `}\n\nReturn ONLY valid JSON.`;
+  const text = await callClaude(prompt, 1024);
+  return { profile: extractJSON(text) };
+}
+
+// fundingRadar: best-effort sweep of tracked brand names looking
+// for funding rounds, M&A activity, or major hires that match the
+// AI's training data. Returns a list of plausible signals; the
+// caller writes any winners to prospect_signals.
+async function fundingRadar(body: any) {
+  const brands = (body.brands || []).slice(0, 50);
+  const prompt =
+    `You are a B2B sales intelligence analyst. From the list below, identify any brands you know have had a meaningful funding round, M&A event, IPO, major hire, or strategic pivot in roughly the last 12 months.\n\n` +
+    `Brands: ${JSON.stringify(brands)}\n\n` +
+    `If you don't have high-confidence info on a brand, omit it — false positives hurt the customer.\n\n` +
+    `Return JSON:\n{"signals":[{` +
+    `"brand":"name as appears in input",` +
+    `"event_type":"funding|acquisition|merger|ipo|hire|pivot",` +
+    `"title":"short headline",` +
+    `"description":"2-3 sentence summary",` +
+    `"approx_when":"YYYY-MM",` +
+    `"severity":"high|medium|low",` +
+    `"confidence":0.0-1.0` +
+    `}]}\n\nReturn ONLY valid JSON. Empty signals array is fine.`;
+  const text = await callClaude(prompt, 2000);
+  return { result: extractJSON(text) };
+}
+
+// postmortemQuestions: generate 5-7 structured questions for a
+// rep + contact debrief based on outcome (won|lost) and deal
+// context. The UI presents these and stores answers.
+async function postmortemQuestions(body: any) {
+  const d = body.deal || {};
+  const outcome = body.outcome || "lost";
+  const prompt =
+    `You are a sales-leadership coach. Generate 5-7 short questions for a deal post-mortem.\n\n` +
+    `Outcome: ${outcome}\nBrand: ${d.brand_name}\nStage when concluded: ${d.stage || "unknown"}\n` +
+    `Value: $${d.value || 0}\nNotes: ${(d.notes || "").slice(0, 500)}\n\n` +
+    `Two audiences:\n` +
+    `- "rep_questions": for our internal sales rep (root-cause + lessons)\n` +
+    `- "contact_questions": short, polite questions we could send to the prospect (decision factors, what we missed)\n\n` +
+    `Return JSON:\n{` +
+    `"rep_questions":[{"id":"r1","prompt":"text"}],` +
+    `"contact_questions":[{"id":"c1","prompt":"text"}]` +
+    `}\n\nReturn ONLY valid JSON.`;
+  const text = await callClaude(prompt, 1024);
+  return { questions: extractJSON(text) };
 }
 
 async function analyzeLostDeal(body: any) {

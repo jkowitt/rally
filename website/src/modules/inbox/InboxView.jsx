@@ -241,6 +241,12 @@ function MessageDetail({ message }) {
       defaultSubject: `Re: ${subj || '(no subject)'}`,
       defaultBody: '',
       dealId: message.linked_deal_id || null,
+      // Threading: pass provider message_id + thread_id so the
+      // edge function can stitch In-Reply-To/References (Gmail)
+      // or route through /messages/{id}/reply (Outlook).
+      inReplyToMessageId: message.message_id,
+      threadId: message.thread_id,
+      provider: message.provider,
       generateDraft: withDraft
         ? async () => await draftReplyEmail({
             incoming: {

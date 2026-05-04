@@ -5,6 +5,8 @@ import { useNowMinute } from '@/hooks/useNow'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import OnboardingChecklist from '@/components/OnboardingChecklist'
+import CoachingNudges from '@/components/CoachingNudges'
+import IntelligenceTourBanner from '@/components/IntelligenceTourBanner'
 import ResumeBanner from '@/components/onboarding/ResumeBanner'
 import UpgradeBanner from '@/components/upgrade/UpgradeBanner'
 import { TrialBanner } from '@/components/UpgradeGate'
@@ -598,6 +600,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <IntelligenceTourBanner />
+      <CoachingNudges />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

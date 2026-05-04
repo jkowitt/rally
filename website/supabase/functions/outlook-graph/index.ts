@@ -390,13 +390,25 @@ async function handleSend(accessToken: string, body: any, sb: any, userId: strin
     }));
   }
 
-  const sendRes = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
+  // If this is a reply, route through the message-specific reply
+  // endpoint so Graph stitches threading headers (In-Reply-To,
+  // References) automatically.
+  const inReplyTo: string | null = body.in_reply_to_message_id || null;
+
+  const sendUrl = inReplyTo
+    ? `https://graph.microsoft.com/v1.0/me/messages/${inReplyTo}/reply`
+    : "https://graph.microsoft.com/v1.0/me/sendMail";
+  const sendBody = inReplyTo
+    ? { message, comment: "" }
+    : { message, saveToSentItems: true };
+
+  const sendRes = await fetch(sendUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message, saveToSentItems: true }),
+    body: JSON.stringify(sendBody),
   });
   if (!sendRes.ok) {
     const errText = await sendRes.text();

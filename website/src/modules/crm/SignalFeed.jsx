@@ -60,6 +60,23 @@ export default function SignalFeed() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['prospect-signals'] }),
   })
 
+  // Bulk dismiss every active signal currently shown by the filter.
+  const bulkDismiss = useMutation({
+    mutationFn: async () => {
+      if (!signals.length) return
+      const ids = signals.map(s => s.id)
+      const { error } = await supabase
+        .from('prospect_signals')
+        .update({ dismissed_at: new Date().toISOString() })
+        .in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['prospect-signals'] })
+      toast({ title: 'Dismissed all visible signals', type: 'success' })
+    },
+  })
+
   const markActed = useMutation({
     mutationFn: async (id) => {
       const { error } = await supabase
@@ -124,13 +141,24 @@ export default function SignalFeed() {
         <FilterTab id="history" label="History (90d)" active={view === 'history'} onClick={() => setView('history')} />
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        <TypeChip label="All" count={signals.length} active={filter === 'all'} onClick={() => setFilter('all')} />
+      <div className="flex gap-2 flex-wrap items-center justify-between">
+        <div className="flex gap-2 flex-wrap">
+          <TypeChip label="All" count={signals.length} active={filter === 'all'} onClick={() => setFilter('all')} />
         <TypeChip label="Job changes" count={counts.job_change || 0} active={filter === 'job_change'} onClick={() => setFilter('job_change')} icon={UserPlus} />
         <TypeChip label="Hiring" count={counts.hiring_post || 0} active={filter === 'hiring_post'} onClick={() => setFilter('hiring_post')} icon={Briefcase} />
         <TypeChip label="Competitor deals" count={counts.competitor_sponsorship || 0} active={filter === 'competitor_sponsorship'} onClick={() => setFilter('competitor_sponsorship')} icon={TrendingUp} />
         <TypeChip label="News" count={counts.earnings_mention || 0} active={filter === 'earnings_mention'} onClick={() => setFilter('earnings_mention')} icon={Newspaper} />
-        <TypeChip label="Engagement" count={counts.engagement_burst || 0} active={filter === 'engagement_burst'} onClick={() => setFilter('engagement_burst')} icon={Activity} />
+          <TypeChip label="Engagement" count={counts.engagement_burst || 0} active={filter === 'engagement_burst'} onClick={() => setFilter('engagement_burst')} icon={Activity} />
+        </div>
+        {view === 'active' && signals.length > 0 && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => { if (confirm(`Dismiss all ${signals.length} visible signals?`)) bulkDismiss.mutate() }}
+          >
+            Dismiss all ({signals.length})
+          </Button>
+        )}
       </div>
 
       {isLoading && <div className="text-sm text-text-muted">Scanning…</div>}

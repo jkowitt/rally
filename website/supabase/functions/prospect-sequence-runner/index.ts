@@ -103,12 +103,59 @@ async function processEnrollment(sb: any, e: Enrollment) {
 
   // 2. Find contact + enroller
   const { data: contact } = await sb.from("contacts")
-    .select("id, email, first_name, last_name, company, position")
+    .select("id, email, first_name, last_name, company, position, do_not_contact_until, best_send_hour")
     .eq("id", e.contact_id).maybeSingle();
 
   const enrollerId = e.enrolled_by;
   if (!enrollerId) {
     return { error: "no enroller" };
+  }
+
+  // 2a. Mute / DNC check
+  if (contact?.do_not_contact_until) {
+    const dncUntil = new Date(contact.do_not_contact_until).getTime();
+    if (dncUntil > Date.now()) {
+      // Defer to after DNC ends
+      await sb.from("prospect_sequence_enrollments")
+        .update({ next_send_at: contact.do_not_contact_until })
+        .eq("id", e.id);
+      return { deferred: true, reason: "do_not_contact" };
+    }
+  }
+
+  // 2b. Holiday window check (property-level)
+  const { data: holiday } = await sb
+    .from("property_holiday_windows")
+    .select("ends_at")
+    .eq("property_id", e.property_id)
+    .lte("starts_at", new Date().toISOString())
+    .gte("ends_at", new Date().toISOString())
+    .order("ends_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (holiday?.ends_at) {
+    await sb.from("prospect_sequence_enrollments")
+      .update({ next_send_at: holiday.ends_at })
+      .eq("id", e.id);
+    return { deferred: true, reason: "holiday_window" };
+  }
+
+  // 2c. Send-time optimization. If the contact has a best_send_hour
+  // and now is more than 1 hour away from it, defer to today's
+  // best hour (or tomorrow's if it has already passed).
+  if (typeof contact?.best_send_hour === "number") {
+    const now = new Date();
+    const target = new Date(now);
+    target.setUTCHours(contact.best_send_hour, 0, 0, 0);
+    if (target.getTime() < now.getTime() - 60 * 60_000) {
+      target.setUTCDate(target.getUTCDate() + 1);
+    }
+    if (target.getTime() - now.getTime() > 60 * 60_000) {
+      await sb.from("prospect_sequence_enrollments")
+        .update({ next_send_at: target.toISOString() })
+        .eq("id", e.id);
+      return { deferred: true, reason: "send_time_optimization", target: target.toISOString() };
+    }
   }
 
   const channel = step.channel || "email";

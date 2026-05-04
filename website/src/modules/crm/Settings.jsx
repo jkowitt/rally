@@ -119,6 +119,30 @@ export default function Settings() {
             <label className="text-xs text-text-muted">Role</label>
             <input value={profile?.role || 'rep'} disabled className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-muted mt-1 opacity-60" />
           </div>
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="md:col-span-2">
+              <label className="text-xs text-text-muted">Calendar booking URL</label>
+              <p className="text-[10px] text-text-muted/70 mt-0.5 mb-1">e.g. calendly.com/jane-15min — surfaces a one-click "Insert booking link" button in Compose.</p>
+              <input
+                type="url"
+                defaultValue={profile?.calendar_booking_url || ''}
+                onBlur={(e) => handleProfileUpdate('calendar_booking_url', e.target.value || null)}
+                placeholder="https://calendly.com/your-handle/15min"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted">Booking link label</label>
+              <p className="text-[10px] text-text-muted/70 mt-0.5 mb-1">Text shown before the link.</p>
+              <input
+                type="text"
+                defaultValue={profile?.calendar_booking_label || ''}
+                onBlur={(e) => handleProfileUpdate('calendar_booking_label', e.target.value || null)}
+                placeholder="Book a 15-min intro"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -198,6 +222,8 @@ export default function Settings() {
       </div>
 
       {/* Email preferences */}
+      <DigestSubscriptionSection userId={profile?.id} propertyId={propertyId} userEmail={profile?.email} />
+
       <EmailPreferencesSection userEmail={profile?.email} />
 
       {/* Data Export */}
@@ -419,6 +445,115 @@ function UsageOverageSection({ propertyId, currentPlan }) {
  * them the opt-out control. Rows don't get deleted — they just get
  * marked unsubscribed so re-opts and analytics still work.
  */
+/**
+ * DigestSubscriptionSection: opt into the 8am email digest of priority
+ * queue + signals + nudges. Slack delivery requires a webhook URL.
+ */
+function DigestSubscriptionSection({ userId, propertyId, userEmail }) {
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [emailSub, setEmailSub] = useState(null)
+  const [slackSub, setSlackSub] = useState(null)
+  const [slackUrl, setSlackUrl] = useState('')
+
+  useEffect(() => {
+    if (!userId) return
+    const load = async () => {
+      const { data } = await supabase
+        .from('digest_subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+      setEmailSub((data || []).find(s => s.channel === 'email') || null)
+      const slack = (data || []).find(s => s.channel === 'slack')
+      setSlackSub(slack || null)
+      setSlackUrl(slack?.slack_webhook_url || '')
+      setLoading(false)
+    }
+    load()
+  }, [userId])
+
+  async function toggle(channel, on) {
+    if (!userId || !propertyId) return
+    if (on) {
+      const payload = {
+        user_id: userId, property_id: propertyId, channel,
+        send_hour_utc: 13, send_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+        is_active: true,
+        ...(channel === 'slack' ? { slack_webhook_url: slackUrl || null } : {}),
+      }
+      const { error, data } = await supabase
+        .from('digest_subscriptions')
+        .upsert(payload, { onConflict: 'user_id,channel' })
+        .select().single()
+      if (error) {
+        toast({ title: 'Could not subscribe', description: error.message, type: 'error' })
+        return
+      }
+      if (channel === 'email') setEmailSub(data)
+      else setSlackSub(data)
+      toast({ title: `Subscribed to ${channel} digest`, type: 'success' })
+    } else {
+      await supabase.from('digest_subscriptions').update({ is_active: false }).eq('user_id', userId).eq('channel', channel)
+      if (channel === 'email') setEmailSub(prev => prev ? { ...prev, is_active: false } : null)
+      else setSlackSub(prev => prev ? { ...prev, is_active: false } : null)
+    }
+  }
+
+  if (loading) return null
+
+  return (
+    <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
+      <h2 className="text-sm font-mono text-text-muted uppercase mb-3">Daily digest</h2>
+      <p className="text-xs text-text-muted mb-3">
+        Get your priority queue, signals, and stale-deal nudges sent at 8am ET on weekdays.
+      </p>
+
+      <div className="space-y-3">
+        <label className="flex items-center justify-between gap-3 bg-bg-card border border-border rounded p-3 cursor-pointer">
+          <div>
+            <div className="text-sm text-text-primary">Email to {userEmail || 'your address'}</div>
+            <div className="text-[11px] text-text-muted">Plain-text digest, easy to scan on mobile.</div>
+          </div>
+          <input
+            type="checkbox"
+            checked={!!emailSub?.is_active}
+            onChange={(e) => toggle('email', e.target.checked)}
+            className="accent-accent w-4 h-4"
+          />
+        </label>
+
+        <div className="bg-bg-card border border-border rounded p-3 space-y-2">
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <div>
+              <div className="text-sm text-text-primary">Slack DM</div>
+              <div className="text-[11px] text-text-muted">Paste your incoming-webhook URL below.</div>
+            </div>
+            <input
+              type="checkbox"
+              checked={!!slackSub?.is_active}
+              onChange={(e) => toggle('slack', e.target.checked)}
+              disabled={!slackUrl}
+              className="accent-accent w-4 h-4"
+            />
+          </label>
+          <input
+            type="url"
+            value={slackUrl}
+            onChange={(e) => setSlackUrl(e.target.value)}
+            onBlur={async () => {
+              if (slackSub) {
+                await supabase.from('digest_subscriptions').update({ slack_webhook_url: slackUrl || null }).eq('id', slackSub.id)
+              }
+            }}
+            placeholder="https://hooks.slack.com/services/…"
+            className="w-full bg-bg-surface border border-border rounded px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function EmailPreferencesSection({ userEmail }) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)

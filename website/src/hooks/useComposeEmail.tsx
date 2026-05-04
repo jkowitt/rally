@@ -21,6 +21,12 @@ interface ComposeOptions {
   // shows a "Draft with AI" button that calls this and replaces
   // the body with the result.
   generateDraft?: () => Promise<{ subject?: string; body: string } | null>
+  // Threading: when set, ComposeEmail forwards these to the
+  // outlook-graph / gmail-graph send actions so the reply lands
+  // in the same conversation client-side.
+  inReplyToMessageId?: string | null
+  threadId?: string | null
+  provider?: 'outlook' | 'gmail' | null
 }
 
 interface ComposeAPI {
@@ -58,6 +64,9 @@ export function ComposeEmailProvider({ children }: { children: ReactNode }) {
         defaultBody={opts.defaultBody}
         dealId={opts.dealId}
         generateDraft={opts.generateDraft}
+        inReplyToMessageId={opts.inReplyToMessageId}
+        threadId={opts.threadId}
+        defaultProvider={opts.provider}
       />
     </ComposeContext.Provider>
   )

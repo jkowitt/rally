@@ -1,6 +1,29 @@
 import { useParams } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+
+// Smart Links 2.0: per-section view telemetry. Section blocks
+// register their visibility through an IntersectionObserver and
+// emit page_view events with duration_ms when they leave the
+// viewport. session_start fires once on mount; session_end fires
+// on unload via beforeunload.
+function logPortalEvent(payload) {
+  // Fire-and-forget; never block UI on failure.
+  try {
+    fetch(`${import.meta.env.VITE_SUPABASE_URL || ''}/rest/v1/proposal_view_events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    })
+  } catch { /* swallow */ }
+}
 
 export default function SponsorPortal() {
   const { token } = useParams()
@@ -151,6 +174,32 @@ export default function SponsorPortal() {
     )
   }
 
+  // Session start / end telemetry. Note: RLS allows anonymous insert
+  // is governed by the service-role write path on the proposal_view_events
+  // table — public portal RLS policy must allow insert with no auth.
+  const sessionStartedRef = useRef(false)
+  useEffect(() => {
+    if (!portalLink?.id || sessionStartedRef.current) return
+    sessionStartedRef.current = true
+    logPortalEvent({
+      property_id: portalLink.property_id,
+      deal_id: portalLink.deal_id,
+      portal_link_id: portalLink.id,
+      event_type: 'session_start',
+      user_agent: navigator.userAgent.slice(0, 500),
+    })
+    const onUnload = () => {
+      logPortalEvent({
+        property_id: portalLink.property_id,
+        deal_id: portalLink.deal_id,
+        portal_link_id: portalLink.id,
+        event_type: 'session_end',
+      })
+    }
+    window.addEventListener('beforeunload', onUnload)
+    return () => window.removeEventListener('beforeunload', onUnload)
+  }, [portalLink?.id, portalLink?.property_id, portalLink?.deal_id])
+
   const fulfillmentDelivered = (fulfillment || []).filter(f => f.delivered).length || 0
   const fulfillmentTotal = fulfillment?.length || 0
   const fulfillmentPct = fulfillmentTotal ? Math.round((fulfillmentDelivered / fulfillmentTotal) * 100) : 0
@@ -193,7 +242,7 @@ export default function SponsorPortal() {
       {/* Main content */}
       <main className="max-w-3xl mx-auto px-4 py-8 sm:px-6 space-y-8">
         {/* Deal overview */}
-        <section>
+        <TrackedSection portalLink={portalLink} pageIndex={0} pageLabel="overview">
           <h2 className="text-xl font-semibold text-text-primary mb-1">{deal.brand_name}</h2>
           <div className="flex items-center gap-2 mb-4 flex-wrap">
             <span className={`text-xs font-mono px-2.5 py-1 rounded ${stageColor[deal.stage] || stageColor.Prospect}`}>
@@ -219,11 +268,11 @@ export default function SponsorPortal() {
               <div className="text-sm text-text-primary font-mono mt-2">{deal.end_date || '—'}</div>
             </div>
           </div>
-        </section>
+        </TrackedSection>
 
         {/* Contract Benefits */}
         {contracts?.length > 0 && (
-          <section>
+          <TrackedSection portalLink={portalLink} pageIndex={1} pageLabel="contracts">
             <SectionHeader title="Contract Benefits" />
             <div className="space-y-4">
               {contracts.map(c => (
@@ -256,12 +305,12 @@ export default function SponsorPortal() {
                 </div>
               ))}
             </div>
-          </section>
+          </TrackedSection>
         )}
 
         {/* Fulfillment Progress */}
         {fulfillment?.length > 0 && (
-          <section>
+          <TrackedSection portalLink={portalLink} pageIndex={2} pageLabel="fulfillment">
             <SectionHeader title={`Fulfillment Progress — ${fulfillmentDelivered}/${fulfillmentTotal} delivered`} />
             <div className="bg-[#161B22] border border-border rounded-lg p-4">
               {/* Progress bar */}
@@ -305,12 +354,12 @@ export default function SponsorPortal() {
                 })}
               </div>
             </div>
-          </section>
+          </TrackedSection>
         )}
 
         {/* Assets */}
         {assets?.length > 0 && (
-          <section>
+          <TrackedSection portalLink={portalLink} pageIndex={3} pageLabel="assets">
             <SectionHeader title={`Sponsorship Assets (${assets.length})`} />
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {assets.map(a => (
@@ -326,12 +375,12 @@ export default function SponsorPortal() {
                 </div>
               ))}
             </div>
-          </section>
+          </TrackedSection>
         )}
 
         {/* Contacts */}
         {contacts?.length > 0 && (
-          <section>
+          <TrackedSection portalLink={portalLink} pageIndex={4} pageLabel="contacts">
             <SectionHeader title="Contacts" />
             <div className="space-y-2">
               {contacts.map((c, i) => (
@@ -350,7 +399,7 @@ export default function SponsorPortal() {
                 </div>
               ))}
             </div>
-          </section>
+          </TrackedSection>
         )}
       </main>
 
@@ -368,4 +417,57 @@ function SectionHeader({ title }) {
   return (
     <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-3">{title}</div>
   )
+}
+
+// TrackedSection — wraps a portal section and emits a page_view
+// event with duration_ms when the section enters and then leaves
+// the viewport. Coarse measurement (intersection-based, threshold 0.4),
+// good enough to surface "they spent 90s on the contract page."
+function TrackedSection({ portalLink, pageIndex, pageLabel, children }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!ref.current || !portalLink?.id) return
+    let entryAt = null
+    const obs = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting && !entryAt) {
+          entryAt = Date.now()
+        } else if (!e.isIntersecting && entryAt) {
+          const duration = Date.now() - entryAt
+          entryAt = null
+          // Only log meaningful dwells (> 500ms)
+          if (duration < 500) continue
+          logPortalEvent({
+            property_id: portalLink.property_id,
+            deal_id: portalLink.deal_id,
+            portal_link_id: portalLink.id,
+            event_type: 'page_view',
+            page_index: pageIndex,
+            page_label: pageLabel,
+            duration_ms: duration,
+          })
+        }
+      }
+    }, { threshold: 0.4 })
+    obs.observe(ref.current)
+    return () => {
+      // Flush any pending dwell on unmount.
+      if (entryAt) {
+        const duration = Date.now() - entryAt
+        if (duration >= 500) {
+          logPortalEvent({
+            property_id: portalLink.property_id,
+            deal_id: portalLink.deal_id,
+            portal_link_id: portalLink.id,
+            event_type: 'page_view',
+            page_index: pageIndex,
+            page_label: pageLabel,
+            duration_ms: duration,
+          })
+        }
+      }
+      obs.disconnect()
+    }
+  }, [portalLink?.id, portalLink?.property_id, portalLink?.deal_id, pageIndex, pageLabel])
+  return <section ref={ref}>{children}</section>
 }

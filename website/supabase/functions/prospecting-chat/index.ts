@@ -6,7 +6,10 @@
 // the rep asks about anything else, the model is instructed to refuse
 // politely and steer back to prospecting work.
 //
-// Provider: OpenAI gpt-4o-mini by default (cheap, fast for chat).
+// Provider: OpenAI gpt-4.1-mini by default (fresh knowledge, still
+// cheap for chat — gpt-4o-mini has an Oct-2023 cutoff so it kept
+// telling reps "my data is only up to October 2023" when they
+// asked about real prospects).
 // Falls back to Anthropic Claude Haiku when OPENAI_API_KEY is unset
 // so the feature still works in environments configured for Claude.
 //
@@ -22,7 +25,7 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 
-const CHAT_MODEL_OPENAI    = Deno.env.get("PROSPECTING_CHAT_MODEL_OPENAI")    ?? "gpt-4o-mini";
+const CHAT_MODEL_OPENAI    = Deno.env.get("PROSPECTING_CHAT_MODEL_OPENAI")    ?? "gpt-4.1-mini";
 const CHAT_MODEL_ANTHROPIC = Deno.env.get("PROSPECTING_CHAT_MODEL_ANTHROPIC") ?? "claude-haiku-4-5-20251001";
 
 const corsHeaders = {

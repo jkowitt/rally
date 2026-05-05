@@ -8,7 +8,8 @@
 // questions about anything besides the supplied draft.
 //
 // Backend selection:
-//   • OPENAI_API_KEY set      → OpenAI gpt-4o-mini
+//   • OPENAI_API_KEY set      → OpenAI gpt-4.1-mini (override via
+//                              EMAIL_COACH_OPENAI_MODEL)
 //   • ANTHROPIC_API_KEY set   → Claude haiku
 //   • Neither set             → return a friendly error
 //
@@ -32,6 +33,7 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const OPENAI_MODEL = Deno.env.get("EMAIL_COACH_OPENAI_MODEL") ?? "gpt-4.1-mini";
 
 // Hard ceiling on input size — tokens cost money, and a 100k-char
 // blob is almost certainly an attack or a copy-paste mistake.
@@ -218,7 +220,7 @@ async function callOpenAI(userPrompt: string): Promise<any> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: OPENAI_MODEL,
       temperature: 0.4,
       response_format: { type: "json_object" },
       messages: [

@@ -370,6 +370,23 @@ function ReviewView({ session }) {
           Approve all 85%+ confidence
         </button>
 
+        <button
+          onClick={async () => {
+            const stuck = (stats.files || []).filter(f => f.status !== 'complete' || (f.extracted_benefits_count ?? 0) === 0)
+            if (stuck.length === 0) {
+              alert('No stuck or empty contracts to clear.')
+              return
+            }
+            if (!confirm(`Remove ${stuck.length} contract${stuck.length === 1 ? '' : 's'} that failed extraction or have no benefits?`)) return
+            for (const f of stuck) await migration.deleteFile(f.id)
+            setSelectedFile(null)
+            reload()
+          }}
+          className="w-full bg-danger/10 border border-danger/30 text-danger py-2 rounded text-xs font-semibold hover:bg-danger/20"
+        >
+          Clear stuck / empty contracts
+        </button>
+
         <div>
           <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-2">Filter</div>
           <div className="flex flex-col gap-1">
@@ -389,14 +406,32 @@ function ReviewView({ session }) {
           <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-2">Contracts</div>
           <div className="space-y-1 max-h-96 overflow-y-auto">
             {filteredFiles.map(f => (
-              <button
+              <div
                 key={f.id}
-                onClick={() => setSelectedFile(f)}
-                className={`w-full text-left p-2 rounded text-xs ${selectedFile?.id === f.id ? 'bg-accent/10 border border-accent/30' : 'bg-bg-card border border-border hover:border-accent/30'}`}
+                className={`group relative w-full text-left rounded text-xs ${selectedFile?.id === f.id ? 'bg-accent/10 border border-accent/30' : 'bg-bg-card border border-border hover:border-accent/30'}`}
               >
-                <div className="truncate font-medium">{f.original_filename}</div>
-                <div className="text-[9px] text-text-muted">{f.status}</div>
-              </button>
+                <button
+                  onClick={() => setSelectedFile(f)}
+                  className="w-full text-left p-2 pr-7"
+                >
+                  <div className="truncate font-medium">{f.original_filename}</div>
+                  <div className="text-[9px] text-text-muted">{f.status}</div>
+                </button>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    if (!confirm(`Remove ${f.original_filename} from this migration?`)) return
+                    await migration.deleteFile(f.id)
+                    if (selectedFile?.id === f.id) setSelectedFile(null)
+                    reload()
+                  }}
+                  aria-label={`Delete ${f.original_filename}`}
+                  title="Remove from migration"
+                  className="absolute top-1.5 right-1.5 text-text-muted opacity-0 group-hover:opacity-100 hover:text-danger transition-opacity text-sm leading-none px-1"
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         </div>

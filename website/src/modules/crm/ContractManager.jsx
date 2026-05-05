@@ -159,10 +159,12 @@ export default function ContractManager() {
       } else {
         delete payload.id
         isNewContract = true
-        // Auto-mark as active in Account Management when a real (non-template)
-        // contract is created with a deal attached — this is the "send to AM" trigger.
+        // Auto-mark as Signed in Account Management when a real (non-template)
+        // contract is created with a deal attached — this is the "send to AM"
+        // trigger. Status must match the contracts_status_check constraint
+        // (Draft | In Review | Final | Signed | Expired).
         if (!payload.is_template && payload.deal_id && !payload.status) {
-          payload.status = 'active'
+          payload.status = 'Signed'
         }
         const { data, error } = await supabase.from('contracts').insert({ ...payload, property_id: propertyId, created_by: profile.id }).select().single()
         if (error) throw error
@@ -1357,7 +1359,7 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
         contract_text: pdfText || null,
         ai_summary: parsed?.summary || null,
         ai_extracted_benefits: parsed?.benefits || null,
-        status: dealId ? 'active' : 'In Review',
+        status: dealId ? 'Signed' : 'In Review',
         signed: false,
         created_by: profileId,
         // Store the original PDF exactly as uploaded

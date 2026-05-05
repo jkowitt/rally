@@ -140,6 +140,11 @@ Deno.serve(async (req: Request) => {
   }
 });
 
+// Default model for the contract reader. Override per environment by
+// setting CONTRACT_AI_MODEL — lets us bump to the next Opus without a
+// code change + redeploy.
+const CONTRACT_AI_MODEL = Deno.env.get("CONTRACT_AI_MODEL") ?? "claude-opus-4-7";
+
 async function callClaude(prompt: string, maxTokens: number): Promise<string> {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
   if (!apiKey) {
@@ -154,7 +159,7 @@ async function callClaude(prompt: string, maxTokens: number): Promise<string> {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-opus-4-7",
+      model: CONTRACT_AI_MODEL,
       max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -223,7 +228,7 @@ async function callClaudeAdvanced(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-opus-4-7",
+      model: CONTRACT_AI_MODEL,
       max_tokens: maxTokens,
       system: systemPrompt,
       messages: messages,

@@ -120,8 +120,11 @@ create table if not exists property_addons (
 );
 
 create index if not exists idx_property_addons_property on property_addons(property_id);
-create index if not exists idx_property_addons_active on property_addons(property_id, addon_key)
-  where (expires_at is null or expires_at > now());
+-- Partial-index predicates can't reference now() because it's STABLE,
+-- not IMMUTABLE. The runtime "is this addon active?" check happens in
+-- the queries below — the index just covers (property_id, addon_key)
+-- with expires_at as a payload for cheap filtering at scan time.
+create index if not exists idx_property_addons_active on property_addons(property_id, addon_key, expires_at);
 
 alter table property_addons enable row level security;
 create policy "property_addons_property_read" on property_addons for select using (

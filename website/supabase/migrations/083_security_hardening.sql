@@ -1,6 +1,11 @@
 -- ============================================================
 -- MIGRATION 083 — PRE-LAUNCH SECURITY HARDENING
 -- ============================================================
+-- Enable pgcrypto up-front so digest() is available for the api_keys
+-- backfill below (the create-extension was originally at the bottom
+-- of the file, which made earlier statements fail on first deploy).
+create extension if not exists pgcrypto;
+
 -- Pre-market readiness pass. No new product features — just
 -- closing the security + abuse-protection gaps that would bite
 -- on day one of real traffic.

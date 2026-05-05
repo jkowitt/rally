@@ -330,6 +330,10 @@ grant execute on function recent_outreach_touch_count(uuid, integer) to authenti
 -- Suggest existing accounts whose name resembles a candidate brand.
 -- Used by the Lookalikes UI when "Add to pipeline" is clicked, so
 -- the rep can opt into linking the new deal to a parent account.
+-- pg_trgm provides similarity(); must be created BEFORE the function
+-- below references it, otherwise function creation errors with
+-- `function similarity(text, text) does not exist`.
+create extension if not exists pg_trgm;
 create or replace function suggest_account_for_brand(p_property_id uuid, p_brand text)
 returns table (account_id uuid, account_name text, similarity real)
 language sql stable as $$
@@ -343,8 +347,6 @@ language sql stable as $$
   order by sim desc
   limit 3;
 $$;
--- pg_trgm provides similarity(); enable if not already.
-create extension if not exists pg_trgm;
 grant execute on function suggest_account_for_brand(uuid, text) to authenticated;
 
 -- ────────────────────────────────────────────────────────────

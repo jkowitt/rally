@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatureFlags, HIDDEN_MODULES } from '@/hooks/useFeatureFlags'
+import { getFlagMeta } from '@/lib/featureFlagMeta'
 import { useToast } from '@/components/Toast'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import APIUsageBanner from '@/components/APIUsageBanner'
@@ -60,6 +61,7 @@ export default function DeveloperDashboard() {
   const [newPropCity, setNewPropCity] = useState('')
   const [newPropState, setNewPropState] = useState('')
   const [savingFlag, setSavingFlag] = useState(null)
+  const [expandedFlag, setExpandedFlag] = useState(null)   // module key whose info pane is open
   const [diagnosticResult, setDiagnosticResult] = useState(null)
   const [runningDiagnostic, setRunningDiagnostic] = useState(false)
 
@@ -737,16 +739,38 @@ export default function DeveloperDashboard() {
 
               const renderToggle = (module) => {
                 const enabled = Boolean(flags[module])
+                const meta = getFlagMeta(module)
+                const expanded = expandedFlag === module
                 return (
-                  <div key={module} className="flex items-center justify-between py-1.5">
-                    <span className="text-sm text-text-primary font-mono">{module}</span>
-                    <button
-                      onClick={() => handleToggleFlag(module, module)}
-                      disabled={savingFlag === module}
-                      className={`px-3 py-1 rounded text-xs font-mono transition-opacity ${enabled ? 'bg-success/20 text-success' : 'bg-bg-card text-text-muted'} ${savingFlag === module ? 'opacity-50' : ''}`}
-                    >
-                      {savingFlag === module ? '…' : (enabled ? 'ON' : 'OFF')}
-                    </button>
+                  <div key={module} className="py-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-sm text-text-primary truncate" title={meta.label}>{meta.label}</span>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedFlag(expanded ? null : module)}
+                          aria-label={`More info about ${meta.label}`}
+                          aria-expanded={expanded}
+                          title={meta.description}
+                          className={`shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-mono leading-none ${expanded ? 'bg-accent text-bg-primary' : 'bg-bg-surface text-text-muted hover:text-accent border border-border'}`}
+                        >
+                          ⓘ
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => handleToggleFlag(module, module)}
+                        disabled={savingFlag === module}
+                        className={`shrink-0 px-3 py-1 rounded text-xs font-mono transition-opacity ${enabled ? 'bg-success/20 text-success' : 'bg-bg-card text-text-muted'} ${savingFlag === module ? 'opacity-50' : ''}`}
+                      >
+                        {savingFlag === module ? '…' : (enabled ? 'ON' : 'OFF')}
+                      </button>
+                    </div>
+                    {expanded && (
+                      <div className="mt-1.5 ml-1 pl-2 border-l-2 border-accent/40 space-y-1">
+                        <div className="text-[11px] text-text-secondary leading-relaxed">{meta.description}</div>
+                        <div className="text-[9px] text-text-muted font-mono">flag key: {module}</div>
+                      </div>
+                    )}
                   </div>
                 )
               }
@@ -814,14 +838,19 @@ export default function DeveloperDashboard() {
                 <div className="space-y-2">
                   {HIDDEN_MODULES.map(module => {
                     const enabled = Boolean(flags[module])
-                    const description = HIDDEN_FLAG_DESCRIPTIONS[module] || 'Hidden developer flag'
+                    const meta = getFlagMeta(module)
+                    // Hidden flags always show the description inline
+                    // (no info-toggle) since they're rare + deserve
+                    // explicit context every time.
+                    const description = meta.description || HIDDEN_FLAG_DESCRIPTIONS[module] || 'Hidden developer flag.'
                     return (
                       <div key={module} className="flex items-center justify-between py-2">
                         <div className="flex-1 min-w-0 mr-3">
-                          <div className="text-sm text-text-primary font-mono">{module}</div>
+                          <div className="text-sm text-text-primary">{meta.label}</div>
                           <div className="text-[10px] text-text-muted mt-0.5 leading-relaxed">
                             {description}
                           </div>
+                          <div className="text-[9px] text-text-muted mt-0.5 font-mono opacity-60">flag key: {module}</div>
                         </div>
                         <button
                           onClick={() => handleToggleFlag(module, module)}

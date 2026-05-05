@@ -25,7 +25,7 @@ import {
 import { on } from '@/lib/appEvents'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail, draftFirstTouchEmail } from '@/lib/claude'
+import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail, draftFirstTouchEmail, extractCompaniesFromText } from '@/lib/claude'
 import { useComposeEmail } from '@/hooks/useComposeEmail'
 import { usePlanLimits } from '@/hooks/usePlanLimits'
 import UpgradeGate, { UsageBadge } from '@/components/UpgradeGate'
@@ -3583,6 +3583,8 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
   const [importing, setImporting] = useState(false)
   const [step, setStep] = useState('paste') // paste | review
   const [expanded, setExpanded] = useState({})
+  const [aiAnalyzing, setAiAnalyzing] = useState(false)
+  const [aiError, setAiError] = useState('')
 
   function parseProspects(text) {
     const lines = text.split('\n').filter(l => l.trim())
@@ -3701,6 +3703,63 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
     const results = parseProspects(rawText)
     setGrouped(results)
     setStep('review')
+  }
+
+  // Ask Claude to extract a clean company list from whatever was
+  // pasted — works even when the format is too messy for the
+  // structured parser (prose, mixed lists, scraped pages, etc.).
+  // Output gets converted into the same `grouped` shape handleParse
+  // uses, so the review + import steps work unchanged.
+  async function handleAIAnalyze() {
+    if (!rawText.trim()) return
+    setAiAnalyzing(true)
+    setAiError('')
+    try {
+      const res = await extractCompaniesFromText({ text: rawText, property_id: propertyId })
+      const companies = Array.isArray(res?.companies) ? res.companies : []
+      if (companies.length === 0) {
+        setAiError('Claude couldn\'t find any companies in that text. Try the structured parser, or rephrase.')
+        return
+      }
+      // Convert AI output → existing grouped format. Each company
+      // becomes one group; if the AI extracted a contact, attach it.
+      const groups = companies.map(c => ({
+        company: c.company_name || '',
+        companyData: {
+          city: c.city || '',
+          state: c.state || '',
+          website: c.website || '',
+          linkedin: c.linkedin || '',
+          founded: '',
+          revenue_thousands: '',
+          employees: '',
+          sub_industry: '',
+          priority: 'Medium',
+          outreach_status: '',
+          notes: c.notes || '',
+          value: '',
+        },
+        contacts: (c.first_name || c.last_name || c.email || c.phone)
+          ? [{
+              first_name: c.first_name || '',
+              last_name: c.last_name || '',
+              email: c.email || '',
+              phone: c.phone || '',
+              position: c.position || '',
+              city: c.city || '',
+              state: c.state || '',
+              linkedin: '',
+              website: c.website || '',
+            }]
+          : [],
+      })).filter(g => g.company)
+      setGrouped(groups)
+      setStep('review')
+    } catch (e) {
+      setAiError(`AI analysis failed: ${e?.message || 'unknown error'}`)
+    } finally {
+      setAiAnalyzing(false)
+    }
   }
 
   function removeGroup(index) {
@@ -3855,32 +3914,36 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
         {step === 'paste' && (
           <div className="p-5 flex-1 flex flex-col gap-4">
             <div className="bg-bg-card border border-border rounded-lg p-3">
-              <div className="text-xs text-text-muted font-mono mb-2">Supported formats (auto-detected):</div>
+              <div className="text-xs text-text-muted font-mono mb-2">Two ways to import:</div>
               <div className="text-xs text-text-secondary space-y-1 font-mono">
-                <div>Tab-separated with headers (paste from Excel / Google Sheets)</div>
-                <div>Company, First Name, Last Name, Title, Email, Phone, ...</div>
-                <div>Company | Contact | email | phone</div>
-                <div>Multiple rows with same Company = grouped as one deal</div>
-              </div>
-              <div className="text-[10px] text-text-muted mt-2 font-mono">
-                Headers: Company, First Name, Last Name, Title, City, State, Email, Phone, LinkedIn, Website, Founded, Revenue ($000s), Employees, Sub-Industry, Priority, Outreach Status, Notes
+                <div><span className="text-accent">Structured parse</span> — tab/CSV from Excel or Google Sheets, optional headers (Company, First Name, Email, Phone, City, State, Title…). Multiple rows with the same Company group into one deal.</div>
+                <div><span className="text-accent">Analyze with AI</span> — paste anything: a numbered list, a comma-separated string, prose, a scraped article. Claude extracts the company names (and any details it can find) regardless of format.</div>
               </div>
             </div>
             <textarea
               value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              placeholder={"Company\tFirst Name\tLast Name\tTitle\tCity\tState\tEmail\tPhone\nNike\tJohn\tSmith\tVP Marketing\tPortland\tOR\tjohn@nike.com\t503-555-0100\nNike\tSarah\tJones\tDirector Sales\tPortland\tOR\tsarah@nike.com\t503-555-0101\nAdidas\tMike\tChen\tCMO\tBoston\tMA\tmike@adidas.com\t617-555-0200"}
+              onChange={(e) => { setRawText(e.target.value); setAiError('') }}
+              placeholder={"Structured (Tab):\nCompany\tFirst Name\tLast Name\tTitle\tCity\tEmail\nNike\tJohn\tSmith\tVP Marketing\tPortland\tjohn@nike.com\n\nOR free-form (use 'Analyze with AI'):\n1. Acme Corp — based in Chicago, contact Jane Doe (jane@acme.com)\n2. Beta Industries\n3. Gamma Foods\nLooking at Coca-Cola, Pepsi, and maybe Dr Pepper as well."}
               rows={14}
               className="w-full bg-bg-card border border-border rounded-lg px-4 py-3 text-sm text-text-primary placeholder-text-muted/50 focus:outline-none focus:border-accent resize-none font-mono"
               autoFocus
             />
+            {aiError && <div className="text-xs text-danger">{aiError}</div>}
             <div className="flex gap-3">
               <button
                 onClick={handleParse}
-                disabled={!rawText.trim()}
+                disabled={!rawText.trim() || aiAnalyzing}
                 className="flex-1 bg-accent text-bg-primary py-2.5 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
               >
-                Parse {rawText.trim().split('\n').filter(l => l.trim()).length || 0} Lines
+                Structured parse · {rawText.trim().split('\n').filter(l => l.trim()).length || 0} lines
+              </button>
+              <button
+                onClick={handleAIAnalyze}
+                disabled={!rawText.trim() || aiAnalyzing}
+                className="flex-1 bg-bg-card border border-accent/40 text-accent py-2.5 rounded text-sm font-medium hover:bg-accent/10 disabled:opacity-50"
+                title="Send the pasted text to Claude. Works on any format — bulleted, comma-separated, prose, etc."
+              >
+                {aiAnalyzing ? 'Analyzing…' : '✨ Analyze with AI'}
               </button>
               <button onClick={onClose} className="px-6 bg-bg-card text-text-secondary py-2.5 rounded text-sm hover:text-text-primary">
                 Cancel

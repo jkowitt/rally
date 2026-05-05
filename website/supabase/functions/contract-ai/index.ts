@@ -103,6 +103,8 @@ Deno.serve(async (req: Request) => {
       result = await meetingNotes(body);
     } else if (action === "search_prospects") {
       result = await searchProspects(supabaseClient, body);
+    } else if (action === "extract_companies_from_text") {
+      result = await extractCompaniesFromText(body);
     } else if (action === "suggest_prospects") {
       result = await suggestProspects(supabaseClient, body);
     } else if (action === "research_contacts") {
@@ -939,6 +941,60 @@ ABSOLUTE RULES:
 4. NEVER return Fortune 500 megacorps (Toyota, Ford, GM, Honda, Hyundai, Coca-Cola, Pepsi, Amazon, Walmart, McDonald's, Microsoft, Apple, Nike, etc.) when the rep asks for startups, small, or mid-market revenue bands. A $250B brand is NOT a startup.
 5. When a city + radius is set, return companies whose HEADQUARTERS is within that area — not just companies that happen to advertise there. Bias to mid-market and local employers.
 6. For each company in your output, estimated_revenue and estimated_employees MUST fall within the requested ranges. If you don't know them precisely, return numeric ranges that AT LEAST overlap the requested band. If you can't honestly do that, omit the company.`;
+}
+
+// Extract a structured company list from freeform pasted text. Used
+// by the BulkImportModal when the rep pastes something other than a
+// clean CSV — bullet lists, comma-separated names, prose mentions,
+// scraped vendor lists, etc. Returns a JSON array of { company_name,
+// city, state, website, notes } so the existing import flow can
+// consume it without changes.
+async function extractCompaniesFromText(body: any) {
+  const text = (body.text || "").slice(0, 20000); // hard cap to avoid token blowups
+  if (!text.trim()) return { companies: [] };
+
+  const prompt = `Extract every distinct company or organization mentioned in the text below.
+
+The text may be in any format:
+  - A bulleted or numbered list ("1. Acme Corp\\n2. Beta Industries")
+  - A comma-separated list ("Coca-Cola, Pepsi, Apple")
+  - Free-form prose ("Looking at Nike, then maybe Under Armour and Lululemon")
+  - Mixed: structured data interspersed with sentences
+  - A line per company plus extra info (city, website, contact name)
+
+Return ONLY a valid JSON array of objects with these fields:
+{
+  "company_name": "Official cleaned-up company name (e.g. 'The Coca-Cola Company' not 'coke')",
+  "city": "string or null — only if explicitly mentioned in the text for this company",
+  "state": "2-letter US state or null",
+  "website": "domain or URL if mentioned, else null",
+  "first_name": "string or null — if a contact person is associated with this company in the text",
+  "last_name": "string or null",
+  "email": "string or null",
+  "phone": "string or null",
+  "position": "string or null — title/role if mentioned",
+  "notes": "string or null — short summary of any other context the text gave (e.g. 'mentioned as a competitor', 'based in Chicago metro area')"
+}
+
+RULES:
+- Don't invent fields the text didn't include. If only a name was given, return just company_name and leave the rest null.
+- De-duplicate exact matches (case-insensitive). Slight name variants ("Nike Inc." vs "Nike") should collapse to one entry, with the cleaner form.
+- Skip generic words ("the company", "our client", "this brand") — only return real, named entities.
+- If the text contains no companies, return [].
+
+Text:
+---
+${text}
+---`;
+
+  try {
+    const out = await callClaude(prompt, 3000);
+    const arr = extractJSON(out);
+    if (Array.isArray(arr)) return { companies: arr };
+    return { companies: [] };
+  } catch (err) {
+    return { companies: [], error: String(err) };
+  }
 }
 
 async function searchProspects(supabase: any, body: any) {

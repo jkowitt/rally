@@ -450,6 +450,13 @@ function tryParseJSON(text) {
   return null
 }
 
+// Ask Claude to pull a structured company list out of free-form
+// pasted text — bullet lists, prose, comma-separated, mixed, etc.
+// Used by the "Analyze with AI" button in the BulkImportModal.
+export async function extractCompaniesFromText({ text, property_id }) {
+  return invokeEdgeFunction('contract-ai', { action: 'extract_companies_from_text', text, property_id })
+}
+
 export async function searchProspects({ query, category, property_id, icp_filters, industry, exclude_companies }) {
   try {
     const result = await invokeEdgeFunction('contract-ai', { action: 'search_prospects', query, category, property_id, icp_filters, industry, exclude_companies })

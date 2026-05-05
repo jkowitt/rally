@@ -4596,7 +4596,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="prospect-finder-title"
-        className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-7xl max-h-[95vh] sm:max-h-[92vh] flex flex-col"
+        className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:w-[95vw] sm:max-w-[1600px] max-h-[95vh] sm:max-h-[95vh] flex flex-col"
       >
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-border">

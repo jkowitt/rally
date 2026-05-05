@@ -24,7 +24,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encryptToken, decryptToken } from "../_shared/cryptoTokens.ts";
-import { logOutreach, generateTrackingToken, injectTrackingPixel, rewriteLinksForTracking } from "../_shared/outreachLog.ts";
+import { logOutreach, generateTrackingToken, injectTrackingPixel, rewriteLinksForTracking, plainTextToHtml } from "../_shared/outreachLog.ts";
 
 const TRACKING_BASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 
@@ -452,14 +452,18 @@ async function handleSend(sb: any, userId: string, body: any) {
   const sequenceEnrollmentId: string | null = body.sequence_enrollment_id || null;
   const sequenceStepIndex: number | null = (typeof body.sequence_step_index === "number") ? body.sequence_step_index : null;
 
-  // Tracking: only inject when body looks like HTML.
+  // Tracking: convert plain text to minimal HTML so the pixel + link
+  // rewriter always fire when tracking is enabled. Bare URLs become
+  // <a> tags so click tracking captures them too. Set body.tracking
+  // = false to opt out.
   const trackingEnabled = body.tracking !== false;
-  const isHtml = /<\/?(html|body|p|div|br|table|span|a)\b/i.test(messageBody);
-  const trackingToken = trackingEnabled && isHtml ? generateTrackingToken() : null;
-  if (trackingToken && TRACKING_BASE_URL) {
+  const trackingToken = trackingEnabled ? generateTrackingToken() : null;
+  if (trackingEnabled && trackingToken && TRACKING_BASE_URL) {
+    messageBody = plainTextToHtml(messageBody);
     messageBody = rewriteLinksForTracking(messageBody, TRACKING_BASE_URL, trackingToken);
     messageBody = injectTrackingPixel(messageBody, TRACKING_BASE_URL, trackingToken);
   }
+  const isHtml = /<\/?(html|body|p|div|br|table|span|a)\b/i.test(messageBody);
   const bodyMimeType = isHtml ? "text/html" : "text/plain";
 
   // Threading: when caller passes in_reply_to_message_id, we look up

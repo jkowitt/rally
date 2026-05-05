@@ -94,6 +94,40 @@ export function injectTrackingPixel(
   return body + footer + pixel
 }
 
+// Convert a plain-text body to minimal HTML so the tracking pixel +
+// link rewriter can fire. Without this, every plain-text email goes
+// out unmeasured. Treats blank-line breaks as paragraphs and single
+// newlines as <br>; auto-detects bare URLs and wraps them in <a>
+// tags so click tracking captures them too. Idempotent — if the
+// body already contains common HTML tags, returns it unchanged.
+const HTML_TAG_RE = /<\/?(html|body|p|div|br|table|span|a|h[1-6]|ul|ol|li)\b/i
+export function plainTextToHtml(body: string): string {
+  if (!body) return body
+  if (HTML_TAG_RE.test(body)) return body
+
+  // Escape HTML-special chars first so user content doesn't break markup.
+  const escape = (s: string) => s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  // Auto-link bare URLs (http://, https://, www.) so they become
+  // anchor tags and rewriteLinksForTracking can wrap them.
+  const linkify = (s: string) => s.replace(
+    /((?:https?:\/\/|www\.)[^\s<]+)/g,
+    (match) => {
+      const href = match.startsWith('www.') ? `https://${match}` : match
+      return `<a href="${href}">${match}</a>`
+    },
+  )
+
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map(p => `<p>${linkify(escape(p)).replace(/\n/g, '<br/>')}</p>`)
+    .join('\n')
+  return `<div>${paragraphs}</div>`
+}
+
 // Rewrite all <a href="..."> URLs to route through track-click so
 // we can record clicks. URLs already pointed at our domain are
 // left alone. Only rewrites in HTML bodies.

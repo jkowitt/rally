@@ -370,6 +370,9 @@ export default function ComposeEmail({
               This message will be logged to the deal timeline automatically.
             </div>
           )}
+          <div className="text-[10px] text-text-muted font-mono">
+            ✓ Tracked: opens + link clicks · plain text auto-converted to HTML so the tracking pixel and link rewriter fire.
+          </div>
 
           {/* Personality-aware tone hint. Renders only when the
               recipient has a contact_personalities row. Hint is a

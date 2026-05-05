@@ -17,7 +17,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { requireDeveloper, corsHeaders, jsonResponse } from "../_shared/devGuard.ts";
 import { decryptToken, encryptToken } from "../_shared/cryptoTokens.ts";
-import { logOutreach, generateTrackingToken, injectTrackingPixel, rewriteLinksForTracking } from "../_shared/outreachLog.ts";
+import { logOutreach, generateTrackingToken, injectTrackingPixel, rewriteLinksForTracking, plainTextToHtml } from "../_shared/outreachLog.ts";
 
 const TRACKING_BASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 
@@ -363,15 +363,19 @@ async function handleSend(accessToken: string, body: any, sb: any, userId: strin
   const sequenceEnrollmentId: string | null = body.sequence_enrollment_id || null;
   const sequenceStepIndex: number | null = (typeof body.sequence_step_index === "number") ? body.sequence_step_index : null;
 
-  // Optionally inject tracking pixel + rewrite links for click tracking
-  // only when the body looks like HTML. For plain text, no pixel.
+  // Inject tracking pixel + rewrite links for click tracking. Tracking
+  // requires HTML so the pixel can render and links can carry the
+  // wrapper href; plain-text bodies are auto-converted to minimal
+  // HTML (bare URLs become <a> tags so clicks are tracked too) when
+  // tracking is enabled. Set body.tracking = false to opt out.
   const trackingEnabled = body.tracking !== false;
   const trackingToken = trackingEnabled ? generateTrackingToken() : null;
-  const isHtml = /<\/?(html|body|p|div|br|table|span|a)\b/i.test(messageBody);
-  if (trackingEnabled && trackingToken && isHtml && TRACKING_BASE_URL) {
+  if (trackingEnabled && trackingToken && TRACKING_BASE_URL) {
+    messageBody = plainTextToHtml(messageBody);
     messageBody = rewriteLinksForTracking(messageBody, TRACKING_BASE_URL, trackingToken);
     messageBody = injectTrackingPixel(messageBody, TRACKING_BASE_URL, trackingToken);
   }
+  const isHtml = /<\/?(html|body|p|div|br|table|span|a)\b/i.test(messageBody);
 
   const message: any = {
     subject,

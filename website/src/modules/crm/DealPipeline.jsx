@@ -4081,7 +4081,15 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     }
     if (append) setLoadingMore(true)
     else setLoading(true)
-    setStatus(append ? 'Loading more prospects…' : 'Searching for prospects…')
+    // Tiny human-readable summary of which filters are active, so the
+    // rep can see the filter chips really do shape the query.
+    const activeFilters: string[] = []
+    if (sizeFilter !== 'any') activeFilters.push(`size: ${sizeFilter}`)
+    if (revenueFilter !== 'any') activeFilters.push(`revenue: ${revenueFilter}`)
+    if (locFilter.trim()) activeFilters.push(`location: ${locFilter.trim()}`)
+    if (searchCategory) activeFilters.push(`market: ${searchCategory}`)
+    const filterTag = activeFilters.length ? `  ·  filters: ${activeFilters.join(' · ')}` : ''
+    setStatus(append ? `Loading more prospects…${filterTag}` : `Searching for prospects…${filterTag}`)
     if (!append) {
       planLimits.trackUsage('prospect_search')
       setResults([])

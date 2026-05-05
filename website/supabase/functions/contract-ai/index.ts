@@ -926,7 +926,15 @@ function buildICPConstraints(icp: any): string {
   }
 
   if (lines.length === 0) return '';
-  return `\n\nIDEAL CUSTOMER PROFILE (strict requirements):\n${lines.join('\n')}\n\nCRITICAL: Only suggest companies that fit ALL of the above criteria. Skip massive global brands (Nike, Coca-Cola, Amazon, etc.) unless they specifically match. Prioritize realistic, reachable targets that match the profile. Quality over fame.`;
+  return `\n\n🚨 IDEAL CUSTOMER PROFILE — HARD REQUIREMENTS (NOT preferences):
+${lines.join('\n')}
+
+ABSOLUTE RULES:
+1. EVERY company you return MUST satisfy EVERY constraint above. No exceptions.
+2. If you cannot find 8-12 companies that fit ALL criteria, return FEWER companies (even just 3-4) rather than padding with non-matches.
+3. Do NOT include companies that violate even one criterion. Drop them entirely.
+4. Skip massive global brands (Nike, Coca-Cola, Amazon, etc.) unless they specifically match. Prioritize realistic, reachable targets that match the profile.
+5. For each company in your output, the estimated_revenue and estimated_employees fields MUST fall within the requested ranges. If unsure, omit the company.`;
 }
 
 async function searchProspects(supabase: any, body: any) {
@@ -981,11 +989,108 @@ CRITICAL: Match the ICP criteria exactly. Prefer realistic mid-market and local 
 Return ONLY a valid JSON array.`;
 
   const text = await callClaude(prompt, 3000);
+  let prospects: any[] = [];
   try {
-    return { prospects: extractJSON(text) };
+    prospects = extractJSON(text) || [];
   } catch {
-    return { prospects: [] };
+    prospects = [];
   }
+
+  // Server-side post-filter — Claude often softens "strict" constraints,
+  // so re-check revenue + employee + size buckets against the parsed
+  // numbers it returned. Companies that violate get dropped before
+  // they ever reach the client.
+  if (Array.isArray(prospects) && prospects.length > 0 && icp) {
+    prospects = prospects.filter((p) => companyMatchesIcp(p, icp));
+  }
+
+  return { prospects };
+}
+
+// Parse "$50M-$100M", "$1.2B", "10M", "50,000" etc. into a single
+// dollar number representing the midpoint (or the floor if it's a
+// "$2B+" style range with no upper bound).
+function parseDollars(raw: any): number | null {
+  if (raw == null) return null;
+  if (typeof raw === "number") return raw;
+  const s = String(raw).toLowerCase().replace(/\$|,/g, "").trim();
+  if (!s) return null;
+  // "100m-500m" → average
+  const range = s.match(/^([\d.]+)\s*([kmb]?)\s*[-–to]+\s*([\d.]+)\s*([kmb]?)/);
+  if (range) {
+    const lo = scaleNum(parseFloat(range[1]), range[2]);
+    const hi = scaleNum(parseFloat(range[3]), range[4] || range[2]);
+    if (Number.isFinite(lo) && Number.isFinite(hi)) return (lo + hi) / 2;
+  }
+  // "$2B+" → return the floor
+  const plus = s.match(/^([\d.]+)\s*([kmb]?)\s*\+/);
+  if (plus) return scaleNum(parseFloat(plus[1]), plus[2]);
+  // "$120m" or "120000000"
+  const single = s.match(/^([\d.]+)\s*([kmb]?)/);
+  if (single) return scaleNum(parseFloat(single[1]), single[2]);
+  return null;
+}
+
+function scaleNum(n: number, suffix: string): number {
+  if (!Number.isFinite(n)) return NaN;
+  switch ((suffix || "").toLowerCase()) {
+    case "k": return n * 1000;
+    case "m": return n * 1000000;
+    case "b": return n * 1000000000;
+    default:  return n;
+  }
+}
+
+// Parse "200-500" / "1,000+" / "5000" employee strings to a midpoint.
+function parseEmployees(raw: any): number | null {
+  if (raw == null) return null;
+  if (typeof raw === "number") return raw;
+  const s = String(raw).toLowerCase().replace(/,/g, "").trim();
+  const range = s.match(/^(\d+)\s*[-–to]+\s*(\d+)/);
+  if (range) return (parseInt(range[1], 10) + parseInt(range[2], 10)) / 2;
+  const plus = s.match(/^(\d+)\s*\+/);
+  if (plus) return parseInt(plus[1], 10);
+  const single = s.match(/^(\d+)/);
+  if (single) return parseInt(single[1], 10);
+  return null;
+}
+
+// Apply the same constraints we wrote into the prompt as a server-side
+// filter. Acts as a safety net when Claude returns near-misses.
+function companyMatchesIcp(p: any, icp: any): boolean {
+  const rev = parseDollars(p.estimated_revenue);
+  if (icp.revenue_min != null && rev != null && rev < icp.revenue_min * 0.5) return false;
+  if (icp.revenue_max != null && rev != null && rev > icp.revenue_max * 1.5) return false;
+
+  const emp = parseEmployees(p.estimated_employees);
+  // Apply company_size bucket bounds with 25% tolerance.
+  const sizeBands: Record<string, [number, number]> = {
+    startup:    [0,    50],
+    small:      [50,   200],
+    mid:        [200,  1000],
+    large:      [1000, 5000],
+    enterprise: [5000, Number.POSITIVE_INFINITY],
+  };
+  if (icp.company_size && icp.company_size !== "any" && sizeBands[icp.company_size] && emp != null) {
+    const [lo, hi] = sizeBands[icp.company_size];
+    if (emp < lo * 0.5 || emp > hi * 1.5) return false;
+  }
+
+  // Soft-match location (Claude often includes the right city/state in
+  // headquarters_city or headquarters_state, but values may not be
+  // identical strings). Only filter when the user typed something.
+  if (Array.isArray(icp.cities) && icp.cities.length > 0) {
+    const want = icp.cities.map((c: string) => c.toLowerCase());
+    const got = `${p.headquarters_city || ""} ${p.headquarters_state || ""}`.toLowerCase();
+    if (!want.some((c: string) => got.includes(c))) return false;
+  }
+  if (Array.isArray(icp.states) && icp.states.length > 0) {
+    const want = icp.states.map((s: string) => s.toLowerCase());
+    const got = (p.headquarters_state || "").toLowerCase();
+    if (!want.some((s: string) => got.includes(s))) return false;
+  }
+
+  return true;
 }
 
 async function suggestProspects(supabase: any, body: any) {

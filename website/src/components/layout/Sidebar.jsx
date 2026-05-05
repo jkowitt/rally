@@ -128,6 +128,7 @@ function getProspectingSections() {
         // with ?find=1 so the existing modal opens automatically.
         // Keeps the search UX in one place without duplicating it.
         { to: '/app/crm/pipeline?find=1', label: 'Find Prospects' },
+        { to: '/app/crm/enrichment-queue', label: 'Bulk Enrich' },
         { to: '/app/crm/lookalikes', label: 'Lookalikes' },
         { to: '/app/crm/signals', label: 'Signal Radar' },
         { to: '/app/crm/relationships', label: 'Relationship Search' },

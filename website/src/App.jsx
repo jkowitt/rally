@@ -39,6 +39,7 @@ const ContractManager = lazyRetry(() => import('./modules/crm/ContractManager'))
 const SignalFeed = lazyRetry(() => import('./modules/crm/SignalFeed'))
 const PriorityQueue = lazyRetry(() => import('./modules/crm/PriorityQueue'))
 const Lookalikes = lazyRetry(() => import('./modules/crm/Lookalikes'))
+const EnrichmentQueue = lazyRetry(() => import('./modules/crm/EnrichmentQueue'))
 const RelationshipSearch = lazyRetry(() => import('./modules/crm/RelationshipSearch'))
 const Sequences = lazyRetry(() => import('./modules/crm/Sequences'))
 const OutreachAnalytics = lazyRetry(() => import('./modules/crm/OutreachAnalytics'))
@@ -226,6 +227,7 @@ export default function App() {
                             <Route path="/crm/signals" element={<SignalFeed />} />
                             <Route path="/crm/priority" element={<PriorityQueue />} />
                             <Route path="/crm/lookalikes" element={<Lookalikes />} />
+                            <Route path="/crm/enrichment-queue" element={<EnrichmentQueue />} />
                             <Route path="/crm/relationships" element={<RelationshipSearch />} />
                             <Route path="/crm/sequences" element={<Sequences />} />
                             <Route path="/crm/outreach-analytics" element={<OutreachAnalytics />} />

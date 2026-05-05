@@ -356,8 +356,55 @@ async function editContract(body: any): Promise<any> {
 }
 
 async function parsePdfText(body: any): Promise<any> {
-  const prompt = 'Parse this contract and return a JSON object with these fields:\n- brand_name: company/brand name\n- contact_name: primary contact full name\n- contact_email\n- contact_phone\n- contact_position: title/role\n- contact_company\n- contract_number\n- effective_date (YYYY-MM-DD)\n- expiration_date (YYYY-MM-DD)\n- total_value: total contract value as number\n- annual_values: object with year keys and annual value, e.g. {"2025": 50000, "2026": 55000}. Calculate from total_value divided across years, or use per-year values if specified in the contract.\n- benefits: array of {description, category, quantity, frequency, value}\n- summary: 2-3 sentence summary\n\nReturn ONLY valid JSON.\n\nContract:\n---\n' + body.pdf_text + '\n---';
-  const text = await callClaude(prompt, 2048);
+  // Explicit, rigorous extraction prompt. The five fields that
+  // matter most for downstream surfaces (CRM deal record, renewal
+  // pipeline, recap reports, account health) are:
+  //   1. brand_name           — the sponsor / company / counterparty
+  //   2. expiration_date      — drives renewal cadence + AM dashboards
+  //   3. total_value          — drives pipeline dollars
+  //   4. annual_values        — drives multi-year revenue rollups
+  //   5. benefits             — drives auto-fulfillment record spawning
+  //
+  // The prompt below is deliberately verbose because contracts vary
+  // wildly (event sponsorships, naming rights, ad insertion orders,
+  // SaaS resells, etc.). Treating extraction casually leads to nulls
+  // that then break renewal and fulfillment downstream.
+  const prompt = `You are a contract-parsing expert. Read the contract below and extract structured data.
+
+Return ONLY a JSON object with exactly these fields:
+
+{
+  "brand_name": "string — the sponsor / counterparty / customer (NOT our property). E.g. 'Acme Beverages, Inc.' Look in title, recitals, signature block. Use the legal name if available; else the trading name.",
+  "contact_name": "string|null — primary point of contact at the sponsor. Look in 'Notice' clauses or signature block.",
+  "contact_email": "string|null",
+  "contact_phone": "string|null",
+  "contact_position": "string|null — title/role under the contact's signature",
+  "contact_company": "string|null — defaults to brand_name if not separately stated",
+  "contract_number": "string|null — any contract / order / SOW number printed on the doc",
+  "effective_date": "YYYY-MM-DD or null — when the contract starts. Common labels: 'Effective Date', 'Commencement Date', 'Term Start'.",
+  "expiration_date": "YYYY-MM-DD or null — when the contract ends. Common labels: 'Expiration Date', 'Termination Date', 'End of Term', 'Through'. If a term length is stated (e.g. '3-year term starting Jan 1, 2025'), CALCULATE the end date.",
+  "total_value": "number — total dollar value over the entire term. Strip currency symbols + commas. If multiple line items, SUM them. If only annual values are listed, SUM all years. NEVER return null — use 0 if truly unknown.",
+  "annual_values": "object — { 'YYYY': number } per year of the term. Three resolution rules in priority order:\\n    a) Per-year values explicitly stated (e.g. 'Year 1: $50,000; Year 2: $55,000; Year 3: $60,500') → use those.\\n    b) A single annual fee with an escalator clause ('5% annual increase') → compute each year.\\n    c) Total value with no per-year breakdown → divide evenly across the term years.\\n    Year keys are 4-digit calendar years. Use the year of the start date for Year 1.",
+  "benefits": "array — every deliverable the sponsor receives. Look in: 'Schedule A', 'Exhibit B', 'Inventory', 'Compensation', 'Sponsor Benefits', 'Activation Rights', body paragraphs. Each item: {description, category, quantity, frequency, value}. category guesses (best fit): 'Signage', 'Digital', 'Hospitality', 'Media', 'Naming', 'Activations', 'Promotional', 'Other'. frequency: 'Per Season' | 'Per Game' | 'Per Match' | 'Monthly' | 'Quarterly' | 'Weekly' | 'One-Time'. value: dollar value for the line item or null. quantity: integer count of occurrences (e.g. 12 for 'one social post per month for a year').",
+  "summary": "string — 2-3 sentence executive summary covering parties, term length, total value, and key benefit highlights.",
+  "warnings": "array of strings — flag anything inferred vs. explicit. E.g. 'expiration_date calculated from 3-year term', 'annual_values divided evenly because per-year amounts were not stated', 'no contact email found'."
+}
+
+CRITICAL RULES:
+- If a field genuinely isn't in the contract, return null (or 0 for total_value, [] for arrays). Do NOT invent.
+- Date format MUST be YYYY-MM-DD. Convert 'January 1, 2025' → '2025-01-01'.
+- Money values are PLAIN NUMBERS (50000, not "$50,000.00").
+- annual_values keys MUST be 4-digit strings: "2025", not "Year 1".
+- If the contract is missing or unreadable, return all nulls + warnings explaining what couldn't be extracted.
+- Do not include any prose before or after the JSON.
+
+Contract:
+---
+${body.pdf_text}
+---`;
+  // Bumped max_tokens from 2048 to 4096 — long contracts with many
+  // benefits in a Schedule A frequently truncated.
+  const text = await callClaude(prompt, 4096);
   const parsed = extractJSON(text);
   return { parsed: parsed };
 }

@@ -934,10 +934,11 @@ ${lines.join('\n')}
 
 ABSOLUTE RULES:
 1. EVERY company you return MUST satisfy EVERY constraint above. No exceptions.
-2. If you cannot find 8-12 companies that fit ALL criteria, return FEWER companies (even just 3-4) rather than padding with non-matches.
+2. If you cannot find 8-12 companies that fit ALL criteria, return FEWER companies (even just 3-4) rather than padding with non-matches. Returning 3 perfect matches beats 12 mediocre ones.
 3. Do NOT include companies that violate even one criterion. Drop them entirely.
-4. Skip massive global brands (Nike, Coca-Cola, Amazon, etc.) unless they specifically match. Prioritize realistic, reachable targets that match the profile.
-5. For each company in your output, the estimated_revenue and estimated_employees fields MUST fall within the requested ranges. If unsure, omit the company.`;
+4. NEVER return Fortune 500 megacorps (Toyota, Ford, GM, Honda, Hyundai, Coca-Cola, Pepsi, Amazon, Walmart, McDonald's, Microsoft, Apple, Nike, etc.) when the rep asks for startups, small, or mid-market revenue bands. A $250B brand is NOT a startup.
+5. When a city + radius is set, return companies whose HEADQUARTERS is within that area — not just companies that happen to advertise there. Bias to mid-market and local employers.
+6. For each company in your output, estimated_revenue and estimated_employees MUST fall within the requested ranges. If you don't know them precisely, return numeric ranges that AT LEAST overlap the requested band. If you can't honestly do that, omit the company.`;
 }
 
 async function searchProspects(supabase: any, body: any) {
@@ -1062,32 +1063,58 @@ function parseEmployees(raw: any): number | null {
 // filter. Acts as a safety net when Claude returns near-misses.
 function companyMatchesIcp(p: any, icp: any): boolean {
   const rev = parseDollars(p.estimated_revenue);
-  if (icp.revenue_min != null && rev != null && rev < icp.revenue_min * 0.5) return false;
-  if (icp.revenue_max != null && rev != null && rev > icp.revenue_max * 1.5) return false;
 
+  // Revenue band — strict. No tolerance on the upper bound: when the
+  // rep asks for "$1M-$10M" they don't want to see $250B brands.
+  if (icp.revenue_max != null && rev != null && rev > icp.revenue_max) return false;
+  if (icp.revenue_min != null && rev != null && rev < icp.revenue_min * 0.5) return false;
+
+  // Company size — check by employee count if Claude gave us one,
+  // otherwise infer from revenue (a $250B company is enterprise no
+  // matter how many people work there). Without this fallback the
+  // filter quietly fails when the model omits estimated_employees.
   const emp = parseEmployees(p.estimated_employees);
-  // Apply company_size bucket bounds with 25% tolerance.
-  const sizeBands: Record<string, [number, number]> = {
+  const sizeBandsByEmp: Record<string, [number, number]> = {
     startup:    [0,    50],
     small:      [50,   200],
     mid:        [200,  1000],
     large:      [1000, 5000],
     enterprise: [5000, Number.POSITIVE_INFINITY],
   };
-  if (icp.company_size && icp.company_size !== "any" && sizeBands[icp.company_size] && emp != null) {
-    const [lo, hi] = sizeBands[icp.company_size];
-    if (emp < lo * 0.5 || emp > hi * 1.5) return false;
+  // Rough revenue → size mapping that mirrors buildICPConstraints.
+  const sizeRevenueCaps: Record<string, number> = {
+    startup:    10000000,    // <$10M
+    small:      50000000,    // <$50M
+    mid:        500000000,   // <$500M
+    large:      2000000000,  // <$2B
+    // enterprise: no cap
+  };
+  if (icp.company_size && icp.company_size !== "any") {
+    if (emp != null) {
+      const [lo, hi] = sizeBandsByEmp[icp.company_size] || [0, Infinity];
+      if (emp < lo * 0.5 || emp > hi * 1.5) return false;
+    } else if (rev != null && sizeRevenueCaps[icp.company_size] != null) {
+      // Drop anything obviously too large for the requested bucket.
+      if (rev > sizeRevenueCaps[icp.company_size]) return false;
+    }
   }
 
-  // Soft-match location (Claude often includes the right city/state in
-  // headquarters_city or headquarters_state, but values may not be
-  // identical strings). Only filter when the user typed something.
+  // Location. Substring-match against the prospect's headquarters
+  // because Claude's strings don't always match exactly.
   if (Array.isArray(icp.cities) && icp.cities.length > 0) {
     const want = icp.cities.map((c: string) => c.toLowerCase());
     const got = `${p.headquarters_city || ""} ${p.headquarters_state || ""}`.toLowerCase();
-    if (!want.some((c: string) => got.includes(c))) return false;
+    if (!want.some((c: string) => got.includes(c))) {
+      // If a state was also passed, allow it as a relaxation —
+      // "Glenview, IL" should still surface IL companies in
+      // neighboring suburbs even if the city doesn't match exactly,
+      // PROVIDED the state matches.
+      const stateOK = Array.isArray(icp.states) && icp.states.length > 0
+        && icp.states.some((s: string) => (p.headquarters_state || "").toLowerCase().includes(s.toLowerCase()));
+      if (!stateOK) return false;
+    }
   }
-  if (Array.isArray(icp.states) && icp.states.length > 0) {
+  if (Array.isArray(icp.states) && icp.states.length > 0 && (!Array.isArray(icp.cities) || icp.cities.length === 0)) {
     const want = icp.states.map((s: string) => s.toLowerCase());
     const got = (p.headquarters_state || "").toLowerCase();
     if (!want.some((s: string) => got.includes(s))) return false;

@@ -73,25 +73,47 @@ export function generateTrackingToken(): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-// Inject a 1x1 tracking pixel + a CAN-SPAM-compliant unsubscribe
-// footer at the end of an HTML body. Safe to call with non-HTML
-// bodies (returns unchanged for plain text).
+// Inject a 1×1 tracking pixel at the end of an HTML body. Safe to
+// call with non-HTML bodies (returns unchanged).
+//
+// NOTE: this used to also append a CAN-SPAM unsubscribe footer.
+// That footer was removed because the shared helper is used for
+// 1-to-1 cold outreach (compose modal + prospect sequences), where
+// an "Unsubscribe" link reads as a marketing email and tanks reply
+// rates. Bulk / newsletter sends inject their own compliant footer
+// in email-marketing-send (see CAN-SPAM checks there); the legal
+// requirement only applies to commercial bulk mail, not personal
+// 1-to-1 outreach.
 export function injectTrackingPixel(
   body: string,
   trackingBaseUrl: string,
   token: string,
 ): string {
   const pixelUrl = `${trackingBaseUrl}/functions/v1/track-open?t=${encodeURIComponent(token)}`
-  const unsubUrl = `${trackingBaseUrl}/functions/v1/unsubscribe?t=${encodeURIComponent(token)}`
   const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none" />`
+  const looksHtml = /<\/?(html|body|p|div|br|table|span)\b/i.test(body)
+  if (!looksHtml) return body
+  if (body.includes('</body>')) return body.replace('</body>', `${pixel}</body>`)
+  return body + pixel
+}
+
+// Optional CAN-SPAM unsubscribe footer for bulk / newsletter sends
+// that aren't going through email-marketing-send. Call this
+// explicitly — it's not auto-applied.
+export function appendUnsubscribeFooter(
+  body: string,
+  trackingBaseUrl: string,
+  token: string,
+): string {
+  const unsubUrl = `${trackingBaseUrl}/functions/v1/unsubscribe?t=${encodeURIComponent(token)}`
   const footer =
     `<div style="font-size:11px;color:#777;margin-top:24px;padding-top:12px;border-top:1px solid #eee;">` +
     `Don't want to hear from us? <a href="${unsubUrl}" style="color:#777;">Unsubscribe</a>.` +
     `</div>`
   const looksHtml = /<\/?(html|body|p|div|br|table|span)\b/i.test(body)
   if (!looksHtml) return body
-  if (body.includes('</body>')) return body.replace('</body>', `${footer}${pixel}</body>`)
-  return body + footer + pixel
+  if (body.includes('</body>')) return body.replace('</body>', `${footer}</body>`)
+  return body + footer
 }
 
 // Convert a plain-text body to minimal HTML so the tracking pixel +

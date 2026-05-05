@@ -11,11 +11,14 @@
 //   - delta_sync       : new/changed emails since last delta link
 //   - full_sync        : 90-day initial backfill
 //
-// Every call routes through requireDeveloper → 404 on failure.
+// Every call routes through requireUser → 401 on failure. Originally
+// developer-only (legacy migration 053), but the customer-facing
+// /app/crm/inbox flow needs all reps to call this — gate on the
+// inbox_outlook feature flag instead of the developer role.
 // Auto-refreshes tokens that expire within 5 minutes.
 // ============================================================
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { requireDeveloper, corsHeaders, jsonResponse } from "../_shared/devGuard.ts";
+import { requireUser, corsHeaders, jsonResponse } from "../_shared/devGuard.ts";
 import { decryptToken, encryptToken } from "../_shared/cryptoTokens.ts";
 import { logOutreach, generateTrackingToken, injectTrackingPixel, rewriteLinksForTracking, plainTextToHtml } from "../_shared/outreachLog.ts";
 
@@ -32,7 +35,7 @@ const TOKEN_ENDPOINT = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const guard = await requireDeveloper(req);
+  const guard = await requireUser(req, { flag: "inbox_outlook" });
   if (!guard.ok) return guard.response;
   const { userId, sb } = guard;
 

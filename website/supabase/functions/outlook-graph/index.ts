@@ -52,6 +52,7 @@ Deno.serve(async (req: Request) => {
     if (action === "delta_sync") return await handleDeltaSync(sb, userId, token);
     if (action === "full_sync") return await handleFullSync(sb, userId, token, body.days ?? 90);
     if (action === "send") return await handleSend(token, body, sb, userId);
+    if (action === "save_draft") return await handleSaveDraft(token, body, sb, userId);
     if (action === "sync") {
       // Alias used by the customer-facing UI; map to delta_sync.
       return await handleDeltaSync(sb, userId, token);
@@ -515,4 +516,60 @@ async function handleSend(accessToken: string, body: any, sb: any, userId: strin
   } catch { /* logging is best-effort */ }
 
   return jsonResponse({ success: true, tracking_token: trackingToken });
+}
+
+
+// Save a draft in the user's Outlook. Microsoft Graph creates a
+// draft when you POST to /me/messages without sending. The
+// signature is appended inside the function so the rep gets
+// consistent formatting whether they Send Direct or Save to
+// Drafts. No tracking pixel — drafts are edited in Outlook web
+// before send and we can't guarantee the user keeps it.
+async function handleSaveDraft(accessToken: string, body: any, sb: any, userId: string) {
+  const toArr: string[] = Array.isArray(body.to) ? body.to.filter(Boolean) : [];
+  const ccArr: string[] = Array.isArray(body.cc) ? body.cc.filter(Boolean) : [];
+  const subject: string = body.subject || "";
+  let messageBody: string = body.body || "";
+
+  // Append signature.
+  const { data: oauth } = await sb.from("outlook_auth")
+    .select("signature_html").eq("user_id", userId).maybeSingle();
+  const { data: prof } = await sb.from("profiles")
+    .select("email_signature_html, email_signature").eq("id", userId).maybeSingle();
+  const sigHtml = oauth?.signature_html || prof?.email_signature_html || "";
+  const sigPlain = prof?.email_signature || "";
+  if (sigHtml) {
+    const isHtml = /<\/?(html|body|p|div|br|table|span|a)\b/i.test(messageBody);
+    messageBody = isHtml
+      ? `${messageBody}<br/><br/>${sigHtml}`
+      : `<div>${(messageBody || "").replace(/\n/g, "<br/>")}</div><br/><br/>${sigHtml}`;
+  } else if (sigPlain) {
+    messageBody = `${messageBody}\n\n${sigPlain}`;
+  }
+  const isHtml = /<\/?(html|body|p|div|br|table|span|a)\b/i.test(messageBody);
+
+  const message = {
+    subject,
+    body: {
+      contentType: isHtml ? "HTML" : "Text",
+      content: messageBody,
+    },
+    toRecipients: toArr.map(e => ({ emailAddress: { address: e } })),
+    ...(ccArr.length ? { ccRecipients: ccArr.map(e => ({ emailAddress: { address: e } })) } : {}),
+  };
+
+  const res = await fetch("https://graph.microsoft.com/v1.0/me/messages", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(message),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    return jsonResponse({ success: false, error: `Outlook draft failed: ${errText.slice(0, 300)}` }, 200);
+  }
+  const out = await res.json();
+  return jsonResponse({ success: true, draft_id: out?.id || null, web_link: out?.webLink || null });
 }

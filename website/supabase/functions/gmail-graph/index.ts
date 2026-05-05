@@ -114,6 +114,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === "sync") return await handleSync(sb, userId);
     if (action === "send") return await handleSend(sb, userId, body);
+    if (action === "save_draft") return await handleSaveDraft(sb, userId, body);
     if (action === "fetch_signatures") return await handleFetchSignatures(sb, userId);
 
     return new Response("Not Found", { status: 404 });
@@ -686,4 +687,70 @@ async function handleFetchSignatures(sb: any, userId: string) {
   }
 
   return jsonResponse({ success: true, identities, primary_signature: primary?.signature || "" });
+}
+
+
+// Save a draft in the user's Gmail. Posts to /users/me/drafts with
+// a base64-url-encoded RFC 2822 message. The signature is appended
+// inside the function so callers do not need to handle it. Tracking
+// pixel + link rewrite are intentionally NOT applied — drafts are
+// edited in Gmail web before send and we cannot guarantee the user
+// will keep our injected pixel.
+async function handleSaveDraft(sb: any, userId: string, body: any) {
+  const accessToken = await getFreshAccessToken(sb, userId);
+  if (!accessToken) {
+    return jsonResponse({ success: false, error: "Gmail is not connected" }, 200);
+  }
+
+  const toArr: string[] = Array.isArray(body.to) ? body.to.filter(Boolean) : [];
+  const ccArr: string[] = Array.isArray(body.cc) ? body.cc.filter(Boolean) : [];
+  const subject: string = body.subject || "";
+  let messageBody: string = body.body || "";
+
+  // Append the user's signature if one is configured.
+  const { data: gauth } = await sb.from("gmail_auth")
+    .select("signature_html, gmail_email").eq("user_id", userId).maybeSingle();
+  const { data: prof } = await sb.from("profiles")
+    .select("email_signature_html, email_signature").eq("id", userId).maybeSingle();
+  const sigHtml = gauth?.signature_html || prof?.email_signature_html || "";
+  const sigPlain = prof?.email_signature || "";
+  if (sigHtml) {
+    const isHtml = /<\/?(html|body|p|div|br|table|span|a)\b/i.test(messageBody);
+    messageBody = isHtml
+      ? `${messageBody}<br/><br/>${sigHtml}`
+      : `<div>${(messageBody || "").replace(/\n/g, "<br/>")}</div><br/><br/>${sigHtml}`;
+  } else if (sigPlain) {
+    messageBody = `${messageBody}\n\n${sigPlain}`;
+  }
+
+  const isHtml = /<\/?(html|body|p|div|br|table|span|a)\b/i.test(messageBody);
+  const bodyMime = isHtml ? "text/html; charset=utf-8" : "text/plain; charset=utf-8";
+
+  const fromEmail = gauth?.gmail_email || "";
+  const headers = [
+    `From: ${fromEmail}`,
+    `To: ${toArr.join(", ")}`,
+    ccArr.length ? `Cc: ${ccArr.join(", ")}` : null,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    `Content-Type: ${bodyMime}`,
+  ].filter(Boolean).join("\r\n");
+  const raw = `${headers}\r\n\r\n${messageBody}`;
+
+  // base64url encode
+  const utf8 = new TextEncoder().encode(raw);
+  let binary = "";
+  for (let i = 0; i < utf8.length; i += 0x8000) binary += String.fromCharCode(...utf8.subarray(i, i + 0x8000));
+  const b64 = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/drafts", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ message: { raw: b64 } }),
+  });
+  if (!res.ok) {
+    return jsonResponse({ success: false, error: `Gmail draft failed: ${(await res.text()).slice(0, 300)}` }, 200);
+  }
+  const out = await res.json();
+  return jsonResponse({ success: true, draft_id: out?.id || null, message_id: out?.message?.id || null });
 }

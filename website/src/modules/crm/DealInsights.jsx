@@ -4,6 +4,9 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { getDealInsights, getPipelineForecast, draftEmail } from '@/lib/claude'
 import { isAIFeatureEnabled } from '@/lib/featureCheck'
+import { useComposeEmail } from '@/hooks/useComposeEmail'
+import { useToast } from '@/components/Toast'
+import { humanError } from '@/lib/humanError'
 
 function aiErrorMessage(err, action) {
   const msg = err?.message || ''
@@ -60,6 +63,9 @@ function formatCurrency(val) {
 export default function DealInsights() {
   const { profile } = useAuth()
   const propertyId = profile?.property_id
+  const composeEmail = useComposeEmail()
+  const { toast } = useToast()
+  const [savingDraft, setSavingDraft] = useState(false)
 
   // --- Pipeline Forecast State ---
   const [forecastData, setForecastData] = useState(null)
@@ -564,16 +570,87 @@ export default function DealInsights() {
 
               {emailData && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="text-xs text-text-muted">
                       Tone: <span className="text-text-secondary capitalize">{emailData.tone}</span>
                     </div>
-                    <button
-                      onClick={handleCopyEmail}
-                      className="text-xs text-accent hover:text-accent/80 transition-colors font-medium"
-                    >
-                      {emailCopied ? 'Copied!' : 'Copy to Clipboard'}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          // Open the compose modal pre-filled. Signature
+                          // auto-appends inside ComposeEmail's effect.
+                          const recipient =
+                            selectedDeal?.contact_email ||
+                            (selectedDeal?.contact_first_name || selectedDeal?.contact_last_name
+                              ? `${selectedDeal.contact_first_name || ''} ${selectedDeal.contact_last_name || ''}`.trim()
+                              : '')
+                          composeEmail.open({
+                            to: selectedDeal?.contact_email || '',
+                            defaultSubject: emailData.subject || '',
+                            defaultBody: emailData.body || '',
+                            dealId: selectedDealId,
+                          })
+                          if (!selectedDeal?.contact_email) {
+                            toast({ title: 'No contact email on this deal — fill it in the compose modal.', type: 'warning' })
+                          }
+                        }}
+                        className="text-xs px-3 py-1 rounded bg-accent text-bg-primary font-medium hover:opacity-90"
+                        title="Open the compose modal pre-filled. Your signature auto-applies."
+                      >
+                        ✉ Send via Inbox
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (savingDraft) return
+                          setSavingDraft(true)
+                          try {
+                            // Pick the provider the rep last used / has connected.
+                            // Try Outlook first, then Gmail.
+                            const { data: outlook } = await supabase.from('outlook_auth')
+                              .select('is_connected').eq('user_id', profile?.id).maybeSingle()
+                            const { data: gmail } = await supabase.from('gmail_auth')
+                              .select('is_connected').eq('user_id', profile?.id).maybeSingle()
+                            const provider = outlook?.is_connected ? 'outlook' : gmail?.is_connected ? 'gmail' : null
+                            if (!provider) {
+                              toast({ title: 'Connect an inbox first', description: 'Go to Inbox → Connect to link Outlook or Gmail.', type: 'warning' })
+                              return
+                            }
+                            const fn = provider === 'gmail' ? 'gmail-graph' : 'outlook-graph'
+                            const { data, error } = await supabase.functions.invoke(fn, {
+                              body: {
+                                action: 'save_draft',
+                                to: selectedDeal?.contact_email ? [selectedDeal.contact_email] : [],
+                                subject: emailData.subject || '',
+                                body: emailData.body || '',
+                                deal_id: selectedDealId,
+                              },
+                            })
+                            if (error) throw error
+                            if (!data?.success) throw new Error(data?.error || 'unknown error')
+                            toast({
+                              title: `Saved to ${provider === 'gmail' ? 'Gmail' : 'Outlook'} drafts`,
+                              description: 'Open your drafts to review and send.',
+                              type: 'success',
+                            })
+                          } catch (e) {
+                            toast({ title: 'Save draft failed', description: humanError(e), type: 'error' })
+                          } finally {
+                            setSavingDraft(false)
+                          }
+                        }}
+                        disabled={savingDraft}
+                        className="text-xs px-3 py-1 rounded border border-border text-text-secondary hover:text-text-primary hover:border-accent/50 disabled:opacity-50"
+                        title="Save as a draft in Gmail / Outlook with your signature attached. Edit and send from there."
+                      >
+                        {savingDraft ? 'Saving…' : '💾 Save to Drafts'}
+                      </button>
+                      <button
+                        onClick={handleCopyEmail}
+                        className="text-xs text-accent hover:text-accent/80 transition-colors font-medium"
+                      >
+                        {emailCopied ? 'Copied!' : 'Copy to Clipboard'}
+                      </button>
+                    </div>
                   </div>
                   <div className="bg-bg-surface border border-border rounded-lg p-3">
                     <div className="text-xs text-text-muted mb-1">Subject</div>

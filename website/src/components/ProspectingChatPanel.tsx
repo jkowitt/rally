@@ -4,6 +4,11 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { humanError } from '@/lib/humanError'
 import { MessageCircle, X, Send, Sparkles } from 'lucide-react'
+// Re-using the digest markdown renderer for chat. The model emits
+// markdown (### headings, **bold**, bullet lists, fenced code) — we
+// were previously dropping it into a <div> as plain text, so reps
+// saw raw `###` and `**` symbols.
+import { renderMarkdown } from '@/lib/digestMarkdown'
 
 // ProspectingChatPanel — slide-out side panel with a Claude/OpenAI
 // powered chat scoped to prospecting, outreach strategies, and
@@ -210,15 +215,16 @@ export default function ProspectingChatPanel({
           )}
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[85%] text-xs leading-relaxed whitespace-pre-wrap rounded-lg px-3 py-2 ${
-                  m.role === 'user'
-                    ? 'bg-accent text-bg-primary'
-                    : 'bg-bg-card border border-border text-text-primary'
-                }`}
-              >
-                {m.content}
-              </div>
+              {m.role === 'user' ? (
+                <div className="max-w-[85%] text-xs leading-relaxed whitespace-pre-wrap rounded-lg px-3 py-2 bg-accent text-bg-primary">
+                  {m.content}
+                </div>
+              ) : (
+                <div
+                  className="chat-md max-w-[85%] text-xs leading-relaxed rounded-lg px-3 py-2 bg-bg-card border border-border text-text-primary"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(m.content) }}
+                />
+              )}
             </div>
           ))}
           {sending && (

@@ -41,7 +41,14 @@ import { sanitizeText } from '@/lib/sanitize'
 import { humanError } from '@/lib/humanError'
 import { runAutomations } from '@/lib/automations'
 
-const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted', 'In Fulfillment', 'Renewed']
+// "Contracted" is the won column for now — In Fulfillment + Renewed
+// were hidden because the AM/fulfillment side isn't wired up yet.
+// If a deal still lives in one of those stages from earlier data,
+// it won't render on the board (filtered out of activeDeals below)
+// but is preserved in the DB so we can re-introduce the columns
+// without backfill.
+const STAGES = ['Prospect', 'Proposal Sent', 'Negotiation', 'Contracted']
+const HIDDEN_WON_STAGES = ['In Fulfillment', 'Renewed']
 const ALL_STAGES = [...STAGES, 'Declined']
 const SOURCES = ['Referral', 'Cold Outreach', 'Inbound', 'Event', 'Renewal', 'Other']
 const PRIORITIES = ['High', 'Medium', 'Low']
@@ -277,6 +284,12 @@ export default function DealPipeline() {
       queryClient.invalidateQueries({ queryKey: ['deals', propertyId] })
       queryClient.invalidateQueries({ queryKey: ['activities', propertyId] })
       toast({ title: 'Stage updated', type: 'success' })
+    },
+    onError: (err) => {
+      // Without this the failure was silent — reps would drag a card
+      // to Contracted, nothing would happen, and there was no clue
+      // that a downstream trigger had thrown.
+      toast({ title: 'Stage update failed', description: humanError(err), type: 'error' })
     },
   })
 

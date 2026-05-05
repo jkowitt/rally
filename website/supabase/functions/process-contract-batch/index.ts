@@ -177,24 +177,30 @@ async function processOneFile(sb: any, file: any, session: any) {
   let lastError = "";
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const extracted = await extractContractWithClaude(file);
+      const extracted = await extractContractWithClaude(sb, file);
       if (!extracted) throw new Error("empty extraction");
 
-      // Write benefits
-      const benefitRows = (extracted.benefits || []).map((b: any) => ({
-        session_id: session.id,
-        file_id: file.id,
-        property_id: file.property_id,
-        benefit_name: b.name || "Unknown benefit",
-        benefit_category: normalizeCategory(b.category),
-        frequency: b.frequency || null,
-        quantity: b.quantity || 1,
-        unit_value: b.unit_value || null,
-        annual_value: b.annual_value || null,
-        total_value: b.total_value || null,
-        extracted_confidence: b.confidence || 50,
-        review_status: "pending",
-      }));
+      // Write benefits. The new prompt returns `description` + `value`
+      // rather than `name` + `unit_value`/`annual_value`/`total_value`,
+      // so we derive the per-row dollar fields from the single value.
+      const benefitRows = (extracted.benefits || []).map((b: any) => {
+        const v = typeof b.value === "number" ? b.value : Number(String(b.value || "").replace(/[$,]/g, "")) || null;
+        const qty = b.quantity || 1;
+        return {
+          session_id: session.id,
+          file_id: file.id,
+          property_id: file.property_id,
+          benefit_name: b.description || b.name || "Unknown benefit",
+          benefit_category: normalizeCategory(b.category),
+          frequency: b.frequency || null,
+          quantity: qty,
+          unit_value: v,
+          annual_value: v && qty ? v * qty : v,
+          total_value: v && qty ? v * qty : v,
+          extracted_confidence: b.confidence || 75,
+          review_status: "pending",
+        };
+      });
 
       if (benefitRows.length > 0) {
         const { data: insertedBenefits } = await sb
@@ -220,16 +226,19 @@ async function processOneFile(sb: any, file: any, session: any) {
         }
       }
 
-      // Write sponsor row
-      if (extracted.sponsor) {
+      // Write sponsor row. New schema is flat (brand_name + contact_*)
+      // rather than nested under .sponsor — fall back to old shape so
+      // env overrides that still return the legacy structure also work.
+      const brand = extracted.brand_name || extracted.sponsor?.name || null;
+      if (brand) {
         await sb.from("contract_migration_sponsors").insert({
           session_id: session.id,
           property_id: file.property_id,
-          extracted_name: extracted.sponsor.name || null,
-          extracted_email: extracted.sponsor.email || null,
-          extracted_phone: extracted.sponsor.phone || null,
-          extracted_company: extracted.sponsor.company || extracted.sponsor.name || null,
-          extracted_contact_person: extracted.sponsor.contact_person || null,
+          extracted_name: brand,
+          extracted_email: extracted.contact_email || extracted.sponsor?.email || null,
+          extracted_phone: extracted.contact_phone || extracted.sponsor?.phone || null,
+          extracted_company: extracted.contact_company || extracted.sponsor?.company || brand,
+          extracted_contact_person: extracted.contact_name || extracted.sponsor?.contact_person || null,
           contract_file_ids: [file.id],
           merge_status: "new",
           review_status: "pending",
@@ -275,52 +284,72 @@ async function processOneFile(sb: any, file: any, session: any) {
 }
 
 // ─── Claude extraction ───────────────────────────────────────
-async function extractContractWithClaude(file: any) {
+// Defaults to Opus (current latest) but overridable per environment
+// via PROCESS_CONTRACT_BATCH_MODEL — keeps parity with contract-ai.
+const EXTRACT_MODEL = Deno.env.get("PROCESS_CONTRACT_BATCH_MODEL") ?? "claude-opus-4-7";
+const STORAGE_BUCKET = "contract-migrations";
+
+async function extractContractWithClaude(sb: any, file: any) {
   if (!ANTHROPIC_API_KEY) {
-    // Fallback mock extraction so the flow still works end-to-end
-    // in environments without Claude configured.
     return {
-      sponsor: { name: file.original_filename.replace(/\.(pdf|docx)$/i, ""), email: null },
+      brand_name: file.original_filename.replace(/\.(pdf|docx)$/i, ""),
+      contact_name: null, contact_email: null, contact_phone: null,
+      effective_date: null, expiration_date: null,
+      total_value: 0, annual_values: {},
       benefits: [],
+      summary: "ANTHROPIC_API_KEY not configured — extraction skipped.",
+      warnings: ["claude_disabled"],
     };
   }
 
-  // For PDFs with a file_url, we pass the URL; Claude can read PDFs
-  // directly via its document input type.
-  const systemPrompt = `You are extracting data from a sponsorship contract for bulk migration into a CRM. Extract with HIGH PRECISION. Flag ambiguous information rather than guessing. Return valid JSON only.
+  // Download the file from storage so we can pass the actual bytes
+  // to Claude as a document content block. The previous version sent
+  // the file URL as a string — Claude can't fetch URLs, so it was
+  // essentially extracting from the filename only, which is why mass
+  // uploads "didn't analyze well" while individual uploads did.
+  const { data: blob, error: dlErr } = await sb.storage
+    .from(STORAGE_BUCKET)
+    .download(file.storage_path);
+  if (dlErr || !blob) throw new Error(`storage_download_failed: ${dlErr?.message || "no blob"}`);
 
-Return this exact structure:
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  // Build base64 in chunks to avoid call stack overflow on large PDFs.
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  const base64 = btoa(binary);
+
+  // Same rigorous extraction schema used by contract-ai parse_pdf_text
+  // so individual + bulk uploads produce identical structure + quality.
+  const prompt = `You are a contract-parsing expert. Read the contract and extract structured data.
+
+Return ONLY a JSON object with exactly these fields:
+
 {
-  "sponsor": {
-    "name": "Company/sponsor name",
-    "email": "primary contact email or null",
-    "phone": "phone or null",
-    "company": "company or null",
-    "contact_person": "contact person name or null"
-  },
-  "start_date": "YYYY-MM-DD or null",
-  "end_date": "YYYY-MM-DD or null",
-  "total_value": 0,
-  "benefits": [
-    {
-      "name": "specific benefit name",
-      "category": "one of: LED Board, Jersey Patch, Radio Read, Social Post, Naming Right, Signage, Activation Space, Digital, or custom",
-      "frequency": "per game / per month / annual / one-time / null",
-      "quantity": 1,
-      "unit_value": 0,
-      "annual_value": 0,
-      "total_value": 0,
-      "confidence": 85
-    }
-  ]
+  "brand_name": "string — the sponsor / counterparty / customer (NOT our property). Look in title, recitals, signature block. Legal name preferred.",
+  "contact_name": "string|null — primary point of contact at the sponsor",
+  "contact_email": "string|null",
+  "contact_phone": "string|null",
+  "contact_position": "string|null",
+  "contact_company": "string|null — defaults to brand_name",
+  "contract_number": "string|null",
+  "effective_date": "YYYY-MM-DD or null — when the contract starts",
+  "expiration_date": "YYYY-MM-DD or null — when the contract ends. CALCULATE from term length if not stated explicitly.",
+  "total_value": "number — total dollar value over the entire term. Sum line items if needed. NEVER null — use 0 if truly unknown.",
+  "annual_values": "object — { 'YYYY': number } per year of the term. Resolution rules: explicit per-year values > escalator clause > divide total evenly.",
+  "benefits": "array — every deliverable. Each item: {description, category, frequency, quantity, value, confidence}. category: 'Signage'|'Digital'|'Hospitality'|'Media'|'Naming'|'Activations'|'Promotional'|'LED Board'|'Jersey Patch'|'Radio Read'|'Social Post'|'Naming Right'|'Activation Space'|'Other'. frequency: 'Per Season'|'Per Game'|'Per Match'|'Monthly'|'Quarterly'|'Weekly'|'One-Time'. confidence: 0-100.",
+  "summary": "string — 2-3 sentence executive summary",
+  "warnings": "array of strings — flag inferred vs explicit values (e.g. 'expiration_date calculated from 3-year term')"
 }
 
-Set confidence 0-100 per benefit. Use 0 for total_value if unknown.`;
-
-  const userPrompt = `Contract file: ${file.original_filename}
-File URL: ${file.file_url || "not available"}
-
-Extract all sponsorship benefits from this contract. If you cannot read the file directly, return a JSON with empty benefits array and set sponsor.name to the filename.`;
+CRITICAL RULES:
+- Money values are PLAIN NUMBERS (50000, not "$50,000.00").
+- Date format MUST be YYYY-MM-DD.
+- annual_values keys MUST be 4-digit strings.
+- If genuinely missing, return null (or 0 for total_value, [] for arrays). Do NOT invent.
+- Do not include any prose before or after the JSON.`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -331,15 +360,30 @@ Extract all sponsorship benefits from this contract. If you cannot read the file
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
+        model: EXTRACT_MODEL,
+        max_tokens: 4096,
+        messages: [{
+          role: "user",
+          content: [
+            {
+              type: "document",
+              source: {
+                type: "base64",
+                media_type: "application/pdf",
+                data: base64,
+              },
+            },
+            { type: "text", text: prompt },
+          ],
+        }],
       }),
     });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`claude_http_${res.status}: ${errText.slice(0, 500)}`);
+    }
     const data = await res.json();
     const text = data?.content?.[0]?.text || "{}";
-    // Strip markdown code fences if Claude wrapped the JSON
     const cleaned = text.replace(/```json\s*/i, "").replace(/```\s*$/i, "").trim();
     return JSON.parse(cleaned);
   } catch (err) {

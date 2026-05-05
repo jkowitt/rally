@@ -2,8 +2,7 @@
 -- MIGRATION 083 — PRE-LAUNCH SECURITY HARDENING
 -- ============================================================
 -- Enable pgcrypto up-front so digest() is available for the api_keys
--- backfill below (the create-extension was originally at the bottom
--- of the file, which made earlier statements fail on first deploy).
+-- backfill below.
 create extension if not exists pgcrypto;
 
 -- Pre-market readiness pass. No new product features — just
@@ -30,9 +29,13 @@ alter table api_keys add column if not exists token_hash text;
 alter table api_keys add column if not exists token_prefix text;       -- first 8 chars for UI display
 alter table api_keys add column if not exists last_used_ip text;
 
--- Backfill: hash any existing plaintext tokens.
+-- Backfill: hash any existing plaintext tokens. On Supabase pgcrypto
+-- lives in the `extensions` schema (not on the default search_path),
+-- so we fully-qualify digest() — unqualified calls error with
+-- "function digest(text, unknown) does not exist" even when the
+-- extension is installed.
 update api_keys set
-  token_hash = encode(digest(token, 'sha256'), 'hex'),
+  token_hash = encode(extensions.digest(token, 'sha256'::text), 'hex'),
   token_prefix = substring(token from 1 for 12)
   where token_hash is null and token is not null;
 

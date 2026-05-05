@@ -4006,9 +4006,15 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   // Inline LinkedIn-Sales-Nav-style filters. Merged into icp_filters
   // before each search call so the edge function's existing
   // buildICPConstraints() picks them up uniformly.
-  const [locFilter, setLocFilter]       = useState('')      // free text city/state/region
-  const [sizeFilter, setSizeFilter]     = useState('any')   // any | startup | small | mid | large | enterprise
-  const [revenueFilter, setRevenueFilter] = useState('any') // any | <1M | 1-10M | 10-50M | 50-100M | 100-500M | 500M-1B | 1B+
+  const [cityFilter, setCityFilter]       = useState('')
+  const [stateFilter, setStateFilter]     = useState('')      // 2-letter US state code
+  const [radiusFilter, setRadiusFilter]   = useState('')      // number of miles, optional
+  const [sizeFilter, setSizeFilter]       = useState('any')   // any | startup | small | mid | large | enterprise
+  const [revenueFilter, setRevenueFilter] = useState('any')   // any | <1M | 1-10M | 10-50M | 50-100M | 100-500M | 500M-1B | 1B+
+  // Result sort. ICP score is Claude's 1-10 self-rating of how well
+  // each company matches the criteria; default-sort by it descending
+  // so the strongest matches surface first.
+  const [sortBy, setSortBy] = useState('icp')                 // icp | revenue | name
   const [results, setResults] = useState([]) // search or suggestion results
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -4054,13 +4060,12 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
       }
       Object.assign(out, map[revenueFilter] || {})
     }
-    if (locFilter.trim()) {
-      // Treat the free-text location as either a city or state hint
-      // depending on what the user typed; the edge function happily
-      // accepts both arrays.
-      const v = locFilter.trim()
-      if (/^[A-Z]{2}$/.test(v)) out.states = [v]
-      else out.cities = [v]
+    if (cityFilter.trim())  out.cities = [cityFilter.trim()]
+    if (stateFilter.trim()) out.states = [stateFilter.trim().toUpperCase()]
+    const radiusMi = parseInt(radiusFilter, 10)
+    if (Number.isFinite(radiusMi) && radiusMi > 0 && cityFilter.trim()) {
+      out.radius_miles = radiusMi
+      out.radius_anchor = `${cityFilter.trim()}${stateFilter.trim() ? ', ' + stateFilter.trim().toUpperCase() : ''}`
     }
     return Object.keys(out).length ? out : null
   }
@@ -4086,7 +4091,12 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     const activeFilters = []
     if (sizeFilter !== 'any') activeFilters.push(`size: ${sizeFilter}`)
     if (revenueFilter !== 'any') activeFilters.push(`revenue: ${revenueFilter}`)
-    if (locFilter.trim()) activeFilters.push(`location: ${locFilter.trim()}`)
+    if (cityFilter.trim()) {
+      const radiusPart = radiusFilter && parseInt(radiusFilter, 10) > 0 ? ` (${radiusFilter} mi)` : ''
+      activeFilters.push(`location: ${cityFilter.trim()}${stateFilter.trim() ? ', ' + stateFilter.trim().toUpperCase() : ''}${radiusPart}`)
+    } else if (stateFilter.trim()) {
+      activeFilters.push(`location: ${stateFilter.trim().toUpperCase()}`)
+    }
     if (searchCategory) activeFilters.push(`market: ${searchCategory}`)
     const filterTag = activeFilters.length ? `  ·  filters: ${activeFilters.join(' · ')}` : ''
     setStatus(append ? `Loading more prospects…${filterTag}` : `Searching for prospects…${filterTag}`)
@@ -4639,27 +4649,58 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
               />
               <button
                 onClick={() => handleSearch()}
-                disabled={loading || (!searchQuery.trim() && !searchCategory && sizeFilter === 'any' && revenueFilter === 'any' && !locFilter.trim())}
+                disabled={loading || (!searchQuery.trim() && !searchCategory && sizeFilter === 'any' && revenueFilter === 'any' && !cityFilter.trim() && !stateFilter.trim())}
                 className="bg-accent text-bg-primary px-4 sm:px-5 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
               >
                 {loading ? '...' : 'Search'}
               </button>
             </div>
 
-            {/* LinkedIn-Sales-Nav-style filter row: Location / Size /
-                Revenue. The legacy ICP picker still lives below for
-                advanced criteria (won-deal patterns, role targets, etc.) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <label className="block">
-                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Location</span>
+            {/* LinkedIn-Sales-Nav-style filter rows. Geo filters get
+                their own line (City / State / Radius) so reps can
+                target a specific metro; the size/revenue/sort row
+                lives below. The legacy ICP picker stays at the bottom
+                for advanced criteria (won-deal patterns, role targets,
+                etc.) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <label className="block col-span-2 sm:col-span-2">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">City</span>
                 <input
-                  placeholder="City or 2-letter state"
-                  value={locFilter}
-                  onChange={(e) => setLocFilter(e.target.value)}
+                  placeholder="e.g. Austin"
+                  value={cityFilter}
+                  onChange={(e) => setCityFilter(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
                   className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                 />
               </label>
+              <label className="block">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">State</span>
+                <input
+                  placeholder="TX"
+                  maxLength={2}
+                  value={stateFilter}
+                  onChange={(e) => setStateFilter(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted uppercase focus:outline-none focus:border-accent"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted" title="Approximate — Claude estimates distance from its general knowledge of US geography. Requires a city.">
+                  Radius (mi)
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="50"
+                  value={radiusFilter}
+                  onChange={(e) => setRadiusFilter(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                  disabled={!cityFilter.trim()}
+                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-40"
+                />
+              </label>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <label className="block">
                 <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Company size</span>
                 <select
@@ -4690,6 +4731,20 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                   <option value="100-500M">$100M – $500M</option>
                   <option value="500M-1B">$500M – $1B</option>
                   <option value="1B+">$1B+</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted" title="ICP score = Claude's 1-10 self-rating of how well each company fits the criteria above. Higher = stronger match.">
+                  Sort by
+                </span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="icp">ICP match (best first)</option>
+                  <option value="revenue">Revenue (high → low)</option>
+                  <option value="name">Name (A → Z)</option>
                 </select>
               </label>
             </div>
@@ -4751,7 +4806,28 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
         {/* Results */}
         {!loading && results.length > 0 && (
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {results.map((prospect, idx) => {
+            {(() => {
+              // Pair each prospect with its original index so addedIdxs /
+              // researchingIdx / addingIdx state still works after sort.
+              const indexed = results.map((p, originalIdx) => ({ p, originalIdx }))
+              const parseRev = (raw) => {
+                if (raw == null) return -Infinity
+                const s = String(raw).toLowerCase().replace(/\$|,/g, '').trim()
+                const m = s.match(/^([\d.]+)\s*([kmb]?)/)
+                if (!m) return -Infinity
+                const n = parseFloat(m[1])
+                const mult = m[2] === 'k' ? 1e3 : m[2] === 'm' ? 1e6 : m[2] === 'b' ? 1e9 : 1
+                return n * mult
+              }
+              if (sortBy === 'icp') {
+                indexed.sort((a, b) => (b.p.icp_match_score || 0) - (a.p.icp_match_score || 0))
+              } else if (sortBy === 'revenue') {
+                indexed.sort((a, b) => parseRev(b.p.estimated_revenue) - parseRev(a.p.estimated_revenue))
+              } else if (sortBy === 'name') {
+                indexed.sort((a, b) => (a.p.company_name || '').localeCompare(b.p.company_name || ''))
+              }
+              return indexed
+            })().map(({ p: prospect, originalIdx: idx }) => {
               const isAdded = addedIdxs.has(idx)
               const research = researchedContacts[idx]
               const isResearching = researchingIdx === idx

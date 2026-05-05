@@ -887,6 +887,9 @@ function buildICPConstraints(icp: any): string {
   }
   if (icp.cities?.length) lines.push(`- Target cities: ${icp.cities.join(', ')}`);
   if (icp.states?.length) lines.push(`- Target states: ${icp.states.join(', ')}`);
+  if (icp.radius_miles && icp.radius_anchor) {
+    lines.push(`- Headquartered within ~${icp.radius_miles} miles of ${icp.radius_anchor} (use your general knowledge of US geography to estimate distance; close metro areas count as in-range)`);
+  }
 
   // Industries
   if (icp.industries?.length) lines.push(`- Target industries: ${icp.industries.join(', ')}`);

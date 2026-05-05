@@ -4613,7 +4613,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
               be approximate); Apollo/Hunter run only when the rep
               picks "verified add" on a specific prospect. */}
           <div className="mt-3 pt-3 border-t border-border text-[10px] text-text-muted leading-snug">
-            Search powered by Claude — firmographics & contacts are AI-estimated and may be inaccurate. Pick <span className="text-accent">Verified add</span> on a row to spend a credit and verify via Apollo + Hunter before it lands in your pipeline.
+            Firmographics &amp; contacts are AI-estimated and may be inaccurate. Pick <span className="text-accent">Verified add</span> on a row to spend a credit and verify.
           </div>
         </div>
 

@@ -4749,8 +4749,6 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
               </label>
             </div>
 
-            {/* Advanced ICP picker — keep for power users */}
-            <ICPFilter value={icpFilters} onChange={setIcpFilters} propertyId={effectivePropertyId} mode="inline" />
             <div className="flex gap-1.5 flex-wrap max-h-[100px] overflow-y-auto">
               <button
                 onClick={() => { setSearchCategory(''); }}

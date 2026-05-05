@@ -312,6 +312,20 @@ export default function DealPipeline() {
       // Account-lead is nullable: send null (not empty string) when unset.
       if (payload.account_lead_id === '') payload.account_lead_id = null
 
+      // Migration 077+ fields — defensively strip when empty so the
+      // insert succeeds against any database that hasn't run those
+      // migrations yet. PostgREST returns "Could not find the
+      // 'account_id' column of 'deals'" when the column is missing,
+      // which crashes the save. Removing nullish/empty values keeps
+      // pre-migration databases working AND post-migration databases
+      // accept null+filled values just fine.
+      const post077Fields = ['account_id', 'agency_id', 'custom_fields', 'account_lead_id', 'assigned_to_user_id']
+      post077Fields.forEach((f) => {
+        const v = payload[f]
+        const isEmptyObject = v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0
+        if (v === '' || v === undefined || isEmptyObject) delete payload[f]
+      })
+
       // Set primary contact on deal from first contact (backward compat)
       if (formContacts?.length > 0) {
         const primary = formContacts.find(c => c.is_primary) || formContacts[0]

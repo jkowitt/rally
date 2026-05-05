@@ -233,6 +233,19 @@ async function upsertEmail(sb: any, userId: string, m: any, folder: string, sour
   const ccEmails = (m.ccRecipients || []).map((r: any) => r.emailAddress?.address).filter(Boolean);
   const isSent = folder === "sent";
 
+  // Resolve the user's property_id ONCE up front. The InboxView
+  // query filters by property_id, so a row inserted without one is
+  // effectively invisible — that was the cause of "synced but no
+  // messages show up". Prior code only looked up property_id inside
+  // the autocreate-contact branch and never carried it onto the
+  // outlook_emails row itself.
+  const { data: ownerProfile } = await sb
+    .from("profiles")
+    .select("property_id")
+    .eq("id", userId)
+    .maybeSingle();
+  const ownerPropertyId = ownerProfile?.property_id ?? null;
+
   // Try to auto-link to an existing contact
   let linkedContactId = null, linkedDealId = null, autoLinked = false;
   const candidates = isSent ? toEmails : [fromEmail];
@@ -252,24 +265,16 @@ async function upsertEmail(sb: any, userId: string, m: any, folder: string, sour
     // Fallback: incoming mail from an unknown sender becomes a new
     // contact automatically. Only for received mail (skip our own
     // outgoing) and only when we have a property to scope it to.
-    if (!isSent && fromEmail) {
-      const { data: profile } = await sb
-        .from("profiles")
-        .select("property_id")
-        .eq("id", userId)
-        .maybeSingle();
-      const propertyId = profile?.property_id;
-      if (propertyId) {
-        const { data: newId } = await sb.rpc("autocreate_contact_from_email", {
-          p_property_id: propertyId,
-          p_from_email: fromEmail,
-          p_from_name: fromName,
-          p_subject: m.subject,
-        });
-        if (newId) {
-          linkedContactId = newId as string;
-          autoLinked = true;
-        }
+    if (!isSent && fromEmail && ownerPropertyId) {
+      const { data: newId } = await sb.rpc("autocreate_contact_from_email", {
+        p_property_id: ownerPropertyId,
+        p_from_email: fromEmail,
+        p_from_name: fromName,
+        p_subject: m.subject,
+      });
+      if (newId) {
+        linkedContactId = newId as string;
+        autoLinked = true;
       }
     }
   }
@@ -277,6 +282,7 @@ async function upsertEmail(sb: any, userId: string, m: any, folder: string, sour
   const row = {
     outlook_message_id: m.id,
     user_id: userId,
+    property_id: ownerPropertyId,
     subject: m.subject,
     body_preview: (m.bodyPreview || "").slice(0, 500),
     body_html: m.body?.contentType === "html" ? m.body.content : null,
@@ -326,14 +332,9 @@ async function upsertEmail(sb: any, userId: string, m: any, folder: string, sour
   // Record into outreach_log so the response_count + sequence
   // auto-pause triggers fire. Dedup on (provider, message_id).
   if (linkedContactId) {
-    const { data: prof } = await sb
-      .from("profiles")
-      .select("property_id")
-      .eq("id", userId)
-      .maybeSingle();
     await logOutreach({
       sb,
-      propertyId: prof?.property_id ?? null,
+      propertyId: ownerPropertyId,
       userId,
       provider: "outlook",
       direction: isSent ? "outbound" : "inbound",

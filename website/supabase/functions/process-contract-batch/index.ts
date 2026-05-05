@@ -310,7 +310,14 @@ async function extractContractWithClaude(sb: any, file: any) {
   const { data: blob, error: dlErr } = await sb.storage
     .from(STORAGE_BUCKET)
     .download(file.storage_path);
-  if (dlErr || !blob) throw new Error(`storage_download_failed: ${dlErr?.message || "no blob"}`);
+  if (dlErr || !blob) {
+    throw new Error(`storage_download_failed bucket=${STORAGE_BUCKET} path=${file.storage_path}: ${dlErr?.message || "no blob"}`);
+  }
+
+  const sizeMB = blob.size / (1024 * 1024);
+  if (sizeMB > 32) {
+    throw new Error(`pdf_too_large: ${sizeMB.toFixed(1)} MB (Anthropic PDF document API limit is 32 MB). Split the PDF or use individual upload.`);
+  }
 
   const bytes = new Uint8Array(await blob.arrayBuffer());
   // Build base64 in chunks to avoid call stack overflow on large PDFs.

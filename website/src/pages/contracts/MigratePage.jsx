@@ -419,6 +419,26 @@ function ReviewView({ session, setSession }) {
 
         <button
           onClick={async () => {
+            const failed = (stats.files || []).filter(f => f.status === 'failed')
+            if (failed.length === 0) {
+              alert('No failed contracts to retry.')
+              return
+            }
+            if (!confirm(`Retry extraction on ${failed.length} failed contract${failed.length === 1 ? '' : 's'}?`)) return
+            const r = await migration.retryFailed(session.id)
+            if (!r.success) alert(`Retry failed: ${r.error}`)
+            else {
+              alert(`Retrying ${failed.length} contract${failed.length === 1 ? '' : 's'} — refresh in a minute to see results.`)
+              setTimeout(reload, 5000)
+            }
+          }}
+          className="w-full bg-warning/10 border border-warning/30 text-warning py-2 rounded text-xs font-semibold hover:bg-warning/20"
+        >
+          ↻ Retry failed
+        </button>
+
+        <button
+          onClick={async () => {
             const stuck = (stats.files || []).filter(f => f.status !== 'complete' || (f.extracted_benefits_count ?? 0) === 0)
             if (stuck.length === 0) {
               alert('No stuck or empty contracts to clear.')
@@ -581,15 +601,47 @@ function ContractDetail({ file, session, onReload }) {
   }
 
   const extracted = file.extracted_data || {}
+  // Read new shape (brand_name / effective_date / expiration_date) with
+  // a fallback to the legacy nested .sponsor + start/end_date shape.
+  const sponsorName = extracted.brand_name || extracted.sponsor?.name || extracted.sponsor?.company || '—'
+  const startDate = extracted.effective_date || extracted.start_date
+  const endDate   = extracted.expiration_date || extracted.end_date
 
   return (
     <div className="bg-bg-card border border-border rounded-lg overflow-hidden">
       <div className="p-4 border-b border-border">
         <div className="text-sm font-semibold">{file.original_filename}</div>
         <div className="text-[11px] text-text-muted">
-          {extracted.sponsor?.name} · {extracted.start_date || '—'} to {extracted.end_date || '—'}
+          {sponsorName} · {startDate || '—'} to {endDate || '—'}
           {extracted.total_value && ` · $${Number(extracted.total_value).toLocaleString()}`}
         </div>
+        {file.status === 'failed' && (
+          <div className="mt-3 bg-danger/10 border border-danger/30 rounded p-3 text-[11px] text-danger">
+            <div className="font-mono uppercase tracking-wider text-[9px] mb-1">Extraction failed</div>
+            <div className="text-text-secondary whitespace-pre-wrap break-all">
+              {file.error_message || 'No error message captured. Check the Supabase Functions log for process-contract-batch.'}
+            </div>
+            <div className="mt-2 text-[10px] text-text-muted">
+              Common causes: PDF over 32 MB or 100 pages, encrypted PDF, scanned image-only PDF, or transient Anthropic API error. Re-uploading often works.
+            </div>
+          </div>
+        )}
+        {file.status === 'complete' && (extracted.benefits || []).length === 0 && (
+          <div className="mt-3 bg-warning/10 border border-warning/30 rounded p-3 text-[11px] text-warning">
+            <div className="font-mono uppercase tracking-wider text-[9px] mb-1">No benefits found</div>
+            <div className="text-text-secondary">
+              Extraction succeeded but Claude returned an empty benefits list — usually because the PDF is mostly boilerplate, scanned without OCR, or the deliverables live in an external Schedule attachment that wasn't uploaded.
+            </div>
+          </div>
+        )}
+        {Array.isArray(extracted.warnings) && extracted.warnings.length > 0 && (
+          <div className="mt-3 bg-bg-surface border border-border rounded p-2 text-[11px]">
+            <div className="font-mono uppercase tracking-wider text-[9px] text-text-muted mb-1">AI warnings</div>
+            <ul className="space-y-0.5 text-text-secondary list-disc list-inside">
+              {extracted.warnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-1 border-b border-border px-4">

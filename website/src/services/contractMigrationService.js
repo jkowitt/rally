@@ -118,6 +118,24 @@ export async function startProcessing(sessionId) {
   return { success: true, result: data }
 }
 
+// Flip every failed file back to queued and re-run the batch. Useful
+// when a transient Anthropic error or storage glitch took out a few
+// contracts mid-batch and the user just wants to retry them.
+export async function retryFailed(sessionId) {
+  const { error: updErr } = await supabase
+    .from('contract_migration_files')
+    .update({ status: 'queued', error_message: null, retry_count: 0 })
+    .eq('session_id', sessionId)
+    .eq('status', 'failed')
+  if (updErr) return { success: false, error: updErr.message }
+  await updateSession(sessionId, { status: 'processing' })
+  const { data, error } = await supabase.functions.invoke('process-contract-batch', {
+    body: { session_id: sessionId },
+  })
+  if (error) return { success: false, error: error.message }
+  return { success: true, result: data }
+}
+
 // ─── Benefits review ────────────────────────────────────────
 export async function listBenefits(sessionId, { reviewStatus, fileId } = {}) {
   let q = supabase

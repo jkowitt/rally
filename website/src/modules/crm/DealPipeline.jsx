@@ -4641,114 +4641,123 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
 
         {/* Search controls — left sidebar when in search tab */}
         {tab === 'search' && (
-          <aside className="w-72 lg:w-80 shrink-0 border-r border-border overflow-y-auto p-3 sm:p-4 space-y-3">
-            <div className="flex gap-2">
+          <aside className="w-80 lg:w-96 shrink-0 border-r border-border overflow-y-auto p-4 space-y-4">
+            <div className="space-y-2">
               <input
                 placeholder="Search companies or keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
-                className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                 autoFocus
               />
               <button
                 onClick={() => handleSearch()}
                 disabled={loading || (!searchQuery.trim() && !searchCategory && sizeFilter === 'any' && revenueFilter === 'any' && !cityFilter.trim() && !stateFilter.trim())}
-                className="bg-accent text-bg-primary px-4 sm:px-5 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
+                className="w-full bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
               >
-                {loading ? '...' : 'Search'}
+                {loading ? 'Searching…' : 'Search'}
               </button>
             </div>
 
-            {/* Compact filter strip — single row instead of labeled
-                grids. Placeholders carry the meaning; hover tooltips
-                explain anything ambiguous. Frees ~350px of vertical
-                space so results render above the fold. */}
-            <div className="flex flex-wrap gap-2">
-              <input
-                placeholder="City"
-                value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
-                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent w-32"
-                title="City filter"
-              />
-              <input
-                placeholder="ST"
-                maxLength={2}
-                value={stateFilter}
-                onChange={(e) => setStateFilter(e.target.value.toUpperCase())}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
-                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted uppercase focus:outline-none focus:border-accent w-14"
-                title="2-letter state"
-              />
-              <input
-                type="number"
-                min="0"
-                placeholder="Radius mi"
-                value={radiusFilter}
-                onChange={(e) => setRadiusFilter(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
-                disabled={!cityFilter.trim()}
-                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-40 w-20"
-                title="Radius in miles from the typed city — approximate, Claude estimates from general geography"
-              />
-              <select
-                value={sizeFilter}
-                onChange={(e) => setSizeFilter(e.target.value)}
-                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
-                title="Company size"
-              >
-                <option value="any">Any size</option>
-                <option value="startup">Startup (&lt; 50)</option>
-                <option value="small">Small (50–200)</option>
-                <option value="mid">Mid (200–1k)</option>
-                <option value="large">Large (1k–5k)</option>
-                <option value="enterprise">Enterprise (5k+)</option>
-              </select>
-              <select
-                value={revenueFilter}
-                onChange={(e) => setRevenueFilter(e.target.value)}
-                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
-                title="Revenue range"
-              >
-                <option value="any">Any revenue</option>
-                <option value="<1M">&lt; $1M</option>
-                <option value="1-10M">$1M–$10M</option>
-                <option value="10-50M">$10M–$50M</option>
-                <option value="50-100M">$50M–$100M</option>
-                <option value="100-500M">$100M–$500M</option>
-                <option value="500M-1B">$500M–$1B</option>
-                <option value="1B+">$1B+</option>
-              </select>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
-                title="Sort results — ICP score is Claude's 1-10 self-rating of how well each company fits the criteria"
-              >
-                <option value="icp">Sort: ICP match</option>
-                <option value="revenue">Sort: Revenue ↓</option>
-                <option value="name">Sort: Name A→Z</option>
-              </select>
-            </div>
+            {/* Filters — vertical stack inside the sidebar with proper
+                labels above each control. Reads top-down like a Sales
+                Navigator filter rail. */}
+            <div className="space-y-3">
+              <div>
+                <div className="text-[9px] font-mono uppercase tracking-widest text-text-muted mb-1">Location</div>
+                <div className="grid grid-cols-[1fr_3rem] gap-1.5">
+                  <input
+                    placeholder="City"
+                    value={cityFilter}
+                    onChange={(e) => setCityFilter(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                    className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                  />
+                  <input
+                    placeholder="ST"
+                    maxLength={2}
+                    value={stateFilter}
+                    onChange={(e) => setStateFilter(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                    className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted uppercase focus:outline-none focus:border-accent text-center"
+                  />
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Radius (miles) — requires a city"
+                  value={radiusFilter}
+                  onChange={(e) => setRadiusFilter(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                  disabled={!cityFilter.trim()}
+                  className="mt-1.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-40"
+                  title="Approximate — Claude estimates distance from general geography"
+                />
+              </div>
 
-            <div className="flex gap-1.5 flex-wrap max-h-[100px] overflow-y-auto">
-              <button
-                onClick={() => { setSearchCategory(''); }}
-                className={`px-2 py-1 rounded text-[11px] font-mono border ${!searchCategory ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-card border-border text-text-muted'}`}
-              >
-                All
-              </button>
-              {SEARCH_CATEGORIES.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => { setSearchCategory(searchCategory === cat ? '' : cat) }}
-                  className={`px-2 py-1 rounded text-[11px] font-mono border ${searchCategory === cat ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-card border-border text-text-muted'}`}
+              <div>
+                <div className="text-[9px] font-mono uppercase tracking-widest text-text-muted mb-1">Company size</div>
+                <select
+                  value={sizeFilter}
+                  onChange={(e) => setSizeFilter(e.target.value)}
+                  className="w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
                 >
-                  {cat}
-                </button>
-              ))}
+                  <option value="any">Any size</option>
+                  <option value="startup">Startup (&lt; 50 employees)</option>
+                  <option value="small">Small (50–200)</option>
+                  <option value="mid">Mid-market (200–1,000)</option>
+                  <option value="large">Large (1,000–5,000)</option>
+                  <option value="enterprise">Enterprise (5,000+)</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="text-[9px] font-mono uppercase tracking-widest text-text-muted mb-1">Revenue ($)</div>
+                <select
+                  value={revenueFilter}
+                  onChange={(e) => setRevenueFilter(e.target.value)}
+                  className="w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="any">Any revenue</option>
+                  <option value="<1M">Less than $1M</option>
+                  <option value="1-10M">$1M – $10M</option>
+                  <option value="10-50M">$10M – $50M</option>
+                  <option value="50-100M">$50M – $100M</option>
+                  <option value="100-500M">$100M – $500M</option>
+                  <option value="500M-1B">$500M – $1B</option>
+                  <option value="1B+">$1B+</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="text-[9px] font-mono uppercase tracking-widest text-text-muted mb-1" title="ICP score = Claude's 1-10 self-rating of how well each company fits the criteria. Higher = stronger match.">
+                  Sort by
+                </div>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="icp">ICP match (best first)</option>
+                  <option value="revenue">Revenue (high → low)</option>
+                  <option value="name">Name (A → Z)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[9px] font-mono uppercase tracking-widest text-text-muted mb-1">Industry</div>
+              <select
+                value={searchCategory}
+                onChange={(e) => setSearchCategory(e.target.value)}
+                className="w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+              >
+                <option value="">All industries</option>
+                {SEARCH_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
           </aside>
         )}

@@ -148,6 +148,20 @@ Deno.serve(async (req: Request) => {
     // Process in batches of BATCH_SIZE
     let processed = 0, succeeded = 0, failed = 0;
     for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      // Cooperative cancellation: re-check session status between
+      // batches. The Force Stop button flips the session to
+      // 'review', which is our cue to stop picking up new files. The
+      // currently-in-flight batch finishes (so we don't leave a row
+      // mid-update), then we exit cleanly.
+      const { data: live } = await sb
+        .from("contract_migration_sessions")
+        .select("status")
+        .eq("id", sessionId)
+        .maybeSingle();
+      if (live?.status !== "processing") {
+        break;
+      }
+
       const batch = files.slice(i, i + BATCH_SIZE);
       const results = await Promise.allSettled(
         batch.map(f => processOneFile(sb, f, session))

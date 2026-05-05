@@ -121,6 +121,29 @@ export async function startProcessing(sessionId) {
 // Flip every failed file back to queued and re-run the batch. Useful
 // when a transient Anthropic error or storage glitch took out a few
 // contracts mid-batch and the user just wants to retry them.
+// Force-stop the in-flight extraction. Marks every file in
+// processing / retrying / queued state as failed (with a clear
+// error message), bumps the session into 'review' so the UI can
+// show what worked + let the user clear the rest. The runner
+// reads file.status before each extraction call, so anything
+// already mid-flight finishes that call but won't pick up the
+// next file. Net effect: extraction halts within ~5-10 seconds.
+export async function cancelProcessing(sessionId) {
+  const { data: files, error: fErr } = await supabase
+    .from('contract_migration_files')
+    .update({
+      status: 'failed',
+      error_message: 'Cancelled by user (force stop)',
+      processing_completed_at: new Date().toISOString(),
+    })
+    .eq('session_id', sessionId)
+    .in('status', ['queued', 'processing', 'retrying'])
+    .select('id')
+  if (fErr) return { success: false, error: fErr.message }
+  await updateSession(sessionId, { status: 'review' })
+  return { success: true, cancelled: files?.length || 0 }
+}
+
 export async function retryFailed(sessionId) {
   const { error: updErr } = await supabase
     .from('contract_migration_files')

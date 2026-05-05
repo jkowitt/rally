@@ -232,6 +232,7 @@ function UploadView({ session, setSession }) {
 // ─── Step 2: Processing view ─────────────────────────────────
 function ProcessingView({ session }) {
   const [files, setFiles] = useState([])
+  const [cancelling, setCancelling] = useState(false)
 
   useEffect(() => {
     const load = async () => setFiles(await migration.listFiles(session.id))
@@ -246,6 +247,21 @@ function ProcessingView({ session }) {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [session.id])
+
+  // Force-stop. Marks every queued / processing / retrying row as
+  // failed and bumps the session to Review so the rep can keep what
+  // succeeded and clear the rest. Whatever the AI is mid-call on
+  // finishes gracefully but no new file gets picked up.
+  async function forceStop() {
+    if (!confirm('Stop the extraction now?\n\nFiles already in progress finish their current AI call (~5-10s); nothing new starts. You can review what succeeded and retry or clear the rest.')) return
+    setCancelling(true)
+    const r = await migration.cancelProcessing(session.id)
+    setCancelling(false)
+    if (!r.success) alert(`Couldn't stop: ${r.error || 'unknown error'}`)
+    // Realtime subscription will pick up the new row states; the
+    // session.status flip to 'review' is picked up by MigratePage's
+    // own subscription, swapping us into ReviewView.
+  }
 
   const pctComplete = session.total_contracts > 0
     ? Math.round((session.contracts_processed / session.total_contracts) * 100)
@@ -275,6 +291,13 @@ function ProcessingView({ session }) {
           {session.contracts_processed} of {session.total_contracts} complete
           {remaining > 0 && ` · ~${estimatedRemaining} min remaining`}
         </div>
+        <button
+          onClick={forceStop}
+          disabled={cancelling}
+          className="mt-2 text-xs px-3 py-1.5 border border-danger/30 text-danger rounded hover:bg-danger/10 disabled:opacity-50"
+        >
+          {cancelling ? 'Stopping…' : '⏹ Force stop'}
+        </button>
       </div>
 
       <div className="space-y-2">
@@ -435,6 +458,26 @@ function ReviewView({ session, setSession }) {
           className="w-full bg-warning/10 border border-warning/30 text-warning py-2 rounded text-xs font-semibold hover:bg-warning/20"
         >
           ↻ Retry failed
+        </button>
+
+        <button
+          onClick={async () => {
+            // Reset rows that got orphaned in 'processing' / 'retrying'
+            // (function timed out mid-AI-call). Marks them failed so
+            // Retry / Clear can act on them.
+            const stuck = (stats.files || []).filter(f => f.status === 'processing' || f.status === 'retrying' || f.status === 'queued')
+            if (stuck.length === 0) {
+              alert('No in-flight contracts to stop.')
+              return
+            }
+            if (!confirm(`Force-stop ${stuck.length} in-flight contract${stuck.length === 1 ? '' : 's'}? They\'ll be marked failed so you can retry or clear them.`)) return
+            const r = await migration.cancelProcessing(session.id)
+            if (!r.success) alert(`Stop failed: ${r.error || 'unknown'}`)
+            else reload()
+          }}
+          className="w-full bg-danger/10 border border-danger/30 text-danger py-2 rounded text-xs font-semibold hover:bg-danger/20"
+        >
+          ⏹ Force stop in-flight
         </button>
 
         <button

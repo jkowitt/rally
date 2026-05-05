@@ -4083,7 +4083,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     else setLoading(true)
     // Tiny human-readable summary of which filters are active, so the
     // rep can see the filter chips really do shape the query.
-    const activeFilters: string[] = []
+    const activeFilters = []
     if (sizeFilter !== 'any') activeFilters.push(`size: ${sizeFilter}`)
     if (revenueFilter !== 'any') activeFilters.push(`revenue: ${revenueFilter}`)
     if (locFilter.trim()) activeFilters.push(`location: ${locFilter.trim()}`)

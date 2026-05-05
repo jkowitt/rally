@@ -207,6 +207,19 @@ create table if not exists data_exports (
   expires_at timestamptz
 );
 
+-- An older `data_exports` table existed in migration 001 with a
+-- different shape (exported_by, file_url, restrictive export_type
+-- check). The `create table if not exists` above is a no-op against
+-- that legacy table, so back-fill the new columns idempotently and
+-- relax the check so newer export_type values don't violate it.
+alter table data_exports add column if not exists user_id         uuid references auth.users(id) on delete set null;
+alter table data_exports add column if not exists row_count       integer;
+alter table data_exports add column if not exists file_size_bytes integer;
+alter table data_exports add column if not exists requested_at    timestamptz not null default now();
+alter table data_exports add column if not exists completed_at    timestamptz;
+alter table data_exports add column if not exists download_url    text;
+alter table data_exports drop constraint if exists data_exports_export_type_check;
+
 alter table data_exports enable row level security;
 create policy "data_exports_own" on data_exports
   for all using (user_id = auth.uid() or is_developer())

@@ -247,18 +247,40 @@ grant insert on proposal_view_events to anon;
 grant insert on proposal_view_events to authenticated;
 
 -- Roll-up view: per portal-link, total time + page heatmap.
+-- Postgres forbids nesting aggregates, so the per-page sum runs in a
+-- CTE first and the outer level just collects them into a jsonb map.
 create or replace view proposal_view_summary as
+  with page_totals as (
+    select
+      portal_link_id,
+      deal_id,
+      page_index,
+      sum(duration_ms) filter (where event_type = 'page_view') as page_ms
+    from proposal_view_events
+    where page_index is not null
+    group by portal_link_id, deal_id, page_index
+  ),
+  overall as (
+    select
+      portal_link_id,
+      deal_id,
+      count(*) filter (where event_type = 'session_start') as sessions,
+      sum(duration_ms) filter (where event_type = 'page_view') as total_ms,
+      max(occurred_at) as last_viewed_at
+    from proposal_view_events
+    group by portal_link_id, deal_id
+  )
   select
-    portal_link_id,
-    deal_id,
-    count(*) filter (where event_type = 'session_start') as sessions,
-    sum(duration_ms) filter (where event_type = 'page_view') as total_ms,
-    max(occurred_at) as last_viewed_at,
-    jsonb_object_agg(page_index::text,
-      coalesce(sum(duration_ms) filter (where event_type = 'page_view'), 0)
-    ) filter (where page_index is not null) as page_heatmap_ms
-  from proposal_view_events
-  group by portal_link_id, deal_id;
+    o.portal_link_id,
+    o.deal_id,
+    o.sessions,
+    o.total_ms,
+    o.last_viewed_at,
+    (select jsonb_object_agg(pt.page_index::text, coalesce(pt.page_ms, 0))
+       from page_totals pt
+      where pt.portal_link_id = o.portal_link_id
+        and pt.deal_id        is not distinct from o.deal_id) as page_heatmap_ms
+  from overall o;
 
 -- ────────────────────────────────────────────────────────────
 -- 9. WIN/LOSS DEBRIEF AUTOMATION

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import ProspectingChatPanel from '@/components/ProspectingChatPanel'
 import DealActivityTimeline from '@/components/DealActivityTimeline'
 import BuyingCommittee from '@/components/BuyingCommittee'
 import AccountBrief from '@/components/AccountBrief'
@@ -1170,6 +1171,10 @@ export default function DealPipeline() {
           />
         </Suspense>
       )}
+
+      {/* Prospecting copilot — floating launcher + slide-out panel.
+          Scoped to prospecting / outreach / target-list strategy. */}
+      <ProspectingChatPanel />
     </div>
   )
 }

@@ -65,7 +65,7 @@ export default function MigratePage() {
       <Header session={session} />
       {session.status === 'uploading' && <UploadView session={session} setSession={setSession} />}
       {session.status === 'processing' && <ProcessingView session={session} />}
-      {session.status === 'review' && <ReviewView session={session} />}
+      {session.status === 'review' && <ReviewView session={session} setSession={setSession} />}
       {session.status === 'complete' && <CompleteView session={session} />}
     </div>
   )
@@ -310,7 +310,7 @@ function StatusIcon({ status }) {
 }
 
 // ─── Step 3: Review view ─────────────────────────────────────
-function ReviewView({ session }) {
+function ReviewView({ session, setSession }) {
   const { profile } = useAuth()
   const [stats, setStats] = useState(null)
   const [selectedFile, setSelectedFile] = useState(null)
@@ -324,6 +324,15 @@ function ReviewView({ session }) {
     const s = await migration.getSessionStats(session.id)
     setStats(s)
     if (!selectedFile && s.files?.length > 0) setSelectedFile(s.files[0])
+  }
+
+  // Send the user back to the upload step (e.g. after they cleared
+  // all stuck contracts and want to start fresh). Flips the session
+  // status; realtime listener picks it up but we also patch locally
+  // for immediate feedback.
+  async function backToUpload() {
+    await migration.updateSession(session.id, { status: 'uploading' })
+    setSession({ ...session, status: 'uploading' })
   }
 
   async function approveAllHighConfidence() {
@@ -340,6 +349,34 @@ function ReviewView({ session }) {
   }
 
   if (!stats) return <div className="p-6 text-xs text-text-muted">Loading review…</div>
+
+  // If every contract has been removed, drop the user back to the
+  // upload step automatically — there's nothing to review.
+  if ((stats.files?.length || 0) === 0) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 text-center space-y-4">
+        <div className="text-3xl">📄</div>
+        <h2 className="text-lg font-semibold text-text-primary">No contracts left in this session</h2>
+        <p className="text-xs text-text-muted">
+          You've cleared everything from this batch. Add more contracts to keep going, or finish up.
+        </p>
+        <div className="flex justify-center gap-2 pt-2">
+          <button
+            onClick={backToUpload}
+            className="bg-accent text-bg-primary px-4 py-2 rounded text-xs font-semibold hover:opacity-90"
+          >
+            ← Upload more contracts
+          </button>
+          <button
+            onClick={() => navigate('/app/crm/contracts')}
+            className="border border-border text-text-secondary px-4 py-2 rounded text-xs hover:text-text-primary"
+          >
+            Back to Contracts
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const filteredFiles = filter === 'needs_review'
     ? stats.files.filter(f => f.status !== 'complete')
@@ -385,6 +422,13 @@ function ReviewView({ session }) {
           className="w-full bg-danger/10 border border-danger/30 text-danger py-2 rounded text-xs font-semibold hover:bg-danger/20"
         >
           Clear stuck / empty contracts
+        </button>
+
+        <button
+          onClick={backToUpload}
+          className="w-full bg-bg-card border border-border text-text-secondary py-2 rounded text-xs font-semibold hover:text-text-primary hover:border-accent/50"
+        >
+          + Upload more contracts
         </button>
 
         <div>

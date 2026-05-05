@@ -8,6 +8,8 @@ import { useDialog } from '@/hooks/useDialog'
 import { Paperclip, X, Calendar, AlertTriangle, Brain, Sparkles } from 'lucide-react'
 import { lintEmail, hasBlockers } from '@/lib/deliverability'
 import EmailCoachPanel from '@/components/EmailCoachPanel'
+import ProspectingChatPanel from '@/components/ProspectingChatPanel'
+import { MessageCircle } from 'lucide-react'
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024 // 25 MB per Gmail/Outlook
 
@@ -60,6 +62,7 @@ export default function ComposeEmail({
   const [sending, setSending] = useState(false)
   const [drafting, setDrafting] = useState(false)
   const [coachOpen, setCoachOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   // Personality-aware tone hint. Looks up the recipient's
   // contact_personalities row by email + property; renders a
   // one-line nudge ("direct + fast pace · prefers data over story").
@@ -471,6 +474,16 @@ export default function ComposeEmail({
             >
               <Sparkles className="w-3.5 h-3.5" /> Coach
             </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setChatOpen(true)}
+              type="button"
+              title="Open the outreach copilot — chat through email feedback, follow-up tactics, and rewrites"
+              disabled={sending}
+            >
+              <MessageCircle className="w-3.5 h-3.5" /> Chat
+            </Button>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={onClose} disabled={sending}>
@@ -489,6 +502,23 @@ export default function ComposeEmail({
         draft={body}
         onChangeDraft={setBody}
         subject={subject}
+      />
+
+      {/* Outreach copilot — same chat infra as the Pipeline copilot,
+          but seeded with the live draft + recipient context so the
+          model can analyze and rewrite specifically. */}
+      <ProspectingChatPanel
+        mode="outreach"
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        emailContext={{
+          draft: body,
+          subject,
+          recipient_email: (to || '').split(',')[0]?.trim() || '',
+          recipient_name: tonePersonality?.full_name || '',
+          recipient_company: tonePersonality?.company || '',
+          recipient_title: tonePersonality?.position || tonePersonality?.title || '',
+        }}
       />
     </div>
   )

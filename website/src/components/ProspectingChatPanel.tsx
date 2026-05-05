@@ -17,7 +17,34 @@ interface Message {
   content: string
 }
 
-const SUGGESTED_PROMPTS = [
+export interface OutreachContext {
+  draft?: string
+  subject?: string
+  recipient_name?: string
+  recipient_email?: string
+  recipient_company?: string
+  recipient_title?: string
+  prospect_notes?: string
+}
+
+interface Props {
+  // 'prospecting' (default) — floating launcher on Pipeline page,
+  // general target-list / outreach strategy chat.
+  // 'outreach'  — opened from inside the email composer with a draft
+  // attached. Different starter prompts focused on the draft.
+  mode?: 'prospecting' | 'outreach'
+  // When mode === 'outreach', pass the live draft + recipient info.
+  // The edge function injects this into the system prompt so the
+  // model can give specific feedback.
+  emailContext?: OutreachContext
+  // Caller-controlled open state for the outreach mode (since it's
+  // typically launched from a button inside another panel rather
+  // than its own floating launcher).
+  open?: boolean
+  onClose?: () => void
+}
+
+const PROSPECTING_PROMPTS = [
   'Who should I target first if my property is a college bowl game?',
   'Draft a first-touch email to a CMO at a regional auto dealer.',
   'Build me a 5-step outreach sequence for sponsorship cold outreach.',
@@ -25,10 +52,30 @@ const SUGGESTED_PROMPTS = [
   'My ICP is mid-market beverage brands in the Midwest. Find me 8 targets.',
 ]
 
-export default function ProspectingChatPanel() {
+const OUTREACH_PROMPTS = [
+  'Analyze this email and tell me what to fix.',
+  'Make the subject line more specific to this recipient.',
+  'Shorten the body to 80 words and tighten the ask.',
+  'My open rates are low — rewrite the opener so it\'s less template-y.',
+  'Suggest a follow-up to send if they don\'t respond in 4 days.',
+]
+
+export default function ProspectingChatPanel({
+  mode = 'prospecting',
+  emailContext,
+  open: openProp,
+  onClose: onCloseProp,
+}: Props = {}) {
   const { profile } = useAuth()
   const { toast } = useToast()
-  const [open, setOpen] = useState(false)
+  // Internal open state used when the parent doesn't drive it (i.e.
+  // the floating-launcher prospecting variant).
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = openProp ?? internalOpen
+  const setOpen = (v: boolean) => {
+    if (openProp === undefined) setInternalOpen(v)
+    else if (!v) onCloseProp?.()
+  }
   const [messages, setMessages] = useState<Message[]>([])
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
@@ -61,6 +108,7 @@ export default function ProspectingChatPanel() {
         body: {
           messages: next,
           property_id: profile?.property_id || null,
+          email_context: mode === 'outreach' && emailContext ? emailContext : undefined,
         },
       })
       if (error) throw error
@@ -82,18 +130,26 @@ export default function ProspectingChatPanel() {
     setMessages([])
   }
 
+  const SUGGESTED_PROMPTS = mode === 'outreach' ? OUTREACH_PROMPTS : PROSPECTING_PROMPTS
+  const headerTitle = mode === 'outreach' ? 'Outreach copilot' : 'Prospecting copilot'
+  const headerSub   = mode === 'outreach' ? 'Email analysis · rewrites · follow-up tactics' : 'Targets · outreach · list strategy'
+
   return (
     <>
-      {/* Floating launcher — bottom-right */}
-      <button
-        onClick={() => setOpen(true)}
-        className={`fixed bottom-5 right-5 z-40 flex items-center gap-2 bg-accent text-bg-primary px-4 py-3 rounded-full shadow-lg hover:opacity-90 transition-opacity ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-        aria-label="Open prospecting chat"
-        title="Prospecting copilot — ask about target lists, outreach, ICP fit"
-      >
-        <MessageCircle className="w-4 h-4" />
-        <span className="text-sm font-medium hidden sm:inline">Prospecting copilot</span>
-      </button>
+      {/* Floating launcher — only for the standalone prospecting
+          variant. In outreach mode the parent (ComposeEmail / coach
+          panel) drives `open` via its own button. */}
+      {openProp === undefined && (
+        <button
+          onClick={() => setOpen(true)}
+          className={`fixed bottom-5 right-5 z-40 flex items-center gap-2 bg-accent text-bg-primary px-4 py-3 rounded-full shadow-lg hover:opacity-90 transition-opacity ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          aria-label="Open prospecting chat"
+          title="Prospecting copilot — ask about target lists, outreach, ICP fit"
+        >
+          <MessageCircle className="w-4 h-4" />
+          <span className="text-sm font-medium hidden sm:inline">Prospecting copilot</span>
+        </button>
+      )}
 
       {/* Panel — slides in from the right */}
       <aside
@@ -104,8 +160,8 @@ export default function ProspectingChatPanel() {
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-accent" />
             <div>
-              <h2 className="text-sm font-semibold text-text-primary">Prospecting copilot</h2>
-              <p className="text-[10px] text-text-muted">Targets · outreach · list strategy</p>
+              <h2 className="text-sm font-semibold text-text-primary">{headerTitle}</h2>
+              <p className="text-[10px] text-text-muted">{headerSub}</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -133,7 +189,10 @@ export default function ProspectingChatPanel() {
           {messages.length === 0 && (
             <div className="space-y-3">
               <div className="text-[11px] text-text-muted leading-relaxed">
-                Ask me about prospecting, outreach strategies, or possible targets. I&rsquo;m scoped to those — not a general chatbot. Firmographics I mention are AI-estimated; verify the hard numbers in Apollo/Hunter.
+                {mode === 'outreach'
+                  ? <>I can see your draft and the recipient context. Ask for a critique, a rewrite, or follow-up tactics. I&rsquo;m scoped to email + outreach — not a general chatbot.</>
+                  : <>Ask me about prospecting, outreach strategies, or possible targets. I&rsquo;m scoped to those — not a general chatbot. Firmographics I mention are AI-estimated; verify the hard numbers in Apollo/Hunter.</>
+                }
               </div>
               <div className="space-y-1.5">
                 <div className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Try one of these</div>

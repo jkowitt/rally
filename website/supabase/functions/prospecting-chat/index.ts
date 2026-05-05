@@ -30,21 +30,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are Loud Legacy's prospecting copilot — a sales-development assistant for B2B revenue reps. You help with three things ONLY:
+const SYSTEM_PROMPT = `You are Loud Legacy's prospecting + outreach copilot — a sales-development assistant for B2B revenue reps. You help with FOUR things ONLY:
 
 1. PROSPECTING — finding good-fit companies, building target lists, refining ICP criteria, evaluating whether a specific company is worth pursuing.
 2. OUTREACH STRATEGIES — first-touch messaging, multi-step sequences, channel mix (email / LinkedIn / phone), reply handling, objection responses, follow-up cadence.
 3. POSSIBLE TARGETS — given a property type (sports team, media outlet, conference, etc.) or an existing pipeline, suggesting realistic mid-market or local companies that fit and explaining why.
+4. EMAIL ANALYSIS + REWRITES — when the rep shares a draft (or you see one in the [DRAFT EMAIL] context block), give specific feedback on subject line, opener, value prop, ask, and length. When asked, propose a rewrite. Tie suggestions to the recipient when their info is available.
 
 HARD RULES:
-- If the rep asks about anything outside those three areas (CRM admin, billing, contract redlines, personal advice, general world questions, code, math, etc.), politely refuse in one sentence and steer back: "I'm scoped to prospecting and outreach — what list are you trying to build?"
+- If the rep asks about anything outside those four areas (CRM admin, billing, contract redlines, personal advice, general world questions, code, math, etc.), politely refuse in one sentence and steer back: "I'm scoped to prospecting, outreach, and email coaching — what are you working on?"
 - Do NOT invent specific firmographic numbers (revenue, employee count, exact contact emails) as if they were verified. When you reference a company, qualify with "approximately" or "based on public knowledge". Tell the rep to verify with Apollo / Hunter for hard data.
 - Keep responses tight: 2-4 short paragraphs unless the rep specifically asks for a long breakdown. Bullet lists are fine when listing prospects or steps.
 - Be direct and useful. Don't pad with disclaimers, apologies, or "great question!" filler.
 - When the rep asks "who should I target?", offer 5-10 named companies with a one-liner each on why each fits. Skip Fortune-500 megacorps unless the rep specifically wants those.
 - When discussing outreach copy, reference specifics from the company / contact context the rep gave you. Avoid generic templates.
+- When you propose an email rewrite, return the full text inside a fenced code block (\`\`\`) so the rep can copy it cleanly.
 
-You are not a contract reviewer, a deal-stage automation, an email-sender, or a research bot. You are a thinking partner that talks through prospecting and outreach.`;
+You are not a contract reviewer, a deal-stage automation, an email-sender, or a research bot. You are a thinking partner that talks through prospecting, outreach, and email drafts.`;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -111,7 +113,33 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const systemFull = SYSTEM_PROMPT + (profile?.full_name ? `\n\nThe rep's name is ${profile.full_name}.` : "") + pipelineSummary;
+    // Optional email context — when the panel is opened from the
+    // composer, the front-end passes the current draft + recipient
+    // info so the model can give specific feedback.
+    let emailContext = "";
+    const ec = body.email_context;
+    if (ec && typeof ec === "object") {
+      const lines: string[] = ["\n\n[DRAFT EMAIL — the rep is currently composing this]"];
+      if (ec.subject) lines.push(`Subject: ${String(ec.subject).slice(0, 300)}`);
+      if (ec.recipient_name)    lines.push(`To: ${String(ec.recipient_name).slice(0, 100)}${ec.recipient_email ? ` <${String(ec.recipient_email).slice(0, 200)}>` : ""}`);
+      else if (ec.recipient_email) lines.push(`To: ${String(ec.recipient_email).slice(0, 200)}`);
+      if (ec.recipient_company) lines.push(`Company: ${String(ec.recipient_company).slice(0, 200)}`);
+      if (ec.recipient_title)   lines.push(`Title: ${String(ec.recipient_title).slice(0, 200)}`);
+      if (ec.prospect_notes)    lines.push(`Notes: ${String(ec.prospect_notes).slice(0, 800)}`);
+      if (ec.draft) {
+        lines.push("");
+        lines.push("---");
+        lines.push(String(ec.draft).slice(0, 6000));
+        lines.push("---");
+      }
+      lines.push("\nWhen the rep refers to \"the email\" / \"my draft\" / \"this\", they mean the text above.");
+      emailContext = lines.join("\n");
+    }
+
+    const systemFull = SYSTEM_PROMPT
+      + (profile?.full_name ? `\n\nThe rep's name is ${profile.full_name}.` : "")
+      + pipelineSummary
+      + emailContext;
 
     let reply = "";
     let provider = "none";

@@ -463,6 +463,55 @@ async function handleSend(accessToken: string, body: any, sb: any, userId: strin
       sequenceEnrollmentId,
       sequenceStepIndex,
     });
+
+    // Mirror the sent message into outlook_emails so it shows up in
+    // the unified inbox immediately (the next delta sync would catch
+    // it eventually, but reps want their own send to appear without
+    // waiting 5 minutes). Use a synthetic outlook_message_id prefixed
+    // with `local-` so the upsert dedupes against the real message
+    // when delta sync runs later (matched by from_email + subject +
+    // sent_at within the same minute).
+    if (propertyId) {
+      const synthMsgId = `local-${trackingToken || Date.now()}`;
+      await sb.from("outlook_emails").upsert({
+        outlook_message_id: synthMsgId,
+        user_id: userId,
+        property_id: propertyId,
+        subject: subject || null,
+        body_preview: (body.body || "").slice(0, 500),
+        body_html: messageBody.startsWith("<") ? messageBody : null,
+        body_text: messageBody.startsWith("<") ? null : messageBody,
+        from_email: null,                   // filled by delta sync from the real send
+        from_name: null,
+        to_emails: to,
+        cc_emails: cc.length ? cc : null,
+        sent_at: new Date().toISOString(),
+        is_sent: true,
+        is_read: true,
+        has_attachments: attachments.length > 0,
+        folder: "sentitems",
+        conversation_id: body.thread_id || null,
+        linked_contact_id: contactId,
+        linked_deal_id: resolvedDealId,
+        auto_linked: !!resolvedDealId,
+        manually_linked: false,
+        ignored: false,
+        crm_logged: true,
+        crm_logged_at: new Date().toISOString(),
+      }, { onConflict: "outlook_message_id" });
+
+      // Drop a row into the activity timeline so reps see the email
+      // alongside calls / meetings / notes on the deal.
+      await sb.from("activities").insert({
+        property_id: propertyId,
+        deal_id: resolvedDealId,
+        contact_email: to[0] || null,
+        activity_type: "Email",
+        subject: subject || null,
+        description: (body.body || "").slice(0, 1000),
+        created_by: userId,
+      });
+    }
   } catch { /* logging is best-effort */ }
 
   return jsonResponse({ success: true, tracking_token: trackingToken });

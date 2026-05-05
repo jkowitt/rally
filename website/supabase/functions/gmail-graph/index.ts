@@ -601,6 +601,50 @@ async function handleSend(sb: any, userId: string, body: any) {
       sequenceEnrollmentId,
       sequenceStepIndex,
     });
+
+    // Mirror sent message into gmail_emails so the unified inbox
+    // shows it instantly. Delta sync will catch the canonical Gmail
+    // copy on the next 5-minute tick and overwrite this row (matched
+    // by gmail_message_id), so we just stub fields the rep cares
+    // about for the inbox preview.
+    if (propertyId && sendJson?.id) {
+      await sb.from("gmail_emails").upsert({
+        gmail_message_id: sendJson.id,
+        user_id: userId,
+        property_id: propertyId,
+        subject: subject || null,
+        snippet: (body.body || "").slice(0, 500),
+        body_html: messageBody.startsWith("<") ? messageBody : null,
+        body_text: messageBody.startsWith("<") ? null : messageBody,
+        from_email: null,
+        from_name: null,
+        to_emails: toArr,
+        cc_emails: ccArr.length ? ccArr : null,
+        sent_at: new Date().toISOString(),
+        is_sent: true,
+        is_read: true,
+        has_attachments: attachments.length > 0,
+        labels: ["SENT"],
+        gmail_thread_id: sendJson.threadId || null,
+        linked_contact_id: contactId,
+        linked_deal_id: resolvedDealId,
+        auto_linked: !!resolvedDealId,
+        manually_linked: false,
+        ignored: false,
+        crm_logged: true,
+        crm_logged_at: new Date().toISOString(),
+      }, { onConflict: "gmail_message_id" });
+
+      await sb.from("activities").insert({
+        property_id: propertyId,
+        deal_id: resolvedDealId,
+        contact_email: toArr[0] || null,
+        activity_type: "Email",
+        subject: subject || null,
+        description: (body.body || "").slice(0, 1000),
+        created_by: userId,
+      });
+    }
   } catch { /* best-effort */ }
 
   return jsonResponse({ success: true, tracking_token: trackingToken, message_id: sendJson?.id || null });

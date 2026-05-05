@@ -63,7 +63,7 @@ function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
       label: 'Activity',
       items: [
         { to: '/app/crm/inbox', label: 'Inbox', shared: true },
-        { to: '/app/crm/activities', label: 'Timeline' },
+        { to: '/app/crm/activities', label: 'Activity' },
         { to: '/app/crm/tasks', label: 'Tasks' },
       ],
     },

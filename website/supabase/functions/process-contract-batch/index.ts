@@ -31,7 +31,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BATCH_SIZE = 5;
+// Concurrency = 1 by default. Anthropic's tier-1 limit on Opus is
+// 30,000 input tokens/min, and a single contract PDF easily lands at
+// 5-15K input tokens via the document content block — running 5 in
+// parallel blew past the cap and 429'd. Override to a higher number
+// when the project is on a higher Anthropic tier.
+const BATCH_SIZE = parseInt(Deno.env.get("PROCESS_CONTRACT_BATCH_CONCURRENCY") || "1", 10);
+// Inter-call delay (ms) between contracts inside a batch loop, to
+// stay under tokens-per-minute caps even when BATCH_SIZE = 1.
+const PER_CONTRACT_DELAY_MS = parseInt(Deno.env.get("PROCESS_CONTRACT_BATCH_DELAY_MS") || "2000", 10);
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -119,9 +127,10 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", sessionId);
 
-      // Respect rate limits
+      // Respect rate limits — pause between batches so the tokens-per-
+      // minute window has time to refill. Default 2s; override via env.
       if (i + BATCH_SIZE < files.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, PER_CONTRACT_DELAY_MS));
       }
     }
 
@@ -284,9 +293,12 @@ async function processOneFile(sb: any, file: any, session: any) {
 }
 
 // ─── Claude extraction ───────────────────────────────────────
-// Defaults to Opus (current latest) but overridable per environment
-// via PROCESS_CONTRACT_BATCH_MODEL — keeps parity with contract-ai.
-const EXTRACT_MODEL = Deno.env.get("PROCESS_CONTRACT_BATCH_MODEL") ?? "claude-opus-4-7";
+// Defaults to Sonnet 4.6 — comparable quality on structured contract
+// extraction, ~5× higher tokens-per-minute on the default Anthropic
+// tier, and ~5× cheaper per token. Override to Opus
+// (claude-opus-4-7) when on a higher Anthropic tier and willing to
+// trade $$$ for marginal accuracy.
+const EXTRACT_MODEL = Deno.env.get("PROCESS_CONTRACT_BATCH_MODEL") ?? "claude-sonnet-4-6";
 const STORAGE_BUCKET = "contract-migrations";
 
 async function extractContractWithClaude(sb: any, file: any) {
@@ -387,6 +399,14 @@ CRITICAL RULES:
     });
     if (!res.ok) {
       const errText = await res.text();
+      // Honor Anthropic's rate-limit hint when present so the
+      // per-file retry loop sleeps long enough for the token bucket
+      // to refill instead of immediately retrying and 429ing again.
+      if (res.status === 429) {
+        const retryAfterSec = parseInt(res.headers.get("retry-after") || "30", 10);
+        const sleepMs = Math.min(retryAfterSec * 1000, 60_000);
+        await new Promise(r => setTimeout(r, sleepMs));
+      }
       throw new Error(`claude_http_${res.status}: ${errText.slice(0, 500)}`);
     }
     const data = await res.json();

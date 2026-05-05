@@ -31,9 +31,18 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
 
   const visibleHubs = HUBS.filter(hub => {
     if (hub.id === 'crm') return true
-    if (hub.id === 'accounts') return true
+    if (hub.id === 'accounts') {
+      // Account Management is gated by hub_accounts (default ON).
+      // Developers always see it so they can flip the toggle.
+      return isDeveloper || flags.hub_accounts !== false
+    }
     if (hub.id === 'ops') {
-      return isDeveloper || hasAdminRole || showEmailMarketing || flags.client_growth_hub || flags.client_finance_dashboard
+      // Business Operations is gated by hub_business_ops (default
+      // OFF for non-developers). The legacy admin / marketing /
+      // finance entry points still grant access for backward compat.
+      if (isDeveloper) return true
+      if (flags.hub_business_ops) return hasAdminRole || showEmailMarketing || flags.client_growth_hub || flags.client_finance_dashboard
+      return false
     }
     return false
   })

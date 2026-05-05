@@ -41,6 +41,12 @@ const ALL_MODULES: readonly string[] = [
   // Inbox integrations (greenlit per provider once OAuth apps are registered)
   'inbox_outlook',
   'inbox_gmail',
+  // Hub-level visibility. hub_accounts defaults ON because every
+  // tier that closed a deal needs to manage it; hub_business_ops
+  // stays OFF for non-developers until the developer flips it on
+  // in Dev Tools (operations / billing tooling that isn't for reps).
+  'hub_accounts',
+  'hub_business_ops',
 ]
 
 // Hidden modules: flags that must NEVER appear in the standard Dev Tools
@@ -60,6 +66,10 @@ const ALL_OFF: FlagMap = Object.fromEntries(ALL_PUBLIC_MODULES.map(m => [m, fals
 const DEFAULT_FLAGS: FlagMap = {
   ...ALL_OFF,
   crm: true,
+  // Account Management ships ON by default — almost every customer
+  // wants it. Developers can turn it off per-tenant if a particular
+  // customer is on a CRM-only plan.
+  hub_accounts: true,
   show_sports: true, show_entertainment: true, show_conference: true,
   show_nonprofit: true, show_media: true, show_realestate: true,
   show_agency: true, show_other: true,

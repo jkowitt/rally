@@ -114,6 +114,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === "sync") return await handleSync(sb, userId);
     if (action === "send") return await handleSend(sb, userId, body);
+    if (action === "fetch_signatures") return await handleFetchSignatures(sb, userId);
 
     return new Response("Not Found", { status: 404 });
   } catch (err) {
@@ -603,4 +604,42 @@ async function handleSend(sb: any, userId: string, body: any) {
   } catch { /* best-effort */ }
 
   return jsonResponse({ success: true, tracking_token: trackingToken, message_id: sendJson?.id || null });
+}
+
+
+// Pull every Gmail "send-as" identity for the connected account and
+// return their HTML signatures. Reps almost always already have a
+// signature configured in Gmail web — this lets the CRM auto-import
+// it on demand instead of forcing them to paste it again.
+async function handleFetchSignatures(sb: any, userId: string) {
+  const accessToken = await getFreshAccessToken(sb, userId);
+  if (!accessToken) {
+    return jsonResponse({ success: false, error: "Gmail is not connected for this user" }, 200);
+  }
+
+  const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    return jsonResponse({ success: false, error: `Gmail API ${res.status}: ${(await res.text()).slice(0, 300)}` }, 200);
+  }
+  const json = await res.json();
+  const identities = (json.sendAs || []).map((s: any) => ({
+    email: s.sendAsEmail || "",
+    display_name: s.displayName || "",
+    signature: s.signature || "",
+    is_primary: !!s.isPrimary,
+    is_default: !!s.isDefault,
+  }));
+
+  // Auto-save the primary identity's signature to gmail_auth so the
+  // compose flow has it available without a second click.
+  const primary = identities.find((i: any) => i.is_primary) || identities[0];
+  if (primary?.signature) {
+    await sb.from("gmail_auth")
+      .update({ signature_html: primary.signature, updated_at: new Date().toISOString() })
+      .eq("user_id", userId);
+  }
+
+  return jsonResponse({ success: true, identities, primary_signature: primary?.signature || "" });
 }

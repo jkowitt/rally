@@ -114,10 +114,18 @@ export default function InboxConnect() {
         onDisconnect={() => disconnect('gmail')}
       />
 
-      <div className="text-xs text-text-muted leading-relaxed border-t border-border pt-4">
-        <strong className="text-text-secondary">Privacy:</strong> We only read mail you receive
-        and send. Bodies are stored encrypted at rest. You can disconnect at any time and your
-        emails stop syncing instantly. We never send mail without your explicit action.
+      <div className="border-t border-border pt-4 flex items-center justify-between gap-2 flex-wrap">
+        <div className="text-xs text-text-muted leading-relaxed flex-1 min-w-[260px]">
+          <strong className="text-text-secondary">Privacy:</strong> We only read mail you receive
+          and send. Bodies are stored encrypted at rest. You can disconnect at any time and your
+          emails stop syncing instantly. We never send mail without your explicit action.
+        </div>
+        <a
+          href="/app/crm/inbox/signature"
+          className="text-xs px-3 py-1.5 border border-border rounded text-text-secondary hover:text-text-primary hover:border-accent/50 whitespace-nowrap"
+        >
+          ✍ Manage signature
+        </a>
       </div>
     </div>
   )

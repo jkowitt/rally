@@ -106,15 +106,43 @@ export default function ComposeEmail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // Auto-append signature on first open. Pull from profile.email_signature.
+  // Resolved signature for the currently-selected provider. Loaded
+  // once when the modal opens and re-resolves whenever the rep flips
+  // between Outlook / Gmail. Order of preference: per-provider
+  // override → profile.email_signature_html → profile.email_signature
+  // (plain). HTML signatures get appended as HTML; plain ones as text.
+  const [signature, setSignature] = useState({ html: '', isHtml: false })
   useEffect(() => {
-    if (!open || !profile) return
-    const sig = profile?.email_signature
-    if (sig && !body.includes(sig)) {
-      setBody(prev => prev ? `${prev}\n\n${sig}` : `\n\n${sig}`)
+    if (!open || !profile?.id) return
+    let alive = true
+    ;(async () => {
+      const { getEffectiveSignatures, pickSignatureForProvider } = await import('@/services/emailSignatureService')
+      const sigs = await getEffectiveSignatures(profile.id)
+      if (!alive) return
+      setSignature(pickSignatureForProvider(sigs, provider))
+    })()
+    return () => { alive = false }
+  }, [open, profile?.id, provider])
+
+  // Auto-append signature on first open and whenever it changes.
+  // For HTML signatures we wrap the existing plain-text body in a
+  // simple <div> so the appended HTML renders correctly when
+  // outlook-graph / gmail-graph convert the whole thing to HTML for
+  // sending + tracking.
+  useEffect(() => {
+    if (!open) return
+    if (!signature.html) return
+    if (body.includes(signature.html)) return
+    if (signature.isHtml) {
+      setBody(prev => {
+        const baseHtml = prev ? `<div>${prev.replace(/\n/g, '<br/>')}</div>` : ''
+        return baseHtml + `<br/><br/>${signature.html}`
+      })
+    } else {
+      setBody(prev => prev ? `${prev}\n\n${signature.html}` : `\n\n${signature.html}`)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, profile?.email_signature])
+  }, [open, signature.html, signature.isHtml])
 
   if (!open) return null
 
@@ -125,11 +153,17 @@ export default function ComposeEmail({
       const result = await generateDraft()
       if (result) {
         if (result.subject && !subject) setSubject(result.subject)
-        // Replace body but keep signature if it was already there
-        const sig = profile?.email_signature
-        const draft = sig && !result.body.includes(sig)
-          ? `${result.body}\n\n${sig}`
-          : result.body
+        // Replace body, then re-attach the resolved signature in the
+        // shape that matches it (HTML or plain).
+        let draft = result.body || ''
+        if (signature.html && !draft.includes(signature.html)) {
+          if (signature.isHtml) {
+            const baseHtml = draft ? `<div>${draft.replace(/\n/g, '<br/>')}</div>` : ''
+            draft = baseHtml + `<br/><br/>${signature.html}`
+          } else {
+            draft = `${draft}\n\n${signature.html}`
+          }
+        }
         setBody(draft)
         toast({ title: 'Draft generated', type: 'success' })
       }

@@ -32,6 +32,7 @@ const OutlookOAuthCallback = lazyRetry(() => import('./pages/auth/OutlookOAuthCa
 const GmailOAuthCallback = lazyRetry(() => import('./pages/auth/GmailOAuthCallback'))
 const InboxView = lazyRetry(() => import('./modules/inbox/InboxView'))
 const InboxConnect = lazyRetry(() => import('./modules/inbox/InboxConnect'))
+const SignatureSettings = lazyRetry(() => import('./modules/inbox/SignatureSettings'))
 const Dashboard = lazyRetry(() => import('./modules/dashboard/Dashboard'))
 const AssetCatalog = lazyRetry(() => import('./modules/crm/AssetCatalog'))
 const DealPipeline = lazyRetry(() => import('./modules/crm/DealPipeline'))
@@ -224,6 +225,7 @@ export default function App() {
                             <Route path="/crm/pipeline" element={<DealPipeline />} />
                             <Route path="/crm/inbox" element={<InboxView />} />
                             <Route path="/crm/inbox/connect" element={<InboxConnect />} />
+                            <Route path="/crm/inbox/signature" element={<SignatureSettings />} />
                             <Route path="/crm/signals" element={<SignalFeed />} />
                             <Route path="/crm/priority" element={<PriorityQueue />} />
                             <Route path="/crm/lookalikes" element={<Lookalikes />} />

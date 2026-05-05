@@ -189,11 +189,17 @@ export default function ContractManager() {
         const { data: insertedBenefits, error: benErr } = await supabase.from('contract_benefits').insert(benefitRows).select()
         if (benErr) syncErrors.push('Insert benefits: ' + benErr.message)
 
-        // Auto-create fulfillment records (deal_id is nullable since migration 021)
-        if (insertedBenefits?.length > 0) {
+        // Fulfillment row creation:
+        //   • If contract has a deal_id → migration 080's trg_spawn_fulfillment
+        //     trigger already fired on the contract_benefits insert above
+        //     and produced rows with frequency expansion. We just clear any
+        //     stale rows from the previous benefit set (delete-by-cascade
+        //     from contract_benefits handles that automatically too).
+        //   • If no deal_id → trigger early-exits, so insert minimal rows here.
+        if (insertedBenefits?.length > 0 && !savedContract.deal_id) {
           await supabase.from('fulfillment_records').delete().eq('contract_id', savedContract.id).eq('auto_generated', true)
           const fulfillmentRows = insertedBenefits.map(b => ({
-            deal_id: savedContract.deal_id || null,
+            deal_id: null,
             contract_id: savedContract.id,
             benefit_id: b.id,
             scheduled_date: savedContract.effective_date || null,
@@ -267,9 +273,12 @@ export default function ContractManager() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      // Clean up linked assets and fulfillment records first
+      // Clean up linked rows first. fulfillment_records has FKs to both
+      // contracts and contract_benefits with NO ON DELETE CASCADE in the
+      // original schema (1.0 / 080 trigger inserts), so we must wipe them
+      // explicitly. Migration 086 adds the missing cascades for new DBs.
       await supabase.from('assets').delete().eq('source_contract_id', id).eq('from_contract', true)
-      await supabase.from('fulfillment_records').delete().eq('contract_id', id).eq('auto_generated', true)
+      await supabase.from('fulfillment_records').delete().eq('contract_id', id)
       // contract_benefits cascade automatically on contract delete
       const { error } = await supabase.from('contracts').delete().eq('id', id)
       if (error) throw error
@@ -1401,10 +1410,13 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
 
         benefitCount = insertedBenefits?.length || 0
 
-        // Auto-create fulfillment records (deal_id nullable since migration 021)
-        if (insertedBenefits?.length > 0) {
+        // Auto-create fulfillment records ONLY when no deal is attached.
+        // When dealId is set, migration 080's trg_spawn_fulfillment trigger
+        // handles fulfillment row creation (with frequency expansion: e.g.
+        // "Per Game" → 12 rows). Inserting here too would duplicate.
+        if (!dealId && insertedBenefits?.length > 0) {
           const fulfillmentRows = insertedBenefits.map((b) => ({
-            deal_id: dealId || null,
+            deal_id: null,
             contract_id: contract.id,
             benefit_id: b.id,
             scheduled_date: parsed?.effective_date || null,
@@ -1414,6 +1426,9 @@ function UploadTemplate({ deals, propertyId, profileId, onImported }) {
           const { error: fulErr } = await supabase.from('fulfillment_records').insert(fulfillmentRows)
           if (fulErr) console.warn('Fulfillment insert error:', fulErr.message)
           else fulfillmentCount = fulfillmentRows.length
+        } else if (dealId && insertedBenefits?.length > 0) {
+          // Trigger fires per benefit; tally for the success toast.
+          fulfillmentCount = insertedBenefits.length
         }
 
         // Smart asset matching: use AI to match benefits to existing assets

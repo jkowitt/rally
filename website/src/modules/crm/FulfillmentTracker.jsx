@@ -80,13 +80,13 @@ function generateReport(contracts, records) {
     const delivered = cRecs.filter((r) => r.delivered).length
     const overdue = cRecs.filter((r) => isOverdue(r)).length
     return {
-      brand: c.deals?.brand_name || '\u2014',
+      brand: c.deals?.brand_name || c.brand_name || '\u2014',
       total: cRecs.length,
       delivered,
       overdue,
       benefits: cRecs.map((r) => ({
-        name: r.contract_benefits?.name || r.assets?.name || '\u2014',
-        category: r.contract_benefits?.type || r.assets?.category || '\u2014',
+        name: r.contract_benefits?.benefit_description || r.assets?.name || '\u2014',
+        category: r.assets?.category || '\u2014',
         status: deriveStatus(r),
         scheduledDate: r.scheduled_date,
         deliveryDate: r.delivery_date,
@@ -350,9 +350,9 @@ function ProofOfDelivery({ record, onRefresh }) {
 function RecordRow({ rec, onToggle, onRefresh }) {
   const [showProof, setShowProof] = useState(false)
   const status = deriveStatus(rec)
-  const benefitName = rec.contract_benefits?.name || rec.assets?.name || '\u2014'
-  const category = rec.contract_benefits?.type || rec.assets?.category || '\u2014'
-  const brandName = rec.deals?.brand_name || '\u2014'
+  const benefitName = rec.contract_benefits?.benefit_description || rec.assets?.name || '\u2014'
+  const category = rec.assets?.category || '\u2014'
+  const brandName = rec.deals?.brand_name || rec.contracts?.brand_name || '\u2014'
 
   return (
     <div className="border-b border-border last:border-0 px-3 py-3 sm:px-4 sm:py-3 hover:bg-bg-card/50 transition-colors">
@@ -445,7 +445,7 @@ function ContractCard({ contract, records, onRefresh }) {
           {cRecs.map((r) => (
             <div key={r.id} className="flex items-center justify-between text-xs gap-2">
               <span className="text-text-primary truncate">
-                {r.contract_benefits?.name || r.assets?.name || '\u2014'}
+                {r.contract_benefits?.benefit_description || r.assets?.name || '\u2014'}
               </span>
               <StatusBadge status={deriveStatus(r)} />
             </div>
@@ -501,7 +501,7 @@ export default function FulfillmentTracker() {
       const contractIds = contracts.map(c => c.id).filter(Boolean)
       const { data, error } = await supabase
         .from('fulfillment_records')
-        .select('*, deals(id, brand_name, logo_url), contracts(brand_name, status, property_id)')
+        .select('*, deals(id, brand_name, logo_url), contracts(brand_name, status, property_id), contract_benefits(id, benefit_description, frequency, quantity, value), assets(id, name, category)')
         .order('scheduled_date')
       if (error) { console.error('Fulfillment records query error:', error); return [] }
       // Filter to this property's records: has a deal OR belongs to a contract from this property
@@ -586,7 +586,7 @@ export default function FulfillmentTracker() {
   const assetTypes = (() => {
     const set = new Set(
       records
-        .map((r) => r.contract_benefits?.type || r.assets?.category)
+        .map((r) => r.assets?.category)
         .filter(Boolean),
     )
     return Array.from(set).sort()
@@ -595,12 +595,12 @@ export default function FulfillmentTracker() {
   const filteredRecords = records.filter((r) => {
     const status = deriveStatus(r)
     if (filterStatus !== 'all' && status !== filterStatus) return false
-    const type = r.contract_benefits?.type || r.assets?.category || ''
+    const type = r.assets?.category || ''
     if (filterAssetType !== 'all' && type !== filterAssetType) return false
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
-      const brand = (r.deals?.brand_name || '').toLowerCase()
-      const name = (r.contract_benefits?.name || r.assets?.name || '').toLowerCase()
+      const brand = (r.deals?.brand_name || r.contracts?.brand_name || '').toLowerCase()
+      const name = (r.contract_benefits?.benefit_description || r.assets?.name || '').toLowerCase()
       if (!brand.includes(term) && !name.includes(term)) return false
     }
     return true

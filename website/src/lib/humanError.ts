@@ -8,7 +8,26 @@
 
 export function humanError(err: unknown): string {
   if (!err) return 'Something went wrong. Please try again.'
-  const raw = err instanceof Error ? err.message : String(err)
+  // Supabase PostgrestError + edge-function FunctionsError + plain
+  // `{ message, details, hint, code }` objects don't extend Error,
+  // so `instanceof Error` misses them and `String(err)` returns the
+  // useless "[object Object]". Pull `.message` (and friends) directly
+  // when present.
+  let raw: string
+  if (err instanceof Error) {
+    raw = err.message
+  } else if (typeof err === 'object' && err !== null) {
+    const e = err as { message?: unknown; details?: unknown; hint?: unknown; error?: unknown; error_description?: unknown }
+    raw =
+      (typeof e.message === 'string' && e.message) ||
+      (typeof e.error_description === 'string' && e.error_description) ||
+      (typeof e.error === 'string' && e.error) ||
+      (typeof e.details === 'string' && e.details) ||
+      (typeof e.hint === 'string' && e.hint) ||
+      (() => { try { return JSON.stringify(err) } catch { return String(err) } })()
+  } else {
+    raw = String(err)
+  }
   const msg = raw.toLowerCase()
 
   // Auth

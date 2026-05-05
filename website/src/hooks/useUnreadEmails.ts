@@ -40,51 +40,33 @@ export function useUnreadEmails(): UseUnreadEmailsAPI {
 
   useEffect(() => { refresh() }, [refresh])
 
-  // Realtime: react to inserts/updates on either provider's table.
-  // We don't subscribe to the unioned view — Postgres doesn't emit
-  // changes for views — so we listen to both underlying tables.
+  // Polling — refresh the count every 60s while the tab is visible.
+  // Originally used Supabase realtime channels here, but that path
+  // caused render loops on tenants whose outlook_emails / gmail_emails
+  // tables aren't in the supabase_realtime publication: subscribe
+  // failed in a tight loop, hammering the websocket and the React
+  // tree above. Polling is dumber but bulletproof.
   useEffect(() => {
     if (!profile?.id) return
-    const handle = (payload: any) => {
-      // Refresh count immediately.
+    let alive = true
+    const tick = () => {
+      if (!alive) return
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       refresh()
-      // OS-level notification for genuinely new inbound mail. Don't
-      // re-fire for the same id (tabs that lose+regain focus would
-      // otherwise notify twice). Skip when the tab is already
-      // focused — the realtime event itself + sidebar dot is enough.
-      try {
-        const row = payload.new
-        if (!row || row.is_sent || row.is_read || row.ignored) return
-        if (lastSeenIds.current.has(row.id)) return
-        lastSeenIds.current.add(row.id)
-        if (typeof Notification === 'undefined') return
-        if (Notification.permission !== 'granted') return
-        if (typeof document !== 'undefined' && document.visibilityState === 'visible') return
-        const from = row.from_name || row.from_email || 'New email'
-        const subject = row.subject || '(no subject)'
-        const n = new Notification(`${from}`, {
-          body: subject,
-          tag: row.id,
-          icon: '/favicon.svg',
-        })
-        n.onclick = () => {
-          window.focus()
-          window.location.href = '/app/crm/inbox'
-        }
-      } catch { /* ignore — notifications are best-effort */ }
     }
-    const channels = [
-      supabase.channel(`outlook_emails_${profile.id}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'outlook_emails', filter: `user_id=eq.${profile.id}` }, handle)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'outlook_emails', filter: `user_id=eq.${profile.id}` }, () => refresh())
-        .subscribe(),
-      supabase.channel(`gmail_emails_${profile.id}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gmail_emails', filter: `user_id=eq.${profile.id}` }, handle)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'gmail_emails', filter: `user_id=eq.${profile.id}` }, () => refresh())
-        .subscribe(),
-    ]
-    return () => { channels.forEach(c => supabase.removeChannel(c)) }
+    const handle = window.setInterval(tick, 60_000)
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      alive = false
+      window.clearInterval(handle)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [profile?.id, refresh])
+
+  // Suppress unused-ref lint — kept around so we can re-introduce
+  // realtime later without touching the rest of the API.
+  void lastSeenIds
 
   return { count, refresh }
 }

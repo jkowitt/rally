@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -19,13 +19,19 @@ export default function AccountsDashboard() {
   const [recentContracts, setRecentContracts] = useState([])
   const [recentVersions, setRecentVersions] = useState([])
   const [loading, setLoading] = useState(true)
+  // Only flip to "loading" UI on the very first fetch. Subsequent
+  // re-runs (session refresh briefly nulls profile, useAuth re-emits,
+  // effect re-fires) keep the cached numbers visible — otherwise the
+  // dashboard flickers between "…" placeholders and real values
+  // every time the auth context reloads.
+  const firstLoadRef = useRef(true)
 
   useEffect(() => {
     if (!propertyId) return
     let cancelled = false
 
     async function load() {
-      setLoading(true)
+      if (firstLoadRef.current) setLoading(true)
 
       const { data: contracts } = await supabase
         .from('contracts')
@@ -66,6 +72,7 @@ export default function AccountsDashboard() {
       setRecentContracts(active.slice(0, 8))
       setRecentVersions(versions || [])
       setLoading(false)
+      firstLoadRef.current = false
     }
 
     load()

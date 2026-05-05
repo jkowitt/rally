@@ -2,6 +2,15 @@ import { useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
+// EMERGENCY KILL SWITCH: set to true to disable the heartbeat
+// entirely while we investigate a render-loop / app-flicker issue.
+// Override via VITE_DISABLE_USAGE_HEARTBEAT=true in env if rolling
+// back via env is faster than deploying a new build.
+const DISABLED =
+  typeof import.meta !== 'undefined'
+  // @ts-ignore — Vite injects env at build time
+  && import.meta.env?.VITE_DISABLE_USAGE_HEARTBEAT === 'true'
+
 // Fire one heartbeat per minute while the tab is visible. The edge
 // function inserts a row into usage_events; aggregate views in
 // migration 089 turn those rows into "minutes used" by user and by
@@ -13,6 +22,7 @@ export function useUsageHeartbeat() {
   const lastFiredAt = useRef(0)
 
   useEffect(() => {
+    if (DISABLED) return
     if (!session || !profile?.id) return
 
     async function fire() {

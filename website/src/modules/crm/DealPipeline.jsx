@@ -4635,9 +4635,13 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
           </div>
         </div>
 
-        {/* Search Controls */}
+        {/* Body — sidebar layout for search tab (filters fixed left,
+            results scroll on the right); top-down for suggestions. */}
+        <div className={`flex-1 overflow-hidden min-h-0 flex ${tab === 'search' ? 'flex-row' : 'flex-col'}`}>
+
+        {/* Search controls — left sidebar when in search tab */}
         {tab === 'search' && (
-          <div className="p-3 sm:p-4 border-b border-border space-y-3">
+          <aside className="w-72 lg:w-80 shrink-0 border-r border-border overflow-y-auto p-3 sm:p-4 space-y-3">
             <div className="flex gap-2">
               <input
                 placeholder="Search companies or keywords..."
@@ -4746,8 +4750,14 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                 </button>
               ))}
             </div>
-          </div>
+          </aside>
         )}
+
+        {/* Main pane — suggestions controls (when on that tab) plus
+            status / loading / results / empty render here. The inner
+            results block owns its own overflow-y-auto, so this just
+            sets up the column layout. */}
+        <div className="flex-1 flex flex-col min-h-0">
 
         {/* Suggestions controls with ICP filter */}
         {tab === 'suggestions' && (
@@ -5075,6 +5085,8 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
             </div>
           </div>
         )}
+        </div>{/* /main pane */}
+        </div>{/* /body wrapper */}
 
         {/* Bulk-send action bar */}
         {selectedContacts.size > 0 && (

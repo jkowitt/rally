@@ -313,19 +313,30 @@ export default function DealPipeline() {
       // Account-lead is nullable: send null (not empty string) when unset.
       if (payload.account_lead_id === '') payload.account_lead_id = null
 
-      // Migration 077+ fields — defensively strip when empty so the
-      // insert succeeds against any database that hasn't run those
-      // migrations yet. PostgREST returns "Could not find the
-      // 'account_id' column of 'deals'" when the column is missing,
-      // which crashes the save. Removing nullish/empty values keeps
-      // pre-migration databases working AND post-migration databases
-      // accept null+filled values just fine.
-      const post077Fields = ['account_id', 'agency_id', 'custom_fields', 'account_lead_id', 'assigned_to_user_id']
+      // UUID columns on `deals` — Postgres rejects an empty string
+      // ("") with "invalid input syntax for type uuid". Empty form
+      // values must be deleted (or coerced to null) before send. List
+      // covers every UUID added by migrations 001 / 027 / 069 / 074 /
+      // 075 / 077, plus the post-077 jsonb custom_fields helper.
+      const post077Fields = [
+        'account_id', 'agency_id', 'custom_fields',
+        'account_lead_id', 'assigned_to_user_id',
+        'assigned_to',     // legacy from migration 027
+        'created_by',      // from migration 069
+        'parent_deal_id',  // renewal chain link
+      ]
       post077Fields.forEach((f) => {
         const v = payload[f]
         const isEmptyObject = v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0
         if (v === '' || v === undefined || isEmptyObject) delete payload[f]
       })
+
+      // Defensive belt-and-suspenders: scan every `*_id` field on the
+      // payload and delete any that are empty strings. Catches future
+      // UUID columns we add to the form without touching this list.
+      for (const k of Object.keys(payload)) {
+        if (k.endsWith('_id') && payload[k] === '') delete payload[k]
+      }
 
       // Set primary contact on deal from first contact (backward compat)
       if (formContacts?.length > 0) {

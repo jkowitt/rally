@@ -7,6 +7,18 @@
 -- ============================================================
 
 -- ========================
+-- 0. PRE-REQUISITE COLUMNS
+-- ========================
+-- The activation metrics view below references `deals.created_by`
+-- and `contracts.uploaded_by`. Neither column existed in the
+-- original schema (001) — add them defensively here so the view
+-- compiles on any database state.
+alter table deals     add column if not exists created_by  uuid references profiles(id) on delete set null;
+alter table contracts add column if not exists uploaded_by uuid references profiles(id) on delete set null;
+create index if not exists idx_deals_created_by      on deals(created_by);
+create index if not exists idx_contracts_uploaded_by on contracts(uploaded_by);
+
+-- ========================
 -- 1. ONBOARDING ANALYTICS
 -- ========================
 -- Track every onboarding event with timestamps so we can measure

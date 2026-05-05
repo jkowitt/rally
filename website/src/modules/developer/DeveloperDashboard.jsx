@@ -695,22 +695,103 @@ export default function DeveloperDashboard() {
               )}
             </div>
 
-            <div className="space-y-2">
-              {Object.entries(flags)
-                .filter(([module]) => !HIDDEN_MODULES.includes(module))
-                .map(([module, enabled]) => (
-                <div key={module} className="flex items-center justify-between py-2">
-                  <span className="text-sm text-text-primary font-mono">{module}</span>
-                  <button
-                    onClick={() => handleToggleFlag(module, module)}
-                    disabled={savingFlag === module}
-                    className={`px-3 py-1 rounded text-xs font-mono transition-opacity ${enabled ? 'bg-success/20 text-success' : 'bg-bg-card text-text-muted'} ${savingFlag === module ? 'opacity-50' : ''}`}
-                  >
-                    {savingFlag === module ? '…' : (enabled ? 'ON' : 'OFF')}
-                  </button>
-                </div>
-              ))}
-            </div>
+            {(() => {
+              // Bucket the flag list so reps + devs can find what they
+              // need without scrolling 30 entries. Hubs sit at the top
+              // because they gate entire top-level surfaces; everything
+              // else lives under a category header.
+              const visibleEntries = Object.entries(flags).filter(([m]) => !HIDDEN_MODULES.includes(m))
+              const visibleSet = new Set(visibleEntries.map(([m]) => m))
+
+              // Order matters — hubs first, then per-industry, then
+              // shared infrastructure. Modules not in any bucket fall
+              // into "Other" so nothing silently disappears.
+              const BUCKETS = [
+                { key: 'hubs', label: 'Hubs (overarching)', accent: 'accent', modules: ['hub_accounts', 'hub_business_ops'] },
+                { key: 'sports',         label: 'Sports',                     modules: ['show_sports', 'sportify'] },
+                { key: 'entertainment',  label: 'Entertainment',              modules: ['show_entertainment', 'industry_entertainment'] },
+                { key: 'conference',     label: 'Conference / Trade show',    modules: ['show_conference', 'industry_conference'] },
+                { key: 'nonprofit',      label: 'Nonprofit',                  modules: ['show_nonprofit', 'industry_nonprofit'] },
+                { key: 'media',          label: 'Media',                      modules: ['show_media', 'industry_media'] },
+                { key: 'realestate',     label: 'Real Estate',                modules: ['show_realestate', 'industry_realestate'] },
+                { key: 'agency',         label: 'Agency',                     modules: ['show_agency', 'industry_agency'] },
+                { key: 'other_industry', label: 'Other industry',             modules: ['show_other'] },
+                { key: 'inbox',          label: 'Inbox + email infra',        modules: ['inbox_outlook', 'inbox_gmail'] },
+                { key: 'growth',         label: 'Client growth tools',        modules: [
+                  'client_growth_hub', 'client_marketing_hub', 'client_ad_spend', 'client_goal_tracker',
+                  'client_connection_manager', 'client_financial_projections', 'client_finance_dashboard',
+                  'client_growth_workbook', 'client_report_builder', 'client_strategic_workbooks',
+                ] },
+                { key: 'core',           label: 'Core modules',               modules: [
+                  'crm', 'valora', 'businessnow', 'newsletter', 'automations',
+                  'businessops', 'developer', 'marketing',
+                ] },
+              ]
+
+              const claimed = new Set()
+              for (const b of BUCKETS) for (const m of b.modules) claimed.add(m)
+              const otherModules = visibleEntries.map(([m]) => m).filter(m => !claimed.has(m))
+              if (otherModules.length > 0) {
+                BUCKETS.push({ key: 'misc', label: 'Other', modules: otherModules })
+              }
+
+              const renderToggle = (module) => {
+                const enabled = Boolean(flags[module])
+                return (
+                  <div key={module} className="flex items-center justify-between py-1.5">
+                    <span className="text-sm text-text-primary font-mono">{module}</span>
+                    <button
+                      onClick={() => handleToggleFlag(module, module)}
+                      disabled={savingFlag === module}
+                      className={`px-3 py-1 rounded text-xs font-mono transition-opacity ${enabled ? 'bg-success/20 text-success' : 'bg-bg-card text-text-muted'} ${savingFlag === module ? 'opacity-50' : ''}`}
+                    >
+                      {savingFlag === module ? '…' : (enabled ? 'ON' : 'OFF')}
+                    </button>
+                  </div>
+                )
+              }
+
+              const hubBucket = BUCKETS[0]
+              const restBuckets = BUCKETS.slice(1)
+
+              return (
+                <>
+                  {/* Hubs — overarching, always at the top with stronger
+                      visual treatment so devs see them first. */}
+                  <div className="mb-5 bg-accent/5 border border-accent/30 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-accent">{hubBucket.label}</div>
+                      <div className="text-[9px] text-text-muted">Top-level navigation</div>
+                    </div>
+                    <div className="text-[11px] text-text-muted mb-2 leading-relaxed">
+                      Hide or expose entire top-bar hubs. Account Management defaults ON; Business Operations defaults OFF for non-developers.
+                    </div>
+                    <div className="space-y-0">
+                      {hubBucket.modules.filter(m => visibleSet.has(m)).map(renderToggle)}
+                    </div>
+                  </div>
+
+                  {/* Industry + infra buckets, in the order defined above. */}
+                  <div className="space-y-4">
+                    {restBuckets.map(b => {
+                      const inBucket = b.modules.filter(m => visibleSet.has(m))
+                      if (inBucket.length === 0) return null
+                      return (
+                        <details key={b.key} open className="bg-bg-card border border-border rounded-lg p-3">
+                          <summary className="cursor-pointer flex items-center justify-between">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-text-muted">{b.label}</span>
+                            <span className="text-[9px] text-text-muted font-mono">{inBucket.length}</span>
+                          </summary>
+                          <div className="mt-2 space-y-0 divide-y divide-border/40">
+                            {inBucket.map(renderToggle)}
+                          </div>
+                        </details>
+                      )
+                    })}
+                  </div>
+                </>
+              )
+            })()}
 
             {/* Hidden Developer Flags — only the developer role sees this
                 section. These flags are excluded from the filter above so

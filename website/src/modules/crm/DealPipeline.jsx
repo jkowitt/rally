@@ -4656,97 +4656,77 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
               </button>
             </div>
 
-            {/* LinkedIn-Sales-Nav-style filter rows. Geo filters get
-                their own line (City / State / Radius) so reps can
-                target a specific metro; the size/revenue/sort row
-                lives below. The legacy ICP picker stays at the bottom
-                for advanced criteria (won-deal patterns, role targets,
-                etc.) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <label className="block col-span-2 sm:col-span-2">
-                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">City</span>
-                <input
-                  placeholder="e.g. Austin"
-                  value={cityFilter}
-                  onChange={(e) => setCityFilter(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
-                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
-                />
-              </label>
-              <label className="block">
-                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">State</span>
-                <input
-                  placeholder="TX"
-                  maxLength={2}
-                  value={stateFilter}
-                  onChange={(e) => setStateFilter(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
-                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted uppercase focus:outline-none focus:border-accent"
-                />
-              </label>
-              <label className="block">
-                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted" title="Approximate — Claude estimates distance from its general knowledge of US geography. Requires a city.">
-                  Radius (mi)
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="50"
-                  value={radiusFilter}
-                  onChange={(e) => setRadiusFilter(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
-                  disabled={!cityFilter.trim()}
-                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-40"
-                />
-              </label>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <label className="block">
-                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Company size</span>
-                <select
-                  value={sizeFilter}
-                  onChange={(e) => setSizeFilter(e.target.value)}
-                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
-                >
-                  <option value="any">Any size</option>
-                  <option value="startup">Startup (&lt; 50 employees)</option>
-                  <option value="small">Small (50–200)</option>
-                  <option value="mid">Mid-market (200–1,000)</option>
-                  <option value="large">Large (1,000–5,000)</option>
-                  <option value="enterprise">Enterprise (5,000+)</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Revenue ($)</span>
-                <select
-                  value={revenueFilter}
-                  onChange={(e) => setRevenueFilter(e.target.value)}
-                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
-                >
-                  <option value="any">Any revenue</option>
-                  <option value="<1M">Less than $1M</option>
-                  <option value="1-10M">$1M – $10M</option>
-                  <option value="10-50M">$10M – $50M</option>
-                  <option value="50-100M">$50M – $100M</option>
-                  <option value="100-500M">$100M – $500M</option>
-                  <option value="500M-1B">$500M – $1B</option>
-                  <option value="1B+">$1B+</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted" title="ICP score = Claude's 1-10 self-rating of how well each company fits the criteria above. Higher = stronger match.">
-                  Sort by
-                </span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
-                >
-                  <option value="icp">ICP match (best first)</option>
-                  <option value="revenue">Revenue (high → low)</option>
-                  <option value="name">Name (A → Z)</option>
-                </select>
-              </label>
+            {/* Compact filter strip — single row instead of labeled
+                grids. Placeholders carry the meaning; hover tooltips
+                explain anything ambiguous. Frees ~350px of vertical
+                space so results render above the fold. */}
+            <div className="flex flex-wrap gap-2">
+              <input
+                placeholder="City"
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent w-32"
+                title="City filter"
+              />
+              <input
+                placeholder="ST"
+                maxLength={2}
+                value={stateFilter}
+                onChange={(e) => setStateFilter(e.target.value.toUpperCase())}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted uppercase focus:outline-none focus:border-accent w-14"
+                title="2-letter state"
+              />
+              <input
+                type="number"
+                min="0"
+                placeholder="Radius mi"
+                value={radiusFilter}
+                onChange={(e) => setRadiusFilter(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                disabled={!cityFilter.trim()}
+                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-40 w-20"
+                title="Radius in miles from the typed city — approximate, Claude estimates from general geography"
+              />
+              <select
+                value={sizeFilter}
+                onChange={(e) => setSizeFilter(e.target.value)}
+                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+                title="Company size"
+              >
+                <option value="any">Any size</option>
+                <option value="startup">Startup (&lt; 50)</option>
+                <option value="small">Small (50–200)</option>
+                <option value="mid">Mid (200–1k)</option>
+                <option value="large">Large (1k–5k)</option>
+                <option value="enterprise">Enterprise (5k+)</option>
+              </select>
+              <select
+                value={revenueFilter}
+                onChange={(e) => setRevenueFilter(e.target.value)}
+                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+                title="Revenue range"
+              >
+                <option value="any">Any revenue</option>
+                <option value="<1M">&lt; $1M</option>
+                <option value="1-10M">$1M–$10M</option>
+                <option value="10-50M">$10M–$50M</option>
+                <option value="50-100M">$50M–$100M</option>
+                <option value="100-500M">$100M–$500M</option>
+                <option value="500M-1B">$500M–$1B</option>
+                <option value="1B+">$1B+</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+                title="Sort results — ICP score is Claude's 1-10 self-rating of how well each company fits the criteria"
+              >
+                <option value="icp">Sort: ICP match</option>
+                <option value="revenue">Sort: Revenue ↓</option>
+                <option value="name">Sort: Name A→Z</option>
+              </select>
             </div>
 
             <div className="flex gap-1.5 flex-wrap max-h-[100px] overflow-y-auto">

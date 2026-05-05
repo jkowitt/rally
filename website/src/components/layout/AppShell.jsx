@@ -7,6 +7,7 @@ import ImpersonationBanner from '../ImpersonationBanner'
 import OnboardingBanner from '../onboarding/OnboardingBanner'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useSessionTimeout } from '@/hooks/useSessionTimeout'
+import { useUsageHeartbeat } from '@/hooks/useUsageHeartbeat'
 import { on } from '@/lib/appEvents'
 import {
   Home, LayoutGrid, Target, CheckSquare, Handshake,
@@ -17,6 +18,7 @@ const FeatureSuggestion = lazy(() => import('../FeatureSuggestion'))
 
 export default function AppShell({ children }) {
   useSessionTimeout()
+  useUsageHeartbeat()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showSuggestion, setShowSuggestion] = useState(false)

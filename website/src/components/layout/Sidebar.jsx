@@ -256,6 +256,7 @@ function getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing, re
       adminItems.push({ to: '/app/developer/qa-tasks', label: 'QA Tasks' })
       adminItems.push({ to: '/app/developer/qa-test-suite', label: 'QA Test Suite' })
       adminItems.push({ to: '/app/developer/qa-usage', label: 'Usage Simulator' })
+      adminItems.push({ to: '/app/developer/usage', label: 'Usage Dashboard' })
       adminItems.push({ to: '/app/developer/digest', label: 'Change Log' })
       adminItems.push({ to: '/app/admin/trials', label: 'Trials' })
       adminItems.push({ to: '/app/admin/ads', label: 'Ads' })

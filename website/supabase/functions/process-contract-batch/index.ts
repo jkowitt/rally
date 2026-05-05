@@ -25,6 +25,7 @@ import { enforceRateLimit, logRateLimitCall } from "../_shared/rateLimit.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -85,12 +86,53 @@ Deno.serve(async (req: Request) => {
       return json({ success: false, error: "not found" }, 404);
     }
 
+    // Per-property daily quota — 5 starter / 10 pro / 50 enterprise.
+    // Block before fetching files so the 429 we're avoiding never
+    // happens. Developer impersonation bypasses the cap.
+    if (profile?.role !== "developer") {
+      const { data: prop } = await sb
+        .from("properties")
+        .select("plan")
+        .eq("id", session.property_id)
+        .maybeSingle();
+      const plan = prop?.plan || "free";
+      const { data: quota } = await sb.rpc("contract_upload_quota_for_plan", { p_plan: plan });
+      const { data: used }  = await sb.rpc("contract_uploads_used_today", { p_property_id: session.property_id });
+      const usedNum = Number(used ?? 0);
+      const quotaNum = Number(quota ?? 1);
+      if (usedNum >= quotaNum) {
+        return json({
+          success: false,
+          error: `Daily upload limit reached (${usedNum}/${quotaNum} for ${plan} plan). Resets in 24h or upgrade your plan.`,
+          quota_exceeded: true,
+          plan, used: usedNum, limit: quotaNum,
+        }, 200);
+      }
+    }
+
     // Fetch queued files
     const { data: files } = await sb
       .from("contract_migration_files")
       .select("*")
       .eq("session_id", sessionId)
       .in("status", ["queued", "failed"]);
+
+    // Log each file we're about to process against the daily quota,
+    // BEFORE the AI call — that way a partial-success run still
+    // counts (so reps can't exhaust the model retrying the same
+    // file infinitely without it counting). Best-effort.
+    if (files && files.length > 0 && profile?.role !== "developer") {
+      try {
+        await sb.from("contract_upload_log").insert(
+          files.map((f: any) => ({
+            property_id: session.property_id,
+            user_id: userRes.user.id,
+            file_id: f.id,
+            source: "bulk",
+          })),
+        );
+      } catch { /* non-fatal */ }
+    }
 
     if (!files || files.length === 0) {
       await sb
@@ -186,7 +228,7 @@ async function processOneFile(sb: any, file: any, session: any) {
   let lastError = "";
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const extracted = await extractContractWithClaude(sb, file);
+      const extracted = await extractContract(sb, file);
       if (!extracted) throw new Error("empty extraction");
 
       // Write benefits. The new prompt returns `description` + `value`
@@ -292,57 +334,19 @@ async function processOneFile(sb: any, file: any, session: any) {
   return { success: false, error: lastError };
 }
 
-// ─── Claude extraction ───────────────────────────────────────
-// Defaults to Sonnet 4.6 — comparable quality on structured contract
-// extraction, ~5× higher tokens-per-minute on the default Anthropic
-// tier, and ~5× cheaper per token. Override to Opus
-// (claude-opus-4-7) when on a higher Anthropic tier and willing to
-// trade $$$ for marginal accuracy.
-const EXTRACT_MODEL = Deno.env.get("PROCESS_CONTRACT_BATCH_MODEL") ?? "claude-sonnet-4-6";
+// ─── Extraction (OpenAI primary, Anthropic fallback) ─────────
+// Default routing: OpenAI gpt-4o-mini Responses API with PDF input
+// when OPENAI_API_KEY is set (much higher TPM than Anthropic Sonnet).
+// Falls back to Anthropic when only ANTHROPIC_API_KEY is configured.
+// Overrides:
+//   PROCESS_CONTRACT_BATCH_PROVIDER = 'openai' | 'anthropic'
+//   PROCESS_CONTRACT_BATCH_MODEL    = override the chosen provider's model
+const PROVIDER_OVERRIDE = (Deno.env.get("PROCESS_CONTRACT_BATCH_PROVIDER") || "").toLowerCase();
+const OPENAI_MODEL  = Deno.env.get("PROCESS_CONTRACT_BATCH_OPENAI_MODEL") ?? "gpt-4o-mini";
+const ANTHROPIC_MODEL = Deno.env.get("PROCESS_CONTRACT_BATCH_MODEL") ?? "claude-sonnet-4-6";
 const STORAGE_BUCKET = "contract-migrations";
 
-async function extractContractWithClaude(sb: any, file: any) {
-  if (!ANTHROPIC_API_KEY) {
-    return {
-      brand_name: file.original_filename.replace(/\.(pdf|docx)$/i, ""),
-      contact_name: null, contact_email: null, contact_phone: null,
-      effective_date: null, expiration_date: null,
-      total_value: 0, annual_values: {},
-      benefits: [],
-      summary: "ANTHROPIC_API_KEY not configured — extraction skipped.",
-      warnings: ["claude_disabled"],
-    };
-  }
-
-  // Download the file from storage so we can pass the actual bytes
-  // to Claude as a document content block. The previous version sent
-  // the file URL as a string — Claude can't fetch URLs, so it was
-  // essentially extracting from the filename only, which is why mass
-  // uploads "didn't analyze well" while individual uploads did.
-  const { data: blob, error: dlErr } = await sb.storage
-    .from(STORAGE_BUCKET)
-    .download(file.storage_path);
-  if (dlErr || !blob) {
-    throw new Error(`storage_download_failed bucket=${STORAGE_BUCKET} path=${file.storage_path}: ${dlErr?.message || "no blob"}`);
-  }
-
-  const sizeMB = blob.size / (1024 * 1024);
-  if (sizeMB > 32) {
-    throw new Error(`pdf_too_large: ${sizeMB.toFixed(1)} MB (Anthropic PDF document API limit is 32 MB). Split the PDF or use individual upload.`);
-  }
-
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  // Build base64 in chunks to avoid call stack overflow on large PDFs.
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  const base64 = btoa(binary);
-
-  // Same rigorous extraction schema used by contract-ai parse_pdf_text
-  // so individual + bulk uploads produce identical structure + quality.
-  const prompt = `You are a contract-parsing expert. Read the contract and extract structured data.
+const EXTRACTION_PROMPT = `You are a contract-parsing expert. Read the contract and extract structured data.
 
 Return ONLY a JSON object with exactly these fields:
 
@@ -370,52 +374,139 @@ CRITICAL RULES:
 - If genuinely missing, return null (or 0 for total_value, [] for arrays). Do NOT invent.
 - Do not include any prose before or after the JSON.`;
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: EXTRACT_MODEL,
-        max_tokens: 4096,
-        messages: [{
-          role: "user",
-          content: [
-            {
-              type: "document",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: base64,
-              },
-            },
-            { type: "text", text: prompt },
-          ],
-        }],
-      }),
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      // Honor Anthropic's rate-limit hint when present so the
-      // per-file retry loop sleeps long enough for the token bucket
-      // to refill instead of immediately retrying and 429ing again.
-      if (res.status === 429) {
-        const retryAfterSec = parseInt(res.headers.get("retry-after") || "30", 10);
-        const sleepMs = Math.min(retryAfterSec * 1000, 60_000);
-        await new Promise(r => setTimeout(r, sleepMs));
-      }
-      throw new Error(`claude_http_${res.status}: ${errText.slice(0, 500)}`);
+async function extractContract(sb: any, file: any) {
+  // Pick a provider. Explicit override wins; otherwise OpenAI when
+  // configured, then Anthropic, then a stub so the queue keeps moving.
+  const useOpenAI =
+    PROVIDER_OVERRIDE === "openai"
+    || (!PROVIDER_OVERRIDE && OPENAI_API_KEY)
+    || (!PROVIDER_OVERRIDE && !ANTHROPIC_API_KEY && OPENAI_API_KEY);
+  const useAnthropic =
+    PROVIDER_OVERRIDE === "anthropic"
+    || (!PROVIDER_OVERRIDE && !OPENAI_API_KEY && ANTHROPIC_API_KEY);
+
+  if (!useOpenAI && !useAnthropic) {
+    return {
+      brand_name: file.original_filename.replace(/\.(pdf|docx)$/i, ""),
+      contact_name: null, contact_email: null, contact_phone: null,
+      effective_date: null, expiration_date: null,
+      total_value: 0, annual_values: {},
+      benefits: [],
+      summary: "No AI key configured — extraction skipped. Set OPENAI_API_KEY (preferred) or ANTHROPIC_API_KEY in Supabase function secrets.",
+      warnings: ["no_ai_key"],
+    };
+  }
+
+  // Download the file from storage so we can stream the bytes to the
+  // model. Cap at 32 MB (Anthropic's hard limit; OpenAI Responses
+  // accepts more but token cost gets brutal beyond that).
+  const { data: blob, error: dlErr } = await sb.storage
+    .from(STORAGE_BUCKET)
+    .download(file.storage_path);
+  if (dlErr || !blob) {
+    throw new Error(`storage_download_failed bucket=${STORAGE_BUCKET} path=${file.storage_path}: ${dlErr?.message || "no blob"}`);
+  }
+  const sizeMB = blob.size / (1024 * 1024);
+  if (sizeMB > 32) {
+    throw new Error(`pdf_too_large: ${sizeMB.toFixed(1)} MB. Split the PDF or upload individually.`);
+  }
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  const base64 = btoa(binary);
+
+  if (useOpenAI) {
+    return await extractWithOpenAI(file, base64);
+  }
+  return await extractWithAnthropic(base64);
+}
+
+// OpenAI Responses API supports PDFs natively via input_file content
+// blocks. gpt-4o-mini handles them well and the org TPM is much
+// higher than Anthropic's Sonnet tier-1 (~200K vs 30K).
+async function extractWithOpenAI(file: any, base64: string) {
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      input: [{
+        role: "user",
+        content: [
+          {
+            type: "input_file",
+            filename: file.original_filename || "contract.pdf",
+            file_data: `data:application/pdf;base64,${base64}`,
+          },
+          { type: "input_text", text: EXTRACTION_PROMPT },
+        ],
+      }],
+      max_output_tokens: 4096,
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    if (res.status === 429) {
+      const retryAfterSec = parseInt(res.headers.get("retry-after") || "30", 10);
+      await new Promise(r => setTimeout(r, Math.min(retryAfterSec * 1000, 60_000)));
     }
-    const data = await res.json();
-    const text = data?.content?.[0]?.text || "{}";
-    const cleaned = text.replace(/```json\s*/i, "").replace(/```\s*$/i, "").trim();
+    throw new Error(`openai_http_${res.status}: ${errText.slice(0, 500)}`);
+  }
+  const data = await res.json();
+  // Responses API places the assistant text under output[].content[].text
+  const text =
+    data?.output_text
+    || data?.output?.find((o: any) => o.type === "message")?.content?.find((c: any) => c.type === "output_text")?.text
+    || "{}";
+  const cleaned = text.replace(/```json\s*/i, "").replace(/```\s*$/i, "").trim();
+  try {
     return JSON.parse(cleaned);
   } catch (err) {
-    throw new Error(`claude_extraction_failed: ${err}`);
+    throw new Error(`openai_parse_failed: ${err} — raw: ${cleaned.slice(0, 300)}`);
   }
+}
+
+async function extractWithAnthropic(base64: string) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 4096,
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "document",
+            source: { type: "base64", media_type: "application/pdf", data: base64 },
+          },
+          { type: "text", text: EXTRACTION_PROMPT },
+        ],
+      }],
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    if (res.status === 429) {
+      const retryAfterSec = parseInt(res.headers.get("retry-after") || "30", 10);
+      await new Promise(r => setTimeout(r, Math.min(retryAfterSec * 1000, 60_000)));
+    }
+    throw new Error(`claude_http_${res.status}: ${errText.slice(0, 500)}`);
+  }
+  const data = await res.json();
+  const text = data?.content?.[0]?.text || "{}";
+  const cleaned = text.replace(/```json\s*/i, "").replace(/```\s*$/i, "").trim();
+  return JSON.parse(cleaned);
 }
 
 // Constrain to the CHECK constraint values in the assets table

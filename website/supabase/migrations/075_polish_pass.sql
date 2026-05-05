@@ -363,13 +363,16 @@ create policy "digest_subs_owner_all" on digest_subscriptions for all using (
 -- ────────────────────────────────────────────────────────────
 -- 11. ASSIGNED_TO MIGRATION PATH
 -- ────────────────────────────────────────────────────────────
--- New uuid column. Backfills any existing assigned_to text rows that
--- look like uuids. Old text column stays for backwards compat.
+-- New uuid column. Backfills any existing assigned_to rows that
+-- look like uuids. Old `assigned_to` column stays for backwards compat.
+-- The cast-to-text is defensive: migration 027 created assigned_to as
+-- uuid on most installs, but earlier shapes had it as text. Casting
+-- both sides through ::text lets the regex work either way.
 alter table deals add column if not exists assigned_to_user_id uuid references profiles(id) on delete set null;
-update deals set assigned_to_user_id = assigned_to::uuid
+update deals set assigned_to_user_id = assigned_to::text::uuid
   where assigned_to_user_id is null
     and assigned_to is not null
-    and assigned_to ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+    and assigned_to::text ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
 create index if not exists idx_deals_assigned_to_uid on deals(assigned_to_user_id);
 
 -- ────────────────────────────────────────────────────────────

@@ -935,6 +935,9 @@ async function searchProspects(supabase: any, body: any) {
   const propertyId = body.property_id;
   const icp = body.icp_filters;
   const industry = body.industry || 'sports';
+  // Companies the caller has already shown the user — pass-through so
+  // "Load more" returns a fresh page instead of repeating names.
+  const explicitExcludes: string[] = Array.isArray(body.exclude_companies) ? body.exclude_companies : [];
 
   // Fetch existing deals to avoid duplicates
   let existingBrands: string[] = [];
@@ -948,11 +951,13 @@ async function searchProspects(supabase: any, body: any) {
 
   const icpConstraints = buildICPConstraints(icp);
 
+  const allExcludes = [...new Set([...existingBrands, ...explicitExcludes.map(s => (s || "").toLowerCase())])].filter(Boolean);
+
   const prompt = `Find 8-12 real companies for ${industry} sponsorship/partnership outreach.
 
 SEARCH QUERY: "${query}"
 ${category ? `Category: ${category}` : ''}
-${existingBrands.length > 0 ? `Exclude (already in pipeline): ${existingBrands.slice(0, 20).join(", ")}` : ''}${icpConstraints}
+${allExcludes.length > 0 ? `Exclude (already shown or in pipeline — return DIFFERENT companies): ${allExcludes.slice(0, 40).join(", ")}` : ''}${icpConstraints}
 
 Return a JSON array of objects with these fields:
 {

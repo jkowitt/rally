@@ -450,9 +450,9 @@ function tryParseJSON(text) {
   return null
 }
 
-export async function searchProspects({ query, category, property_id, icp_filters, industry }) {
+export async function searchProspects({ query, category, property_id, icp_filters, industry, exclude_companies }) {
   try {
-    const result = await invokeEdgeFunction('contract-ai', { action: 'search_prospects', query, category, property_id, icp_filters, industry })
+    const result = await invokeEdgeFunction('contract-ai', { action: 'search_prospects', query, category, property_id, icp_filters, industry, exclude_companies })
     if (result?.prospects?.length > 0) return result
   } catch (e) {
     console.warn('search_prospects failed, using fallback:', e.message)

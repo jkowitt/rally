@@ -4003,14 +4003,25 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchCategory, setSearchCategory] = useState('')
   const [icpFilters, setIcpFilters] = useState(null)
+  // Inline LinkedIn-Sales-Nav-style filters. Merged into icp_filters
+  // before each search call so the edge function's existing
+  // buildICPConstraints() picks them up uniformly.
+  const [locFilter, setLocFilter]       = useState('')      // free text city/state/region
+  const [sizeFilter, setSizeFilter]     = useState('any')   // any | startup | small | mid | large | enterprise
+  const [revenueFilter, setRevenueFilter] = useState('any') // any | <1M | 1-10M | 10-50M | 50-100M | 100-500M | 500M-1B | 1B+
   const [results, setResults] = useState([]) // search or suggestion results
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [status, setStatus] = useState('')
   const [researchingIdx, setResearchingIdx] = useState(null)
   const [researchedContacts, setResearchedContacts] = useState({}) // { idx: { contacts, company_linkedin, ... } }
   const [addingIdx, setAddingIdx] = useState(null)
   const [addedIdxs, setAddedIdxs] = useState(new Set())
-  const [useVerified, setUseVerified] = useState(true)
+  // Per-add credit prompt: rep picks "verified" (Apollo + Hunter,
+  // 1 credit) or "as-is" (Claude-only, free) on each add. Replaces
+  // the global "✓ Verified contacts" checkbox so users decide
+  // contract-by-contract instead of upfront.
+  const [pendingVerifyIdx, setPendingVerifyIdx] = useState(null)
   // Bulk send state — selectedContacts keyed by `${idx}:${ci}`.
   // Each entry is { prospect, contact } so we can send + draft with full context.
   const [selectedContacts, setSelectedContacts] = useState(new Map())
@@ -4024,8 +4035,38 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
   const propertyType = profile?.properties?.type
   const industryKey = ({ college: 'sports', professional: 'sports', minor_league: 'sports', nonprofit: 'nonprofit', conference: 'conference', media: 'media', realestate: 'realestate', entertainment: 'entertainment' })[propertyType] || 'sports'
 
-  async function handleSearch() {
-    if (!searchQuery.trim() && !searchCategory) return
+  // Build the icp_filters payload by layering the inline LinkedIn-style
+  // filter row on top of any existing ICP picker selection. The edge
+  // function's buildICPConstraints handles the rest.
+  function mergedIcpFilters() {
+    const base = icpFilters || {}
+    const out = { ...base }
+    if (sizeFilter && sizeFilter !== 'any') out.company_size = sizeFilter
+    if (revenueFilter && revenueFilter !== 'any') {
+      const map = {
+        '<1M':       { revenue_min: 0,           revenue_max: 1000000 },
+        '1-10M':     { revenue_min: 1000000,     revenue_max: 10000000 },
+        '10-50M':    { revenue_min: 10000000,    revenue_max: 50000000 },
+        '50-100M':   { revenue_min: 50000000,    revenue_max: 100000000 },
+        '100-500M':  { revenue_min: 100000000,   revenue_max: 500000000 },
+        '500M-1B':   { revenue_min: 500000000,   revenue_max: 1000000000 },
+        '1B+':       { revenue_min: 1000000000,  revenue_max: null },
+      }
+      Object.assign(out, map[revenueFilter] || {})
+    }
+    if (locFilter.trim()) {
+      // Treat the free-text location as either a city or state hint
+      // depending on what the user typed; the edge function happily
+      // accepts both arrays.
+      const v = locFilter.trim()
+      if (/^[A-Z]{2}$/.test(v)) out.states = [v]
+      else out.cities = [v]
+    }
+    return Object.keys(out).length ? out : null
+  }
+
+  async function handleSearch({ append = false } = {}) {
+    if (!searchQuery.trim() && !searchCategory && !append) return
     if (!checkRateLimit('prospect_search', 10)) {
       setStatus('Too many searches. Please wait a moment before trying again.')
       return
@@ -4038,26 +4079,42 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
       setStatus('Prospect search limit reached. Upgrade your plan for more searches.')
       return
     }
-    setLoading(true)
-    setStatus('Searching for prospects...')
-    planLimits.trackUsage('prospect_search')
-    setResults([])
-    setResearchedContacts({})
-    setAddedIdxs(new Set())
+    if (append) setLoadingMore(true)
+    else setLoading(true)
+    setStatus(append ? 'Loading more prospects…' : 'Searching for prospects…')
+    if (!append) {
+      planLimits.trackUsage('prospect_search')
+      setResults([])
+      setResearchedContacts({})
+      setAddedIdxs(new Set())
+    }
     try {
       const data = await searchProspects({
         query: sanitizeText(searchQuery),
         category: sanitizeText(searchCategory),
         property_id: propertyId,
-        icp_filters: icpFilters,
+        icp_filters: mergedIcpFilters(),
         industry: industryKey,
+        // For "Load more" we ask the model to skip companies we already
+        // have so we get fresh results instead of duplicates.
+        exclude_companies: append ? results.map(r => r.company_name).filter(Boolean) : undefined,
       })
-      setResults(data.prospects || [])
-      setStatus(data.prospects?.length ? `Found ${data.prospects.length} prospects` : 'No results found. Try a broader search.')
+      const fresh = data.prospects || []
+      if (append) {
+        // De-dupe by company name when stitching pages together.
+        const seen = new Set(results.map(r => (r.company_name || '').toLowerCase()))
+        const merged = [...results, ...fresh.filter(p => !seen.has((p.company_name || '').toLowerCase()))]
+        setResults(merged)
+        setStatus(`Found ${merged.length} prospects`)
+      } else {
+        setResults(fresh)
+        setStatus(fresh.length ? `Found ${fresh.length} prospects` : 'No results found. Try a broader search or relax the filters.')
+      }
     } catch (e) {
       setStatus('Error: ' + e.message)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
 
@@ -4240,24 +4297,77 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
     }
   }
 
-  async function handleAddProspect(idx) {
+  async function handleAddProspect(idx, { verified = false } = {}) {
     const prospect = results[idx]
     if (!prospect) return
     setAddingIdx(idx)
     try {
-      // Auto-research contacts if not already done
+      // Auto-research contacts if not already done. If the rep opted
+      // into the paid verified flow, fan out to Apollo + Hunter for
+      // accuracy. Otherwise stick with free Claude general-knowledge
+      // research (which the disclaimer in the modal warns about).
       let research = researchedContacts[idx]
       if (!research || !research.contacts?.length) {
         setResearchingIdx(idx)
         try {
-          const data = await researchContacts({
-            company_name: prospect.company_name,
-            category: prospect.category || prospect.sub_industry,
-            website: prospect.website,
-          })
-          research = data.research
+          if (verified) {
+            // Burn a credit, hit Apollo for firmographics + people,
+            // verify each email through Hunter. Mirror handleResearch
+            // since that path is already battle-tested.
+            const isExempt = planLimits.plan === 'enterprise' || planLimits.plan === 'developer'
+            if (!isExempt && planLimits.canUse('contact_research')) {
+              planLimits.trackUsage('contact_research')
+            }
+            let contacts = []
+            let apolloData = null
+            try {
+              const apolloResult = await apolloEnrichCompany({
+                company_name: prospect.company_name,
+                domain: prospect.website,
+                property_id: effectivePropertyId,
+              })
+              if (apolloResult?.data) apolloData = apolloResult.data
+              const peopleResult = await import('@/lib/claude').then(m => m.apolloFindPeople({
+                company_name: prospect.company_name,
+                property_id: effectivePropertyId,
+              }))
+              contacts = (peopleResult?.people || []).map(p => ({
+                name: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+                first_name: p.first_name || '', last_name: p.last_name || '',
+                position: p.title || '', email: p.email || '',
+                phone: p.phone || '', linkedin: p.linkedin_url || '',
+                source: 'apollo',
+              }))
+            } catch { /* fall through to Claude */ }
+            // Verify emails via Hunter for whatever we found.
+            for (const c of contacts) {
+              if (c.email) {
+                try {
+                  const r = await hunterVerifyEmail({ email: c.email, property_id: effectivePropertyId })
+                  c.email_verified = r?.status || 'unknown'
+                } catch { c.email_verified = 'unknown' }
+              }
+            }
+            // Apollo miss → Claude fallback.
+            if (contacts.length === 0) {
+              const data = await researchContacts({
+                company_name: prospect.company_name,
+                category: prospect.category || prospect.sub_industry,
+                website: prospect.website,
+              })
+              contacts = (data.research?.contacts || []).map(c => ({ ...c, source: 'claude' }))
+            }
+            research = { contacts, source: contacts[0]?.source || 'claude', company_linkedin: apolloData?.linkedin_url || prospect.linkedin || null, ...(apolloData ? { employees: apolloData.employees, revenue: apolloData.revenue } : {}) }
+          } else {
+            const data = await researchContacts({
+              company_name: prospect.company_name,
+              category: prospect.category || prospect.sub_industry,
+              website: prospect.website,
+            })
+            research = data.research
+          }
           setResearchedContacts(prev => ({ ...prev, [idx]: research }))
-        } catch (e) { console.warn(e) 
+        } catch (e) { console.warn(e)
           // If research fails, continue without contacts
           research = null
         } finally {
@@ -4498,13 +4608,12 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
             </button>
           </div>
 
-          {/* Verified Contact Toggle */}
-          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={useVerified} onChange={(e) => setUseVerified(e.target.checked)} className="accent-accent w-3.5 h-3.5" />
-              <span className={`text-xs font-mono ${useVerified ? 'text-accent' : 'text-text-muted'}`}>✓ Verified contacts</span>
-            </label>
-            <span className="text-[9px] text-text-muted">1 credit per lookup</span>
+          {/* AI disclaimer — replaces the global "✓ Verified contacts"
+              checkbox. Claude is used for discovery (free, fast, may
+              be approximate); Apollo/Hunter run only when the rep
+              picks "verified add" on a specific prospect. */}
+          <div className="mt-3 pt-3 border-t border-border text-[10px] text-text-muted leading-snug">
+            Search powered by Claude — firmographics & contacts are AI-estimated and may be inaccurate. Pick <span className="text-accent">Verified add</span> on a row to spend a credit and verify via Apollo + Hunter before it lands in your pipeline.
           </div>
         </div>
 
@@ -4521,14 +4630,63 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                 autoFocus
               />
               <button
-                onClick={handleSearch}
-                disabled={loading || (!searchQuery.trim() && !searchCategory)}
+                onClick={() => handleSearch()}
+                disabled={loading || (!searchQuery.trim() && !searchCategory && sizeFilter === 'any' && revenueFilter === 'any' && !locFilter.trim())}
                 className="bg-accent text-bg-primary px-4 sm:px-5 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
               >
                 {loading ? '...' : 'Search'}
               </button>
             </div>
-            {/* ICP Filter — narrows results to ideal customer profile */}
+
+            {/* LinkedIn-Sales-Nav-style filter row: Location / Size /
+                Revenue. The legacy ICP picker still lives below for
+                advanced criteria (won-deal patterns, role targets, etc.) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <label className="block">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Location</span>
+                <input
+                  placeholder="City or 2-letter state"
+                  value={locFilter}
+                  onChange={(e) => setLocFilter(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Company size</span>
+                <select
+                  value={sizeFilter}
+                  onChange={(e) => setSizeFilter(e.target.value)}
+                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="any">Any size</option>
+                  <option value="startup">Startup (&lt; 50 employees)</option>
+                  <option value="small">Small (50–200)</option>
+                  <option value="mid">Mid-market (200–1,000)</option>
+                  <option value="large">Large (1,000–5,000)</option>
+                  <option value="enterprise">Enterprise (5,000+)</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Revenue ($)</span>
+                <select
+                  value={revenueFilter}
+                  onChange={(e) => setRevenueFilter(e.target.value)}
+                  className="mt-0.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="any">Any revenue</option>
+                  <option value="<1M">Less than $1M</option>
+                  <option value="1-10M">$1M – $10M</option>
+                  <option value="10-50M">$10M – $50M</option>
+                  <option value="50-100M">$50M – $100M</option>
+                  <option value="100-500M">$100M – $500M</option>
+                  <option value="500M-1B">$500M – $1B</option>
+                  <option value="1B+">$1B+</option>
+                </select>
+              </label>
+            </div>
+
+            {/* Advanced ICP picker — keep for power users */}
             <ICPFilter value={icpFilters} onChange={setIcpFilters} propertyId={effectivePropertyId} mode="inline" />
             <div className="flex gap-1.5 flex-wrap max-h-[100px] overflow-y-auto">
               <button
@@ -4656,7 +4814,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                       <div className="flex sm:flex-col gap-2 sm:gap-1.5 shrink-0">
                         {!isAdded && (
                           <button
-                            onClick={() => handleAddProspect(idx)}
+                            onClick={() => setPendingVerifyIdx(idx)}
                             disabled={isAdding || isResearching}
                             className="flex-1 sm:flex-none text-xs bg-accent text-bg-primary px-3 py-2 sm:py-1.5 rounded font-medium hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
                           >
@@ -4819,6 +4977,20 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                 </div>
               )
             })}
+
+            {/* Load more — Claude regenerates a fresh page excluding
+                names already on screen so we don't repeat ourselves. */}
+            {tab === 'search' && (
+              <div className="pt-2 flex justify-center">
+                <button
+                  onClick={() => handleSearch({ append: true })}
+                  disabled={loadingMore}
+                  className="text-xs px-4 py-2 border border-border rounded text-text-secondary hover:text-text-primary hover:border-accent/50 disabled:opacity-50"
+                >
+                  {loadingMore ? 'Loading…' : '+ Load 10 more'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -4915,6 +5087,39 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
           </div>
         )}
 
+        {/* Add-to-pipeline credit choice — replaces the global verified
+            checkbox. The rep picks per-row whether to spend a credit on
+            Apollo/Hunter verification or take the free Claude estimate. */}
+        {pendingVerifyIdx !== null && results[pendingVerifyIdx] && (
+          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setPendingVerifyIdx(null)}>
+            <div onClick={(e) => e.stopPropagation()} className="bg-bg-surface border border-border rounded-lg w-full max-w-md p-5 space-y-4">
+              <div>
+                <h3 className="text-base font-semibold text-text-primary">Add {results[pendingVerifyIdx].company_name}?</h3>
+                <p className="text-xs text-text-muted mt-1">Choose how to enrich the contacts before this lands in your pipeline.</p>
+              </div>
+              <div className="space-y-2">
+                <button
+                  onClick={() => { const idx = pendingVerifyIdx; setPendingVerifyIdx(null); handleAddProspect(idx, { verified: true }) }}
+                  className="w-full text-left p-3 rounded border-2 border-accent bg-accent/5 hover:bg-accent/10"
+                >
+                  <div className="text-sm font-medium text-accent">Verified add · 1 credit</div>
+                  <div className="text-[11px] text-text-muted mt-0.5">Apollo for verified firmographics + people, Hunter to confirm each email is deliverable.</div>
+                </button>
+                <button
+                  onClick={() => { const idx = pendingVerifyIdx; setPendingVerifyIdx(null); handleAddProspect(idx, { verified: false }) }}
+                  className="w-full text-left p-3 rounded border border-border hover:border-accent/40"
+                >
+                  <div className="text-sm font-medium text-text-primary">Add as-is · free</div>
+                  <div className="text-[11px] text-text-muted mt-0.5">Use Claude's general-knowledge contacts. Fast and free, but emails and titles may be inaccurate.</div>
+                </button>
+              </div>
+              <button onClick={() => setPendingVerifyIdx(null)} className="w-full text-xs text-text-muted hover:text-text-primary py-1">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="p-3 sm:p-4 border-t border-border flex items-center justify-between gap-2">
           <div className="text-xs text-text-muted font-mono">
@@ -4925,9 +5130,11 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
             {results.length > 0 && addedIdxs.size < results.length && (
               <button
                 onClick={async () => {
+                  // Bulk add → free Claude path so we don't surprise-burn
+                  // a credit per row. Reps can verify individually after.
                   for (let i = 0; i < results.length; i++) {
                     if (!addedIdxs.has(i) && addingIdx === null) {
-                      await handleAddProspect(i)
+                      await handleAddProspect(i, { verified: false })
                     }
                   }
                 }}

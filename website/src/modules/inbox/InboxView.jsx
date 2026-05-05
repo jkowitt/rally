@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useComposeEmail } from '@/hooks/useComposeEmail'
+import { useToast } from '@/components/Toast'
+import { humanError } from '@/lib/humanError'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { Button, Card, EmptyState, Badge } from '@/components/ui'
-import { Mail, Inbox as InboxIcon, Send, Reply, Sparkles } from 'lucide-react'
+import { Mail, Inbox as InboxIcon, Send, Reply, Sparkles, RefreshCw } from 'lucide-react'
 import EmailCoachPanel from '@/components/EmailCoachPanel'
 import { draftReplyEmail, classifyReplyIntent, draftReplyVariants } from '@/lib/claude'
 
@@ -35,6 +37,105 @@ export default function InboxView() {
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState('')
   const [intentFilter, setIntentFilter] = useState('all')
+  const [syncing, setSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState(null)   // { ok, summary, errors[] }
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  // Last-sync metadata so the rep can see when each connected
+  // mailbox was last refreshed. Refetches on every successful sync
+  // so "5 min ago" updates without a page reload.
+  const { data: connections, refetch: refetchConnections } = useQuery({
+    queryKey: ['inbox-connections', profile?.id],
+    enabled: !!profile?.id,
+    queryFn: async () => {
+      const [outlook, gmail] = await Promise.all([
+        supabase.from('outlook_auth')
+          .select('outlook_email, is_connected, last_synced_at, connected_at')
+          .eq('user_id', profile.id).maybeSingle(),
+        supabase.from('gmail_auth')
+          .select('gmail_email, is_connected, last_synced_at, connected_at')
+          .eq('user_id', profile.id).maybeSingle(),
+      ])
+      return {
+        outlook: outlook.data?.is_connected ? outlook.data : null,
+        gmail:   gmail.data?.is_connected   ? gmail.data   : null,
+      }
+    },
+  })
+
+  // Run a manual delta sync against every connected provider.
+  // Catches per-provider errors so one failure doesn't hide the
+  // other's success. Refetches the message list + connection
+  // metadata when done.
+  async function syncNow() {
+    if (syncing) return
+    if (!connections?.outlook && !connections?.gmail) {
+      toast({ title: 'No inbox connected', description: 'Connect Outlook or Gmail first.', type: 'warning' })
+      return
+    }
+    setSyncing(true)
+    setSyncStatus(null)
+    const results = { ok: true, providers: [], errors: [] }
+    try {
+      if (connections?.outlook) {
+        try {
+          const { data, error } = await supabase.functions.invoke('outlook-graph', { body: { action: 'sync' } })
+          if (error) throw error
+          if (data?.success === false) throw new Error(data.error || 'Outlook sync failed')
+          results.providers.push({ name: 'Outlook', synced: data?.synced ?? 0 })
+        } catch (e) {
+          results.ok = false
+          results.errors.push({ provider: 'Outlook', error: humanError(e) })
+        }
+      }
+      if (connections?.gmail) {
+        try {
+          const { data, error } = await supabase.functions.invoke('gmail-graph', { body: { action: 'sync' } })
+          if (error) throw error
+          if (data?.success === false) throw new Error(data.error || 'Gmail sync failed')
+          results.providers.push({ name: 'Gmail', synced: data?.synced ?? 0 })
+        } catch (e) {
+          results.ok = false
+          results.errors.push({ provider: 'Gmail', error: humanError(e) })
+        }
+      }
+      setSyncStatus(results)
+      const totalSynced = results.providers.reduce((s, p) => s + (p.synced || 0), 0)
+      if (results.ok) {
+        toast({
+          title: totalSynced > 0 ? `${totalSynced} new message${totalSynced === 1 ? '' : 's'}` : 'Up to date',
+          description: results.providers.map(p => `${p.name}: ${p.synced}`).join(' · '),
+          type: 'success',
+        })
+      } else {
+        toast({
+          title: 'Sync had errors',
+          description: results.errors.map(e => `${e.provider}: ${e.error}`).join(' · '),
+          type: 'warning',
+        })
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['email-messages-unified'] }),
+        refetchConnections(),
+      ])
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  // Format "X min ago" / "just now" — short, human, no luxon dep.
+  function timeAgo(iso) {
+    if (!iso) return 'never'
+    const ms = Date.now() - new Date(iso).getTime()
+    if (ms < 0 || ms < 30_000) return 'just now'
+    const mins = Math.round(ms / 60_000)
+    if (mins < 60) return `${mins} min ago`
+    const hours = Math.round(mins / 60)
+    if (hours < 24) return `${hours} hr ago`
+    const days = Math.round(hours / 24)
+    return `${days} day${days === 1 ? '' : 's'} ago`
+  }
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['email-messages-unified', profile?.property_id, folder, search, intentFilter],
@@ -89,13 +190,54 @@ export default function InboxView() {
           <p className="text-sm text-text-muted mt-0.5">
             Unified view of every connected mailbox.
           </p>
+          {(connections?.outlook || connections?.gmail) && (
+            <div className="text-[11px] text-text-muted font-mono mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+              {connections.outlook && (
+                <span title={`Connected ${connections.outlook.connected_at}`}>
+                  Outlook · last sync {timeAgo(connections.outlook.last_synced_at)}
+                </span>
+              )}
+              {connections.gmail && (
+                <span title={`Connected ${connections.gmail.connected_at}`}>
+                  Gmail · last sync {timeAgo(connections.gmail.last_synced_at)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={syncNow}
+            disabled={syncing}
+            title="Force a delta sync against every connected mailbox now"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing…' : 'Sync now'}
+          </Button>
           <Link to="/app/crm/inbox/connect">
             <Button variant="secondary" size="sm">Manage connections</Button>
           </Link>
         </div>
       </div>
+
+      {/* Surface errors from the last sync attempt so the rep
+          knows why their inbox isn't updating instead of staring at
+          a stale list. Auto-dismisses on the next successful sync. */}
+      {syncStatus && !syncStatus.ok && syncStatus.errors.length > 0 && (
+        <div className="bg-warning/10 border border-warning/30 rounded p-3 text-[11px] space-y-1">
+          <div className="font-mono uppercase tracking-wider text-warning">Sync errors</div>
+          {syncStatus.errors.map((e, i) => (
+            <div key={i} className="text-text-secondary">
+              <span className="text-warning font-mono">{e.provider}:</span> {e.error}
+            </div>
+          ))}
+          <div className="text-[10px] text-text-muted pt-1">
+            Try Sync now again. If it persists, hit Manage connections to reconnect, or check the edge function logs.
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 flex-wrap items-center">
         <div className="flex gap-1 bg-bg-card rounded-lg p-1 w-fit">

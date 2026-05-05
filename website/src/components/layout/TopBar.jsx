@@ -6,6 +6,7 @@ import NotificationCenter from '../NotificationCenter'
 import AutomationStatusBadge from '../automation/AutomationStatusBadge'
 import { APIUsageCompact } from './../../components/APIUsageBanner'
 import ImpersonationPanel from '../ImpersonationPanel'
+import UserMenu from './UserMenu'
 import { useActiveHub, HUBS, getHubLandingPath } from '@/hooks/useActiveHub'
 import { LayoutGrid, Handshake, Settings as SettingsIcon } from 'lucide-react'
 
@@ -125,18 +126,7 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
             <AutomationStatusBadge />
           )}
           <NotificationCenter />
-          <span className="hidden sm:inline text-sm text-text-secondary truncate max-w-[120px]">
-            {profile?.full_name || profile?.id?.slice(0, 8)}
-          </span>
-          <span className="hidden md:inline text-[10px] font-mono text-text-muted bg-bg-card px-2 py-0.5 rounded uppercase">
-            {profile?.role}
-          </span>
-          <button
-            onClick={signOut}
-            className="text-xs text-text-muted hover:text-danger transition-colors"
-          >
-            Sign Out
-          </button>
+          <UserMenu />
         </div>
       </div>
 

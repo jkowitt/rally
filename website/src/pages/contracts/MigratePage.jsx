@@ -345,7 +345,17 @@ function ReviewView({ session, setSession }) {
     setFinalizing(true)
     const r = await migration.finalizeSession(session.id)
     setFinalizing(false)
-    if (!r.success) alert(r.error)
+    if (!r.success) {
+      alert(`Finalize failed: ${r.error || 'unknown error — check edge function logs'}`)
+      return
+    }
+    // Even when success, individual files may have errored. Surface those.
+    const errs = r.result?.summary?.fileErrors || []
+    if (errs.length > 0) {
+      const lines = errs.slice(0, 5).map(e => `• ${e.file}: ${e.error}`).join('\n')
+      const more = errs.length > 5 ? `\n…and ${errs.length - 5} more` : ''
+      alert(`Migration finished with ${errs.length} per-file error${errs.length === 1 ? '' : 's'}:\n\n${lines}${more}`)
+    }
   }
 
   if (!stats) return <div className="p-6 text-xs text-text-muted">Loading review…</div>

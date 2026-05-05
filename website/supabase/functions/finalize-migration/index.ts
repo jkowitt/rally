@@ -111,11 +111,25 @@ Deno.serve(async (req: Request) => {
 
     let dealsCreated = 0, contractsCreated = 0, fulfillmentCreated = 0;
     let assetsPrevented = 0, assetsCreated = 0;
+    const fileErrors: Array<{ file: string; error: string }> = [];
 
     for (const f of files || []) {
+      try {
       const extracted = f.extracted_data || {};
+      // Handle both extraction shapes:
+      //   • new (process-contract-batch v2): flat brand_name / contact_*
+      //     / effective_date / expiration_date
+      //   • legacy: nested .sponsor.{name,company,email,contact_person}
+      //     + .start_date / .end_date
       const sponsor = extracted.sponsor || {};
-      const brandName = sponsor.company || sponsor.name || f.original_filename.replace(/\.(pdf|docx)$/i, "");
+      const brandName =
+        extracted.brand_name ||
+        extracted.contact_company ||
+        sponsor.company ||
+        sponsor.name ||
+        f.original_filename.replace(/\.(pdf|docx)$/i, "");
+      const startDate = extracted.effective_date || extracted.start_date || null;
+      const endDate   = extracted.expiration_date || extracted.end_date || null;
 
       // Find matching sponsor row to link contact
       const sponsorRow = (sponsors || []).find((s: any) =>
@@ -124,38 +138,45 @@ Deno.serve(async (req: Request) => {
       const contactId = sponsorRow?.final_contact_id || null;
 
       // Create deal
-      const { data: deal } = await sb
+      const { data: deal, error: dealErr } = await sb
         .from("deals")
         .insert({
           property_id: propertyId,
           brand_name: brandName,
-          contact_name: sponsor.contact_person || sponsor.name || null,
-          contact_email: sponsor.email || null,
+          contact_name: extracted.contact_name || sponsor.contact_person || sponsor.name || null,
+          contact_email: extracted.contact_email || sponsor.email || null,
           value: extracted.total_value || null,
-          start_date: extracted.start_date || null,
-          end_date: extracted.end_date || null,
+          start_date: startDate,
+          end_date: endDate,
           stage: "In Fulfillment", // migrated contracts are already active
         })
         .select()
         .single();
 
-      if (!deal) continue;
+      if (dealErr || !deal) {
+        fileErrors.push({ file: f.original_filename, error: `deal_insert: ${dealErr?.message || "no row"}` });
+        continue;
+      }
       dealsCreated++;
 
       // Create contract row
-      const { data: contract } = await sb
+      const { data: contract, error: contractErr } = await sb
         .from("contracts")
         .insert({
           deal_id: deal.id,
           property_id: propertyId,
           brand_name: brandName,
-          effective_date: extracted.start_date || null,
-          expiration_date: extracted.end_date || null,
+          effective_date: startDate,
+          expiration_date: endDate,
           total_value: extracted.total_value || null,
+          status: "Signed",  // matches contracts_status_check
           signed: true,
         })
         .select()
         .single();
+      if (contractErr) {
+        fileErrors.push({ file: f.original_filename, error: `contract_insert: ${contractErr.message}` });
+      }
       if (contract) contractsCreated++;
 
       // ─── 3. Benefits for this file → assets + fulfillment ────
@@ -213,6 +234,10 @@ Deno.serve(async (req: Request) => {
             .eq("id", contactId);
         }
       }
+      } catch (perFileErr) {
+        // Don't let a single bad file kill the whole finalize call.
+        fileErrors.push({ file: f.original_filename, error: String(perFileErr).slice(0, 500) });
+      }
     }
 
     // ─── 4. Update session with final counts ────────────────────
@@ -247,10 +272,14 @@ Deno.serve(async (req: Request) => {
         fulfillmentCreated,
         assetsCreated,
         assetsPrevented,
+        fileErrors,
       },
     });
   } catch (err) {
-    return json({ success: false, error: String(err) }, 200);
+    // Log the stack so the dashboard's edge function logs show the
+    // actual cause (vs the front-end's generic "non-2xx" toast).
+    console.error("finalize-migration failed:", err, (err as Error)?.stack);
+    return json({ success: false, error: String((err as Error)?.message || err) }, 200);
   }
 });
 

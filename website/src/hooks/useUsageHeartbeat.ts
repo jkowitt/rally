@@ -2,14 +2,15 @@ import { useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
-// EMERGENCY KILL SWITCH: set to true to disable the heartbeat
-// entirely while we investigate a render-loop / app-flicker issue.
-// Override via VITE_DISABLE_USAGE_HEARTBEAT=true in env if rolling
-// back via env is faster than deploying a new build.
+// Disabled by default while we investigate a site-wide flicker /
+// render-loop. Re-enable via VITE_ENABLE_USAGE_HEARTBEAT=true once
+// the underlying issue is confirmed fixed; until then the dev-tools
+// usage dashboard will show no heartbeats. The contract-quota +
+// daily-limit features in migration 089 still work.
 const DISABLED =
-  typeof import.meta !== 'undefined'
+  typeof import.meta === 'undefined'
   // @ts-ignore — Vite injects env at build time
-  && import.meta.env?.VITE_DISABLE_USAGE_HEARTBEAT === 'true'
+  || import.meta.env?.VITE_ENABLE_USAGE_HEARTBEAT !== 'true'
 
 // Fire one heartbeat per minute while the tab is visible. The edge
 // function inserts a row into usage_events; aggregate views in
@@ -52,5 +53,12 @@ export function useUsageHeartbeat() {
       if (intervalRef.current != null) window.clearInterval(intervalRef.current)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [session?.access_token, profile?.id])
+    // Intentionally NOT including session?.access_token in deps —
+    // it changes on every token refresh, which would tear down the
+    // interval continuously and could feed a render loop. The
+    // !!session guard above is enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id])
+  // Reference session to satisfy any future linter that wants it.
+  void session
 }

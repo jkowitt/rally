@@ -4596,7 +4596,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="prospect-finder-title"
-        className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col"
+        className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg w-full sm:max-w-7xl max-h-[95vh] sm:max-h-[92vh] flex flex-col"
       >
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-border">
@@ -4803,9 +4803,12 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
           </div>
         )}
 
-        {/* Results */}
+        {/* Results — grid on wide screens so reps see ~6 cards above
+            the fold instead of 1-2. Cards keep the same look/feel,
+            just packed two-up at lg+ widths. */}
         {!loading && results.length > 0 && (
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
             {(() => {
               // Pair each prospect with its original index so addedIdxs /
               // researchingIdx / addingIdx state still works after sort.
@@ -5061,11 +5064,13 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                 </div>
               )
             })}
+            </div>
 
             {/* Load more — Claude regenerates a fresh page excluding
-                names already on screen so we don't repeat ourselves. */}
+                names already on screen so we don't repeat ourselves.
+                Lives outside the grid so it spans the full width. */}
             {tab === 'search' && (
-              <div className="pt-2 flex justify-center">
+              <div className="pt-4 flex justify-center">
                 <button
                   onClick={() => handleSearch({ append: true })}
                   disabled={loadingMore}

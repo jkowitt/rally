@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useToast } from '@/components/Toast'
+import { requestEmailNotificationPermission } from '@/hooks/useUnreadEmails'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { Button, Card } from '@/components/ui'
 import { Mail } from 'lucide-react'
@@ -120,6 +121,17 @@ export default function InboxConnect() {
           and send. Bodies are stored encrypted at rest. You can disconnect at any time and your
           emails stop syncing instantly. We never send mail without your explicit action.
         </div>
+        <button
+          onClick={async () => {
+            const result = await requestEmailNotificationPermission()
+            if (result === 'granted') toast({ title: 'Desktop notifications on', description: 'You\'ll see a popup when new emails arrive.', type: 'success' })
+            else if (result === 'denied') toast({ title: 'Permission denied', description: 'Allow notifications in your browser settings to enable popups.', type: 'warning' })
+          }}
+          className="text-xs px-3 py-1.5 border border-border rounded text-text-secondary hover:text-text-primary hover:border-accent/50 whitespace-nowrap"
+          title="Allow desktop popups for new inbound emails"
+        >
+          🔔 Enable desktop notifications
+        </button>
         <a
           href="/app/crm/inbox/signature"
           className="text-xs px-3 py-1.5 border border-border rounded text-text-secondary hover:text-text-primary hover:border-accent/50 whitespace-nowrap"

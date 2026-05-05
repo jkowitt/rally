@@ -5,6 +5,7 @@ import { useAddons } from '@/hooks/useAddons'
 import { useAuth } from '@/hooks/useAuth'
 import { useIndustryConfig } from '@/hooks/useIndustryConfig'
 import { useActiveHub, detectHub } from '@/hooks/useActiveHub'
+import { useUnreadEmails } from '@/hooks/useUnreadEmails'
 import { emit } from '@/lib/appEvents'
 import { Lightbulb, Sparkles } from 'lucide-react'
 import AdditionalFeaturesPanel from '@/components/AdditionalFeaturesPanel'
@@ -280,6 +281,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { activeHub, setActiveHub } = useActiveHub()
+  const { count: unreadEmailCount } = useUnreadEmails()
 
   const role = profile?.role
   const hasAdminRole = role === 'developer' || role === 'businessops' || role === 'admin'
@@ -337,22 +339,42 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
                   {section.label}
                 </div>
               )}
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.to + item.label}
-                  to={item.to}
-                  end={item.to === '/app' || item.to === '/app/marketing' || item.to === '/app/ops' || item.to === '/app/accounts'}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
-                      isActive
-                        ? 'text-accent bg-accent/5 border-r-2 border-accent'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
-                    } ${!showLabels ? 'justify-center' : ''}`
-                  }
-                >
-                  {showLabels && <span>{item.label}</span>}
-                </NavLink>
-              ))}
+              {section.items.map((item) => {
+                const isInbox = item.to === '/app/crm/inbox'
+                const showInboxDot = isInbox && unreadEmailCount > 0
+                return (
+                  <NavLink
+                    key={item.to + item.label}
+                    to={item.to}
+                    end={item.to === '/app' || item.to === '/app/marketing' || item.to === '/app/ops' || item.to === '/app/accounts'}
+                    className={({ isActive }) =>
+                      `relative flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
+                        isActive
+                          ? 'text-accent bg-accent/5 border-r-2 border-accent'
+                          : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
+                      } ${!showLabels ? 'justify-center' : ''}`
+                    }
+                  >
+                    {showLabels && (
+                      <span className="flex-1 inline-flex items-center justify-between gap-2">
+                        <span>{item.label}</span>
+                        {showInboxDot && (
+                          <span
+                            className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-bg-primary text-[10px] font-mono font-semibold leading-none"
+                            title={`${unreadEmailCount} unread email${unreadEmailCount === 1 ? '' : 's'}`}
+                          >
+                            {unreadEmailCount > 9 ? '9+' : unreadEmailCount}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {/* In collapsed mode, just a dot — no count text. */}
+                    {!showLabels && showInboxDot && (
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger" aria-label={`${unreadEmailCount} unread`} />
+                    )}
+                  </NavLink>
+                )
+              })}
             </div>
           )
         })}

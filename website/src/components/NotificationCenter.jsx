@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useUnreadEmails } from '@/hooks/useUnreadEmails'
 import * as userNotifService from '@/services/userNotificationService'
 
 export default function NotificationCenter() {
   const { profile } = useAuth()
   const propertyId = profile?.property_id
+  const { count: unreadEmails } = useUnreadEmails()
   const [open, setOpen] = useState(false)
   const [dismissed, setDismissed] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('ll_dismissed_notifs') || '[]')) } catch { return new Set() }
@@ -147,9 +149,30 @@ export default function NotificationCenter() {
     read: n.read,
   }))
 
-  const allNotifications = [...dbMapped, ...notifications]
+  // Surface unread inbound emails as a single bell entry so the
+  // rep doesn't have to flip to /app/crm/inbox to know there's
+  // mail. Tapping it deep-links to the inbox.
+  const emailEntries = unreadEmails > 0
+    ? [{
+        id: 'unread-emails',
+        type: 'accent',
+        icon: '✉',
+        title: `${unreadEmails} unread email${unreadEmails === 1 ? '' : 's'}`,
+        sub: 'Inbound mail synced from Outlook + Gmail.',
+        time: '',
+        href: '/app/crm/inbox',
+      }]
+    : []
+
+  const allNotifications = [...emailEntries, ...dbMapped, ...notifications]
   const visible = allNotifications.filter(n => !dismissed.has(n.id))
-  const unreadCount = visible.filter(n => n.isDb ? !n.read : true).length
+  // Bell badge count = unread DB notifications + generated CRM
+  // alerts + unread emails (counted as one bucket per inbox, not
+  // per message, to avoid the badge screaming "127" the first time
+  // a noisy mailbox syncs).
+  const unreadCount =
+    visible.filter(n => n.id !== 'unread-emails' && (n.isDb ? !n.read : true)).length
+    + (unreadEmails > 0 ? 1 : 0)
 
   function dismiss(id) {
     const next = new Set([...dismissed, id])

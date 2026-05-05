@@ -78,6 +78,13 @@ export const jsonResponse = (body: unknown, status = 200) =>
 // Used by /auth/* customer flows (Outlook + Gmail inbox connect).
 // Optional flag check — pass `flag: 'inbox_outlook'` etc. to gate
 // behind feature flags.
+//
+// Cron-friendly: when the Authorization header carries the service
+// role key, accept a body.user_id parameter and use it instead of
+// looking up via JWT. Lets the scheduled delta-sync functions
+// invoke per-user actions without minting per-user JWTs. Body is
+// read non-destructively via req.clone() so the calling handler
+// can still parse the original.
 export async function requireUser(req: Request, { flag }: { flag?: string } = {}) {
   try {
     const authHeader = req.headers.get("Authorization") || "";
@@ -85,11 +92,21 @@ export async function requireUser(req: Request, { flag }: { flag?: string } = {}
     if (!jwt) return { ok: false as const, response: jsonResponse({ error: "Unauthorized" }, 401) };
 
     const sb = createClient(SUPABASE_URL, SERVICE_KEY);
-    const { data: userRes, error: userErr } = await sb.auth.getUser(jwt);
-    if (userErr || !userRes?.user) {
-      return { ok: false as const, response: jsonResponse({ error: "Unauthorized" }, 401) };
+
+    let userId: string;
+    if (jwt === SERVICE_KEY) {
+      const body = await req.clone().json().catch(() => ({} as any));
+      if (!body?.user_id) {
+        return { ok: false as const, response: jsonResponse({ error: "service-role caller must provide user_id in body" }, 400) };
+      }
+      userId = String(body.user_id);
+    } else {
+      const { data: userRes, error: userErr } = await sb.auth.getUser(jwt);
+      if (userErr || !userRes?.user) {
+        return { ok: false as const, response: jsonResponse({ error: "Unauthorized" }, 401) };
+      }
+      userId = userRes.user.id;
     }
-    const userId = userRes.user.id;
 
     if (flag) {
       const { data } = await sb.from("feature_flags").select("enabled").eq("module", flag).maybeSingle();

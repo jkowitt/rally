@@ -47,13 +47,25 @@ const CLIENT_ID = Deno.env.get("GMAIL_CLIENT_ID") ?? "";
 const CLIENT_SECRET = Deno.env.get("GMAIL_CLIENT_SECRET") ?? "";
 
 async function requireUser(req: Request) {
+  const SERVICE_KEY_LOCAL = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const sb = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    SERVICE_KEY_LOCAL,
   );
   const auth = req.headers.get("Authorization") || "";
   const jwt = auth.replace(/^Bearer\s+/i, "").trim();
   if (!jwt) return { ok: false as const, response: jsonResponse({ error: "Missing auth" }, 401) };
+
+  // Cron / internal caller using the service role key — pull
+  // user_id from the body so per-user sync can happen without a JWT.
+  if (jwt === SERVICE_KEY_LOCAL) {
+    const body = await req.clone().json().catch(() => ({} as any));
+    if (!body?.user_id) {
+      return { ok: false as const, response: jsonResponse({ error: "service-role caller must provide user_id in body" }, 400) };
+    }
+    return { ok: true as const, userId: String(body.user_id), sb };
+  }
+
   const { data } = await sb.auth.getUser(jwt);
   if (!data.user) return { ok: false as const, response: jsonResponse({ error: "Unauthorized" }, 401) };
   return { ok: true as const, userId: data.user.id, sb };

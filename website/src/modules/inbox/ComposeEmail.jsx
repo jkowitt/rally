@@ -112,6 +112,7 @@ export default function ComposeEmail({
   // override → profile.email_signature_html → profile.email_signature
   // (plain). HTML signatures get appended as HTML; plain ones as text.
   const [signature, setSignature] = useState({ html: '', isHtml: false })
+  const [includeSignature, setIncludeSignature] = useState(true)
   useEffect(() => {
     if (!open || !profile?.id) return
     let alive = true
@@ -124,25 +125,18 @@ export default function ComposeEmail({
     return () => { alive = false }
   }, [open, profile?.id, provider])
 
-  // Auto-append signature on first open and whenever it changes.
-  // For HTML signatures we wrap the existing plain-text body in a
-  // simple <div> so the appended HTML renders correctly when
-  // outlook-graph / gmail-graph convert the whole thing to HTML for
-  // sending + tracking.
-  useEffect(() => {
-    if (!open) return
-    if (!signature.html) return
-    if (body.includes(signature.html)) return
+  // Concatenate body + signature for send. We keep them separate in
+  // the UI so the textarea stays clean (the previous behaviour
+  // injected raw signature HTML into a plain <textarea>, which the
+  // user saw as `<div style="…">` markup).
+  function buildOutgoingBody() {
+    if (!includeSignature || !signature.html) return body
     if (signature.isHtml) {
-      setBody(prev => {
-        const baseHtml = prev ? `<div>${prev.replace(/\n/g, '<br/>')}</div>` : ''
-        return baseHtml + `<br/><br/>${signature.html}`
-      })
-    } else {
-      setBody(prev => prev ? `${prev}\n\n${signature.html}` : `\n\n${signature.html}`)
+      const baseHtml = body ? `<div>${body.replace(/\n/g, '<br/>')}</div>` : ''
+      return baseHtml + `<br/><br/>${signature.html}`
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, signature.html, signature.isHtml])
+    return body ? `${body}\n\n${signature.html}` : `\n\n${signature.html}`
+  }
 
   if (!open) return null
 
@@ -153,18 +147,7 @@ export default function ComposeEmail({
       const result = await generateDraft()
       if (result) {
         if (result.subject && !subject) setSubject(result.subject)
-        // Replace body, then re-attach the resolved signature in the
-        // shape that matches it (HTML or plain).
-        let draft = result.body || ''
-        if (signature.html && !draft.includes(signature.html)) {
-          if (signature.isHtml) {
-            const baseHtml = draft ? `<div>${draft.replace(/\n/g, '<br/>')}</div>` : ''
-            draft = baseHtml + `<br/><br/>${signature.html}`
-          } else {
-            draft = `${draft}\n\n${signature.html}`
-          }
-        }
-        setBody(draft)
+        setBody(result.body || '')
         toast({ title: 'Draft generated', type: 'success' })
       }
     } catch (err) {
@@ -240,7 +223,7 @@ export default function ComposeEmail({
           to: to.split(',').map(s => s.trim()).filter(Boolean),
           cc: cc ? cc.split(',').map(s => s.trim()).filter(Boolean) : undefined,
           subject,
-          body,
+          body: buildOutgoingBody(),
           attachments: attachments.map(a => ({
             filename: a.name,
             mimeType: a.type,
@@ -374,6 +357,39 @@ export default function ComposeEmail({
               className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent mt-1 resize-none font-mono"
             />
           </div>
+
+          {/* Signature preview. Kept separate from the textarea so
+              HTML signatures (Outlook ships them with inline styles)
+              don't pollute the compose box with raw markup. Rendered
+              live so the rep can confirm what'll be appended. */}
+          {signature.html && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] text-text-muted uppercase tracking-wider">
+                  Signature {includeSignature ? '(will be appended)' : '(disabled for this message)'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIncludeSignature(v => !v)}
+                  className="text-[11px] text-text-muted hover:text-accent"
+                >
+                  {includeSignature ? 'Don’t include' : 'Include signature'}
+                </button>
+              </div>
+              {includeSignature && (
+                signature.isHtml ? (
+                  <div
+                    className="bg-bg-card border border-border rounded p-3 text-sm text-text-secondary max-h-40 overflow-y-auto"
+                    dangerouslySetInnerHTML={{ __html: signature.html }}
+                  />
+                ) : (
+                  <pre className="bg-bg-card border border-border rounded p-3 text-sm text-text-secondary max-h-40 overflow-y-auto whitespace-pre-wrap font-sans">
+                    {signature.html}
+                  </pre>
+                )
+              )}
+            </div>
+          )}
 
           {/* Attachments */}
           {attachments.length > 0 && (

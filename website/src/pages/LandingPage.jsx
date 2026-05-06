@@ -148,7 +148,11 @@ export default function LandingPage() {
 
 /* ─── WELCOME GATE ─── */
 function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selectedIndustry, onSelectIndustry }) {
-  const [step, setStep] = useState(hasAccount ? 'returning' : 'choose') // choose | industry | sub-choice | returning
+  // Always open on the 'choose' step — that's the prospecting/CRM
+  // welcome page and it's where every visitor (new OR returning)
+  // should land first. Returning users still have a "Sign in" link
+  // there, plus the dedicated /login route.
+  const [step, setStep] = useState('choose') // choose | industry | sub-choice | returning
   const [pendingIndustry, setPendingIndustry] = useState(null)
   const navigate = useNavigate()
 

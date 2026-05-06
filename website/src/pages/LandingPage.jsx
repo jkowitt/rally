@@ -13,6 +13,65 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
 }
 
+// Tiered plans shown on the welcome gate's 'plans' step. Kept
+// intentionally narrow — CRM + Prospecting capabilities only —
+// per product direction. Email integration (Outlook + Gmail
+// inbox sync, send-from-CRM, open/click tracking) is the
+// Enterprise differentiator and is the only line item that
+// flips between included / excluded across tiers.
+const PLAN_TIERS = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    tagline: 'For solo reps getting organized',
+    price: 39,
+    cta: 'Start with Starter',
+    featured: false,
+    features: [
+      { label: 'AI prospect search (50 / mo)', included: true },
+      { label: 'Drag-and-drop CRM pipeline', included: true },
+      { label: 'Manual + CSV prospect import', included: true },
+      { label: 'Up to 1,000 contacts', included: true },
+      { label: 'Outlook + Gmail integration', included: false },
+      { label: 'Email tracking (opens + clicks)', included: false },
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    tagline: 'For revenue teams closing deals',
+    price: 99,
+    cta: 'Start with Pro',
+    featured: true,
+    features: [
+      { label: 'AI prospect search (500 / mo)', included: true },
+      { label: 'Drag-and-drop CRM pipeline', included: true },
+      { label: 'Bulk import + AI enrichment queue', included: true },
+      { label: 'Up to 25,000 contacts', included: true },
+      { label: 'Up to 5 seats', included: true },
+      { label: 'Outlook + Gmail integration', included: false },
+      { label: 'Email tracking (opens + clicks)', included: false },
+    ],
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    tagline: 'For teams that live in their inbox',
+    price: 299,
+    cta: 'Start with Enterprise',
+    featured: false,
+    features: [
+      { label: 'Unlimited AI prospect search', included: true },
+      { label: 'Drag-and-drop CRM pipeline', included: true },
+      { label: 'Bulk import + AI enrichment queue', included: true },
+      { label: 'Unlimited contacts + seats', included: true },
+      { label: 'Outlook + Gmail integration', included: true },
+      { label: 'Email tracking (opens + clicks)', included: true },
+      { label: 'Inbox sync + send-from-CRM', included: true },
+    ],
+  },
+]
+
 const INDUSTRIES = [
   {
     id: 'sports',
@@ -165,7 +224,7 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
       {/* Grid background */}
       <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'linear-gradient(#E8B84B 1px, transparent 1px), linear-gradient(90deg, #E8B84B 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
 
-      <div className="relative w-full max-w-lg mx-auto px-6">
+      <div className={`relative w-full mx-auto px-6 ${step === 'plans' ? 'max-w-4xl' : 'max-w-lg'}`}>
         <AnimatePresence mode="wait">
           {/* Step 1: New or Returning */}
           {step === 'choose' && (
@@ -213,13 +272,12 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                 transition={{ delay: 0.6 }}
                 className="space-y-2"
               >
-                <Link
-                  to="/login?mode=signup"
-                  onClick={() => { localStorage.setItem('ll-welcomed', '1') }}
+                <button
+                  onClick={() => setStep('plans')}
                   className="block w-full bg-accent text-bg-primary py-4 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity text-center"
                 >
                   Start Free — No Credit Card
-                </Link>
+                </button>
                 <button
                   onClick={() => setStep('industry')}
                   className="w-full border border-border text-text-secondary py-3 rounded-lg text-xs font-medium hover:border-accent/50 hover:text-text-primary transition-colors"
@@ -257,6 +315,106 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                   <div className="text-[9px] text-text-muted uppercase tracking-wider">To Start</div>
                 </div>
               </motion.div>
+            </motion.div>
+          )}
+
+          {/* Step 1c: Plan picker. "Start Free" routes here so the
+              visitor sees the three tiers before signing up. Each
+              card carries the plan into /login so signup can
+              pre-select it (read in the LoginPage from the
+              `plan` query param). */}
+          {step === 'plans' && (
+            <motion.div
+              key="plans"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.35 }}
+              className="space-y-6 max-w-3xl"
+            >
+              <div className="text-center">
+                <motion.h2
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-2xl font-semibold text-text-primary"
+                >
+                  Pick a plan to start
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-text-secondary text-sm mt-2"
+                >
+                  CRM + Prospecting on every plan. Email integration only on Enterprise.
+                </motion.p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {PLAN_TIERS.map((tier, i) => (
+                  <motion.div
+                    key={tier.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 + i * 0.08 }}
+                    className={`relative flex flex-col rounded-lg border p-5 text-left ${
+                      tier.featured
+                        ? 'border-accent bg-accent/5'
+                        : 'border-border bg-bg-surface'
+                    }`}
+                  >
+                    {tier.featured && (
+                      <div className="absolute -top-2 right-4 text-[9px] font-mono uppercase tracking-widest bg-accent text-bg-primary px-2 py-0.5 rounded">
+                        Most popular
+                      </div>
+                    )}
+                    <div className="text-sm font-semibold text-text-primary">{tier.name}</div>
+                    <div className="text-[11px] text-text-muted mt-0.5">{tier.tagline}</div>
+                    <div className="mt-3 flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-text-primary">${tier.price}</span>
+                      <span className="text-[11px] text-text-muted">/mo</span>
+                    </div>
+                    <ul className="mt-4 space-y-1.5 text-[12px] text-text-secondary">
+                      {tier.features.map(f => (
+                        <li key={f.label} className="flex items-start gap-2">
+                          <span
+                            className={`mt-[2px] inline-block w-3 text-center font-mono text-[11px] ${
+                              f.included ? 'text-accent' : 'text-text-muted/50'
+                            }`}
+                            aria-hidden="true"
+                          >
+                            {f.included ? '✓' : '–'}
+                          </span>
+                          <span className={f.included ? '' : 'line-through text-text-muted/60'}>
+                            {f.label}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      to={`/login?mode=signup&plan=${tier.id}`}
+                      onClick={() => { localStorage.setItem('ll-welcomed', '1') }}
+                      className={`mt-5 block w-full text-center py-2.5 rounded text-sm font-semibold transition-opacity ${
+                        tier.featured
+                          ? 'bg-accent text-bg-primary hover:opacity-90'
+                          : 'border border-border text-text-primary hover:border-accent/50'
+                      }`}
+                    >
+                      {tier.cta}
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="text-center">
+                <button
+                  onClick={() => setStep('choose')}
+                  className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+                >
+                  &larr; Go back
+                </button>
+              </div>
             </motion.div>
           )}
 

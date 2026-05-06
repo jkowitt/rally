@@ -432,11 +432,17 @@ begin
   end case;
 
   -- Fan out to: account_lead, assigned_to_user_id, full account team.
+  -- Wrap unnest() in a subquery so we can reference its output in
+  -- WHERE — the bare `where unnest is not null` form raises
+  -- "column unnest does not exist" because WHERE binds before the
+  -- SRF column is named.
   for uid in
-    select distinct unnest(array[new.account_lead_id, new.assigned_to_user_id])
-    where unnest is not null
-    union
-    select user_id from account_team_members where account_id = new.account_id
+    select distinct u from (
+      select unnest(array[new.account_lead_id, new.assigned_to_user_id]) as u
+      union
+      select user_id from account_team_members where account_id = new.account_id
+    ) s
+    where u is not null
   loop
     if uid is null then continue; end if;
     insert into user_notifications (user_id, type, title, body, link, icon, metadata)

@@ -30,7 +30,10 @@ const GRAPH_ME = "https://graph.microsoft.com/v1.0/me";
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const guard = await requireUser(req);
+  // Email integration is Enterprise-only. Block the OAuth begin
+  // (and every action under outlook-auth) for any other plan so
+  // a non-Enterprise user can't even kick off the connect flow.
+  const guard = await requireUser(req, { plan: ["enterprise"] });
   if (!guard.ok) return guard.response;
   const { userId, sb } = guard;
 

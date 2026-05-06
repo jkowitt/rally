@@ -25,6 +25,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encryptToken, decryptToken } from "../_shared/cryptoTokens.ts";
+import { assertPlan } from "../_shared/devGuard.ts";
 
 const CLIENT_ID = Deno.env.get("GMAIL_CLIENT_ID") ?? "";
 const CLIENT_SECRET = Deno.env.get("GMAIL_CLIENT_SECRET") ?? "";
@@ -72,6 +73,11 @@ Deno.serve(async (req: Request) => {
   const guard = await requireUser(req);
   if (!guard.ok) return guard.response;
   const { userId, sb } = guard;
+
+  // Email integration is Enterprise-only. Block the OAuth begin
+  // (and every subsequent action) for any other plan.
+  const planFail = await assertPlan(sb, userId, ["enterprise"]);
+  if (planFail) return planFail;
 
   if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
     return jsonResponse({

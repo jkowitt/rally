@@ -35,7 +35,11 @@ const TOKEN_ENDPOINT = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const guard = await requireUser(req, { flag: "inbox_outlook" });
+  // Enterprise-plan gate applies to every action (sync, send,
+  // save_draft, fetch_signatures). The plan check also runs when
+  // the cron-driven service-role caller invokes per-user — so a
+  // downgraded account stops syncing automatically.
+  const guard = await requireUser(req, { flag: "inbox_outlook", plan: ["enterprise"] });
   if (!guard.ok) return guard.response;
   const { userId, sb } = guard;
 

@@ -74,6 +74,16 @@ export function humanError(err: unknown): string {
     return 'Connection blocked. Try refreshing the page.'
   }
 
+  // Plan-gated features (edge functions returning 403 / "plan_required").
+  // The shared assertPlan helper sends back a friendly `message` field
+  // naming the required plan; surface it directly. Catch-all check
+  // covers cases where only the error code reaches us.
+  if (msg.includes('plan_required') || (msg.includes('requires the') && msg.includes('plan'))) {
+    return raw.includes('requires the')
+      ? raw
+      : 'This feature requires a higher-tier plan. Upgrade in Settings → Billing.'
+  }
+
   // Edge function failures
   if (msg.includes('edge function') && msg.includes('non-2xx')) {
     return 'An AI feature is temporarily unavailable. Try again in a moment — other features still work.'

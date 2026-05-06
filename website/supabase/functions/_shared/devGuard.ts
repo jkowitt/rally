@@ -63,6 +63,35 @@ export async function requireDeveloper(req: Request, { requireFlag = true } = {}
   }
 }
 
+// Standalone plan check for handlers that already authenticate
+// the user another way (e.g. gmail-auth/gmail-graph have their
+// own local requireUser variants). Returns null if the user is on
+// one of the allowed plans (or is a developer), otherwise returns
+// a ready-to-send 403 Response.
+export async function assertPlan(
+  sb: ReturnType<typeof createClient>,
+  userId: string,
+  allowed: string[],
+): Promise<Response | null> {
+  const { data: profile } = await sb
+    .from("profiles")
+    .select("role, property_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profile?.role === "developer") return null;
+  const { data: prop } = profile?.property_id
+    ? await sb.from("properties").select("plan").eq("id", profile.property_id).maybeSingle()
+    : { data: null };
+  const userPlan = (prop?.plan as string | undefined) ?? "free";
+  if (allowed.includes(userPlan)) return null;
+  return jsonResponse({
+    error: "plan_required",
+    required_plan: allowed,
+    current_plan: userPlan,
+    message: `This feature requires the ${allowed.join(" or ")} plan. You're currently on ${userPlan}.`,
+  }, 403);
+}
+
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -79,13 +108,20 @@ export const jsonResponse = (body: unknown, status = 200) =>
 // Optional flag check — pass `flag: 'inbox_outlook'` etc. to gate
 // behind feature flags.
 //
+// Optional plan check — pass `plan: ['enterprise']` to restrict to
+// users on one of the listed plan tiers. The check looks up
+// profiles.property_id → properties.plan and rejects with 403 +
+// a friendly message naming the required plan(s). `developer` role
+// always bypasses, since developers need to QA gated features.
+//
 // Cron-friendly: when the Authorization header carries the service
 // role key, accept a body.user_id parameter and use it instead of
 // looking up via JWT. Lets the scheduled delta-sync functions
 // invoke per-user actions without minting per-user JWTs. Body is
 // read non-destructively via req.clone() so the calling handler
-// can still parse the original.
-export async function requireUser(req: Request, { flag }: { flag?: string } = {}) {
+// can still parse the original. Plan checks still apply to cron
+// callers — a downgraded account shouldn't keep syncing email.
+export async function requireUser(req: Request, { flag, plan }: { flag?: string; plan?: string | string[] } = {}) {
   try {
     const authHeader = req.headers.get("Authorization") || "";
     const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
@@ -112,6 +148,34 @@ export async function requireUser(req: Request, { flag }: { flag?: string } = {}
       const { data } = await sb.from("feature_flags").select("enabled").eq("module", flag).maybeSingle();
       if (!data?.enabled) {
         return { ok: false as const, response: jsonResponse({ error: "Feature not enabled" }, 403) };
+      }
+    }
+
+    if (plan) {
+      const allowed = Array.isArray(plan) ? plan : [plan];
+      // Pull role + property_id in one round-trip; if developer, bypass.
+      const { data: profile } = await sb
+        .from("profiles")
+        .select("role, property_id")
+        .eq("id", userId)
+        .maybeSingle();
+      const isDev = profile?.role === "developer";
+      if (!isDev) {
+        const { data: prop } = profile?.property_id
+          ? await sb.from("properties").select("plan").eq("id", profile.property_id).maybeSingle()
+          : { data: null };
+        const userPlan = (prop?.plan as string | undefined) ?? "free";
+        if (!allowed.includes(userPlan)) {
+          return {
+            ok: false as const,
+            response: jsonResponse({
+              error: "plan_required",
+              required_plan: allowed,
+              current_plan: userPlan,
+              message: `This feature requires the ${allowed.join(" or ")} plan. You're currently on ${userPlan}.`,
+            }, 403),
+          };
+        }
       }
     }
 

@@ -25,6 +25,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encryptToken, decryptToken } from "../_shared/cryptoTokens.ts";
 import { logOutreach, generateTrackingToken, injectTrackingPixel, rewriteLinksForTracking, plainTextToHtml } from "../_shared/outreachLog.ts";
+import { assertPlan } from "../_shared/devGuard.ts";
 
 const TRACKING_BASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 
@@ -119,6 +120,12 @@ Deno.serve(async (req: Request) => {
   const guard = await requireUser(req);
   if (!guard.ok) return guard.response;
   const { userId, sb } = guard;
+
+  // Enterprise-only — applies to sync, send, save_draft, and the
+  // signature fetch. Cron callers (service-role + body.user_id)
+  // are also gated so a downgrade stops syncing automatically.
+  const planFail = await assertPlan(sb, userId, ["enterprise"]);
+  if (planFail) return planFail;
 
   try {
     const body = await req.json();

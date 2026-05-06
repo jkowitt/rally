@@ -11,7 +11,20 @@ import {
   trackEvent,
 } from '@/services/onboardingService'
 
-const TOTAL_STEPS = 5
+// Onboarding is now CRM + Prospecting only — three screens:
+//   1. Welcome
+//   2. Add first deal (CRM)
+//   3. Find prospects (Prospecting)
+// Email integration is Enterprise-only and lives in Settings,
+// not the universal first-run flow.
+const TOTAL_STEPS = 3
+
+// localStorage key that records the user has *seen* the modal
+// at least once. Belt-and-suspenders against the modal popping
+// up on subsequent logins if the DB completion write hadn't
+// landed by the time the page reloaded. Per-user so multiple
+// accounts on one browser don't cross-contaminate.
+const seenOnceKey = (uid: string) => `ll_onboarding_seen_${uid}`
 
 export interface OnboardingProgressRow {
   current_step?: number
@@ -78,8 +91,29 @@ export function useOnboarding(): UseOnboardingAPI {
       const cl = (await fetchChecklist(userId)) as ChecklistItem[]
       if (!cancelled) setChecklistItems(cl)
       setLoaded(true)
-      if (!isOnboardingComplete && !isOnboardingSkipped && !p?.onboarding_completed && !p?.skipped_at) {
+
+      // First-login-only auto-show. Three independent guards must
+      // all be clean for the modal to open automatically:
+      //   1. DB hasn't recorded a completion or skip
+      //   2. profile flags don't say complete or skipped
+      //   3. localStorage hasn't recorded that we already showed
+      //      this modal once for this user
+      // Once we show, immediately set the localStorage flag so a
+      // refresh during the flow doesn't reopen the modal on the
+      // next mount — the user stays in whatever step they were on
+      // but it won't *reappear* uninvited. Resume from the banner
+      // still works.
+      let seenOnce = false
+      try { seenOnce = localStorage.getItem(seenOnceKey(userId!)) === '1' } catch { /* SSR / private mode */ }
+      const shouldAutoShow =
+        !seenOnce &&
+        !isOnboardingComplete &&
+        !isOnboardingSkipped &&
+        !p?.onboarding_completed &&
+        !p?.skipped_at
+      if (shouldAutoShow) {
         setIsOnboardingVisible(true)
+        try { localStorage.setItem(seenOnceKey(userId!), '1') } catch { /* ignore */ }
       }
     }
     load()

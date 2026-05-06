@@ -3,24 +3,9 @@ import { useOnboarding } from '@/hooks/useOnboarding'
 import OnboardingProgress from './OnboardingProgress'
 import WelcomeStep from './steps/WelcomeStep'
 import CreateDealStep from './steps/CreateDealStep'
-import ContractUploadStep from './steps/ContractUploadStep'
-import AssetCatalogStep from './steps/AssetCatalogStep'
-import CompletionStep from './steps/CompletionStep'
+import FindProspectsStep from './steps/FindProspectsStep'
 import { useAuth } from '@/hooks/useAuth'
 import { trackEvent } from '@/services/onboardingService'
-
-// Map the property.type stored at signup → the 4 buckets the
-// WelcomeStep shows. Saves the user from picking their industry
-// twice (once on the landing page, then again here).
-function mapPropertyTypeToIndustry(type) {
-  if (!type) return 'sports'
-  if (type === 'nonprofit') return 'nonprofit'
-  if (type === 'media') return 'media'
-  if (type === 'realestate') return 'realestate'
-  // college / professional / minor_league / agency / entertainment
-  // / conference / other → roll up to "sports & events"
-  return 'sports'
-}
 
 export default function OnboardingModal() {
   const { profile } = useAuth()
@@ -49,7 +34,7 @@ export default function OnboardingModal() {
   }
 
   async function handleFinish() {
-    await markStepComplete(5)
+    await markStepComplete(totalSteps)
     await completeOnboarding()
   }
 
@@ -74,7 +59,7 @@ export default function OnboardingModal() {
           <div className="flex-1">
             <OnboardingProgress currentStep={currentStep} completedSteps={completedSteps} totalSteps={totalSteps} />
           </div>
-          {currentStep > 1 && currentStep < 5 && (
+          {currentStep > 1 && currentStep < totalSteps && (
             <button
               onClick={handleRequestExit}
               className="text-text-muted hover:text-text-primary text-sm shrink-0"
@@ -91,13 +76,15 @@ export default function OnboardingModal() {
             <WelcomeStep
               onNext={() => handleNext(1)}
               userName={profile?.full_name}
-              initialIndustry={mapPropertyTypeToIndustry(profile?.properties?.type)}
             />
           )}
           {currentStep === 2 && <CreateDealStep onNext={() => handleNext(2)} onSkip={() => handleSkipStep(2)} />}
-          {currentStep === 3 && <ContractUploadStep onNext={() => handleNext(3)} onSkip={() => handleSkipStep(3)} />}
-          {currentStep === 4 && <AssetCatalogStep onNext={() => handleNext(4)} onSkip={() => handleSkipStep(4)} />}
-          {currentStep === 5 && <CompletionStep onFinish={handleFinish} completedSteps={completedSteps} />}
+          {currentStep === 3 && (
+            <FindProspectsStep
+              onFinish={handleFinish}
+              onSkip={async () => { await handleFinish() }}
+            />
+          )}
         </div>
       </div>
 

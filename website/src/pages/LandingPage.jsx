@@ -3,12 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import EditableText, { EditableImage } from '@/components/cms/EditableText'
 import { useIndustryVisibility, shouldShowIndustry } from '@/hooks/useIndustryVisibility'
-import DigestSignupForm from '@/components/digest/DigestSignupForm'
-
-// Inline signup wrapper — dark-theme variant for the landing hero
-function DigestSignupInline() {
-  return <DigestSignupForm source="landing_page" compact brandLight={false} />
-}
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -195,9 +189,9 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                   transition={{ delay: 0.3 }}
                   className="text-text-primary text-2xl sm:text-3xl font-bold mt-4 leading-tight"
                 >
-                  Upload any sponsor contract.
+                  Find your next customer.
                   <br />
-                  <span className="text-accent">AI extracts every benefit in 30 seconds.</span>
+                  <span className="text-accent">Close them in one workspace.</span>
                 </motion.h1>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -205,7 +199,7 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                   transition={{ delay: 0.4 }}
                   className="text-text-secondary text-sm mt-4"
                 >
-                  The AI-first sponsorship CRM. Built for sponsorship teams who want their contracts, deals, and fulfillment in one place. <span className="text-text-primary">$39/mo</span>.
+                  AI-powered prospecting + a CRM built for revenue teams. Discover decision-makers, run your pipeline, and personalize outreach — all in one place. <span className="text-text-primary">$39/mo</span>.
                 </motion.p>
               </div>
 
@@ -228,12 +222,6 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                 >
                   See how it works for my industry
                 </button>
-                <Link
-                  to="/digest"
-                  className="block w-full border border-accent/40 text-accent py-3 rounded-lg text-xs font-medium hover:bg-accent/10 transition-colors text-center"
-                >
-                  📖 Read The Digest — no account required
-                </Link>
                 <button
                   onClick={() => {
                     localStorage.setItem('ll-has-account', '1')
@@ -245,37 +233,20 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                 </button>
               </motion.div>
 
-              {/* The Digest signup — monthly newsletter */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.75 }}
-                className="mt-8 pt-6 border-t border-border"
-              >
-                <div className="text-center mb-3">
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-accent">The Digest</div>
-                  <div className="text-[11px] text-text-muted mt-1">One good article a month. Real estate, sports, marketing.</div>
-                </div>
-                <DigestSignupInline />
-                <div className="text-center mt-2">
-                  <Link to="/digest" className="text-[10px] text-text-muted hover:text-accent">Browse past issues →</Link>
-                </div>
-              </motion.div>
-
               {/* Social proof row */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.8 }}
-                className="grid grid-cols-3 gap-2 pt-2"
+                className="grid grid-cols-3 gap-2 pt-6 mt-6 border-t border-border"
               >
                 <div className="text-center">
-                  <div className="text-base font-bold text-text-primary">22</div>
-                  <div className="text-[9px] text-text-muted uppercase tracking-wider">Asset Types</div>
+                  <div className="text-base font-bold text-text-primary">AI</div>
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider">Prospecting</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-base font-bold text-text-primary">18</div>
-                  <div className="text-[9px] text-text-muted uppercase tracking-wider">AI Features</div>
+                  <div className="text-base font-bold text-text-primary">∞</div>
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider">Pipeline</div>
                 </div>
                 <div className="text-center">
                   <div className="text-base font-bold text-accent">$0</div>

@@ -9,11 +9,15 @@ import { useQuery } from '@tanstack/react-query'
 import { usePlanLimits } from '@/hooks/usePlanLimits'
 import CustomFieldsEditor from '@/components/CustomFieldsEditor'
 
+// Mirrors src/data/plans.ts. Kept inline here so Settings can render
+// the upgrade-eligibility ("recommended", "Current Plan" highlight)
+// and per-user counts that the marketing data file doesn't carry.
+// Update both files together when pricing changes.
 const PLANS = [
-  { id: 'free', name: 'Free', price: '$0', period: '7-day trial', users: 2, features: ['CRM Pipeline (15 deals)', '3 prospect searches/mo', '2 contract uploads/mo', 'Basic CSV export', 'No verified contact lookups'] },
-  { id: 'starter', name: 'Starter', price: '$39', period: '/month', users: 5, features: ['Everything in Free', '500 deals', '50 prospect searches/mo', '40 verified contact lookups/mo', '25 contract uploads/mo', 'AI insights', 'Fulfillment reports', 'Team goals', 'Bulk import'] },
-  { id: 'pro', name: 'Pro', price: '$99', period: '/month', users: 15, features: ['Everything in Starter', 'All modules', '200 prospect searches/mo', '160 verified contact lookups/mo', 'Unlimited contracts', 'Verified contacts', 'Email verification', 'PowerPoint reports', 'Custom dashboard eligible', 'Priority support'], recommended: true },
-  { id: 'enterprise', name: 'Enterprise', price: 'Custom', period: '', users: 'Unlimited', features: ['Everything in Pro', 'Unlimited everything', 'Unlimited users', 'White-label dashboard', 'Custom integrations', 'API access', 'Dedicated support', 'SLA guarantee'] },
+  { id: 'free',       name: 'Free',       price: '$0',   period: 'forever',  users: 1,           features: ['1 user · 100 contacts · 25 deals', '10 prospect lookups / month', 'Drag-and-drop CRM pipeline', 'AI prospect search (5 results / query)', 'CSV import + activity timeline'] },
+  { id: 'starter',    name: 'Starter',    price: '$29',  period: '/month',   users: 3,           features: ['Everything in Free', '3 users · 2,500 contacts · 500 deals', '100 prospect lookups / month (pooled)', 'Custom deal stages + pipelines', 'Lookalike companies + ICP filters', 'Weighted forecast + stale-deal alerts'] },
+  { id: 'pro',        name: 'Pro',        price: '$79',  period: '/month',   users: 10,          features: ['Everything in Starter', '10 users · 25,000 contacts · unlimited deals', '500 prospect lookups / month (pooled)', 'Bulk paste + CSV with AI enrichment', 'Outreach sequences + reply-intent', 'Outreach copilot + email coach', 'Custom dashboards + role-based permissions'], recommended: true },
+  { id: 'enterprise', name: 'Enterprise', price: '$249', period: '/month',   users: 'Unlimited', features: ['Everything in Pro', 'Unlimited users · contacts · deals', '2,500 prospect lookups / month (pooled)', 'Outlook + Gmail full inbox sync', 'Send from CRM with open + click tracking', 'AI reply suggestions + auto-log to deals', 'Priority support + custom onboarding'] },
 ]
 
 export default function Settings() {
@@ -21,6 +25,18 @@ export default function Settings() {
   // CustomFieldsEditor lives here for the property-admin tab.
   // Imported from components/CustomFieldsEditor.tsx
   const { toast } = useToast()
+
+  // Role-based section visibility.
+  // - Reps see a stripped-down page: read-only name + email + property,
+  //   plus a couple of personal preferences they own (calendar booking
+  //   link, click-to-call confirm, digest subscription).
+  // - Admins / developers / businessops see the full page with billing,
+  //   integrations, custom fields, data export, and the danger zone.
+  // Names + emails on a rep's record are managed by an admin from the
+  // team-management view, not by the rep themselves.
+  const role = profile?.role || 'rep'
+  const isAdminLike = role === 'admin' || role === 'developer' || role === 'businessops'
+  const repReadOnly = !isAdminLike
   const config = useIndustryConfig()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -92,13 +108,19 @@ export default function Settings() {
       {/* Profile */}
       <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
         <h2 className="text-sm font-mono text-text-muted uppercase mb-3">Profile</h2>
+        {repReadOnly && (
+          <p className="text-[11px] text-text-muted mb-3 leading-relaxed">
+            Your name, email, and title are managed by your admin. Reach out to them to update these.
+          </p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-text-muted">Full Name</label>
             <input
               defaultValue={profile?.full_name || ''}
-              onBlur={(e) => handleProfileUpdate('full_name', e.target.value)}
-              className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent mt-1"
+              onBlur={(e) => !repReadOnly && handleProfileUpdate('full_name', e.target.value)}
+              disabled={repReadOnly}
+              className={`w-full bg-bg-card border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-accent mt-1 ${repReadOnly ? 'text-text-muted opacity-60' : 'text-text-primary'}`}
             />
           </div>
           <div>
@@ -113,9 +135,10 @@ export default function Settings() {
             <label className="text-xs text-text-muted">Title</label>
             <input
               defaultValue={profile?.title || ''}
-              onBlur={(e) => handleProfileUpdate('title', e.target.value)}
+              onBlur={(e) => !repReadOnly && handleProfileUpdate('title', e.target.value)}
+              disabled={repReadOnly}
               placeholder="e.g. Director of Partnerships"
-              className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent mt-1"
+              className={`w-full bg-bg-card border border-border rounded px-3 py-2 text-sm placeholder-text-muted focus:outline-none focus:border-accent mt-1 ${repReadOnly ? 'text-text-muted opacity-60' : 'text-text-primary'}`}
             />
           </div>
           <div>
@@ -159,7 +182,9 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Current Plan + Upgrade */}
+      {/* Current Plan + Upgrade — admin-only. Reps don't pick or
+          pay for plans, so the upgrade card is noise on their view. */}
+      {isAdminLike && (
       <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-mono text-text-muted uppercase">Plan & Billing</h2>
@@ -206,9 +231,12 @@ export default function Settings() {
           })}
         </div>
       </div>
+      )}
 
-      {/* Usage & Overage */}
+      {/* Usage & Overage — admin-only (rep doesn't pay overages) */}
+      {isAdminLike && (
       <UsageOverageSection propertyId={propertyId} currentPlan={currentPlan} />
+      )}
 
       {/* Preferences */}
       <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
@@ -227,8 +255,14 @@ export default function Settings() {
       {/* Email preferences */}
       <DigestSubscriptionSection userId={profile?.id} propertyId={propertyId} userEmail={profile?.email} />
 
+      {/* DNC + custom fields + data export + integrations are
+          all admin-only — they configure the workspace, not the
+          individual rep. */}
+      {isAdminLike && (
       <DncDomainsSection propertyId={propertyId} userId={profile?.id} />
+      )}
 
+      {isAdminLike && (
       <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
         <h2 className="text-sm font-mono text-text-muted uppercase mb-3">Custom fields</h2>
         <p className="text-xs text-text-muted mb-3">
@@ -239,16 +273,23 @@ export default function Settings() {
           <CustomFieldsEditor propertyId={propertyId} appliesTo="contact" />
         </div>
       </div>
+      )}
 
       <EmailPreferencesSection userEmail={profile?.email} />
 
-      {/* Data Export */}
+      {/* Data Export — admin-only (full GDPR / workspace export). */}
+      {isAdminLike && (
       <DataExportSection userId={profile?.id} />
+      )}
 
-      {/* Integrations */}
+      {/* Integrations — admin-only (configures workspace-level keys). */}
+      {isAdminLike && (
       <IntegrationsSection propertyId={propertyId} />
+      )}
 
-      {/* Account Deletion — Danger Zone */}
+      {/* Account Deletion — admin-only Danger Zone. Reps can't
+          delete their workspace; that's an admin action. */}
+      {isAdminLike && (
       <div className="bg-bg-surface border border-danger/30 rounded-lg p-4 sm:p-5">
         <h2 className="text-sm font-mono text-danger uppercase mb-1">Danger Zone</h2>
         <p className="text-xs text-text-muted mb-4">
@@ -386,6 +427,7 @@ export default function Settings() {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }

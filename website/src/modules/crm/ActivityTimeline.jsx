@@ -129,12 +129,19 @@ function exportToCsv(activities) {
 function QuickLogForm({ type, deals, isPending, onSubmit, onCancel }) {
   const [dealId, setDealId] = useState(deals.length === 1 ? deals[0].id : '')
   const [subject, setSubject] = useState('')
+  // Optional notes — most reps want to capture what was actually
+  // discussed on the call / in the meeting, not just the subject.
+  const [notes, setNotes] = useState('')
   const config = TYPE_CONFIG[type]
 
   function handleSubmit(e) {
     e.preventDefault()
-    onSubmit(dealId, subject)
+    onSubmit(dealId, subject, notes)
   }
+
+  // The "Note" type is itself a freeform note; for everything else
+  // surface a separate notes textarea.
+  const showNotesField = type !== 'Note'
 
   return (
     <form onSubmit={handleSubmit} className="mt-3 p-3 bg-bg-card border border-border rounded-lg space-y-3">
@@ -179,6 +186,24 @@ function QuickLogForm({ type, deals, isPending, onSubmit, onCancel }) {
           </button>
         </div>
       </div>
+      {showNotesField && (
+        <div>
+          <label className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+            Notes (optional)
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={
+              type === 'Call'    ? 'Talked through pricing — they need budget approval. Sending case study Friday.' :
+              type === 'Email'   ? 'Sent intro deck. Asked for a 20-min slot next Tue/Thu.' :
+                                   'Discussed activation scope. Owner has signoff. Quick second round next Wed.'
+            }
+            rows={3}
+            className="w-full mt-1 bg-bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-y"
+          />
+        </div>
+      )}
     </form>
   )
 }
@@ -411,7 +436,7 @@ export default function ActivityTimeline() {
     setQuickLogType(type)
   }
 
-  function submitQuickLog(dealId, subject) {
+  function submitQuickLog(dealId, subject, notes) {
     if (!dealId || !subject.trim()) return
     quickLogMutation.mutate({
       property_id: propertyId,
@@ -419,6 +444,10 @@ export default function ActivityTimeline() {
       deal_id: dealId,
       activity_type: quickLogType,
       subject: subject.trim(),
+      // Notes from the optional textarea land in description so
+      // they show up in the activity drawer + CSV export, same as
+      // notes captured via the full Log Activity modal.
+      description: notes && notes.trim() ? notes.trim() : null,
       occurred_at: new Date().toISOString(),
     })
   }

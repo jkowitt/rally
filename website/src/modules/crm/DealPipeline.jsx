@@ -8,6 +8,7 @@ import ProspectingChatPanel from '@/components/ProspectingChatPanel'
 import DealActivityTimeline from '@/components/DealActivityTimeline'
 import BuyingCommittee from '@/components/BuyingCommittee'
 import AccountBrief from '@/components/AccountBrief'
+import CompanyResearchPanel from '@/components/CompanyResearchPanel'
 import WarmPathFinder from '@/components/WarmPathFinder'
 import PersonalityProfile from '@/components/PersonalityProfile'
 import PortalEngagement from '@/components/PortalEngagement'
@@ -1741,6 +1742,18 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           <div>
             <AccountBrief deal={deal} contacts={contacts} />
           </div>
+
+          {/* AI company research — pulls industry, website, leadership
+              team from public web sources via Claude + web_search. */}
+          {deal.brand_name && (
+            <div>
+              <CompanyResearchPanel
+                companyName={deal.brand_name}
+                dealId={deal.id}
+                domain={deal.website || null}
+              />
+            </div>
+          )}
 
           {/* Portal engagement — time on each portal section */}
           <div>

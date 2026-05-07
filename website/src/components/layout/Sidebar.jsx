@@ -40,7 +40,10 @@ function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
   const sections = [
     {
       label: 'Overview',
-      items: [{ to: '/app', label: 'Dashboard' }],
+      items: [
+        { to: '/app', label: 'Dashboard' },
+        { to: '/app/todo', label: 'To-Do List' },
+      ],
     },
     {
       label: 'Pipeline',

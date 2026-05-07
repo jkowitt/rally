@@ -346,13 +346,19 @@ export default function Dashboard() {
           ))}
           <StageCard label="Declined" count={(stageCounts['Declined'] || []).length} color="text-danger" href="/app/crm/declined" />
         </div>
-        {/* Sub-counts for prospects */}
+        {/* Sub-counts for prospects. "Not Contacted" navigates to
+            the pipeline in table view with the not_contacted filter
+            applied so the rep can act on the list immediately. */}
         {stageCounts.prospects?.length > 0 && (
           <div className="flex gap-2 sm:gap-3 mt-2 flex-wrap">
-            <div className="bg-bg-surface border border-border rounded-lg px-3 py-2">
+            <button
+              onClick={() => navigate('/app/crm/pipeline?stage=Prospect&view=table&filter=not_contacted')}
+              className="text-left bg-bg-surface border border-border rounded-lg px-3 py-2 hover:border-warning/50 transition-colors"
+              title="Open Prospect-stage deals not yet contacted"
+            >
               <div className="text-[10px] text-text-muted font-mono">Not Contacted</div>
               <div className="text-sm font-mono text-warning">{stageCounts.notContacted.length}</div>
-            </div>
+            </button>
             <div className="bg-bg-surface border border-border rounded-lg px-3 py-2">
               <div className="text-[10px] text-text-muted font-mono">Has Meeting</div>
               <div className="text-sm font-mono text-text-primary">{stageCounts.hasMeeting.length}</div>

@@ -121,6 +121,7 @@ const CompareRouter = lazyRetry(() => import('./pages/compare/CompareRouter'))
 // Public database-driven pricing page
 const PricingPage = lazyRetry(() => import('./pages/pricing/PricingPage'))
 const ManualPage = lazyRetry(() => import('./pages/ManualPage'))
+const TodoList = lazyRetry(() => import('./modules/crm/TodoList'))
 // Addons + billing settings pages (authenticated)
 const AddonsPage = lazyRetry(() => import('./pages/settings/AddonsPage'))
 const BillingPage = lazyRetry(() => import('./pages/settings/BillingPage'))
@@ -223,6 +224,7 @@ export default function App() {
                           <Routes>
                             <Route path="/" element={<Dashboard />} />
                             <Route path="/manual" element={<ManualPage />} />
+                            <Route path="/todo" element={<TodoList />} />
                             {/* CRM */}
                             <Route path="/crm/assets" element={<AssetCatalog />} />
                             <Route path="/crm/pipeline" element={<DealPipeline />} />

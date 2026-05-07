@@ -234,6 +234,8 @@ export default function DealPipeline() {
     const dealId = searchParams.get('deal')
     const stageParam = searchParams.get('stage')
     const findParam = searchParams.get('find')
+    const viewParam = searchParams.get('view')
+    const filterParam = searchParams.get('filter')
     if (findParam === '1') {
       setShowProspectFinder(true)
       setSearchParams({}, { replace: true })
@@ -245,11 +247,18 @@ export default function DealPipeline() {
         setViewingDeal({ ...found, stage: found.stage || 'Prospect' })
         setSearchParams({}, { replace: true })
       }
-    } else if (stageParam && deals?.length) {
-      // Switch to table view and filter to the requested stage
-      setViewMode('table')
+    } else if ((stageParam || viewParam || filterParam) && deals?.length) {
+      // Switch to table view and apply optional stage / filter
+      // params. Dashboard's "Not Contacted" stat uses
+      // ?stage=Prospect&view=table&filter=not_contacted to
+      // deep-link straight into a filtered, actionable list.
+      if (viewParam === 'table' || stageParam) setViewMode('table')
       setShowColumnFilters(true)
-      setColumnFilters(prev => ({ ...prev, stage: stageParam }))
+      setColumnFilters(prev => ({
+        ...prev,
+        ...(stageParam ? { stage: stageParam } : {}),
+        ...(filterParam ? { _filter: filterParam } : {}),
+      }))
       setSearchParams({}, { replace: true })
     }
   }, [deals, searchParams, setSearchParams])
@@ -604,6 +613,11 @@ export default function DealPipeline() {
             if (d.priority !== val) return false
           } else if (col === 'source') {
             if (d.source !== val) return false
+          } else if (col === '_filter') {
+            // Synthetic filter set by deep-links (e.g. dashboard's
+            // "Not Contacted" stat). Currently supports:
+            //   not_contacted — last_contacted is null
+            if (val === 'not_contacted' && d.last_contacted) return false
           }
         }
         return true

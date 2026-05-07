@@ -353,12 +353,36 @@ function DealsStep({ selected, setSelected, onBack, onNext }) {
     queryFn: async () => {
       const { data } = await supabase
         .from('deals')
-        .select('id, brand_name, contact_first_name, contact_last_name, contact_position, stage, sub_industry')
+        .select('id, brand_name, contact_first_name, contact_last_name, contact_position, stage, sub_industry, last_contacted')
         .eq('property_id', profile.property_id)
         .neq('stage', 'Declined')
         .order('created_at', { ascending: false })
         .limit(500)
       return data || []
+    },
+  })
+
+  // Active sequence enrollment lookup so reps can see at a glance
+  // which prospects are already running. We only flag enrollments
+  // tied to an active sequence — paused / archived sequences don't
+  // count.
+  const { data: enrollmentsByDeal = new Map() } = useQuery({
+    queryKey: ['ai-builder-enrollments', profile?.property_id],
+    enabled: !!profile?.property_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('prospect_sequence_enrollments')
+        .select('deal_id, sequence_id, generation_status, prospect_sequences!inner(name, is_active)')
+        .eq('property_id', profile.property_id)
+        .eq('prospect_sequences.is_active', true)
+      const map = new Map()
+      for (const row of data || []) {
+        if (!row.deal_id) continue
+        const arr = map.get(row.deal_id) || []
+        arr.push({ name: row.prospect_sequences?.name, status: row.generation_status })
+        map.set(row.deal_id, arr)
+      }
+      return map
     },
   })
 
@@ -408,6 +432,10 @@ function DealsStep({ selected, setSelected, onBack, onNext }) {
           {filtered.map(d => {
             const isSel = selected.includes(d.id)
             const contact = [d.contact_first_name, d.contact_last_name].filter(Boolean).join(' ') || 'No contact'
+            const lastContactedLabel = d.last_contacted ? lastContactedAgo(d.last_contacted) : 'Never contacted'
+            const lastContactedTone = d.last_contacted ? 'text-text-muted' : 'text-warning'
+            const enrollments = enrollmentsByDeal.get(d.id) || []
+            const isEnrolled = enrollments.length > 0
             return (
               <label
                 key={d.id}
@@ -420,12 +448,27 @@ function DealsStep({ selected, setSelected, onBack, onNext }) {
                   className="accent-accent"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-text-primary truncate">{d.brand_name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-text-primary truncate">{d.brand_name}</span>
+                    {isEnrolled && (
+                      <span
+                        className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/30 shrink-0"
+                        title={`Already in: ${enrollments.map(e => e.name).filter(Boolean).join(', ') || 'a sequence'}`}
+                      >
+                        In sequence
+                      </span>
+                    )}
+                  </div>
                   <div className="text-[10px] text-text-muted truncate">
                     {contact}{d.contact_position ? ` · ${d.contact_position}` : ''}{d.sub_industry ? ` · ${d.sub_industry}` : ''}
                   </div>
                 </div>
-                <span className="text-[10px] font-mono text-text-muted">{d.stage}</span>
+                <div className="flex flex-col items-end gap-0.5 shrink-0">
+                  <span className="text-[10px] font-mono text-text-muted">{d.stage}</span>
+                  <span className={`text-[10px] font-mono ${lastContactedTone}`}>
+                    {lastContactedLabel}
+                  </span>
+                </div>
               </label>
             )
           })}
@@ -841,4 +884,18 @@ function DraftRow({ draft, open, onToggle, onApprove, onSkip }) {
       )}
     </div>
   )
+}
+
+
+// Friendlier "last contacted" label. Anything older than a year
+// just says "1y+" so the row stays compact.
+function lastContactedAgo(iso) {
+  if (!iso) return ""
+  const diff = Date.now() - new Date(iso).getTime()
+  const days = Math.floor(diff / 86400000)
+  if (days < 1) return "Today"
+  if (days < 7) return `${days}d ago`
+  if (days < 30) return `${Math.floor(days / 7)}w ago`
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`
+  return "1y+ ago"
 }

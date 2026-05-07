@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import EditableText, { EditableImage } from '@/components/cms/EditableText'
 import { useIndustryVisibility, shouldShowIndustry } from '@/hooks/useIndustryVisibility'
+import { PLAN_TIERS } from '@/data/plans'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -12,65 +13,6 @@ const fadeUp = {
 const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
 }
-
-// Tiered plans shown on the welcome gate's 'plans' step. Kept
-// intentionally narrow — CRM + Prospecting capabilities only —
-// per product direction. Email integration (Outlook + Gmail
-// inbox sync, send-from-CRM, open/click tracking) is the
-// Enterprise differentiator and is the only line item that
-// flips between included / excluded across tiers.
-const PLAN_TIERS = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    tagline: 'For solo reps getting organized',
-    price: 39,
-    cta: 'Start with Starter',
-    featured: false,
-    features: [
-      { label: 'AI prospect search (50 / mo)', included: true },
-      { label: 'Drag-and-drop CRM pipeline', included: true },
-      { label: 'Manual + CSV prospect import', included: true },
-      { label: 'Up to 1,000 contacts', included: true },
-      { label: 'Outlook + Gmail integration', included: false },
-      { label: 'Email tracking (opens + clicks)', included: false },
-    ],
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    tagline: 'For revenue teams closing deals',
-    price: 99,
-    cta: 'Start with Pro',
-    featured: true,
-    features: [
-      { label: 'AI prospect search (500 / mo)', included: true },
-      { label: 'Drag-and-drop CRM pipeline', included: true },
-      { label: 'Bulk import + AI enrichment queue', included: true },
-      { label: 'Up to 25,000 contacts', included: true },
-      { label: 'Up to 5 seats', included: true },
-      { label: 'Outlook + Gmail integration', included: false },
-      { label: 'Email tracking (opens + clicks)', included: false },
-    ],
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    tagline: 'For teams that live in their inbox',
-    price: 299,
-    cta: 'Start with Enterprise',
-    featured: false,
-    features: [
-      { label: 'Unlimited AI prospect search', included: true },
-      { label: 'Drag-and-drop CRM pipeline', included: true },
-      { label: 'Bulk import + AI enrichment queue', included: true },
-      { label: 'Unlimited contacts + seats', included: true },
-      { label: 'Outlook + Gmail integration', included: true },
-      { label: 'Email tracking (opens + clicks)', included: true },
-      { label: 'Inbox sync + send-from-CRM', included: true },
-    ],
-  },
-]
 
 const INDUSTRIES = [
   {
@@ -224,7 +166,7 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
       {/* Grid background */}
       <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'linear-gradient(#E8B84B 1px, transparent 1px), linear-gradient(90deg, #E8B84B 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
 
-      <div className={`relative w-full mx-auto px-6 ${step === 'plans' ? 'max-w-4xl' : 'max-w-lg'}`}>
+      <div className={`relative w-full mx-auto px-6 ${step === 'plans' ? 'max-w-6xl' : 'max-w-lg'}`}>
         <AnimatePresence mode="wait">
           {/* Step 1: New or Returning */}
           {step === 'choose' && (
@@ -351,7 +293,7 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                 </motion.p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {PLAN_TIERS.map((tier, i) => (
                   <motion.div
                     key={tier.id}
@@ -372,11 +314,11 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                     <div className="text-sm font-semibold text-text-primary">{tier.name}</div>
                     <div className="text-[11px] text-text-muted mt-0.5">{tier.tagline}</div>
                     <div className="mt-3 flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-text-primary">${tier.price}</span>
+                      <span className="text-2xl font-bold text-text-primary">${tier.monthly}</span>
                       <span className="text-[11px] text-text-muted">/mo</span>
                     </div>
                     <ul className="mt-4 space-y-1.5 text-[12px] text-text-secondary">
-                      {tier.features.map(f => (
+                      {tier.highlights.map(f => (
                         <li key={f.label} className="flex items-start gap-2">
                           <span
                             className={`mt-[2px] inline-block w-3 text-center font-mono text-[11px] ${

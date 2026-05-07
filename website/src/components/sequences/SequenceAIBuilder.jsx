@@ -204,7 +204,7 @@ function ConfigureStep({ config, setConfig, onNext }) {
       <div className="border-t border-border pt-4">
         <h3 className="text-sm font-semibold text-text-primary">What's this sequence for?</h3>
         <p className="text-xs text-text-muted mt-0.5">
-          Tell Claude what to drive toward. The more specific, the better the drafts.
+          Tell the AI what to drive toward. The more specific, the better the drafts.
         </p>
       </div>
 

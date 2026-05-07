@@ -3959,7 +3959,7 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
               <div className="text-xs text-text-muted font-mono mb-2">Two ways to import:</div>
               <div className="text-xs text-text-secondary space-y-1 font-mono">
                 <div><span className="text-accent">Structured parse</span> — tab/CSV from Excel or Google Sheets, optional headers (Company, First Name, Email, Phone, City, State, Title…). Multiple rows with the same Company group into one deal.</div>
-                <div><span className="text-accent">Analyze with AI</span> — paste anything: a numbered list, a comma-separated string, prose, a scraped article. Claude extracts the company names (and any details it can find) regardless of format.</div>
+                <div><span className="text-accent">Analyze with AI</span> — paste anything: a numbered list, a comma-separated string, prose, a scraped article. The AI extracts the company names (and any details it can find) regardless of format.</div>
               </div>
             </div>
             <textarea
@@ -3983,7 +3983,7 @@ function BulkImportModal({ propertyId, onClose, onImported }) {
                 onClick={handleAIAnalyze}
                 disabled={!rawText.trim() || aiAnalyzing}
                 className="flex-1 bg-bg-card border border-accent/40 text-accent py-2.5 rounded text-sm font-medium hover:bg-accent/10 disabled:opacity-50"
-                title="Send the pasted text to Claude. Works on any format — bulleted, comma-separated, prose, etc."
+                title="Send the pasted text to the AI. Works on any format — bulleted, comma-separated, prose, etc."
               >
                 {aiAnalyzing ? 'Analyzing…' : '✨ Analyze with AI'}
               </button>
@@ -4802,7 +4802,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
                   disabled={!cityFilter.trim()}
                   className="mt-1.5 w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent disabled:opacity-40"
-                  title="Approximate — Claude estimates distance from general geography"
+                  title="Approximate — AI estimates distance from general geography"
                 />
               </div>
 
@@ -4841,7 +4841,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
               </div>
 
               <div>
-                <div className="text-[9px] font-mono uppercase tracking-widest text-text-muted mb-1" title="ICP score = Claude's 1-10 self-rating of how well each company fits the criteria. Higher = stronger match.">
+                <div className="text-[9px] font-mono uppercase tracking-widest text-text-muted mb-1" title="ICP score = AI's 1-10 self-rating of how well each company fits the criteria. Higher = stronger match.">
                   Sort by
                 </div>
                 <select
@@ -5308,7 +5308,7 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
                   className="w-full text-left p-3 rounded border border-border hover:border-accent/40"
                 >
                   <div className="text-sm font-medium text-text-primary">Add as-is · free</div>
-                  <div className="text-[11px] text-text-muted mt-0.5">Use Claude's general-knowledge contacts. Fast and free, but emails and titles may be inaccurate.</div>
+                  <div className="text-[11px] text-text-muted mt-0.5">Use AI general-knowledge contacts. Fast and free, but emails and titles may be inaccurate.</div>
                 </button>
               </div>
               <button onClick={() => setPendingVerifyIdx(null)} className="w-full text-xs text-text-muted hover:text-text-primary py-1">

@@ -4,7 +4,6 @@ import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import GlobalSearch from '../GlobalSearch'
 import ImpersonationBanner from '../ImpersonationBanner'
-import OnboardingBanner from '../onboarding/OnboardingBanner'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useSessionTimeout } from '@/hooks/useSessionTimeout'
 import { useUsageHeartbeat } from '@/hooks/useUsageHeartbeat'
@@ -83,7 +82,6 @@ export default function AppShell({ children }) {
 
       <div className={`flex-1 flex flex-col transition-all duration-200 ml-0 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-[220px]'}`}>
         <ImpersonationBanner />
-        <OnboardingBanner />
         <TopBar onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} mobileMenuOpen={mobileMenuOpen} />
         <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto pb-20 md:pb-6">
           {children}

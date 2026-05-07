@@ -92,17 +92,21 @@ export function useOnboarding(): UseOnboardingAPI {
       if (!cancelled) setChecklistItems(cl)
       setLoaded(true)
 
-      // First-login-only auto-show. Three independent guards must
-      // all be clean for the modal to open automatically:
+      // First-login-only auto-show. The modal is meant to fire
+      // exactly once for a given user, ever — across devices,
+      // browsers, and incognito sessions. Three independent guards
+      // must all be clean for it to open:
       //   1. DB hasn't recorded a completion or skip
       //   2. profile flags don't say complete or skipped
       //   3. localStorage hasn't recorded that we already showed
-      //      this modal once for this user
-      // Once we show, immediately set the localStorage flag so a
-      // refresh during the flow doesn't reopen the modal on the
-      // next mount — the user stays in whatever step they were on
-      // but it won't *reappear* uninvited. Resume from the banner
-      // still works.
+      //      this modal once for this user (defense against the
+      //      DB skip write losing a race with a hard reload)
+      // The instant we decide to show, we ALSO persist a skip in
+      // the DB. That way, if the user closes the tab without
+      // clicking through any step, a subsequent login on a
+      // different device / a fresh browser still sees `skipped_at`
+      // set and won't re-prompt. The user can re-open the modal
+      // manually from the user menu via resumeOnboarding().
       let seenOnce = false
       try { seenOnce = localStorage.getItem(seenOnceKey(userId!)) === '1' } catch { /* SSR / private mode */ }
       const shouldAutoShow =
@@ -114,6 +118,11 @@ export function useOnboarding(): UseOnboardingAPI {
       if (shouldAutoShow) {
         setIsOnboardingVisible(true)
         try { localStorage.setItem(seenOnceKey(userId!), '1') } catch { /* ignore */ }
+        // Persist "shown once" to the DB immediately. Don't await —
+        // a slow Supabase round-trip shouldn't block the modal from
+        // appearing. Errors are non-fatal: the localStorage flag is
+        // still set, so this device won't re-auto-show either way.
+        skipOnboardingSvc(userId!).catch(() => { /* best-effort */ })
       }
     }
     load()

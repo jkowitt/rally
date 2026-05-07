@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { ChevronDown, Settings, LogOut, User, Mail, ShieldCheck, BookOpen } from 'lucide-react'
+import { useOnboarding } from '@/hooks/useOnboarding'
+import { ChevronDown, Settings, LogOut, User, Mail, ShieldCheck, BookOpen, PlayCircle } from 'lucide-react'
 
 // UserMenu — replaces the standalone "name + role pill + Sign Out"
 // strip in the top-right of the TopBar with a single clickable
@@ -17,6 +18,7 @@ import { ChevronDown, Settings, LogOut, User, Mail, ShieldCheck, BookOpen } from
 // the menu is short.
 export default function UserMenu() {
   const { profile, signOut } = useAuth()
+  const { resumeOnboarding } = useOnboarding()
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
 
@@ -121,6 +123,26 @@ export default function UserMenu() {
               sub="Outlook · Gmail · Notifications"
               onClick={() => setOpen(false)}
             />
+            <MenuItem
+              to="/app/manual"
+              icon={BookOpen}
+              label="User manual"
+              sub="Every feature, with steps"
+              onClick={() => setOpen(false)}
+            />
+            <button
+              onClick={() => { setOpen(false); resumeOnboarding() }}
+              role="menuitem"
+              className="w-full flex items-start gap-2 px-3 py-2 hover:bg-bg-card transition-colors text-left"
+            >
+              <PlayCircle className="w-3.5 h-3.5 text-text-muted mt-0.5 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-text-primary leading-tight">Replay setup</div>
+                <div className="text-[10px] text-text-muted leading-tight mt-0.5">
+                  Re-open the first-login walkthrough
+                </div>
+              </div>
+            </button>
             {(role === 'developer' || role === 'admin') && (
               <MenuItem
                 to="/app/developer"

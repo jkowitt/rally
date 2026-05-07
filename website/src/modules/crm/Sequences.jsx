@@ -8,6 +8,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import { Button, Card, EmptyState, Badge } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
 import { Mail, Linkedin, Phone, ListChecks, Activity, Zap, Plus, Trash2, BarChart3, Pencil, X } from 'lucide-react'
+import SequenceAIBuilder from '@/components/sequences/SequenceAIBuilder'
 
 // Sequences — list, create, edit, and review analytics for prospect
 // outreach cadences. Two tabs:
@@ -87,6 +88,7 @@ export default function Sequences() {
 
       <div className="flex gap-1 bg-bg-card rounded-lg p-1 w-fit">
         <button onClick={() => setTab('builder')} className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'builder' ? 'bg-accent text-bg-primary' : 'text-text-muted hover:text-text-primary'}`}>Builder</button>
+        <button onClick={() => setTab('ai')} className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'ai' ? 'bg-accent text-bg-primary' : 'text-text-muted hover:text-text-primary'}`}>AI Builder</button>
         <button onClick={() => setTab('analytics')} className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${tab === 'analytics' ? 'bg-accent text-bg-primary' : 'text-text-muted hover:text-text-primary'}`}>Analytics</button>
       </div>
 
@@ -142,6 +144,12 @@ export default function Sequences() {
             )}
           </div>
         </div>
+      )}
+
+      {tab === 'ai' && (
+        <SequenceAIBuilder
+          sequence={sequences.find(s => s.id === selectedId) || sequences[0]}
+        />
       )}
 
       {tab === 'analytics' && <SequenceAnalytics propertyId={profile?.property_id} />}

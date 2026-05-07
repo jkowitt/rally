@@ -61,18 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) console.warn('Profile fetch error:', error.message)
 
       if (!data) {
-        // Profile doesn't exist yet — create one
+        // Profile doesn't exist yet — create the bare row. Do NOT
+        // auto-attach to a random existing property: that's a
+        // multi-tenant data bleed waiting to happen. Leave
+        // property_id null and let PropertyBootstrap (rendered by
+        // AppShell) prompt the user to name their workspace.
         const { data: { user } } = await supabase.auth.getUser()
         const email = user?.email || ''
         const role: 'developer' | 'admin' =
           email.toLowerCase() === DEV_EMAIL ? 'developer' : 'admin'
-
-        // Try to find or create a default property
-        let propertyId: string | null = null
-        const { data: existingProps } = await supabase.from('properties').select('id').limit(1)
-        if (existingProps && existingProps.length > 0) {
-          propertyId = existingProps[0].id as string
-        }
 
         const profileData: Record<string, unknown> = {
           id: userId,
@@ -81,7 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role,
           onboarding_completed: false,
         }
-        if (propertyId) profileData.property_id = propertyId
 
         const { data: newProfile } = await supabase
           .from('profiles')

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 const FeatureSuggestion = lazy(() => import('../FeatureSuggestion'))
+const PropertyBootstrap = lazy(() => import('../onboarding/PropertyBootstrap'))
 
 export default function AppShell({ children }) {
   useSessionTimeout()
@@ -99,6 +100,13 @@ export default function AppShell({ children }) {
         {/* Mobile bottom nav */}
         <MobileBottomNav />
       </div>
+
+      {/* Bootstrap a workspace for users who somehow ended up signed
+          in without one (email-confirmation flow + legacy accounts).
+          Renders nothing when profile.property_id is set. */}
+      <Suspense fallback={null}>
+        <PropertyBootstrap />
+      </Suspense>
 
       {/* Feedback modal (both feature requests + bug reports). */}
       {feedbackKind && (

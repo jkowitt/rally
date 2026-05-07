@@ -49,10 +49,11 @@ export default function ChecklistWidget() {
   if (profile.onboarding_completed && total > 0 && completed / total >= 0.5) return null
 
   return (
-    // Stacks above the Issue bubble + Prospecting copilot pill so
-    // the floaters don't collide. Compact width when collapsed —
-    // opens to the full 320px panel on click.
-    <div className={`fixed z-30 right-3 md:right-5 bottom-[216px] md:bottom-[152px] ${expanded ? 'w-[calc(100vw-24px)] sm:w-80 max-w-sm' : 'w-auto'}`}>
+    // Bottom-row floater: sits to the left of the Issue bubble
+    // (which sits left of the Prospecting copilot pill). Compact
+    // width when collapsed — opens to the full 320px panel on
+    // click and grows upward (anchored at the bottom edge).
+    <div className={`fixed z-30 bottom-20 md:bottom-5 right-[124px] md:right-[280px] ${expanded ? 'w-[calc(100vw-140px)] sm:w-80 max-w-sm' : 'w-auto'}`}>
       <div className="bg-bg-surface border border-accent/40 rounded-lg shadow-2xl overflow-hidden transition-all">
         {/* Header */}
         <div

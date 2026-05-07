@@ -115,15 +115,16 @@ export default function AppShell({ children }) {
         </Suspense>
       )}
 
-      {/* Floating "Report an Issue" bubble. Stacks above the
-          Prospecting copilot pill (which lives at bottom-5 right-5)
-          so the two never collide. On mobile we offset further up
-          to clear the bottom nav. */}
+      {/* Floating "Report an Issue" bubble. Sits horizontally to the
+          left of the Prospecting copilot pill (which is anchored at
+          bottom-5 right-5). On mobile we lift it above the bottom
+          nav AND keep it left-of-copilot so all three floaters
+          form a single bottom row instead of stacking vertically. */}
       <button
         onClick={() => setFeedbackKind('issue')}
         title="Report an Issue"
         aria-label="Report an Issue"
-        className="fixed z-40 bottom-[152px] md:bottom-24 right-4 md:right-5 w-12 h-12 rounded-full bg-bg-surface border border-border shadow-xl text-text-secondary hover:text-accent hover:border-accent/40 flex items-center justify-center transition-colors"
+        className="fixed z-40 bottom-20 md:bottom-5 right-[64px] md:right-[212px] w-12 h-12 rounded-full bg-bg-surface border border-border shadow-xl text-text-secondary hover:text-accent hover:border-accent/40 flex items-center justify-center transition-colors"
       >
         <Bug className="w-5 h-5" aria-hidden="true" />
       </button>

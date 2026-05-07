@@ -6,7 +6,7 @@ import { useFeatureFlags, HIDDEN_MODULES } from '@/hooks/useFeatureFlags'
 import { getFlagMeta } from '@/lib/featureFlagMeta'
 import { useToast } from '@/components/Toast'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import APIUsageBanner from '@/components/APIUsageBanner'
+import APIUsageBanner, { CONTACT_LOOKUP_LIMITS } from '@/components/APIUsageBanner'
 import { logAudit } from '@/lib/audit'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line } from 'recharts'
 
@@ -476,8 +476,8 @@ export default function DeveloperDashboard() {
           .select('user_id, property_id, credits_used')
           .in('service', ['apollo', 'hunter'])
           .gte('called_at', startOfMonth.toISOString()),
-        supabase.from('profiles').select('id, full_name, email, property_id'),
-        supabase.from('properties').select('id, name'),
+        supabase.from('profiles').select('id, full_name, email, property_id, role'),
+        supabase.from('properties').select('id, name, plan'),
       ])
       const profileById = new Map((profilesRes.data || []).map(p => [p.id, p]))
       const propertyById = new Map((propertiesRes.data || []).map(p => [p.id, p]))
@@ -499,19 +499,28 @@ export default function DeveloperDashboard() {
       const userRows = Array.from(byUser.entries()).map(([uid, v]) => {
         const p = profileById.get(uid)
         const prop = p?.property_id ? propertyById.get(p.property_id) : null
+        const plan = prop?.plan || 'free'
+        const cap = p?.role === 'developer' ? Infinity : (CONTACT_LOOKUP_LIMITS[plan] ?? CONTACT_LOOKUP_LIMITS.free)
         return {
           user_id: uid,
           name: p?.full_name || p?.email || 'Unknown user',
           email: p?.email || null,
           company: prop?.name || '—',
+          plan,
+          cap,
+          credits: v.credits,
+          pctOfCap: cap === Infinity ? 0 : Math.round((v.credits / cap) * 100),
+        }
+      }).sort((a, b) => b.credits - a.credits)
+      const propertyRows = Array.from(byProperty.entries()).map(([pid, v]) => {
+        const prop = propertyById.get(pid)
+        return {
+          property_id: pid,
+          company: prop?.name || 'Unknown company',
+          plan: prop?.plan || 'free',
           credits: v.credits,
         }
       }).sort((a, b) => b.credits - a.credits)
-      const propertyRows = Array.from(byProperty.entries()).map(([pid, v]) => ({
-        property_id: pid,
-        company: propertyById.get(pid)?.name || 'Unknown company',
-        credits: v.credits,
-      })).sort((a, b) => b.credits - a.credits)
       return { byUser: userRows, byProperty: propertyRows }
     },
   })
@@ -944,18 +953,35 @@ export default function DeveloperDashboard() {
           {/* Contact-lookup credits this month — broken down by
               user and by property. Apollo + Hunter combined since
               they share a single 25-credit monthly bucket per user. */}
-          <Panel title="Contact Lookups This Month — by User">
+          <Panel
+            title="Contact Lookups This Month — by User"
+            actions={
+              <span className="text-[10px] text-text-muted font-mono">
+                Caps: free {CONTACT_LOOKUP_LIMITS.free} · starter {CONTACT_LOOKUP_LIMITS.starter} · pro {CONTACT_LOOKUP_LIMITS.pro} · enterprise {CONTACT_LOOKUP_LIMITS.enterprise}
+              </span>
+            }
+          >
             {lookupBreakdown?.byUser?.length ? (
               <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                {lookupBreakdown.byUser.map(r => (
-                  <div key={r.user_id} className="flex items-center justify-between py-1 border-b border-border last:border-b-0">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm text-text-primary truncate">{r.name}</div>
-                      <div className="text-[10px] text-text-muted truncate">{r.company}{r.email ? ` · ${r.email}` : ''}</div>
+                {lookupBreakdown.byUser.map(r => {
+                  const overLimit = r.cap !== Infinity && r.credits >= r.cap
+                  const nearLimit = !overLimit && r.cap !== Infinity && r.pctOfCap >= 80
+                  const usageColor = overLimit ? 'text-danger' : nearLimit ? 'text-warning' : 'text-accent'
+                  return (
+                    <div key={r.user_id} className="flex items-center justify-between py-1 border-b border-border last:border-b-0">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-text-primary truncate">{r.name}</div>
+                        <div className="text-[10px] text-text-muted truncate">{r.company}{r.email ? ` · ${r.email}` : ''}</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded bg-bg-card text-text-muted">{r.plan}</span>
+                        <span className={`text-xs font-mono ${usageColor}`}>
+                          {r.credits}/{r.cap === Infinity ? '∞' : r.cap}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-xs text-accent font-mono shrink-0 ml-2">{r.credits}</span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="text-xs text-text-muted">No contact lookups this month.</div>
@@ -968,7 +994,10 @@ export default function DeveloperDashboard() {
                 {lookupBreakdown.byProperty.map(r => (
                   <div key={r.property_id} className="flex items-center justify-between py-1 border-b border-border last:border-b-0">
                     <span className="text-sm text-text-primary truncate">{r.company}</span>
-                    <span className="text-xs text-accent font-mono shrink-0 ml-2">{r.credits}</span>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="text-[9px] uppercase tracking-wider font-mono px-1.5 py-0.5 rounded bg-bg-card text-text-muted">{r.plan}</span>
+                      <span className="text-xs text-accent font-mono">{r.credits}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2584,10 +2613,13 @@ function MiniKPI({ label, value, sub, accent }) {
   )
 }
 
-function Panel({ title, children }) {
+function Panel({ title, children, actions }) {
   return (
     <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
-      <h3 className="text-sm font-mono text-text-muted uppercase mb-3">{title}</h3>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <h3 className="text-sm font-mono text-text-muted uppercase">{title}</h3>
+        {actions && <div className="shrink-0">{actions}</div>}
+      </div>
       {children}
     </div>
   )

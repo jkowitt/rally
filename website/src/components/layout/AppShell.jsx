@@ -11,7 +11,7 @@ import { useUsageHeartbeat } from '@/hooks/useUsageHeartbeat'
 import { on } from '@/lib/appEvents'
 import {
   Home, LayoutGrid, Target, CheckSquare, Handshake,
-  FileText, Package, Settings, Users, SlidersHorizontal,
+  FileText, Package, Settings, Users, SlidersHorizontal, Bug,
 } from 'lucide-react'
 
 const FeatureSuggestion = lazy(() => import('../FeatureSuggestion'))
@@ -21,7 +21,10 @@ export default function AppShell({ children }) {
   useUsageHeartbeat()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [showSuggestion, setShowSuggestion] = useState(false)
+  // null = closed; otherwise the modal renders in the matching kind.
+  // Two channels feed it: 'open-suggestion' for the sidebar feature
+  // request, 'open-issue' for the floating bug bubble.
+  const [feedbackKind, setFeedbackKind] = useState(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const location = useLocation()
 
@@ -51,8 +54,9 @@ export default function AppShell({ children }) {
     return () => { document.body.style.overflow = '' }
   }, [mobileMenuOpen])
 
-  // Listen for suggestion modal trigger
-  useEffect(() => on('open-suggestion', () => setShowSuggestion(true)), [])
+  // Listen for both feedback triggers
+  useEffect(() => on('open-suggestion', () => setFeedbackKind('feature')), [])
+  useEffect(() => on('open-issue', () => setFeedbackKind('issue')), [])
 
   return (
     <div className="min-h-screen bg-bg-primary flex">
@@ -96,12 +100,23 @@ export default function AppShell({ children }) {
         <MobileBottomNav />
       </div>
 
-      {/* Feature suggestion modal */}
-      {showSuggestion && (
+      {/* Feedback modal (both feature requests + bug reports). */}
+      {feedbackKind && (
         <Suspense fallback={null}>
-          <FeatureSuggestion onClose={() => setShowSuggestion(false)} />
+          <FeatureSuggestion kind={feedbackKind} onClose={() => setFeedbackKind(null)} />
         </Suspense>
       )}
+
+      {/* Floating "Report an Issue" bubble — bottom-right, sits above
+          the mobile bottom nav. One-tap opens the issue form. */}
+      <button
+        onClick={() => setFeedbackKind('issue')}
+        title="Report an Issue"
+        aria-label="Report an Issue"
+        className="fixed z-40 bottom-20 md:bottom-5 right-4 md:right-5 w-12 h-12 rounded-full bg-bg-surface border border-border shadow-xl text-text-secondary hover:text-accent hover:border-accent/40 flex items-center justify-center transition-colors"
+      >
+        <Bug className="w-5 h-5" aria-hidden="true" />
+      </button>
 
     </div>
   )

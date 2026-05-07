@@ -383,28 +383,27 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
 
       {showLabels && (
         <div className="border-t border-border px-4 py-3 space-y-2">
-          {/* Additional Features + Suggest a Feature are gated behind
-              feature_flags.dev_addon_panel (default OFF). Re-enable
-              from Dev Tools when the add-on catalog is ready to ship
-              to customers. */}
+          {/* "Additional Features" surfaces the add-on catalog and is
+              gated behind feature_flags.dev_addon_panel (default OFF
+              until the catalog is ready to sell). "Suggest a Feature"
+              stays visible for everyone — it's a pure feedback
+              channel and doesn't promise anything for sale. */}
           {flags.dev_addon_panel && (
-            <>
-              <button
-                onClick={() => setAddonPanelOpen(true)}
-                className="w-full flex items-center gap-1.5 text-left text-[11px] text-accent hover:opacity-80 transition-opacity font-medium"
-              >
-                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-                Additional Features
-              </button>
-              <button
-                onClick={() => emit('open-suggestion')}
-                className="w-full flex items-center gap-1.5 text-left text-[11px] text-text-muted hover:text-accent transition-colors"
-              >
-                <Lightbulb className="w-3.5 h-3.5" aria-hidden="true" />
-                Suggest a Feature
-              </button>
-            </>
+            <button
+              onClick={() => setAddonPanelOpen(true)}
+              className="w-full flex items-center gap-1.5 text-left text-[11px] text-accent hover:opacity-80 transition-opacity font-medium"
+            >
+              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+              Additional Features
+            </button>
           )}
+          <button
+            onClick={() => emit('open-suggestion')}
+            className="w-full flex items-center gap-1.5 text-left text-[11px] text-text-muted hover:text-accent transition-colors"
+          >
+            <Lightbulb className="w-3.5 h-3.5" aria-hidden="true" />
+            Suggest a Feature
+          </button>
           <div className="text-[10px] text-text-muted font-mono">v1.0.0</div>
         </div>
       )}

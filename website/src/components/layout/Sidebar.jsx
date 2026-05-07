@@ -131,7 +131,9 @@ function getProspectingSections() {
         // Keeps the search UX in one place without duplicating it.
         { to: '/app/crm/pipeline?find=1', label: 'Find Prospects' },
         { to: '/app/crm/enrichment-queue', label: 'Bulk Enrich' },
-        { to: '/app/crm/lookalikes', label: 'Lookalikes' },
+        // Lookalikes intentionally not surfaced in nav — the route
+        // (/app/crm/lookalikes) still works for anyone who deep-links
+        // or for QA, but we're not promoting the feature.
         { to: '/app/crm/signals', label: 'Signal Radar' },
         { to: '/app/crm/relationships', label: 'Relationship Search' },
       ],

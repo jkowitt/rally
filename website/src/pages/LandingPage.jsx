@@ -862,14 +862,17 @@ function AISection() {
 }
 
 /* ─── WHY LOUD LEGACY ─── */
+// Industry-agnostic. Bullets reflect the CRM + Prospecting
+// positioning rather than the old sports/sponsorship-specific
+// pitch (no more VALORA, contracts, "exclusively for sports").
 function WhyLoudLegacy() {
   const points = [
-    { title: 'Built exclusively for sports', desc: 'Not a generic CRM. Every workflow, asset category, and data model is designed for the sponsorship sales process.' },
+    { title: 'Per-workspace, not per-seat', desc: 'Every plan includes a team — Starter ships with 3 seats, Pro with 10. No surprise bills when you add a teammate.' },
     { title: 'Verified contact intelligence', desc: 'Real decision-maker names, verified emails, and LinkedIn profiles from industry-leading databases. Not guesses — actual contacts.' },
-    { title: 'Upload-to-insight in seconds', desc: 'Upload a contract PDF and watch AI extract every benefit, contact, and revenue figure instantly. No manual data entry.' },
-    { title: 'Know your inventory value', desc: 'VALORA tells you if you\'re underpricing assets, when to raise rates, and what similar properties charge. Data-driven pricing.' },
-    { title: 'Mobile-first design', desc: 'Full functionality on your phone. Click-to-call contacts, manage your pipeline, read newsletters, and update deals from anywhere.' },
-    { title: 'Enterprise security, startup speed', desc: 'Row-level security, team hierarchy with role-based access, and modular design. Start with CRM, unlock modules as you grow.' },
+    { title: 'AI prospecting that actually works', desc: 'Describe who you want and the AI returns named companies with ICP scores, decision-makers, and one-click pipeline add. No CSVs, no manual research.' },
+    { title: 'Pipeline you can trust', desc: 'Drag-and-drop CRM, weighted forecasts, stale-deal alerts, and a full activity timeline so nothing falls through the cracks.' },
+    { title: 'Mobile-first design', desc: 'Full functionality on your phone. Click-to-call contacts, manage your pipeline, and update deals from anywhere.' },
+    { title: 'Free forever to start', desc: 'A real free tier — not a 14-day trial. Try the CRM and AI prospecting with no credit card. Upgrade only when you outgrow it.' },
   ]
 
   return (
@@ -877,8 +880,8 @@ function WhyLoudLegacy() {
       <div className="max-w-6xl mx-auto">
         <SectionHeader
           tag="Why Us"
-          title="Purpose-built for the sports business"
-          description="Generic tools weren't built for the unique workflows of sponsorship sales, event operations, and media valuations."
+          title="Built for revenue teams that ship"
+          description="Generic CRMs charge per seat and bury prospecting behind upgrades. Loud Legacy bundles them, prices for accessibility, and scales with the team."
         />
 
         <motion.div
@@ -906,6 +909,10 @@ function WhyLoudLegacy() {
 }
 
 /* ─── CTA ─── */
+// Industry-agnostic — same pitch every visitor sees, regardless of
+// which industry chip they previously selected. Industry param kept
+// in the signup link so the post-signup workspace still gets the
+// right defaults.
 function CTA({ industry }) {
   return (
     <section id="contact" className="py-24 px-6 bg-bg-surface border-t border-border">
@@ -917,7 +924,7 @@ function CTA({ industry }) {
         className="max-w-2xl mx-auto text-center"
       >
         <motion.h2 variants={fadeUp} className="text-3xl md:text-4xl font-bold text-text-primary">
-          Ready to modernize your {industry.cta}?
+          Ready to modernize your revenue team?
         </motion.h2>
         <motion.p variants={fadeUp} className="text-text-secondary mt-4 leading-relaxed">
           Loud Legacy is built for teams who are ready to move beyond spreadsheets and disconnected tools.
@@ -925,7 +932,7 @@ function CTA({ industry }) {
         </motion.p>
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
           <Link
-            to={`/login?industry=${industry._registrationId || industry.id}`}
+            to={`/login?mode=signup${industry?._registrationId || industry?.id ? `&industry=${industry._registrationId || industry.id}` : ''}`}
             className="bg-accent text-bg-primary px-8 py-3.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
           >
             Create Your Free Account

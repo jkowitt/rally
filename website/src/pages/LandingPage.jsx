@@ -69,7 +69,12 @@ function WelcomeGate() {
       {/* Grid background */}
       <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'linear-gradient(#E8B84B 1px, transparent 1px), linear-gradient(90deg, #E8B84B 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
 
-      <div className={`relative w-full mx-auto px-6 ${step === 'plans' ? 'max-w-6xl' : 'max-w-lg'}`}>
+      {/* Parent wrapper stays at a single width so the AnimatePresence
+          exit animation isn't interrupted by a parent reflow. Each
+          step's motion.div sets its own max-width + mx-auto, so the
+          choose / returning steps stay narrow while the plans grid
+          fills out the wider modal. */}
+      <div className="relative w-full mx-auto px-6 max-w-6xl">
         <AnimatePresence mode="wait">
           {/* Step 1: New or Returning */}
           {step === 'choose' && (
@@ -79,7 +84,7 @@ function WelcomeGate() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.35 }}
-              className="text-center space-y-6"
+              className="mx-auto max-w-lg text-center space-y-6"
             >
               <div>
                 <motion.span
@@ -270,7 +275,7 @@ function WelcomeGate() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.35 }}
-              className="text-center space-y-8"
+              className="mx-auto max-w-lg text-center space-y-8"
             >
               <div>
                 <motion.span

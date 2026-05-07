@@ -296,31 +296,36 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                 </motion.p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* items-stretch on the grid + flex-1 on the bullet list
+                  forces every card to the tallest sibling's height so
+                  the CTA buttons line up across the row. pt-7 leaves
+                  headroom for the absolutely-positioned "Most popular"
+                  ribbon on the featured card. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch pt-3">
                 {PLAN_TIERS.map((tier, i) => (
                   <motion.div
                     key={tier.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.25 + i * 0.08 }}
-                    className={`relative flex flex-col rounded-lg border p-5 text-left ${
+                    className={`relative h-full flex flex-col rounded-lg border p-5 text-left ${
                       tier.featured
                         ? 'border-accent bg-accent/5'
                         : 'border-border bg-bg-surface'
                     }`}
                   >
                     {tier.featured && (
-                      <div className="absolute -top-2 right-4 text-[9px] font-mono uppercase tracking-widest bg-accent text-bg-primary px-2 py-0.5 rounded">
+                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-mono uppercase tracking-widest bg-accent text-bg-primary px-2 py-0.5 rounded whitespace-nowrap">
                         Most popular
                       </div>
                     )}
                     <div className="text-sm font-semibold text-text-primary">{tier.name}</div>
-                    <div className="text-[11px] text-text-muted mt-0.5">{tier.tagline}</div>
+                    <div className="text-[11px] text-text-muted mt-0.5 min-h-[28px]">{tier.tagline}</div>
                     <div className="mt-3 flex items-baseline gap-1">
                       <span className="text-2xl font-bold text-text-primary">${tier.monthly}</span>
                       <span className="text-[11px] text-text-muted">/mo</span>
                     </div>
-                    <ul className="mt-4 space-y-1.5 text-[12px] text-text-secondary">
+                    <ul className="mt-4 space-y-1.5 text-[12px] text-text-secondary flex-1">
                       {tier.highlights.map(f => (
                         <li key={f.label} className="flex items-start gap-2">
                           <span

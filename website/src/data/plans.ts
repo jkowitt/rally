@@ -48,7 +48,7 @@ export const PLAN_TIERS: PlanTier[] = [
   {
     id: 'starter',
     name: 'Starter',
-    tagline: 'Cheaper than 1 seat of HubSpot',
+    tagline: 'For solo reps and small teams',
     audience: 'For solo reps and small teams running an active pipeline',
     monthly: 29,
     annual: 290,
@@ -67,7 +67,7 @@ export const PLAN_TIERS: PlanTier[] = [
   {
     id: 'pro',
     name: 'Pro',
-    tagline: 'One-tenth the cost of HubSpot Pro',
+    tagline: 'For revenue teams moving volume',
     audience: 'For revenue teams that need to move volume',
     monthly: 79,
     annual: 790,

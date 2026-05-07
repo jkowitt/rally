@@ -55,9 +55,11 @@ export default function PricingPage() {
         </div>
       </header>
 
-      {/* Plan cards */}
+      {/* Plan cards. items-stretch + flex-1 inside the cards keeps
+          every CTA button on the same baseline regardless of how many
+          highlight bullets each tier has. */}
       <section className="max-w-6xl mx-auto px-5 sm:px-8 pb-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch pt-3">
           {PLAN_TIERS.map(tier => (
             <PlanCard key={tier.id} tier={tier} billing={billing} />
           ))}
@@ -125,19 +127,19 @@ function PlanCard({ tier, billing }) {
 
   return (
     <div
-      className={`relative flex flex-col rounded-lg border p-5 text-left ${
+      className={`relative h-full flex flex-col rounded-lg border p-5 text-left ${
         tier.featured
           ? 'border-accent bg-accent/5 shadow-lg shadow-accent/10'
           : 'border-border bg-bg-surface'
       }`}
     >
       {tier.featured && (
-        <div className="absolute -top-2 right-4 text-[9px] font-mono uppercase tracking-widest bg-accent text-bg-primary px-2 py-0.5 rounded">
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-mono uppercase tracking-widest bg-accent text-bg-primary px-2 py-0.5 rounded whitespace-nowrap">
           Most popular
         </div>
       )}
       <div className="text-sm font-semibold text-text-primary">{tier.name}</div>
-      <div className="text-[11px] text-text-muted mt-0.5">{tier.tagline}</div>
+      <div className="text-[11px] text-text-muted mt-0.5 min-h-[28px]">{tier.tagline}</div>
       <div className="mt-4 flex items-baseline gap-1">
         <span className="text-3xl font-bold text-text-primary">{displayPrice}</span>
         <span className="text-[11px] text-text-muted">{periodLabel}</span>

@@ -22,6 +22,10 @@ export const FLAG_META: Record<string, FlagMeta> = {
     label: 'Business Operations Hub',
     description: 'Exposes the Business Operations hub to non-developer roles. Holds finance, marketing, automations, and admin tooling. Default OFF — keep it hidden from reps unless your team uses these tools.',
   },
+  dev_addon_panel: {
+    label: 'Sidebar add-on panel',
+    description: 'Shows the "Additional Features" + "Suggest a Feature" buttons at the bottom of the left sidebar. Hidden by default for the launch positioning (CRM + Prospecting only). Flip ON when the add-on catalog is ready to expose to customers.',
+  },
 
   // ─── Sports ────────────────────────────────────────────────
   show_sports: {

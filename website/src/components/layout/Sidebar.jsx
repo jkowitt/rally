@@ -46,7 +46,8 @@ function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
       label: 'Pipeline',
       items: [
         { to: '/app/crm/pipeline', label: `${t?.deal || 'Deal'} Pipeline` },
-        { to: '/app/crm/accounts', label: 'Accounts' },
+        // Accounts (parent-company rollups) hidden for launch — bring
+        // back once the AM hub side is wired up.
         { to: '/app/crm/assets', label: t?.asset ? `${t.asset}s` : 'Assets' },
         { to: '/app/crm/declined', label: 'Declined' },
       ],
@@ -382,20 +383,28 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
 
       {showLabels && (
         <div className="border-t border-border px-4 py-3 space-y-2">
-          <button
-            onClick={() => setAddonPanelOpen(true)}
-            className="w-full flex items-center gap-1.5 text-left text-[11px] text-accent hover:opacity-80 transition-opacity font-medium"
-          >
-            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-            Additional Features
-          </button>
-          <button
-            onClick={() => emit('open-suggestion')}
-            className="w-full flex items-center gap-1.5 text-left text-[11px] text-text-muted hover:text-accent transition-colors"
-          >
-            <Lightbulb className="w-3.5 h-3.5" aria-hidden="true" />
-            Suggest a Feature
-          </button>
+          {/* Additional Features + Suggest a Feature are gated behind
+              feature_flags.dev_addon_panel (default OFF). Re-enable
+              from Dev Tools when the add-on catalog is ready to ship
+              to customers. */}
+          {flags.dev_addon_panel && (
+            <>
+              <button
+                onClick={() => setAddonPanelOpen(true)}
+                className="w-full flex items-center gap-1.5 text-left text-[11px] text-accent hover:opacity-80 transition-opacity font-medium"
+              >
+                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                Additional Features
+              </button>
+              <button
+                onClick={() => emit('open-suggestion')}
+                className="w-full flex items-center gap-1.5 text-left text-[11px] text-text-muted hover:text-accent transition-colors"
+              >
+                <Lightbulb className="w-3.5 h-3.5" aria-hidden="true" />
+                Suggest a Feature
+              </button>
+            </>
+          )}
           <div className="text-[10px] text-text-muted font-mono">v1.0.0</div>
         </div>
       )}

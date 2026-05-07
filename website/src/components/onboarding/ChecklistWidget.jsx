@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { useAuth } from '@/hooks/useAuth'
 
+const MAX_LOGINS_TO_SHOW = 3
+const loginCountKey = (uid) => `ll_login_count_${uid}`
+
 export default function ChecklistWidget() {
   const { profile } = useAuth()
   const navigate = useNavigate()
@@ -10,20 +13,30 @@ export default function ChecklistWidget() {
   const [expanded, setExpanded] = useState(false)
   const [dismissed, setDismissed] = useState(false)
 
+  // Increment a per-user login counter the first time the widget
+  // mounts in this browser session. Once the count exceeds 3 we
+  // never auto-show the checklist again. Survives page refreshes
+  // because it's keyed in localStorage.
+  useEffect(() => {
+    if (!profile?.id) return
+    const sessionFlag = `ll_login_counted_${profile.id}`
+    if (sessionStorage.getItem(sessionFlag) === '1') return
+    try {
+      const cur = parseInt(localStorage.getItem(loginCountKey(profile.id)) || '0', 10)
+      localStorage.setItem(loginCountKey(profile.id), String(cur + 1))
+      sessionStorage.setItem(sessionFlag, '1')
+    } catch { /* private mode */ }
+  }, [profile?.id])
+
   if (!loaded || !profile) return null
   if (dismissed) return null
 
-  // Hide for returning users — the checklist is only useful during
-  // the first-week ramp-up. After that, it becomes clutter.
-  //
-  // "Returning user" heuristic:
-  //   - Account older than 7 days, OR
-  //   - Onboarding marked complete AND checklist is more than half done
-  // Either signal means they know the product already.
-  const accountAge = profile.created_at
-    ? Math.floor((Date.now() - new Date(profile.created_at).getTime()) / 86400000)
-    : 0
-  if (accountAge > 7) return null
+  // Hide once the user has logged in 3+ times — they know the
+  // product by then and the widget becomes clutter. Reads the
+  // counter the effect above maintains.
+  let logins = 0
+  try { logins = parseInt(localStorage.getItem(loginCountKey(profile.id)) || '0', 10) } catch { /* ignore */ }
+  if (logins > MAX_LOGINS_TO_SHOW) return null
 
   const completed = checklistItems.filter(i => i.completed).length
   const total = checklistItems.length

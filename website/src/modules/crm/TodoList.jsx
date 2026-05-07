@@ -84,7 +84,7 @@ export default function TodoList() {
         .eq('id', draftId)
       if (row?.task_id) {
         await supabase.from('tasks')
-          .update({ status: 'Completed', completed_at: new Date().toISOString() })
+          .update({ status: 'Done', completed_at: new Date().toISOString() })
           .eq('id', row.task_id)
       }
     },
@@ -100,7 +100,7 @@ export default function TodoList() {
   const completeTask = useMutation({
     mutationFn: async (taskId) => {
       await supabase.from('tasks')
-        .update({ status: 'Completed', completed_at: new Date().toISOString() })
+        .update({ status: 'Done', completed_at: new Date().toISOString() })
         .eq('id', taskId)
     },
     onSuccess: () => {

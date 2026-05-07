@@ -1988,6 +1988,14 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
 
           {activeTab === 'activity' && (
             <ErrorBoundary>
+              <div className="flex justify-end mb-2">
+                <button
+                  onClick={() => { onClose(); navigate(`/app/crm/tasks?deal=${deal.id}&new=1`) }}
+                  className="text-xs bg-accent/10 border border-accent/30 text-accent px-3 py-1.5 rounded hover:bg-accent/20 transition-colors"
+                >
+                  + Schedule task
+                </button>
+              </div>
               <DealActivityTimeline dealId={deal.id} propertyId={propertyId} />
             </ErrorBoundary>
           )}

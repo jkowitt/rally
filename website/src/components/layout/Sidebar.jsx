@@ -90,7 +90,6 @@ function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
       label: 'Admin',
       items: [
         { to: '/app/crm/audit', label: 'Audit Log' },
-        { to: '/app/crm/integrations', label: 'Integrations' },
       ],
     },
   ]

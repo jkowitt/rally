@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -166,6 +167,7 @@ export default function TaskManager() {
   const { toast } = useToast()
   const propertyId = profile?.property_id
   const userId = profile?.id
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
@@ -175,6 +177,21 @@ export default function TaskManager() {
   const [notifPermission, setNotifPermission] = useState(
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
   )
+
+  // Deep-link: /app/crm/tasks?deal=<id>&new=1 opens the form pre-bound
+  // to that deal so the deal-detail "Schedule task" button lands here.
+  const dealParam = searchParams.get('deal') || ''
+  const newParam = searchParams.get('new')
+  useEffect(() => {
+    if (newParam && !showForm) {
+      setEditingTask(dealParam ? { deal_id: dealParam } : null)
+      setShowForm(true)
+      // Strip the trigger param so a refresh doesn't reopen the form.
+      const next = new URLSearchParams(searchParams)
+      next.delete('new')
+      setSearchParams(next, { replace: true })
+    }
+  }, [newParam, dealParam, showForm, searchParams, setSearchParams])
 
   const today = toDateString(new Date())
 
@@ -217,12 +234,13 @@ export default function TaskManager() {
       const payload = { ...task }
       if (!payload.deal_id) delete payload.deal_id
       if (!payload.description) delete payload.description
+      // Default a new task to the current user so it shows up in their
+      // To-Do list (TodoList filters on assigned_to = userId).
+      if (!payload.id && !payload.assigned_to) payload.assigned_to = userId
       if (!payload.assigned_to) delete payload.assigned_to
-      // New fields gracefully handled
       if (!payload.task_type) delete payload.task_type
       if (!payload.scheduled_time) delete payload.scheduled_time
       if (!payload.reminder_time) delete payload.reminder_time
-      if (payload.notify === undefined) delete payload.notify
 
       if (payload.id) {
         const { id, ...updates } = payload
@@ -683,7 +701,7 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
         className="bg-bg-surface border border-border rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
       >
         <h2 className="text-lg font-semibold text-text-primary mb-4">
-          {task ? 'Edit Activity' : 'Schedule Activity'}
+          {task?.id ? 'Edit Activity' : 'Schedule Activity'}
         </h2>
 
         <div className="space-y-3">
@@ -767,7 +785,10 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
                 { label: '1 hour', offset: 60 },
               ].map(opt => {
                 function calcReminder() {
-                  const time = form.scheduled_time || form.due_date ? '09:00' : ''
+                  // Anchor on scheduled_time when set; fall back to 09:00
+                  // when only a date is picked so the offset still has
+                  // something to subtract from.
+                  const time = form.scheduled_time || (form.due_date ? '09:00' : '')
                   if (!time) return
                   const [h, m] = time.split(':').map(Number)
                   const mins = h * 60 + m - opt.offset
@@ -816,7 +837,7 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
                 ))}
               </select>
             </div>
-            {task && (
+            {task?.id && (
               <div>
                 <label className="text-xs text-text-muted">Status</label>
                 <select
@@ -854,7 +875,7 @@ function TaskForm({ task, deals, onSave, onCancel, saving }) {
             disabled={saving || !form.title}
             className="flex-1 bg-accent text-bg-primary py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
           >
-            {saving ? 'Saving...' : task ? 'Update Activity' : 'Schedule Activity'}
+            {saving ? 'Saving...' : task?.id ? 'Update Activity' : 'Schedule Activity'}
           </button>
           <button
             type="button"

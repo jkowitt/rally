@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import OnboardingProgress from './OnboardingProgress'
 import WelcomeStep from './steps/WelcomeStep'
@@ -85,6 +86,20 @@ export default function OnboardingModal() {
               onSkip={async () => { await handleFinish() }}
             />
           )}
+        </div>
+
+        {/* Manual link — every step gets a way out into the full
+            user manual so anyone who wants the encyclopedic version
+            (rather than the 3-step quickstart) can jump straight
+            there without hunting through the user menu. */}
+        <div className="px-5 py-3 border-t border-border bg-bg-card/40">
+          <p className="text-[11px] text-text-muted">
+            Want the full tour of every feature?{' '}
+            <Link to="/app/manual" className="text-accent hover:underline">
+              Read the user manual
+            </Link>{' '}
+            — it covers every page in the sidebar with step-by-step usage.
+          </p>
         </div>
       </div>
 

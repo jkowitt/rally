@@ -3,10 +3,6 @@ import { useOnboarding } from '@/hooks/useOnboarding'
 import { useAuth } from '@/hooks/useAuth'
 import { useNowMinute } from '@/hooks/useNow'
 
-// useOnboarding is still a .js file with no type exports.
-// Define the slice we use here so this component is fully typed.
-interface ChecklistItem { key: string; label: string; completed: boolean }
-
 const SNOOZE_KEY = 'll_onboarding_banner_snoozed_until'
 const DISMISS_KEY = 'll_onboarding_banner_dismissed'
 
@@ -21,10 +17,8 @@ export default function OnboardingBanner() {
     progressPercent,
     completedSteps,
     totalSteps,
-    checklistItems: rawChecklistItems,
     resumeOnboarding,
   } = useOnboarding()
-  const checklistItems = (rawChecklistItems || []) as ChecklistItem[]
 
   const [snoozedUntil, setSnoozedUntil] = useState<number>(() => {
     try { return parseInt(localStorage.getItem(SNOOZE_KEY) || '0', 10) || 0 } catch { return 0 }
@@ -37,31 +31,15 @@ export default function OnboardingBanner() {
 
   if (!loaded || !profile || dismissedForever) return null
   if (snoozedUntil > now) return null
-
-  // Hide once everything is genuinely done. We use BOTH the modal
-  // step completion AND the post-onboarding checklist to decide,
-  // because users can finish the modal without completing the
-  // checklist and vice-versa.
-  const checklistDone = checklistItems.length === 0
-    ? true
-    : checklistItems.every(i => i.completed)
-  if (isOnboardingComplete && checklistDone) return null
+  if (isOnboardingComplete) return null
 
   const stepsDone = completedSteps.length
-  const totalChecklist = checklistItems.length
-  const checklistDoneCount = checklistItems.filter(i => i.completed).length
-
-  // Combined progress: count BOTH the 5 modal steps AND the post-onboarding
-  // checklist as part of the same setup journey. Without this, a user who
-  // clicked-through the modal would see "Setup 0%" because only the
-  // checklist remains — which feels broken (they thought they finished).
-  // If the user completed the modal, give 100% credit for those 5 steps
-  // even if some were skipped — they explicitly clicked Done.
-  const effectiveStepsDone = isOnboardingComplete ? totalSteps : stepsDone
-  const totalUnits = totalSteps + totalChecklist
-  const doneUnits = effectiveStepsDone + checklistDoneCount
-  const combinedPercent = totalUnits > 0
-    ? Math.round((doneUnits / totalUnits) * 100)
+  // Banner used to fold in a post-onboarding checklist; that surface
+  // was retired (the floating Getting Started widget caused too much
+  // layout grief) so progress is just the modal steps now.
+  const effectiveStepsDone = stepsDone
+  const combinedPercent = totalSteps > 0
+    ? Math.round((effectiveStepsDone / totalSteps) * 100)
     : progressPercent
 
   function snoozeOneDay() {
@@ -92,7 +70,7 @@ export default function OnboardingBanner() {
           />
         </div>
         <span className="text-text-secondary truncate hidden sm:inline">
-          {effectiveStepsDone}/{totalSteps} steps · {checklistDoneCount}/{totalChecklist} checklist items
+          {effectiveStepsDone}/{totalSteps} steps
         </span>
       </div>
       <div className="flex items-center gap-2">

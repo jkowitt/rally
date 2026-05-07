@@ -111,7 +111,6 @@ const AdminNotifications = lazyRetry(() => import('./pages/admin/Notifications')
 const DailyDigestPreview = lazyRetry(() => import('./pages/admin/DailyDigestPreview'))
 const GrowthHub = lazyRetry(() => import('./modules/growth/GrowthHub'))
 const OnboardingModal = lazyRetry(() => import('./components/onboarding/OnboardingModal'))
-const ChecklistWidget = lazyRetry(() => import('./components/onboarding/ChecklistWidget'))
 const TooltipTour = lazyRetry(() => import('./components/onboarding/TooltipTour'))
 // Private developer-only router — never referenced from any user-facing UI
 const DevRouter = lazyRetry(() => import('./pages/dev/DevRouter'))
@@ -215,7 +214,6 @@ export default function App() {
                     <AppShell>
                       <Suspense fallback={null}>
                         <OnboardingModal />
-                        <ChecklistWidget />
                         <TooltipTour />
                       </Suspense>
                       <ErrorBoundary>

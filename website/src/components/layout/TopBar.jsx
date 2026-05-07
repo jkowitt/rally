@@ -33,10 +33,7 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
 
   const visibleHubs = HUBS.filter(hub => {
     if (hub.id === 'crm') return true
-    // Prospecting is now a section inside the CRM sidebar; the
-    // standalone hub pill is hidden so users don't have two paths
-    // to the same tools. Route still works for deep links.
-    if (hub.id === 'prospect') return false
+    if (hub.id === 'prospect') return true
     if (hub.id === 'accounts') {
       // Account Management is gated by hub_accounts (default ON).
       // Developers always see it so they can flip the toggle.

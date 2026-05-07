@@ -53,10 +53,8 @@ function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
       ],
     },
     {
-      // Prospecting tools surfaced inline in the CRM sidebar instead
-      // of a separate hub. The standalone Prospecting hub still
-      // works as a route, but reps shouldn't have to switch hubs to
-      // find prospects.
+      // Prospecting tools surfaced inline so the same sidebar shows
+      // everywhere — nothing changes when a hub tab is clicked.
       label: 'Prospecting',
       items: [
         { to: '/app/crm/pipeline?find=1', label: 'Find Prospects' },
@@ -319,16 +317,14 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
     }
   }, [location.pathname])
 
-  let navSections = []
-  if (activeHub === 'prospect') {
-    navSections = getProspectingSections()
-  } else if (activeHub === 'crm') {
-    navSections = getCrmSections(t, propertyType, flags, moduleLabels, addons)
-  } else if (activeHub === 'accounts') {
-    navSections = getAccountsSections(t)
-  } else if (activeHub === 'ops') {
-    navSections = getOpsSections(flags, isDeveloper, hasAdminRole, showEmailMarketing, realIsDeveloper)
-  }
+  // One unified sidebar everywhere. Every feature stays visible
+  // regardless of which hub tab is active — the hub pill is now
+  // a visual context indicator, not a sidebar filter. Older
+  // getProspectingSections / getAccountsSections / getOpsSections
+  // helpers are kept for reference but no longer wired up.
+  const navSections = getCrmSections(t, propertyType, flags, moduleLabels, addons)
+  // Mark unused so the linter doesn't complain about dead helpers.
+  void getProspectingSections; void getAccountsSections; void getOpsSections;
 
   const width = mobile ? 'w-[280px]' : collapsed ? 'w-16' : 'w-[220px]'
   const showLabels = mobile || !collapsed

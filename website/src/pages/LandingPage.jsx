@@ -80,17 +80,16 @@ function WelcomeGate() {
           {step === 'choose' && (
             <motion.div
               key="choose"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.35 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
               className="mx-auto max-w-lg text-center space-y-6"
             >
               <div>
                 <motion.span
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.1, duration: 0.5 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                   className="font-mono font-bold text-accent text-2xl inline-block"
                   style={{ letterSpacing: '0.08em', wordSpacing: '-0.3em' }}
                 >
@@ -99,7 +98,6 @@ function WelcomeGate() {
                 <motion.h1
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
                   className="text-text-primary text-2xl sm:text-3xl font-bold mt-4 leading-tight"
                 >
                   Find your next customer.
@@ -109,7 +107,6 @@ function WelcomeGate() {
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
                   className="text-text-secondary text-sm mt-4"
                 >
                   AI-powered prospecting + a CRM built for revenue teams. Discover decision-makers, run your pipeline, and personalize outreach — all in one place. <span className="text-text-primary">$39/mo</span>.
@@ -117,9 +114,8 @@ function WelcomeGate() {
               </div>
 
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 className="space-y-2"
               >
                 <button
@@ -143,7 +139,6 @@ function WelcomeGate() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
                 className="grid grid-cols-3 gap-2 pt-6 mt-6 border-t border-border"
               >
                 <div className="text-center">
@@ -170,17 +165,16 @@ function WelcomeGate() {
           {step === 'plans' && (
             <motion.div
               key="plans"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.35 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
               className="space-y-6 mx-auto max-w-5xl"
             >
               <div className="text-center">
                 <motion.h2
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
                   className="text-2xl font-semibold text-text-primary"
                 >
                   Pick a plan to start
@@ -188,7 +182,6 @@ function WelcomeGate() {
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
                   className="text-text-secondary text-sm mt-2"
                 >
                   CRM + Prospecting on every plan. Email integration only on Enterprise.
@@ -204,9 +197,8 @@ function WelcomeGate() {
                 {PLAN_TIERS.map((tier, i) => (
                   <motion.div
                     key={tier.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25 + i * 0.08 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     className={`relative h-full flex flex-col rounded-lg border p-5 text-left ${
                       tier.featured
                         ? 'border-accent bg-accent/5'
@@ -271,17 +263,16 @@ function WelcomeGate() {
           {step === 'returning' && (
             <motion.div
               key="returning"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.35 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
               className="mx-auto max-w-lg text-center space-y-8"
             >
               <div>
                 <motion.span
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.1, duration: 0.5 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                   className="font-mono font-bold text-accent text-2xl inline-block"
                   style={{ letterSpacing: '0.08em', wordSpacing: '-0.3em' }}
                 >
@@ -290,7 +281,6 @@ function WelcomeGate() {
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
                   className="text-text-primary text-lg mt-4 font-medium"
                 >
                   Welcome back.
@@ -298,9 +288,8 @@ function WelcomeGate() {
               </div>
 
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 className="space-y-3"
               >
                 <Link

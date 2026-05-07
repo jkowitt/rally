@@ -23,7 +23,7 @@ import {
   Search, Phone, Mail, Handshake, StickyNote, Bell,
   FileText, BarChart3, ClipboardList,
 } from 'lucide-react'
-import { on } from '@/lib/appEvents'
+import { on, emit } from '@/lib/appEvents'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail, draftFirstTouchEmail, extractCompaniesFromText } from '@/lib/claude'
@@ -4487,8 +4487,13 @@ function ProspectFinder({ propertyId, onClose, onAdded }) {
 
       const primaryContact = research?.contacts?.[0]
 
-      // Create the deal
-      if (!effectivePropertyId) throw new Error('No company linked to your account. Go to Settings to set up your property.')
+      // Create the deal — if no workspace yet, prompt the
+      // PropertyBootstrap modal directly instead of dead-ending
+      // on a toast that points to "Settings".
+      if (!effectivePropertyId) {
+        emit('open-property-bootstrap')
+        throw new Error('No workspace yet. Name your company in the dialog, then try adding the prospect again.')
+      }
       const dealRow = {
         property_id: effectivePropertyId,
         brand_name: prospect.company_name,

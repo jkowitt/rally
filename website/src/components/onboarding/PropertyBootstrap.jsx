@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { humanError } from '@/lib/humanError'
+import { on } from '@/lib/appEvents'
 import { Building } from 'lucide-react'
 
 // Blocks the entire app until the signed-in user has a property.
 //
-// Why this exists: users can land in this state via two paths —
+// Why this exists: users can land in this state via three paths —
 //   1. Email confirmation flow. signUp returns early when the
 //      user has to click a link first, and the property creation
 //      step in LoginPage never runs. Confirmed users then sign
@@ -15,21 +16,32 @@ import { Building } from 'lucide-react'
 //   2. Profile auto-create on first fetchProfile run. If the user
 //      somehow ended up authed but with no profile row, useAuth
 //      stamps a profile but can't infer the company.
+//   3. Orphaned property reference. profile.property_id points
+//      to a row that's been deleted. The join returns null
+//      properties even though the FK column has a value.
 //
-// Without a property, RLS scopes everything to nothing — pipeline,
-// contacts, prospecting all return zero rows. The app appears
-// broken. This modal forces a property + updates the profile so
-// the rest of the session works normally.
+// Without a usable property, RLS scopes everything to nothing —
+// pipeline, contacts, prospecting all return zero rows. The app
+// appears broken. This modal forces a property + updates the
+// profile so the rest of the session works normally.
 export default function PropertyBootstrap() {
   const { profile, fetchProfile, signOut } = useAuth()
   const { toast } = useToast()
   const [companyName, setCompanyName] = useState('')
   const [saving, setSaving] = useState(false)
+  // Belt-and-suspenders trigger: action handlers can emit
+  // 'open-property-bootstrap' if they detect a missing property
+  // mid-flow. Once forced, the modal stays up until a property
+  // exists.
+  const [forced, setForced] = useState(false)
+  useEffect(() => on('open-property-bootstrap', () => setForced(true)), [])
 
-  // Render only when a profile is loaded but has no property_id.
-  // While the profile is still loading the auth provider already
-  // renders its own splash, so we don't double-cover.
-  if (!profile || profile.property_id) return null
+  // Render when profile is loaded AND either property_id is null
+  // OR the joined properties row is missing (orphaned FK). Also
+  // render when an action handler explicitly forced us open.
+  if (!profile) return null
+  const needsProperty = !profile.property_id || !profile.properties
+  if (!needsProperty && !forced) return null
 
   async function handleCreate(e) {
     e.preventDefault()
@@ -63,6 +75,7 @@ export default function PropertyBootstrap() {
       // Reload the profile so the rest of the app picks up
       // property_id immediately.
       await fetchProfile(profile.id)
+      setForced(false)
       toast({ title: 'Workspace created', description: name, type: 'success' })
     } catch (err) {
       toast({ title: 'Could not create workspace', description: humanError(err), type: 'error' })

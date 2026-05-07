@@ -49,8 +49,11 @@ export default function ChecklistWidget() {
   if (profile.onboarding_completed && total > 0 && completed / total >= 0.5) return null
 
   return (
-    <div className="fixed bottom-20 md:bottom-4 right-3 md:right-4 z-30 w-[calc(100vw-24px)] sm:w-80 max-w-sm">
-      <div className={`bg-bg-surface border border-accent/40 rounded-lg shadow-2xl overflow-hidden transition-all ${expanded ? '' : ''}`}>
+    // Stacks above the Issue bubble + Prospecting copilot pill so
+    // the floaters don't collide. Compact width when collapsed —
+    // opens to the full 320px panel on click.
+    <div className={`fixed z-30 right-3 md:right-5 bottom-[216px] md:bottom-[152px] ${expanded ? 'w-[calc(100vw-24px)] sm:w-80 max-w-sm' : 'w-auto'}`}>
+      <div className="bg-bg-surface border border-accent/40 rounded-lg shadow-2xl overflow-hidden transition-all">
         {/* Header */}
         <div
           className="px-3 py-2.5 bg-gradient-to-r from-accent/10 to-bg-card border-b border-border flex items-center justify-between cursor-pointer"

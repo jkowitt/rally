@@ -450,7 +450,7 @@ function ICPEditor({ draft, setDraft, toggleAttribute, addIndustry, removeItem, 
 
       {/* Free-form description */}
       <div>
-        <label className="text-[9px] text-text-muted uppercase block mb-1">Additional Criteria (tell Claude exactly what you want)</label>
+        <label className="text-[9px] text-text-muted uppercase block mb-1">Additional Criteria (describe exactly what you want)</label>
         <textarea value={draft.ideal_description || ''} onChange={e => setDraft({ ideal_description: e.target.value })} placeholder="e.g. We're a college athletics program looking for local businesses with community focus. Skip national chains. Prefer founder-led companies with $10M-$50M revenue..." rows={3} className="w-full bg-bg-surface border border-border rounded px-2 py-1.5 text-xs text-text-primary" />
       </div>
 

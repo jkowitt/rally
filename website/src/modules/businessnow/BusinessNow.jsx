@@ -81,7 +81,7 @@ export default function BusinessNow() {
       const msg = e?.message || ''
       const description = (msg.includes('FunctionsFetchError') || msg.includes('Failed to fetch') || msg.includes('404'))
         ? 'AI edge functions are not deployed yet. Deploy them in Supabase Dashboard.'
-        : (msg.includes('API key') ? 'Anthropic API key is not configured in Supabase secrets.' : msg || 'Please try again.')
+        : (msg.includes('API key') ? 'AI provider not configured. Contact your admin.' : msg || 'Please try again.')
       toast({ title: 'Briefing failed', description, type: 'error' })
     },
   })

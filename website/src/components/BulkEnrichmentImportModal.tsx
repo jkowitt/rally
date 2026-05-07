@@ -278,11 +278,11 @@ export default function BulkEnrichmentImportModal({ open, onClose, onQueued }: P
             <label className="text-[11px] uppercase tracking-wider font-mono text-text-muted">Enrichment mode</label>
             <div className="grid grid-cols-2 gap-2 mt-1">
               <ModeCard id="claude" current={mode} onPick={setMode}
-                title="Claude (free)" sub="No tokens used. Faster. Less accurate firmographics." />
+                title="AI (free)" sub="No credits used. Faster. Less accurate firmographics." />
               <ModeCard id="apollo" current={mode} onPick={setMode}
-                title="Apollo (paid)" sub="Token cost per row. Verified emails + firmographics." />
+                title="Verified (paid)" sub="One credit per row. Verified emails + firmographics." />
               <ModeCard id="hybrid" current={mode} onPick={setMode}
-                title="Hybrid" sub="Try Apollo first; fall back to Claude on miss." />
+                title="Hybrid" sub="Try verified first; fall back to AI on miss." />
               <ModeCard id="none" current={mode} onPick={setMode}
                 title="No enrichment" sub="Park the rows in the queue. Enrich later." />
             </div>

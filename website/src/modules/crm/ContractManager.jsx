@@ -808,7 +808,7 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
   async function handleGenerate() {
     if (!selectedDeal) return alert('Select a deal first')
     setAiLoading(true)
-    setAiStatus('Generating contract with Claude AI...')
+    setAiStatus('Generating contract with AI...')
     try {
       const result = await generateContract({
         deal_id: selectedDeal,
@@ -828,7 +828,7 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
   async function handleApplyCompanyEdits() {
     if (!contractText) return alert('No contract text to edit')
     setAiLoading(true)
-    setAiStatus('Claude is applying your company detail changes...')
+    setAiStatus('Applying your company detail changes...')
     try {
       const instructions = []
       if (companyDetails.company_name) instructions.push(`Change the company/brand name to "${companyDetails.company_name}"`)
@@ -860,7 +860,7 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
     if (!contractText) return alert('No contract text to edit')
     if (!editInstructions) return alert('Enter editing instructions')
     setAiLoading(true)
-    setAiStatus('Claude is editing the contract...')
+    setAiStatus('Editing the contract...')
     try {
       const result = await editContractText({ contract_text: contractText, instructions: editInstructions })
       setContractText(result.contract_text)
@@ -1162,7 +1162,7 @@ function AIContractEditor({ contract, deals, assets, templates, propertyId, prof
         {/* AI Edit Bar */}
         <div className="flex gap-2">
           <input
-            placeholder="Tell Claude what to change... (e.g., 'add a non-compete clause', 'increase the value to $50,000')"
+            placeholder="What should change? (e.g., 'add a non-compete clause', 'increase the value to $50,000')"
             value={editInstructions}
             onChange={(e) => setEditInstructions(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleEdit() }}

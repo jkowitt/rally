@@ -148,9 +148,9 @@ Use real numbers from the platform data above. Be specific and actionable.`,
             ))}
           </div>
           <input placeholder="Report Title *" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
-          <textarea placeholder="What should this report cover? Claude will use live platform data." value={form.prompt} onChange={e => setForm({ ...form, prompt: e.target.value })} rows={3} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+          <textarea placeholder="What should this report cover? AI will use live platform data." value={form.prompt} onChange={e => setForm({ ...form, prompt: e.target.value })} rows={3} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
           <div className="flex gap-2 flex-wrap">
-            <button onClick={generateReport} disabled={generating || !form.title} className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50">{generating ? 'Generating...' : 'Generate with Claude'}</button>
+            <button onClick={generateReport} disabled={generating || !form.title} className="bg-accent text-bg-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50">{generating ? 'Generating...' : 'Generate with AI'}</button>
             <button onClick={() => setShowCreate(false)} className="text-text-muted text-sm">Cancel</button>
           </div>
         </div>

@@ -53,6 +53,22 @@ function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
       ],
     },
     {
+      // Prospecting tools surfaced inline in the CRM sidebar instead
+      // of a separate hub. The standalone Prospecting hub still
+      // works as a route, but reps shouldn't have to switch hubs to
+      // find prospects.
+      label: 'Prospecting',
+      items: [
+        { to: '/app/crm/pipeline?find=1', label: 'Find Prospects' },
+        { to: '/app/crm/enrichment-queue', label: 'Bulk Enrich' },
+        { to: '/app/crm/signals', label: 'Signal Radar' },
+        { to: '/app/crm/relationships', label: 'Relationship Search' },
+        { to: '/app/crm/sequences', label: 'Sequences' },
+        { to: '/app/crm/priority', label: 'Priority Queue' },
+        { to: '/app/crm/outreach-analytics', label: 'Outreach Analytics' },
+      ],
+    },
+    {
       label: 'Performance',
       items: [
         { to: '/app/crm/velocity', label: 'Sales Velocity' },

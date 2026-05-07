@@ -196,7 +196,7 @@ export default function ProspectingChatPanel({
               <div className="text-[11px] text-text-muted leading-relaxed">
                 {mode === 'outreach'
                   ? <>I can see your draft and the recipient context. Ask for a critique, a rewrite, or follow-up tactics. I&rsquo;m scoped to email + outreach — not a general chatbot.</>
-                  : <>Ask me about prospecting, outreach strategies, or possible targets. I&rsquo;m scoped to those — not a general chatbot. Firmographics I mention are AI-estimated; verify the hard numbers in Apollo/Hunter.</>
+                  : <>Ask me about prospecting, outreach strategies, or possible targets. I&rsquo;m scoped to those — not a general chatbot. Firmographics I mention are AI-estimated; verify the hard numbers via the verified contact lookup.</>
                 }
               </div>
               <div className="space-y-1.5">

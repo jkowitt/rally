@@ -87,7 +87,7 @@ export default function EnrichmentQueue() {
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold">Enrichment Queue</h1>
           <p className="text-[11px] text-text-muted mt-1 max-w-xl">
-            Park a list of companies or prospects here. Apollo (paid) gives you verified firmographics; Claude (free) leans on general knowledge — fast but less accurate.
+            Park a list of companies or prospects here. Verified mode pulls firmographics + decision-makers from premium data sources; AI mode fills gaps from general knowledge — fast but less accurate.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">

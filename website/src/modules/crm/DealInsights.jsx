@@ -13,7 +13,7 @@ function aiErrorMessage(err, action) {
   if (msg.includes('FunctionsFetchError') || msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('404') || msg.includes('not found'))
     return `AI edge functions are not deployed yet. Deploy them in Supabase to ${action}.`
   if (msg.includes('ANTHROPIC_API_KEY') || msg.includes('API key'))
-    return 'Anthropic API key is not configured. Set it in Supabase secrets.'
+    return 'AI provider not configured. Contact your admin.'
   return msg || `Failed to ${action}. Please try again.`
 }
 

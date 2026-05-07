@@ -28,7 +28,7 @@ function getLookupCap(plan, role) {
 
 const LIMITS = {
   contact_lookup: { label: 'Contact Lookups', icon: '👤', combineKeys: ['apollo', 'hunter'] },
-  claude: { label: 'Claude AI', icon: '🤖' },
+  claude: { label: 'AI', icon: '🤖' },
 }
 
 export default function APIUsageBanner({ compact }) {

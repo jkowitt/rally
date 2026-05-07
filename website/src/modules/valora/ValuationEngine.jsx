@@ -76,7 +76,7 @@ export default function ValuationEngine() {
       const msg = e?.message || ''
       const description = (msg.includes('FunctionsFetchError') || msg.includes('Failed to fetch') || msg.includes('404'))
         ? 'AI edge functions are not deployed yet. Deploy them in Supabase Dashboard.'
-        : (msg.includes('API key') ? 'Anthropic API key is not configured in Supabase secrets.' : msg || 'Please try again.')
+        : (msg.includes('API key') ? 'AI provider not configured. Contact your admin.' : msg || 'Please try again.')
       toast({ title: 'Valuation failed', description, type: 'error' })
     },
   })
@@ -229,7 +229,7 @@ export default function ValuationEngine() {
                     <Tooltip contentStyle={{ background: '#141820', border: '1px solid #1E2435', borderRadius: 6, fontSize: 12 }} />
                     <Legend wrapperStyle={{ fontSize: 10 }} />
                     <Bar dataKey="emv" fill="#E8B84B" name="Calculated" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="claude" fill="#52C48A" name="Claude EMV" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="claude" fill="#52C48A" name="AI EMV" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -350,7 +350,7 @@ export default function ValuationEngine() {
                     <th className="px-4 py-3 text-left text-xs text-text-muted font-mono">Date</th>
                     <th className="px-4 py-3 text-right text-xs text-text-muted font-mono">Audience</th>
                     <th className="px-4 py-3 text-right text-xs text-text-muted font-mono">EMV</th>
-                    <th className="px-4 py-3 text-right text-xs text-text-muted font-mono">Claude</th>
+                    <th className="px-4 py-3 text-right text-xs text-text-muted font-mono">AI</th>
                     <th className="px-4 py-3 text-center text-xs text-text-muted font-mono">Market</th>
                   </tr>
                 </thead>
@@ -435,7 +435,7 @@ function ValuationForm({ assets, deals, onRun, onCancel, running, error }) {
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
       <div className="bg-bg-surface border border-border rounded-t-xl sm:rounded-lg p-5 sm:p-6 w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold text-text-primary mb-1">Run AI Valuation</h2>
-        <p className="text-text-muted text-xs mb-4">Claude analyzes broadcast data and returns an estimated media value</p>
+        <p className="text-text-muted text-xs mb-4">AI analyzes broadcast data and returns an estimated media value</p>
         <div className="space-y-3">
           <select value={form.asset_id} onChange={(e) => setForm({ ...form, asset_id: e.target.value })} className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
             <option value="">Select Asset *</option>

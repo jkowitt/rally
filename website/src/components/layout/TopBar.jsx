@@ -33,7 +33,10 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
 
   const visibleHubs = HUBS.filter(hub => {
     if (hub.id === 'crm') return true
-    if (hub.id === 'prospect') return true
+    // Prospecting is now a section inside the CRM sidebar; the
+    // standalone hub pill is hidden so users don't have two paths
+    // to the same tools. Route still works for deep links.
+    if (hub.id === 'prospect') return false
     if (hub.id === 'accounts') {
       // Account Management is gated by hub_accounts (default ON).
       // Developers always see it so they can flip the toggle.
@@ -132,7 +135,12 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
         </div>
       </div>
 
-      {visibleHubs.length > 1 && (
+      {/* Hub-switcher strip suppressed for launch. Prospecting now
+          lives as a section inside the CRM sidebar; the Accounts
+          and Ops hubs are flag-gated and reach a small audience.
+          Re-render the strip when we re-enable a multi-hub model:
+          change the condition to `visibleHubs.length > 1`. */}
+      {false && visibleHubs.length > 1 && (
         <div className="border-t border-border bg-bg-primary/40">
           <div className="px-3 sm:px-4 md:px-6 py-2 flex items-center gap-2 overflow-x-auto">
             {visibleHubs.map(hub => {

@@ -16,9 +16,12 @@ export const STATUSES = [
   'materialized',
 ]
 
+// User-facing labels intentionally don't name the underlying
+// providers (Apollo / Claude). The `key` values stay so the
+// edge function can dispatch to the right backend.
 export const ENRICHMENT_MODES = [
-  { key: 'claude', label: 'Claude (free)' },
-  { key: 'apollo', label: 'Apollo (paid)' },
+  { key: 'claude', label: 'AI (free)' },
+  { key: 'apollo', label: 'Verified (paid)' },
   { key: 'hybrid', label: 'Hybrid' },
   { key: 'none',   label: 'No enrichment' },
 ]

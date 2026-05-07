@@ -458,6 +458,64 @@ export default function DeveloperDashboard() {
     },
   })
 
+  // Apollo + Hunter contact-lookup credits this month, grouped by
+  // user AND by property. Surfaced in a panel below so a developer
+  // can see who's burning credits and which company they belong to.
+  // Joins are done client-side because the api_usage RLS policy
+  // already lets developers read everything; pulling profiles +
+  // properties separately keeps the query simple and cacheable.
+  const { data: lookupBreakdown } = useQuery({
+    queryKey: ['dev-lookup-breakdown'],
+    queryFn: async () => {
+      const startOfMonth = new Date()
+      startOfMonth.setDate(1)
+      startOfMonth.setHours(0, 0, 0, 0)
+      const [usageRes, profilesRes, propertiesRes] = await Promise.all([
+        supabase
+          .from('api_usage')
+          .select('user_id, property_id, credits_used')
+          .in('service', ['apollo', 'hunter'])
+          .gte('called_at', startOfMonth.toISOString()),
+        supabase.from('profiles').select('id, full_name, email, property_id'),
+        supabase.from('properties').select('id, name'),
+      ])
+      const profileById = new Map((profilesRes.data || []).map(p => [p.id, p]))
+      const propertyById = new Map((propertiesRes.data || []).map(p => [p.id, p]))
+      const byUser = new Map()
+      const byProperty = new Map()
+      for (const row of usageRes.data || []) {
+        const credits = row.credits_used || 1
+        if (row.user_id) {
+          const cur = byUser.get(row.user_id) || { credits: 0 }
+          cur.credits += credits
+          byUser.set(row.user_id, cur)
+        }
+        if (row.property_id) {
+          const cur = byProperty.get(row.property_id) || { credits: 0 }
+          cur.credits += credits
+          byProperty.set(row.property_id, cur)
+        }
+      }
+      const userRows = Array.from(byUser.entries()).map(([uid, v]) => {
+        const p = profileById.get(uid)
+        const prop = p?.property_id ? propertyById.get(p.property_id) : null
+        return {
+          user_id: uid,
+          name: p?.full_name || p?.email || 'Unknown user',
+          email: p?.email || null,
+          company: prop?.name || '—',
+          credits: v.credits,
+        }
+      }).sort((a, b) => b.credits - a.credits)
+      const propertyRows = Array.from(byProperty.entries()).map(([pid, v]) => ({
+        property_id: pid,
+        company: propertyById.get(pid)?.name || 'Unknown company',
+        credits: v.credits,
+      })).sort((a, b) => b.credits - a.credits)
+      return { byUser: userRows, byProperty: propertyRows }
+    },
+  })
+
   // ─── Analytics queries ───
   const { data: allDeals } = useQuery({
     queryKey: ['dev-all-deals'],
@@ -880,6 +938,42 @@ export default function DeveloperDashboard() {
               </div>
             ) : (
               <div className="text-xs text-text-muted">No API usage recorded</div>
+            )}
+          </Panel>
+
+          {/* Contact-lookup credits this month — broken down by
+              user and by property. Apollo + Hunter combined since
+              they share a single 25-credit monthly bucket per user. */}
+          <Panel title="Contact Lookups This Month — by User">
+            {lookupBreakdown?.byUser?.length ? (
+              <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                {lookupBreakdown.byUser.map(r => (
+                  <div key={r.user_id} className="flex items-center justify-between py-1 border-b border-border last:border-b-0">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-text-primary truncate">{r.name}</div>
+                      <div className="text-[10px] text-text-muted truncate">{r.company}{r.email ? ` · ${r.email}` : ''}</div>
+                    </div>
+                    <span className="text-xs text-accent font-mono shrink-0 ml-2">{r.credits}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-text-muted">No contact lookups this month.</div>
+            )}
+          </Panel>
+
+          <Panel title="Contact Lookups This Month — by Company">
+            {lookupBreakdown?.byProperty?.length ? (
+              <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                {lookupBreakdown.byProperty.map(r => (
+                  <div key={r.property_id} className="flex items-center justify-between py-1 border-b border-border last:border-b-0">
+                    <span className="text-sm text-text-primary truncate">{r.company}</span>
+                    <span className="text-xs text-accent font-mono shrink-0 ml-2">{r.credits}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-text-muted">No contact lookups this month.</div>
             )}
           </Panel>
 

@@ -9,9 +9,14 @@ const LIMITS = {
 
 export default function APIUsageBanner({ compact }) {
   const { profile } = useAuth()
+  const userId = profile?.id
 
   const { data: usage } = useQuery({
-    queryKey: ['api-usage-banner'],
+    // Per-user — was previously fetching the whole property's
+    // usage so the rep saw their teammates' credits in the
+    // top-bar pill. Each user gets their own monthly allotment.
+    queryKey: ['api-usage-banner', userId],
+    enabled: !!userId,
     queryFn: async () => {
       const startOfMonth = new Date()
       startOfMonth.setDate(1)
@@ -19,6 +24,7 @@ export default function APIUsageBanner({ compact }) {
       const { data } = await supabase
         .from('api_usage')
         .select('service, credits_used')
+        .eq('user_id', userId)
         .gte('called_at', startOfMonth.toISOString())
       if (!data) return {}
       const grouped = {}

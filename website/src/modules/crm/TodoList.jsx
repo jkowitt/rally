@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
+import { invalidateTaskQueries } from '@/lib/taskCache'
 import { Mail, Linkedin, Phone, ListChecks, CheckSquare, Clock, ExternalLink, Check } from 'lucide-react'
 
 // To-Do List — single screen for "what should I work on today".
@@ -55,7 +56,10 @@ export default function TodoList() {
     },
   })
 
-  // ─── Pending tasks ──────────────────────────────────────
+  // ─── Open tasks ─────────────────────────────────────────
+  // Mirror what TaskManager shows for this rep: anything not yet
+  // marked Done. Filtering on status='Pending' alone hid 'In Progress'
+  // tasks here even though they were still active in TaskManager.
   const { data: tasks = [] } = useQuery({
     queryKey: ['todo-tasks', propertyId, userId],
     enabled: !!propertyId && !!userId,
@@ -65,7 +69,7 @@ export default function TodoList() {
         .select('*, deals(brand_name)')
         .eq('property_id', propertyId)
         .eq('assigned_to', userId)
-        .eq('status', 'Pending')
+        .neq('status', 'Done')
         .order('due_date', { ascending: true, nullsFirst: false })
       return data || []
     },
@@ -89,8 +93,7 @@ export default function TodoList() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['todo-drafts'] })
-      qc.invalidateQueries({ queryKey: ['todo-tasks'] })
+      invalidateTaskQueries(qc)
       toast({ title: 'Marked sent', type: 'success' })
     },
     onError: (err) => toast({ title: 'Update failed', description: humanError(err), type: 'error' }),
@@ -104,7 +107,7 @@ export default function TodoList() {
         .eq('id', taskId)
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['todo-tasks'] })
+      invalidateTaskQueries(qc)
       toast({ title: 'Task completed', type: 'success' })
     },
   })

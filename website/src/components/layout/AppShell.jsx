@@ -11,7 +11,7 @@ import { useUsageHeartbeat } from '@/hooks/useUsageHeartbeat'
 import { on } from '@/lib/appEvents'
 import {
   Home, LayoutGrid, Target, CheckSquare, Handshake,
-  FileText, Package, Settings, Users, SlidersHorizontal, Bug,
+  FileText, Package, Settings, Users, SlidersHorizontal,
 } from 'lucide-react'
 
 const FeatureSuggestion = lazy(() => import('../FeatureSuggestion'))
@@ -108,26 +108,15 @@ export default function AppShell({ children }) {
         <PropertyBootstrap />
       </Suspense>
 
-      {/* Feedback modal (both feature requests + bug reports). */}
+      {/* Feedback modal (both feature requests + bug reports). The
+          'open-issue' trigger now comes from the TopBar bug button;
+          the legacy bottom-right floater has been retired so it no
+          longer collides with the page footer. */}
       {feedbackKind && (
         <Suspense fallback={null}>
           <FeatureSuggestion kind={feedbackKind} onClose={() => setFeedbackKind(null)} />
         </Suspense>
       )}
-
-      {/* Floating "Report an Issue" bubble. Sits horizontally to the
-          left of the Prospecting copilot pill (which is anchored at
-          bottom-5 right-5). On mobile we lift it above the bottom
-          nav AND keep it left-of-copilot so all three floaters
-          form a single bottom row instead of stacking vertically. */}
-      <button
-        onClick={() => setFeedbackKind('issue')}
-        title="Report an Issue"
-        aria-label="Report an Issue"
-        className="fixed z-40 bottom-20 md:bottom-5 right-[64px] md:right-[212px] w-12 h-12 rounded-full bg-bg-surface border border-border shadow-xl text-text-secondary hover:text-accent hover:border-accent/40 flex items-center justify-center transition-colors"
-      >
-        <Bug className="w-5 h-5" aria-hidden="true" />
-      </button>
 
     </div>
   )

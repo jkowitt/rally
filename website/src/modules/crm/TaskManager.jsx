@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { humanError } from '@/lib/humanError'
+import { invalidateTaskQueries } from '@/lib/taskCache'
 import { EmptyState } from '@/components/ui'
 import { CheckSquare } from 'lucide-react'
 
@@ -257,7 +258,7 @@ export default function TaskManager() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', propertyId] })
+      invalidateTaskQueries(queryClient)
       toast({ title: 'Task saved', type: 'success' })
       setShowForm(false)
       setEditingTask(null)
@@ -296,7 +297,7 @@ export default function TaskManager() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', propertyId] })
+      invalidateTaskQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: ['activities', propertyId] })
       toast({ title: 'Task completed — logged to activities', type: 'success' })
     },
@@ -308,7 +309,7 @@ export default function TaskManager() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', propertyId] })
+      invalidateTaskQueries(queryClient)
       toast({ title: 'Task deleted', type: 'success' })
     },
     onError: (err) => toast({ title: 'Error deleting task', description: humanError(err), type: 'error' }),

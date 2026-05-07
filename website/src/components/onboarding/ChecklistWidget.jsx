@@ -49,11 +49,12 @@ export default function ChecklistWidget() {
   if (profile.onboarding_completed && total > 0 && completed / total >= 0.5) return null
 
   return (
-    // Bottom-row floater: sits to the left of the Issue bubble
-    // (which sits left of the Prospecting copilot pill). Compact
-    // width when collapsed — opens to the full 320px panel on
-    // click and grows upward (anchored at the bottom edge).
-    <div className={`fixed z-30 bottom-20 md:bottom-5 right-[124px] md:right-[280px] ${expanded ? 'w-[calc(100vw-140px)] sm:w-80 max-w-sm' : 'w-auto'}`}>
+    // Top-right floater anchored just below the TopBar (h-14). Was
+    // previously bottom-right where it collided with the legal
+    // footer ("Terms of Service" / "Privacy Policy" / "Contact").
+    // On mobile we still float above the bottom nav by anchoring to
+    // the top — phones don't have a footer to clash with.
+    <div className={`fixed z-30 top-16 right-3 md:right-4 ${expanded ? 'w-[calc(100vw-24px)] sm:w-80 max-w-sm' : 'w-auto'}`}>
       <div className="bg-bg-surface border border-accent/40 rounded-lg shadow-2xl overflow-hidden transition-all">
         {/* Header */}
         <div

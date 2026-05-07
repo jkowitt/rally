@@ -1,7 +1,7 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags'
-import { Search, Menu, X } from 'lucide-react'
+import { Search, Menu, X, Bug } from 'lucide-react'
 import NotificationCenter from '../NotificationCenter'
 import AutomationStatusBadge from '../automation/AutomationStatusBadge'
 import { APIUsageCompact } from './../../components/APIUsageBanner'
@@ -9,6 +9,7 @@ import ImpersonationPanel from '../ImpersonationPanel'
 import UserMenu from './UserMenu'
 import { useActiveHub, HUBS, getHubLandingPath } from '@/hooks/useActiveHub'
 import { LayoutGrid, Handshake, Settings as SettingsIcon, Target } from 'lucide-react'
+import { emit } from '@/lib/appEvents'
 
 // Map hub id → lucide icon. Keeps HUBS data shape free of JSX so it
 // can stay typed and reused everywhere.
@@ -127,6 +128,14 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
           {(profile?.role === 'developer' || profile?.role === 'businessops' || profile?.role === 'admin') && (
             <AutomationStatusBadge />
           )}
+          <button
+            onClick={() => emit('open-issue')}
+            title="Report an issue"
+            aria-label="Report an issue"
+            className="text-text-muted hover:text-accent p-1.5 rounded transition-colors"
+          >
+            <Bug className="w-5 h-5" aria-hidden="true" />
+          </button>
           <NotificationCenter />
           <UserMenu />
         </div>

@@ -21,6 +21,7 @@ export interface AppEventMap {
   'open-find-prospects': void
   'open-upload-contract': void
   'open-suggestion': void
+  'open-issue': void
 }
 
 export type AppEventName = keyof AppEventMap

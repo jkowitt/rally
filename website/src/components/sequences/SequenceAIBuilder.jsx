@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
+import { invalidateTaskQueries } from '@/lib/taskCache'
 import { Mail, Linkedin, Phone, ListChecks, Sparkles, Check, X, RefreshCw, Send, ArrowLeft, ArrowRight, Bell, BellOff, Wand2 } from 'lucide-react'
 
 // Four-step AI sequence builder.
@@ -673,7 +674,7 @@ function ReviewStep({ sequence, onBack }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sequence-drafts', sequence.id] })
-      qc.invalidateQueries({ queryKey: ['tasks'] })
+      invalidateTaskQueries(qc)
       toast({ title: 'Approved + scheduled', type: 'success' })
     },
     onError: (err) => toast({ title: 'Approve failed', description: humanError(err), type: 'error' }),

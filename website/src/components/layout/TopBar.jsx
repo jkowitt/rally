@@ -8,11 +8,12 @@ import { APIUsageCompact } from './../../components/APIUsageBanner'
 import ImpersonationPanel from '../ImpersonationPanel'
 import UserMenu from './UserMenu'
 import { useActiveHub, HUBS, getHubLandingPath } from '@/hooks/useActiveHub'
-import { LayoutGrid, Handshake, Settings as SettingsIcon } from 'lucide-react'
+import { LayoutGrid, Handshake, Settings as SettingsIcon, Target } from 'lucide-react'
 
 // Map hub id → lucide icon. Keeps HUBS data shape free of JSX so it
 // can stay typed and reused everywhere.
 const HUB_ICONS = {
+  prospect: Target,
   crm: LayoutGrid,
   accounts: Handshake,
   ops: SettingsIcon,
@@ -32,6 +33,7 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
 
   const visibleHubs = HUBS.filter(hub => {
     if (hub.id === 'crm') return true
+    if (hub.id === 'prospect') return true
     if (hub.id === 'accounts') {
       // Account Management is gated by hub_accounts (default ON).
       // Developers always see it so they can flip the toggle.

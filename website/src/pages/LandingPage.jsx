@@ -109,7 +109,7 @@ function WelcomeGate() {
                   animate={{ opacity: 1 }}
                   className="text-text-secondary text-sm mt-4"
                 >
-                  AI-powered prospecting + a CRM built for revenue teams. Discover decision-makers, run your pipeline, and personalize outreach — all in one place. <span className="text-text-primary">$39/mo</span>.
+                  AI-powered prospecting + a CRM built for revenue teams. Discover decision-makers, run your pipeline, and personalize outreach — all in one place. <span className="text-text-primary">Free to start, $29/mo Starter</span>.
                 </motion.p>
               </div>
 

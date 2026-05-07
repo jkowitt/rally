@@ -41,6 +41,12 @@ export default function SequenceAIBuilder({ sequence }) {
     methods_order: ['email', 'linkedin', 'phone'],
     time_of_day: 'morning',
     notify_user: true,
+    // What this cadence is supposed to accomplish. Claude needs
+    // this to drive toward something concrete instead of writing
+    // generic "introduce yourself" copy.
+    goal_summary: '',
+    initiatives: '',
+    final_ask: 'Book a 15-minute discovery call',
   })
   const [selectedDealIds, setSelectedDealIds] = useState([])
 
@@ -114,6 +120,47 @@ function Stepper({ current }) {
 
 /* ─── Step 1: Configure ───────────────────────────────── */
 function ConfigureStep({ config, setConfig, onNext }) {
+  const { profile } = useAuth()
+  const { toast } = useToast()
+  const qc = useQueryClient()
+  const [pitchDraft, setPitchDraft] = useState('')
+  const [pitchSaving, setPitchSaving] = useState(false)
+
+  // Load the rep's company pitch from properties.company_context
+  // so Claude can tailor outreach to what THIS company sells.
+  // Without this, drafts read like every other generic SDR email.
+  const { data: property } = useQuery({
+    queryKey: ['property-context', profile?.property_id],
+    enabled: !!profile?.property_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('properties')
+        .select('id, name, company_context')
+        .eq('id', profile.property_id)
+        .maybeSingle()
+      if (data?.company_context) setPitchDraft(data.company_context)
+      return data
+    },
+  })
+
+  async function savePitch() {
+    if (!profile?.property_id) return
+    setPitchSaving(true)
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ company_context: pitchDraft.trim() || null })
+        .eq('id', profile.property_id)
+      if (error) throw error
+      qc.invalidateQueries({ queryKey: ['property-context', profile.property_id] })
+      toast({ title: 'Saved company pitch', type: 'success' })
+    } catch (err) {
+      toast({ title: 'Save failed', description: err.message, type: 'error' })
+    } finally {
+      setPitchSaving(false)
+    }
+  }
+
   function updateMethod(idx, value) {
     const next = [...config.methods_order]
     next[idx] = value
@@ -128,9 +175,71 @@ function ConfigureStep({ config, setConfig, onNext }) {
     setConfig({ ...config, methods_order: config.methods_order.filter((_, i) => i !== idx) })
   }
 
+  const pitchDirty = (property?.company_context || '') !== pitchDraft
+
   return (
-    <div className="bg-bg-surface border border-border rounded-lg p-5 space-y-4">
+    <div className="bg-bg-surface border border-border rounded-lg p-5 space-y-5">
+      {/* Company pitch — set once, reused across every sequence */}
       <div>
+        <h3 className="text-sm font-semibold text-text-primary">Your company pitch</h3>
+        <p className="text-xs text-text-muted mt-0.5">
+          One paragraph about what your company does + who you help. The AI uses this to write outreach that actually sounds like you.
+        </p>
+        <textarea
+          value={pitchDraft}
+          onChange={e => setPitchDraft(e.target.value)}
+          placeholder={`e.g. ${property?.name || 'Acme'} is a sponsorship CRM for mid-market college athletic programs. We help ADs and sponsorship leads close partnerships 40% faster by automating contract analysis and deliverable tracking.`}
+          rows={3}
+          className="w-full mt-2 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent resize-y"
+        />
+        {pitchDirty && (
+          <div className="flex justify-end mt-2">
+            <Button size="sm" onClick={savePitch} disabled={pitchSaving}>
+              {pitchSaving ? 'Saving…' : 'Save pitch'}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-border pt-4">
+        <h3 className="text-sm font-semibold text-text-primary">What's this sequence for?</h3>
+        <p className="text-xs text-text-muted mt-0.5">
+          Tell Claude what to drive toward. The more specific, the better the drafts.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        <div>
+          <label className="text-[10px] font-mono uppercase text-text-muted">Sequence goal</label>
+          <input
+            value={config.goal_summary}
+            onChange={e => setConfig({ ...config, goal_summary: e.target.value })}
+            placeholder="e.g. Book a discovery call with their head of partnerships"
+            className="w-full mt-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+          />
+        </div>
+        <div>
+          <label className="text-[10px] font-mono uppercase text-text-muted">Initiatives or talking points</label>
+          <textarea
+            value={config.initiatives}
+            onChange={e => setConfig({ ...config, initiatives: e.target.value })}
+            placeholder="e.g. New AI contract reader feature; case study with University of Texas; reference their recent stadium renovation"
+            rows={3}
+            className="w-full mt-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent resize-y"
+          />
+        </div>
+        <div>
+          <label className="text-[10px] font-mono uppercase text-text-muted">Specific ask in the final touch</label>
+          <input
+            value={config.final_ask}
+            onChange={e => setConfig({ ...config, final_ask: e.target.value })}
+            placeholder="e.g. Reply with a 15-min slot next Tue/Thu"
+            className="w-full mt-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+          />
+        </div>
+      </div>
+
+      <div className="border-t border-border pt-4">
         <h3 className="text-sm font-semibold text-text-primary">Cadence shape</h3>
         <p className="text-xs text-text-muted mt-0.5">How many touchpoints, over how many days. AI will spread them evenly.</p>
       </div>
@@ -353,6 +462,9 @@ function GenerateStep({ sequence, config, dealIds, onBack, onDone }) {
           methods_order: config.methods_order,
           time_of_day: config.time_of_day,
           notify_user: config.notify_user,
+          goal_summary: config.goal_summary || undefined,
+          initiatives: config.initiatives || undefined,
+          final_ask: config.final_ask || undefined,
         },
       })
       if (error) throw error

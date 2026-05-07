@@ -55,6 +55,11 @@ interface GenerateBody {
   methods_order: string[];
   time_of_day?: string;
   notify_user?: boolean;
+  // New in migration 098 — let Claude write to a goal instead
+  // of generic "introduce yourself" outreach.
+  goal_summary?: string;
+  initiatives?: string;
+  final_ask?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -80,6 +85,7 @@ Deno.serve(async (req: Request) => {
   const {
     sequence_id, deal_ids, touchpoints, duration_days, methods_order,
     time_of_day = "morning", notify_user = true,
+    goal_summary, initiatives, final_ask,
   } = body;
 
   // ─── Validate inputs ─────────────────────────────────────
@@ -103,6 +109,12 @@ Deno.serve(async (req: Request) => {
     .eq("id", userId).maybeSingle();
   const propertyId = profile?.property_id;
   if (!propertyId) return jsonResponse({ success: false, error: "user has no property" }, 400);
+
+  // Pull the rep's company-pitch + property name so Claude can
+  // tailor outreach to what THIS company actually sells.
+  const { data: property } = await sb
+    .from("properties").select("name, company_context, type")
+    .eq("id", propertyId).maybeSingle();
 
   const { data: seq } = await sb
     .from("prospect_sequences").select("*")
@@ -141,6 +153,9 @@ Deno.serve(async (req: Request) => {
     duration_days,
     methods_order,
     drafts_generated_at: new Date().toISOString(),
+    goal_summary: goal_summary || null,
+    initiatives: initiatives || null,
+    final_ask: final_ask || null,
   }).eq("id", sequence_id);
 
   // ─── Resolve deals + primary contacts ───────────────────
@@ -162,22 +177,55 @@ Deno.serve(async (req: Request) => {
     if (!primaryContactByDeal.has(c.deal_id)) primaryContactByDeal.set(c.deal_id, c);
   }
 
+  // Pull cached company research (industry, leadership, summary)
+  // for any of the selected companies. Helps Claude reference
+  // real public-web facts instead of guessing.
+  const dealCompanyNames = deals.map(d => d.brand_name).filter(Boolean);
+  const { data: research } = dealCompanyNames.length
+    ? await sb
+        .from("company_research")
+        .select("company_name, industry, website, description, leadership")
+        .eq("property_id", propertyId)
+        .in("company_name", dealCompanyNames)
+    : { data: [] };
+  const researchByName = new Map<string, any>();
+  for (const r of research || []) researchByName.set((r.company_name || "").toLowerCase(), r);
+
   // ─── Enroll deals (idempotent) ──────────────────────────
+  // Migration 098 dropped the NOT NULL on contact_id, so deals
+  // without a contacts row still enroll — they just target the
+  // company generically (or the inline deal.contact_first_name
+  // if populated).
   const enrollmentByDeal = new Map<string, string>();
   for (const deal of deals) {
     const contact = primaryContactByDeal.get(deal.id);
-    const contactId = contact?.id;
-    if (!contactId) continue;
+    const contactId = contact?.id ?? null;
 
-    const { data: existing } = await sb
-      .from("prospect_sequence_enrollments")
-      .select("id")
-      .eq("sequence_id", sequence_id)
-      .eq("contact_id", contactId)
-      .maybeSingle();
-    let enrollmentId = existing?.id;
+    // Look up an existing enrollment matching either the contact
+    // (when present) or the deal (when not).
+    let existingId: string | null = null;
+    if (contactId) {
+      const { data: existing } = await sb
+        .from("prospect_sequence_enrollments")
+        .select("id")
+        .eq("sequence_id", sequence_id)
+        .eq("contact_id", contactId)
+        .maybeSingle();
+      existingId = existing?.id || null;
+    } else {
+      const { data: existing } = await sb
+        .from("prospect_sequence_enrollments")
+        .select("id")
+        .eq("sequence_id", sequence_id)
+        .is("contact_id", null)
+        .eq("deal_id", deal.id)
+        .maybeSingle();
+      existingId = existing?.id || null;
+    }
+
+    let enrollmentId = existingId;
     if (!enrollmentId) {
-      const { data: newEnr } = await sb.from("prospect_sequence_enrollments").insert({
+      const { data: newEnr, error: enrErr } = await sb.from("prospect_sequence_enrollments").insert({
         sequence_id,
         property_id: propertyId,
         contact_id: contactId,
@@ -188,6 +236,10 @@ Deno.serve(async (req: Request) => {
         notify_user,
         generation_status: "generating",
       }).select("id").single();
+      if (enrErr) {
+        // Skip-and-log rather than crashing the whole batch.
+        continue;
+      }
       enrollmentId = newEnr?.id;
     } else {
       await sb.from("prospect_sequence_enrollments")
@@ -209,13 +261,33 @@ Deno.serve(async (req: Request) => {
     const enrollmentId = enrollmentByDeal.get(deal.id);
     if (!enrollmentId) continue;
     const contact = primaryContactByDeal.get(deal.id);
+    // Fall back to inline deal contact fields when no contacts row.
+    const inlineContact = !contact && (deal.contact_first_name || deal.contact_email)
+      ? {
+          first_name: deal.contact_first_name,
+          last_name: deal.contact_last_name,
+          email: deal.contact_email,
+          position: deal.contact_position,
+        }
+      : null;
+    const cachedResearch = researchByName.get((deal.brand_name || "").toLowerCase()) || null;
 
     try {
       const drafts = await generateForDeal({
         deal,
-        contact,
+        contact: contact || inlineContact,
         steps,
         senderName,
+        sequenceContext: {
+          goal: goal_summary,
+          initiatives,
+          finalAsk: final_ask,
+        },
+        companyContext: {
+          name: property?.name,
+          pitch: property?.company_context,
+        },
+        researchSnapshot: cachedResearch,
       });
       // Replace existing drafts for this enrollment
       await sb.from("prospect_sequence_drafts")
@@ -268,8 +340,11 @@ async function generateForDeal(args: {
   contact: any;
   steps: Array<{ step_index: number; day_offset: number; method: string; time_of_day_window: string }>;
   senderName: string;
+  sequenceContext: { goal?: string; initiatives?: string; finalAsk?: string };
+  companyContext: { name?: string; pitch?: string };
+  researchSnapshot: { industry?: string; description?: string; leadership?: Array<{ name: string; title: string }> } | null;
 }): Promise<Array<{ subject: string | null; body: string }>> {
-  const { deal, contact, steps, senderName } = args;
+  const { deal, contact, steps, senderName, sequenceContext, companyContext, researchSnapshot } = args;
 
   const stepDescriptors = steps.map(s =>
     `Step ${s.step_index + 1} (day ${s.day_offset}, channel: ${s.method})`
@@ -291,20 +366,46 @@ Rules per channel:
   • phone     → subject = null. Body is a 30-second voicemail SCRIPT in second person ("Hey {first_name}, this is ${senderName}…"). 50-90 words.
   • task      → subject = null. Body is a one-line internal note for the rep ("Research recent funding announcement", "Look up event sponsorship lead"). 5-15 words.
 
-Carry a thread across the steps — don't repeat yourself across touches. Step 1 is intro; later steps reference earlier outreach without sounding pushy. Final step should feel like a graceful breakup.`;
+Carry a thread across the steps — don't repeat yourself across touches. Step 1 is intro; later steps reference earlier outreach without sounding pushy. Final step should feel like a graceful breakup that names the specific ask.`;
 
-  const contactBlock = contact ? `
+  const contactBlock = contact && (contact.first_name || contact.email) ? `
 Primary contact:
   Name: ${[contact.first_name, contact.last_name].filter(Boolean).join(" ") || "(unknown)"}
   Title: ${contact.position || "(unknown)"}
   Email: ${contact.email || "(unknown)"}
-` : "Primary contact: (none on file — write to the company generically)";
+` : "Primary contact: (none on file — write to the company generically; reference whoever owns the relevant function in your address line)";
+
+  // Sender-side context: who the rep works for + their pitch.
+  // Without this Claude has to guess what we sell, which is why
+  // the pre-098 drafts read so generic.
+  const senderBlock = `
+Sender's company: ${companyContext.name || "(unspecified)"}
+What we do: ${companyContext.pitch || "(not provided — keep value-prop generic)"}`;
+
+  // Sequence-level intent. When the rep filled this in, drafts
+  // can drive toward a real goal instead of "introduce yourself".
+  const intentBlock = `
+Sequence goal: ${sequenceContext.goal || "(not specified — default to booking a 15-minute discovery call)"}
+Initiatives / talking points: ${sequenceContext.initiatives || "(none provided)"}
+Specific ask in the final touch: ${sequenceContext.finalAsk || "Book a meeting"}`;
+
+  // Cached web research from the company-research feature, when
+  // the rep has run it before. Adds real public-web facts that
+  // Claude can reference in the opener.
+  const researchBlock = researchSnapshot ? `
+Public-web research:
+  Industry: ${researchSnapshot.industry || "(not captured)"}
+  About: ${researchSnapshot.description || "(not captured)"}
+  Leadership: ${(researchSnapshot.leadership || []).slice(0, 5).map(p => `${p.name} (${p.title})`).join("; ") || "(not captured)"}` : "";
 
   const userPrompt = `Prospect: ${deal.brand_name}
-Industry: ${deal.sub_industry || "unknown"}
+Industry (from CRM): ${deal.sub_industry || "unknown"}
 Website: ${deal.website || "unknown"}
 Notes from CRM: ${deal.notes || "(none)"}
 ${contactBlock}
+${researchBlock}
+${senderBlock}
+${intentBlock}
 
 Sender: ${senderName}
 

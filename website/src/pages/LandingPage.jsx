@@ -2,7 +2,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import EditableText, { EditableImage } from '@/components/cms/EditableText'
-import { useIndustryVisibility, shouldShowIndustry } from '@/hooks/useIndustryVisibility'
 import { PLAN_TIERS } from '@/data/plans'
 
 const fadeUp = {
@@ -14,92 +13,11 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
 }
 
-const INDUSTRIES = [
-  {
-    id: 'sports',
-    label: 'Sports, Events & Entertainment',
-    icon: '🏟',
-    headline: 'Sports, Events & Entertainment',
-    subtitle: 'Teams, venues, conferences, festivals, trade shows, and partnership agencies',
-    description: 'AI-powered sponsorship CRM, verified contact intelligence, contract analysis, event operations, media valuations, and exhibitor management — built for sports teams, entertainment venues, conferences, festivals, and the agencies that represent them.',
-    deals: 'sponsorship deals',
-    assets: 'sponsorship assets',
-    cta: 'sponsorship business',
-    modules: ['Pipeline', 'Contracts', 'Assets', 'Fulfillment', 'Events', 'Booth Inventory', 'VALORA', 'Newsletter'],
-    stats: [{ value: '22', label: 'Asset Categories' }, { value: 'AI', label: 'Powered Intelligence' }, { value: '∞', label: 'Scalable Pipeline' }],
-    subChoices: [
-      { id: 'property', label: 'Property / Venue', description: 'Team, venue, conference, festival, or trade show', industryId: 'sports' },
-      { id: 'agency', label: 'Partnership Agency', description: 'Sell sponsorships on behalf of properties', industryId: 'agency' },
-    ],
-  },
-  {
-    id: 'nonprofit',
-    label: 'Nonprofits',
-    icon: '💛',
-    headline: 'Donor & Sponsor Management',
-    subtitle: 'Foundations, charities, and nonprofit organizations',
-    description: 'Manage corporate donors, track pledge fulfillment, generate impact reports, and grow your sponsorship revenue with AI-powered tools.',
-    deals: 'donor pledges',
-    assets: 'recognition benefits',
-    cta: 'nonprofit',
-    modules: ['Donor Pipeline', 'Pledge Contracts', 'Recognition Assets', 'Fulfillment', 'Events', 'Newsletter'],
-    stats: [{ value: '10+', label: 'Recognition Types' }, { value: 'AI', label: 'Donor Research' }, { value: '∞', label: 'Donor Pipeline' }],
-  },
-  {
-    id: 'media',
-    label: 'Media',
-    icon: '📡',
-    headline: 'Ad Sales Operations',
-    subtitle: 'Broadcast, digital, podcast, and media companies',
-    description: 'Manage ad inventory, track insertion orders, automate fulfillment verification, and forecast revenue across all channels.',
-    deals: 'ad campaigns',
-    assets: 'ad inventory',
-    cta: 'media sales',
-    modules: ['Sales Pipeline', 'Insertion Orders', 'Ad Inventory', 'Delivery Tracking', 'Analytics', 'Newsletter'],
-    stats: [{ value: '12+', label: 'Ad Formats' }, { value: 'AI', label: 'Revenue Forecast' }, { value: '∞', label: 'Campaign Pipeline' }],
-  },
-  {
-    id: 'realestate',
-    label: 'Real Estate',
-    icon: '🏢',
-    headline: 'Lease & Tenant Pipeline',
-    subtitle: 'Commercial real estate, property management, and brokerages',
-    description: 'Track tenant prospects, manage lease agreements, fulfill build-out commitments, and forecast occupancy revenue in one platform.',
-    deals: 'lease prospects',
-    assets: 'property units',
-    cta: 'real estate operation',
-    modules: ['Tenant Pipeline', 'Lease Contracts', 'Property Units', 'Build-Out Tracking', 'Analytics'],
-    stats: [{ value: '8+', label: 'Property Types' }, { value: 'AI', label: 'Market Analysis' }, { value: '∞', label: 'Tenant Pipeline' }],
-  },
-  {
-    id: 'other',
-    label: 'Other',
-    icon: '🔧',
-    headline: 'Your Sales Pipeline',
-    subtitle: 'Any business that sells packages, services, or deliverables',
-    description: 'Pipeline management, contract tracking, deliverable fulfillment, and AI-powered tools — configured to fit your business.',
-    deals: 'deals',
-    assets: 'deliverables',
-    cta: 'business',
-    modules: ['Pipeline', 'Contracts', 'Deliverables', 'Fulfillment', 'Team Management', 'Newsletter'],
-    stats: [{ value: '20+', label: 'Asset Categories' }, { value: 'AI', label: 'Powered Intelligence' }, { value: '∞', label: 'Scalable Pipeline' }],
-  },
-]
-
 export default function LandingPage() {
-  const { visibility } = useIndustryVisibility()
-  const visibleIndustries = INDUSTRIES.filter(ind => shouldShowIndustry(visibility, ind.id))
-  const [industry, setIndustry] = useState(INDUSTRIES[0])
   const [welcomed, setWelcomed] = useState(() => {
     // Skip gate if they've visited before in this browser session
     return sessionStorage.getItem('ll-welcomed') === '1'
   })
-  const hasAccount = localStorage.getItem('ll-has-account') === '1'
-
-  function handleNewUser() {
-    sessionStorage.setItem('ll-welcomed', '1')
-    setWelcomed(true)
-  }
 
   function handleLogoClick() {
     sessionStorage.removeItem('ll-welcomed')
@@ -107,41 +25,23 @@ export default function LandingPage() {
     window.scrollTo({ top: 0 })
   }
 
-  function handleReturningUser() {
-    localStorage.setItem('ll-has-account', '1')
-    sessionStorage.setItem('ll-welcomed', '1')
-    // Navigate handled by Link in the gate
-  }
-
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary">
       <AnimatePresence>
-        {!welcomed && (
-          <WelcomeGate
-            hasAccount={hasAccount}
-            onNewUser={handleNewUser}
-            onReturningUser={handleReturningUser}
-            industries={visibleIndustries}
-            selectedIndustry={industry}
-            onSelectIndustry={setIndustry}
-          />
-        )}
+        {!welcomed && <WelcomeGate />}
       </AnimatePresence>
 
       {welcomed && (
         <>
           <Nav onLogoClick={handleLogoClick} />
-          <Hero industry={industry} onSelectIndustry={setIndustry} />
-          <IndustrySelector selected={industry} onSelect={setIndustry} industries={visibleIndustries} />
-          {/* Ecosystem + Modules sections removed for the launch page —
-              the four-module pitch (CRM / Activations / VALORA /
-              Business Now) and the per-industry deep-dive don't match
-              the current CRM + Prospecting positioning. Components are
-              gone; restore from git history if we add them back. */}
+          <Hero />
+          {/* Industry picker, Ecosystem, and Modules sections removed —
+              the launch positioning is industry-agnostic CRM +
+              Prospecting. Restore from git history if needed. */}
           <HowItWorks />
           <AISection />
           <WhyLoudLegacy />
-          <CTA industry={industry} />
+          <CTA />
           <SponsorsSection />
           <Footer />
         </>
@@ -151,13 +51,13 @@ export default function LandingPage() {
 }
 
 /* ─── WELCOME GATE ─── */
-function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selectedIndustry, onSelectIndustry }) {
-  // Always open on the 'choose' step — that's the prospecting/CRM
-  // welcome page and it's where every visitor (new OR returning)
-  // should land first. Returning users still have a "Sign in" link
-  // there, plus the dedicated /login route.
-  const [step, setStep] = useState('choose') // choose | industry | sub-choice | returning
-  const [pendingIndustry, setPendingIndustry] = useState(null)
+function WelcomeGate() {
+  // Two real steps after the launch positioning change:
+  //   choose → the CRM + Prospecting welcome
+  //   plans  → tier picker after Start Free
+  // The 'returning' step is reachable only via the choose step's
+  // existing "Sign in" link and is preserved for legacy paths.
+  const [step, setStep] = useState('choose')
   const navigate = useNavigate()
 
   return (
@@ -224,12 +124,6 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                   Start Free — No Credit Card
                 </button>
                 <button
-                  onClick={() => setStep('industry')}
-                  className="w-full border border-border text-text-secondary py-3 rounded-lg text-xs font-medium hover:border-accent/50 hover:text-text-primary transition-colors"
-                >
-                  See how it works for my industry
-                </button>
-                <button
                   onClick={() => {
                     localStorage.setItem('ll-has-account', '1')
                     navigate('/login')
@@ -275,7 +169,7 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.35 }}
-              className="space-y-6 max-w-3xl"
+              className="space-y-6 mx-auto max-w-5xl"
             >
               <div className="text-center">
                 <motion.h2
@@ -411,7 +305,7 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
                   Sign In to Your Account
                 </Link>
                 <button
-                  onClick={() => setStep('industry')}
+                  onClick={() => setStep('plans')}
                   className="w-full border border-border text-text-secondary py-3 rounded-lg text-sm font-medium hover:border-accent/50 hover:text-text-primary transition-colors"
                 >
                   I'm new — explore the platform
@@ -420,144 +314,6 @@ function WelcomeGate({ hasAccount, onNewUser, onReturningUser, industries, selec
             </motion.div>
           )}
 
-          {/* Step 2: Industry Selection */}
-          {step === 'industry' && (
-            <motion.div
-              key="industry"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.35 }}
-              className="text-center space-y-6"
-            >
-              <div>
-                <motion.h2
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-xl font-semibold text-text-primary"
-                >
-                  What industry are you in?
-                </motion.h2>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-text-secondary text-sm mt-2"
-                >
-                  We'll customize everything to fit your workflow
-                </motion.p>
-              </div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="grid grid-cols-2 gap-3"
-              >
-                {industries.map((ind, i) => (
-                  <motion.button
-                    key={ind.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + i * 0.05 }}
-                    onClick={() => {
-                      if (ind.subChoices) {
-                        setPendingIndustry(ind)
-                        setStep('sub-choice')
-                      } else {
-                        onSelectIndustry(ind)
-                        onNewUser()
-                      }
-                    }}
-                    className={`flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all hover:border-accent/50 hover:bg-accent/5 ${
-                      selectedIndustry.id === ind.id ? 'border-accent bg-accent/5' : 'border-border'
-                    }`}
-                  >
-                    <span className="text-xl">{ind.icon}</span>
-                    <div>
-                      <div className="text-sm text-text-primary font-medium">{ind.label}</div>
-                      <div className="text-[10px] text-text-muted leading-tight mt-0.5">{ind.subtitle.split(',')[0]}</div>
-                    </div>
-                  </motion.button>
-                ))}
-              </motion.div>
-
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
-                onClick={() => setStep('choose')}
-                className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-              >
-                &larr; Go back
-              </motion.button>
-            </motion.div>
-          )}
-
-          {/* Step 2b: Sub-choice (e.g. Sports Property vs Agency) */}
-          {step === 'sub-choice' && pendingIndustry && (
-            <motion.div
-              key="sub-choice"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.35 }}
-              className="text-center space-y-6"
-            >
-              <div>
-                <span className="text-3xl">{pendingIndustry.icon}</span>
-                <motion.h2
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-xl font-semibold text-text-primary mt-3"
-                >
-                  Which best describes you?
-                </motion.h2>
-              </div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="space-y-3"
-              >
-                {pendingIndustry.subChoices.map((sub, i) => (
-                  <motion.button
-                    key={sub.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25 + i * 0.1 }}
-                    onClick={() => {
-                      // Use the parent industry for landing page display
-                      onSelectIndustry({ ...pendingIndustry, _subChoice: sub.id, _registrationId: sub.industryId })
-                      onNewUser()
-                    }}
-                    className="w-full flex items-center gap-4 p-4 rounded-lg border border-border text-left transition-all hover:border-accent/50 hover:bg-accent/5"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent font-bold text-sm shrink-0">
-                      {sub.id === 'property' ? '🏟' : '📋'}
-                    </div>
-                    <div>
-                      <div className="text-sm text-text-primary font-medium">{sub.label}</div>
-                      <div className="text-[11px] text-text-muted mt-0.5">{sub.description}</div>
-                    </div>
-                  </motion.button>
-                ))}
-              </motion.div>
-
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                onClick={() => setStep('industry')}
-                className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-              >
-                &larr; Pick a different industry
-              </motion.button>
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
     </motion.div>
@@ -588,7 +344,11 @@ function Nav({ onLogoClick }) {
 }
 
 /* ─── HERO ─── */
-function Hero({ industry }) {
+// Industry-agnostic hero. Was previously fed an industry object that
+// swapped the headline ("Sports Business" / "Media Sales" / etc.) and
+// the eyebrow tag dynamically. Launch positioning is one pitch for
+// every visitor.
+function Hero() {
   return (
     <section className="pt-32 pb-16 px-6 relative overflow-hidden">
       {/* Grid background */}
@@ -602,133 +362,53 @@ function Hero({ industry }) {
       >
         <motion.div variants={fadeUp} className="inline-block mb-6">
           <span className="text-xs font-mono text-accent bg-accent/10 px-3 py-1.5 rounded-full tracking-wider uppercase">
-            {industry.id === 'sports' ? 'Sports Business Operating Suite' : `${industry.label} Operating Suite`}
+            CRM + AI Prospecting
           </span>
         </motion.div>
 
         <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl font-bold leading-[1.05] tracking-tight">
-          The Operating System For{' '}
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={industry.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="text-accent inline-block"
-            >
-              {industry.headline}
-            </motion.span>
-          </AnimatePresence>
+          Find your next customer.{' '}
+          <span className="text-accent inline-block">Close them in one workspace.</span>
         </motion.h1>
 
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={industry.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="text-lg md:text-xl text-text-secondary mt-6 max-w-2xl mx-auto leading-relaxed"
-          >
-            {industry.description}
-          </motion.p>
-        </AnimatePresence>
+        <motion.p
+          variants={fadeUp}
+          className="text-lg md:text-xl text-text-secondary mt-6 max-w-2xl mx-auto leading-relaxed"
+        >
+          AI prospecting and a drag-and-drop CRM — built for revenue teams who want pipeline, contacts, and outreach in one place.
+        </motion.p>
 
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
           <Link
-            to={`/login?industry=${industry._registrationId || industry.id}`}
+            to="/login?mode=signup"
             className="bg-accent text-bg-primary px-8 py-3.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
           >
             Get Started Free
           </Link>
-          <a
-            href="#industries"
+          <Link
+            to="/pricing"
             className="border border-border text-text-secondary px-8 py-3.5 rounded-lg text-sm font-medium hover:border-text-muted hover:text-text-primary transition-colors"
           >
-            See All Industries
-          </a>
+            See Pricing
+          </Link>
         </motion.div>
 
         {/* Stats bar */}
         <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 mt-16 max-w-lg mx-auto">
-          {industry.stats.map((stat) => (
-            <div key={stat.label}>
-              <div className="text-2xl font-mono font-bold text-accent">{stat.value}</div>
-              <div className="text-xs text-text-muted mt-0.5">{stat.label}</div>
-            </div>
-          ))}
+          <div>
+            <div className="text-2xl font-mono font-bold text-accent">AI</div>
+            <div className="text-xs text-text-muted mt-0.5">Prospecting</div>
+          </div>
+          <div>
+            <div className="text-2xl font-mono font-bold text-accent">∞</div>
+            <div className="text-xs text-text-muted mt-0.5">Pipeline</div>
+          </div>
+          <div>
+            <div className="text-2xl font-mono font-bold text-accent">$0</div>
+            <div className="text-xs text-text-muted mt-0.5">To Start</div>
+          </div>
         </motion.div>
       </motion.div>
-    </section>
-  )
-}
-
-/* ─── INDUSTRY SELECTOR ─── */
-// `industries` is passed in from the parent LandingPage so we respect
-// the show_* visibility flags. Previously this function referenced a
-// `visibleIndustries` variable that was only in LandingPage's scope,
-// which threw ReferenceError at render time — causing the whole
-// section (and any CTA inside it, like "Other") to fail silently.
-function IndustrySelector({ selected, onSelect, industries = [] }) {
-  return (
-    <section id="industries" className="py-16 px-6 border-t border-border">
-      <div className="max-w-6xl mx-auto">
-        <SectionHeader
-          tag="Select Your Industry"
-          title="One platform. Every industry."
-          description="Loud Legacy adapts its terminology, asset categories, and workflows to your industry. Pick yours to see how it works for you."
-        />
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mt-12">
-          {industries.map((ind) => (
-            <button
-              key={ind.id}
-              onClick={() => { onSelect(ind); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-              className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all text-center ${
-                selected.id === ind.id
-                  ? 'bg-accent/10 border-accent text-accent'
-                  : 'bg-bg-surface border-border text-text-secondary hover:border-accent/30 hover:text-text-primary'
-              }`}
-            >
-              <span className="text-2xl">{ind.icon}</span>
-              <span className="text-xs font-mono">{ind.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Selected industry detail */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selected.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="mt-8 bg-bg-surface border border-border rounded-lg p-6"
-          >
-            <div className="flex items-start gap-4">
-              <span className="text-3xl">{selected.icon}</span>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-text-primary">{selected.headline}</h3>
-                <p className="text-sm text-text-muted mt-1">{selected.subtitle}</p>
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {selected.modules.map(m => (
-                    <span key={m} className="text-[10px] font-mono bg-bg-card border border-border px-2.5 py-1 rounded text-text-secondary">{m}</span>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  <Link
-                    to={`/login?industry=${selected._registrationId || selected.id}`}
-                    className="inline-block bg-accent text-bg-primary px-6 py-2.5 rounded text-sm font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    Start Free — {selected.label}
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      </div>
     </section>
   )
 }
@@ -918,7 +598,7 @@ function WhyLoudLegacy() {
 // which industry chip they previously selected. Industry param kept
 // in the signup link so the post-signup workspace still gets the
 // right defaults.
-function CTA({ industry }) {
+function CTA() {
   return (
     <section id="contact" className="py-24 px-6 bg-bg-surface border-t border-border">
       <motion.div
@@ -937,7 +617,7 @@ function CTA({ industry }) {
         </motion.p>
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
           <Link
-            to={`/login?mode=signup${industry?._registrationId || industry?.id ? `&industry=${industry._registrationId || industry.id}` : ''}`}
+            to="/login?mode=signup"
             className="bg-accent text-bg-primary px-8 py-3.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
           >
             Create Your Free Account

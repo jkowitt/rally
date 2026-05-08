@@ -85,8 +85,8 @@ export default function ManualPage() {
         <Tip>Filters down the right side scope by industry, size, region, persona, and any saved ICP — apply them before searching to bias results.</Tip>
       </Section>
 
-      <Section title="Bulk enrichment" anchor="bulk-enrich">
-        <p><Link to="/app/crm/enrichment-queue" className="text-accent hover:underline">/app/crm/enrichment-queue</Link> — paste or upload a CSV of company names; the AI runs them through enrichment in the background and queues each for one-click review.</p>
+      <Section title="Bulk add" anchor="bulk-enrich">
+        <p><Link to="/app/crm/enrichment-queue" className="text-accent hover:underline">/app/crm/enrichment-queue</Link> — paste a list or upload a CSV of companies and prospects. Each row is automatically enriched with firmographics + decision-makers in the background; click <Code>Add to CRM</Code> on any enriched row to turn it into a deal or contact.</p>
       </Section>
 
       <Section title="Signal Radar" anchor="signals">
@@ -273,7 +273,7 @@ function Toc() {
     ['assets', 'Asset Catalog'],
     ['declined', 'Declined deals'],
     ['find-prospects', 'Find prospects (AI)'],
-    ['bulk-enrich', 'Bulk enrichment'],
+    ['bulk-enrich', 'Bulk add'],
     ['signals', 'Signal Radar'],
     ['lookalikes', 'Lookalikes'],
     ['relationships', 'Relationship Search'],

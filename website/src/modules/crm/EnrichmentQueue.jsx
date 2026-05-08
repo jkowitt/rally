@@ -85,9 +85,9 @@ export default function EnrichmentQueue() {
 
       <header className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold">Enrichment Queue</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold">Bulk Add</h1>
           <p className="text-[11px] text-text-muted mt-1 max-w-xl">
-            Park a list of companies or prospects here. Verified mode pulls firmographics + decision-makers from premium data sources; AI mode fills gaps from general knowledge — fast but less accurate.
+            Paste a list or upload a CSV of companies and prospects. We enrich each row with firmographics + decision-maker info, then you click <em>Add to CRM</em> to turn them into deals or contacts.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -98,7 +98,7 @@ export default function EnrichmentQueue() {
             <Sparkles className="w-3.5 h-3.5" /> {running ? 'Running…' : `Enrich pending (${stats?.pending || 0})`}
           </Button>
           <Button onClick={() => setShowImport(true)}>
-            <Upload className="w-3.5 h-3.5" /> Bulk import
+            <Upload className="w-3.5 h-3.5" /> Bulk add
           </Button>
         </div>
       </header>
@@ -141,7 +141,7 @@ export default function EnrichmentQueue() {
           description="Paste a list of companies or prospects, or upload a CSV. We'll enrich each row with firmographics + contact info."
           primaryAction={
             <Button size="lg" onClick={() => setShowImport(true)}>
-              <Upload className="w-4 h-4" /> Bulk import
+              <Upload className="w-4 h-4" /> Bulk add
             </Button>
           }
           secondaryAction={
@@ -207,7 +207,6 @@ function QueueRow({ row, busy, onMaterialize, onRetry, onDelete }) {
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <Badge tone={row.kind === 'contact' ? 'info' : 'neutral'}>{row.kind}</Badge>
             <Badge tone={tone}>{row.status}</Badge>
-            <span className="text-[9px] font-mono text-text-muted">mode: {row.enrichment_mode}</span>
             {row.attempt_count > 0 && (
               <span className="text-[9px] font-mono text-text-muted">attempts: {row.attempt_count}</span>
             )}

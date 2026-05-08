@@ -61,7 +61,7 @@ function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
       label: 'Prospecting',
       items: [
         { to: '/app/crm/pipeline?find=1', label: 'Find Prospects' },
-        { to: '/app/crm/enrichment-queue', label: 'Bulk Enrich' },
+        { to: '/app/crm/enrichment-queue', label: 'Bulk Add' },
         { to: '/app/crm/signals', label: 'Signal Radar' },
         { to: '/app/crm/relationships', label: 'Relationship Search' },
         { to: '/app/crm/sequences', label: 'Sequences' },

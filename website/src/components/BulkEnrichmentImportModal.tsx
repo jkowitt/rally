@@ -7,14 +7,11 @@ import { Button, Badge } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
 import { Upload, ClipboardPaste, X, Loader2, Sparkles } from 'lucide-react'
 
-// BulkEnrichmentImportModal — paste lines OR drop a CSV → queues
-// each row for later enrichment. Two enrichment modes:
-//   • Claude (free) — uses general AI knowledge, fast, less precise
-//   • Apollo (paid) — token-based, accurate firmographics + people
-//
-// "Save for later" parks rows in 'pending' without auto-enriching;
-// "Enrich now" hits the bulk-enrichment-runner and processes the
-// batch immediately.
+// BulkEnrichmentImportModal — the single bulk-add tool. Paste a
+// list OR drop a CSV; we queue each row and immediately kick off
+// enrichment (firmographics + decision-makers) so the user can
+// review and click "Add to CRM" without configuring an enrichment
+// "mode" — that decision is internal.
 
 interface Props {
   open: boolean
@@ -22,7 +19,10 @@ interface Props {
   onQueued?: (count: number) => void
 }
 
-type Mode = 'claude' | 'apollo' | 'hybrid' | 'none'
+// Internal-only — used by the runner to pick a backend. Users no
+// longer choose this; we always start with the cheapest path and
+// the runner falls back automatically if it doesn't get coverage.
+const DEFAULT_ENRICHMENT_MODE = 'claude'
 
 export default function BulkEnrichmentImportModal({ open, onClose, onQueued }: Props) {
   const { profile } = useAuth()
@@ -33,9 +33,7 @@ export default function BulkEnrichmentImportModal({ open, onClose, onQueued }: P
   const [pasted, setPasted] = useState('')
   const [csvRows, setCsvRows] = useState<Record<string, string>[]>([])
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
-  const [mode, setMode] = useState<Mode>('claude')
   const [submitting, setSubmitting] = useState(false)
-  const [enrichNow, setEnrichNow] = useState(false)
 
   if (!open) return null
 
@@ -151,26 +149,24 @@ export default function BulkEnrichmentImportModal({ open, onClose, onQueued }: P
         p_property_id: profile.property_id,
         p_rows: valid,
         p_source: tab,
-        p_enrichment_mode: mode,
+        p_enrichment_mode: DEFAULT_ENRICHMENT_MODE,
       })
       if (error) throw error
       const inserted = (data?.[0]?.inserted ?? valid.length)
       onQueued?.(inserted)
 
-      if (enrichNow && mode !== 'none') {
-        // Fire-and-forget; runner will mark rows enriched as it goes.
-        try {
-          await supabase.functions.invoke('bulk-enrichment-runner', {
-            body: { property_id: profile.property_id },
-          })
-        } catch { /* swallow — rows will get processed by cron anyway */ }
-      }
+      // Always kick off enrichment immediately. Fire-and-forget;
+      // the runner marks rows enriched as it goes and the cron
+      // catches anything we miss.
+      try {
+        await supabase.functions.invoke('bulk-enrichment-runner', {
+          body: { property_id: profile.property_id },
+        })
+      } catch { /* swallow — rows will get processed by cron anyway */ }
 
       toast({
-        title: `Queued ${inserted} row${inserted === 1 ? '' : 's'}`,
-        description: enrichNow
-          ? `Enrichment is running now (mode: ${mode}). Check back in a minute.`
-          : `Saved for later. Run "Enrich now" from the queue when you're ready.`,
+        title: `Added ${inserted} row${inserted === 1 ? '' : 's'}`,
+        description: 'Enriching now. Check back in a minute and click Add to CRM on each row.',
         type: 'success',
       })
       onClose()
@@ -197,10 +193,10 @@ export default function BulkEnrichmentImportModal({ open, onClose, onQueued }: P
         <div className="p-4 border-b border-border flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-text-primary flex items-center gap-2">
-              <Upload className="w-4 h-4 text-accent" /> Bulk import for enrichment
+              <Upload className="w-4 h-4 text-accent" /> Bulk add
             </h2>
             <p className="text-[11px] text-text-muted mt-0.5">
-              Paste a list or upload a CSV. We queue each row and enrich it when you're ready.
+              Paste a list or upload a CSV. Each row is enriched with firmographics and decision-makers automatically.
             </p>
           </div>
           <button onClick={onClose} aria-label="Close" className="text-text-muted hover:text-text-primary p-1">
@@ -274,25 +270,6 @@ export default function BulkEnrichmentImportModal({ open, onClose, onQueued }: P
             </div>
           )}
 
-          <div>
-            <label className="text-[11px] uppercase tracking-wider font-mono text-text-muted">Enrichment mode</label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              <ModeCard id="claude" current={mode} onPick={setMode}
-                title="AI (free)" sub="No credits used. Faster. Less accurate firmographics." />
-              <ModeCard id="apollo" current={mode} onPick={setMode}
-                title="Verified (paid)" sub="One credit per row. Verified emails + firmographics." />
-              <ModeCard id="hybrid" current={mode} onPick={setMode}
-                title="Hybrid" sub="Try verified first; fall back to AI on miss." />
-              <ModeCard id="none" current={mode} onPick={setMode}
-                title="No enrichment" sub="Park the rows in the queue. Enrich later." />
-            </div>
-          </div>
-
-          <label className="flex items-center gap-2 text-xs text-text-secondary">
-            <input type="checkbox" checked={enrichNow} onChange={(e) => setEnrichNow(e.target.checked)}
-                   className="accent-accent w-3.5 h-3.5" disabled={mode === 'none'} />
-            Run enrichment immediately (otherwise queued for the cron)
-          </label>
         </div>
 
         <div className="p-4 border-t border-border flex items-center justify-between gap-2">
@@ -302,26 +279,12 @@ export default function BulkEnrichmentImportModal({ open, onClose, onQueued }: P
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
             <Button onClick={submit} disabled={previewCount === 0 || submitting}>
-              {submitting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Queuing…</> : <><Sparkles className="w-3.5 h-3.5" /> Queue {previewCount} rows</>}
+              {submitting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Adding…</> : <><Sparkles className="w-3.5 h-3.5" /> Add {previewCount} rows</>}
             </Button>
           </div>
         </div>
       </div>
     </div>
-  )
-}
-
-function ModeCard({ id, current, onPick, title, sub }: { id: Mode; current: Mode; onPick: (m: Mode) => void; title: string; sub: string }) {
-  const active = current === id
-  return (
-    <button
-      type="button"
-      onClick={() => onPick(id)}
-      className={`text-left p-2.5 rounded border-2 transition-all ${active ? 'border-accent bg-accent/5' : 'border-border bg-bg-card hover:border-accent/40'}`}
-    >
-      <div className={`text-sm font-medium ${active ? 'text-accent' : 'text-text-primary'}`}>{title}</div>
-      <div className="text-[10px] text-text-muted leading-relaxed mt-0.5">{sub}</div>
-    </button>
   )
 }
 

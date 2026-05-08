@@ -50,6 +50,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // If the signed-in user landed without a property (typical of the
+  // email-confirmation flow — signUp returns no session, so the
+  // LoginPage property-creation step is skipped), reuse the company
+  // info we stashed in user_metadata at signUp time and silently
+  // create the property here. Returns the new property_id, or null
+  // if there's no metadata to work with — in which case
+  // PropertyBootstrap will prompt the user manually as a fallback.
+  async function ensurePropertyFromMetadata(
+    userId: string,
+    fallbackEmail: string,
+  ): Promise<string | null> {
+    const { data: { user } } = await supabase.auth.getUser()
+    const meta = (user?.user_metadata || {}) as Record<string, unknown>
+    const companyName = typeof meta.company_name === 'string' ? meta.company_name.trim() : ''
+    if (!companyName) return null
+
+    const propertyData: Record<string, unknown> = {
+      name: companyName,
+      plan: 'free',
+      billing_email: fallbackEmail || null,
+      trial_started_at: new Date().toISOString(),
+      trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+    }
+    if (meta.company_city) propertyData.city = meta.company_city
+    if (meta.company_state) propertyData.state = meta.company_state
+
+    // Try with `type` first; fall back without it if that column
+    // doesn't exist on this deployment. Mirrors LoginPage's belt-
+    // and-suspenders insert.
+    let propertyId: string | null = null
+    if (meta.industry_type) {
+      const { data, error } = await supabase
+        .from('properties')
+        .insert({ ...propertyData, type: meta.industry_type })
+        .select('id')
+        .single()
+      if (!error && data) propertyId = data.id as string
+    }
+    if (!propertyId) {
+      const { data, error } = await supabase
+        .from('properties')
+        .insert(propertyData)
+        .select('id')
+        .single()
+      if (error || !data) return null
+      propertyId = data.id as string
+    }
+
+    const { error: linkErr } = await supabase
+      .from('profiles')
+      .update({ property_id: propertyId })
+      .eq('id', userId)
+    if (linkErr) console.warn('Could not link new property to profile:', linkErr.message)
+    return propertyId
+  }
+
   async function fetchProfile(userId: string): Promise<void> {
     try {
       const { data, error } = await supabase
@@ -63,9 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!data) {
         // Profile doesn't exist yet — create the bare row. Do NOT
         // auto-attach to a random existing property: that's a
-        // multi-tenant data bleed waiting to happen. Leave
-        // property_id null and let PropertyBootstrap (rendered by
-        // AppShell) prompt the user to name their workspace.
+        // multi-tenant data bleed waiting to happen.
         const { data: { user } } = await supabase.auth.getUser()
         const email = user?.email || ''
         const role: 'developer' | 'admin' =
@@ -79,10 +133,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           onboarding_completed: false,
         }
 
+        await supabase.from('profiles').upsert(profileData)
+        // If the user signed up via the confirmation flow we have
+        // their company info in metadata — use it now so they don't
+        // get prompted again. If we can't, fall through and let
+        // PropertyBootstrap take over.
+        await ensurePropertyFromMetadata(userId, email)
         const { data: newProfile } = await supabase
           .from('profiles')
-          .upsert(profileData)
           .select('*, properties!profiles_property_id_fkey(*)')
+          .eq('id', userId)
           .maybeSingle()
         setProfile(newProfile as Profile | null)
       } else {
@@ -96,6 +156,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           typed.role = 'developer'
           typed.email = DEV_EMAIL
         }
+
+        // Existing profile but no property attached — try to recover
+        // from metadata before showing the manual fallback prompt.
+        if (!typed.property_id || !typed.properties) {
+          const newId = await ensurePropertyFromMetadata(userId, typed.email || authEmail || '')
+          if (newId) {
+            const { data: refreshed } = await supabase
+              .from('profiles')
+              .select('*, properties!profiles_property_id_fkey(*)')
+              .eq('id', userId)
+              .maybeSingle()
+            if (refreshed) {
+              setProfile(refreshed as Profile)
+              if ((refreshed as Profile).role === 'developer') {
+                maybeRunScheduledHealthCheck()
+                maybeRunScheduledQA()
+              }
+              setLoading(false)
+              return
+            }
+          }
+        }
+
         setProfile(typed)
         if (typed.role === 'developer') {
           maybeRunScheduledHealthCheck()

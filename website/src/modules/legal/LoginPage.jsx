@@ -236,10 +236,23 @@ export default function LoginPage() {
     if (!companyName) return setError('Company name is required')
     setLoading(true)
     try {
-      // 1. Create auth user
+      // 1. Create auth user. Stash company info in user metadata so
+      //    if Supabase requires email confirmation (no session
+      //    returned from signUp), we can auto-create the property
+      //    on first sign-in without re-asking the user — PropertyBootstrap
+      //    used to step in here and ask for the company name a second
+      //    time, which felt repetitive and broken.
       const { data: authData, error: authErr } = await supabase.auth.signUp({
         email, password,
-        options: { data: { full_name: fullName } },
+        options: {
+          data: {
+            full_name: fullName,
+            company_name: companyName,
+            company_city: companyCity || null,
+            company_state: companyState || null,
+            industry_type: industryType,
+          },
+        },
       })
       if (authErr) {
         // Translate the most common Supabase error messages into

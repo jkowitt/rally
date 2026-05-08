@@ -36,6 +36,23 @@ export default function PropertyBootstrap() {
   const [forced, setForced] = useState(false)
   useEffect(() => on('open-property-bootstrap', () => setForced(true)), [])
 
+  // Pre-fill the company name from auth metadata when we have it
+  // (typed in during signup but not yet linked because email
+  // confirmation gated the property-creation step). Most users in
+  // this state get auto-recovered by useAuth before this modal
+  // mounts; this is just the rare-path fallback.
+  useEffect(() => {
+    if (companyName) return
+    let cancelled = false
+    supabase.auth.getUser().then(({ data }) => {
+      if (cancelled) return
+      const meta = data?.user?.user_metadata || {}
+      const stashed = typeof meta.company_name === 'string' ? meta.company_name : ''
+      if (stashed) setCompanyName(stashed)
+    })
+    return () => { cancelled = true }
+  }, [companyName])
+
   // Render when profile is loaded AND either property_id is null
   // OR the joined properties row is missing (orphaned FK). Also
   // render when an action handler explicitly forced us open.
@@ -50,19 +67,35 @@ export default function PropertyBootstrap() {
     setSaving(true)
     try {
       // Create the property scoped to this user. plan defaults to
-      // 'free' — they can upgrade later from /pricing.
-      const { data: property, error: propErr } = await supabase
+      // 'free'. Try with `type` first (matches the schema on every
+      // current deployment); fall back without it on older instances
+      // where the column may not exist yet — without this fallback
+      // the modal silently failed for some users and the "Create
+      // workspace" button looked broken.
+      const propertyData = {
+        name,
+        plan: 'free',
+        billing_email: profile.email || null,
+        trial_started_at: new Date().toISOString(),
+        trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+      }
+      let property = null
+      const withType = await supabase
         .from('properties')
-        .insert({
-          name,
-          plan: 'free',
-          billing_email: profile.email || null,
-          trial_started_at: new Date().toISOString(),
-          trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
-        })
+        .insert({ ...propertyData, type: 'other' })
         .select()
         .single()
-      if (propErr) throw propErr
+      if (!withType.error && withType.data) {
+        property = withType.data
+      } else {
+        const without = await supabase
+          .from('properties')
+          .insert(propertyData)
+          .select()
+          .single()
+        if (without.error) throw without.error
+        property = without.data
+      }
       if (!property) throw new Error('Property creation returned no row.')
 
       // Link the profile to the new property.

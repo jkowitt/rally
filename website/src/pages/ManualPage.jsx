@@ -299,7 +299,7 @@ function Reference() {
       </Section>
 
       <Section title="To-Do List" anchor="todo">
-        <p><Link to="/app/todo" className="text-accent hover:underline">/app/todo</Link> — your daily plan. Combines two things into one prioritized list:</p>
+        <p>Your daily plan. Combines two things into one prioritized list:</p>
         <ul className="space-y-1.5 list-disc ml-4">
           <li>Approved <strong className="text-text-primary">sequence drafts</strong> scheduled to fire today (or overdue).</li>
           <li>Open <strong className="text-text-primary">tasks</strong> assigned to you that aren't <Code>Done</Code> yet.</li>
@@ -308,7 +308,7 @@ function Reference() {
       </Section>
 
       <Section title="Deal Pipeline" anchor="pipeline">
-        <p><Link to="/app/crm/pipeline" className="text-accent hover:underline">/app/crm/pipeline</Link> — kanban or table view of every deal in the workspace.</p>
+        <p>Kanban or table view of every deal in the workspace.</p>
         <Step n="1" body={<>Stages: <Code>Prospect</Code> → <Code>Proposal Sent</Code> → <Code>Negotiation</Code> → <Code>Contracted</Code> → <Code>In Fulfillment</Code> → <Code>Renewed</Code>. Drag cards between columns to advance the deal; the move is auto-logged in the activity timeline.</>} />
         <Step n="2" body={<>Click any card to open the deal drawer with tabs for Overview, Contracts, and Activity. Inline-edit name, value, contact, stage, priority, source, and start date.</>} />
         <Step n="3" body={<>Toggle to <Code>Table</Code> view (top-left of the board) for bulk edits — double-click a cell to inline-edit.</>} />
@@ -318,7 +318,7 @@ function Reference() {
       </Section>
 
       <Section title="Asset Catalog" anchor="assets">
-        <p><Link to="/app/crm/assets" className="text-accent hover:underline">/app/crm/assets</Link> — every sponsorable asset your property sells (logos on jersey, on-site signage, naming rights, social mentions, etc.).</p>
+        <p>Every sponsorable asset your property sells (logos on jersey, on-site signage, naming rights, social mentions, etc.).</p>
         <ul className="space-y-1.5 list-disc ml-4">
           <li>Add an asset with category, base price, quantity, and any default benefits.</li>
           <li>Assets attached to a deal show in the deal's Overview tab.</li>
@@ -327,7 +327,7 @@ function Reference() {
       </Section>
 
       <Section title="Declined deals" anchor="declined">
-        <p><Link to="/app/crm/declined" className="text-accent hover:underline">/app/crm/declined</Link> — deals you marked lost. Hidden from the active board but kept for retros and recovery. Click a deal to restore it to <Code>Prospect</Code> if the buyer comes back.</p>
+        <p>Deals you marked lost. Hidden from the active board but kept for retros and recovery. Click a deal to restore it to <Code>Prospect</Code> if the buyer comes back.</p>
       </Section>
 
       <Section title="Find Prospects (AI)" anchor="find-prospects">
@@ -339,67 +339,67 @@ function Reference() {
       </Section>
 
       <Section title="Bulk Add" anchor="bulk-enrich">
-        <p><Link to="/app/crm/enrichment-queue" className="text-accent hover:underline">/app/crm/enrichment-queue</Link> — paste a list or upload a CSV of companies and prospects. Each row is automatically enriched with firmographics + decision-makers in the background; click <Code>Add to CRM</Code> on any enriched row to turn it into a deal or contact.</p>
+        <p>Paste a list or upload a CSV of companies and prospects. Each row is automatically enriched with firmographics + decision-makers in the background; click <Code>Add to CRM</Code> on any enriched row to turn it into a deal or contact.</p>
       </Section>
 
       <Section title="Signal Radar" anchor="signals">
-        <p><Link to="/app/crm/signals" className="text-accent hover:underline">/app/crm/signals</Link> — a live feed of buying signals across your prospects: funding rounds, hiring, exec moves, news mentions. Click any signal to open the related deal or create a new one.</p>
+        <p>A live feed of buying signals across your prospects: funding rounds, hiring, exec moves, news mentions. Click any signal to open the related deal or create a new one.</p>
       </Section>
 
       <Section title="Lookalikes" anchor="lookalikes">
-        <p><Link to="/app/crm/lookalikes" className="text-accent hover:underline">/app/crm/lookalikes</Link> — pick a closed-won deal and the AI returns similar companies you haven't worked yet, ranked by ICP fit.</p>
+        <p>Pick a closed-won deal and the AI returns similar companies you haven't worked yet, ranked by ICP fit.</p>
       </Section>
 
       <Section title="Relationship Search" anchor="relationships">
-        <p><Link to="/app/crm/relationships" className="text-accent hover:underline">/app/crm/relationships</Link> — search across every contact in every deal. Useful when you remember a name but not the company, or want to find every person you've talked to at a target account.</p>
+        <p>Search across every contact in every deal. Useful when you remember a name but not the company, or want to find every person you've talked to at a target account.</p>
       </Section>
 
       <Section title="Sequences" anchor="sequences">
-        <p><Link to="/app/crm/sequences" className="text-accent hover:underline">/app/crm/sequences</Link> — multi-step outreach campaigns (email → wait 3 days → LinkedIn → wait 5 days → call, etc.).</p>
+        <p>Multi-step outreach campaigns (email → wait 3 days → LinkedIn → wait 5 days → call, etc.).</p>
         <Step n="1" body={<>Click <Code>New sequence</Code> and either build steps manually or let the AI Sequence Builder draft them from a goal ("warm intro → discovery call").</>} />
         <Step n="2" body={<>Enroll deals or contacts into the sequence. Each step generates a draft you must approve before it sends.</>} />
-        <Step n="3" body={<>Approved drafts land in your <Link to="/app/todo" className="text-accent hover:underline">To-Do List</Link> at the scheduled time. Click <Code>Done</Code> to mark sent.</>} />
+        <Step n="3" body={<>Approved drafts land in your To-Do List at the scheduled time. Click <Code>Done</Code> to mark sent.</>} />
         <Tip>The AI <Code>Coach</Code> button on every draft scores the message and rewrites it against a chosen goal (more concise, push for meeting, more human).</Tip>
       </Section>
 
       <Section title="Priority Queue" anchor="priority">
-        <p><Link to="/app/crm/priority" className="text-accent hover:underline">/app/crm/priority</Link> — single-pane "what should I work on right now" view. Surfaces the deals most likely to close this month, weighted by score, last-contact age, and stage probability.</p>
+        <p>Single-pane "what should I work on right now" view. Surfaces the deals most likely to close this month, weighted by score, last-contact age, and stage probability.</p>
       </Section>
 
       <Section title="Outreach Analytics" anchor="outreach-analytics">
-        <p><Link to="/app/crm/outreach-analytics" className="text-accent hover:underline">/app/crm/outreach-analytics</Link> — open rates, reply rates, and response times across your sequences and one-off sends. Filter by rep, sequence, or template.</p>
+        <p>Open rates, reply rates, and response times across your sequences and one-off sends. Filter by rep, sequence, or template.</p>
       </Section>
 
       <Section title="Sales Velocity" anchor="velocity">
-        <p><Link to="/app/crm/velocity" className="text-accent hover:underline">/app/crm/velocity</Link> — how fast deals move stage-to-stage and where they pile up. Each stage shows median dwell time and a leak-rate.</p>
+        <p>How fast deals move stage-to-stage and where they pile up. Each stage shows median dwell time and a leak-rate.</p>
       </Section>
 
       <Section title="Sales Analytics" anchor="analytics">
-        <p><Link to="/app/crm/analytics" className="text-accent hover:underline">/app/crm/analytics</Link> — revenue by month / quarter / year, win-rate by rep, by source, by industry. Use the date-range picker for any window.</p>
+        <p>Revenue by month / quarter / year, win-rate by rep, by source, by industry. Use the date-range picker for any window.</p>
       </Section>
 
       <Section title="AI Insights" anchor="insights">
-        <p><Link to="/app/crm/insights" className="text-accent hover:underline">/app/crm/insights</Link> — AI-generated recommendations on any active deal: what to do next, what's blocking, which similar deals closed and why.</p>
+        <p>AI-generated recommendations on any active deal: what to do next, what's blocking, which similar deals closed and why.</p>
       </Section>
 
       <Section title="Postmortems" anchor="postmortems">
-        <p><Link to="/app/crm/postmortems" className="text-accent hover:underline">/app/crm/postmortems</Link> — structured retros for closed-won and closed-lost deals so the team learns. Add tags like "price", "timing", or "no champion" so you can spot patterns over time.</p>
+        <p>Structured retros for closed-won and closed-lost deals so the team learns. Add tags like "price", "timing", or "no champion" so you can spot patterns over time.</p>
       </Section>
 
       <Section title="Inbox" anchor="inbox">
-        <p><Link to="/app/crm/inbox" className="text-accent hover:underline">/app/crm/inbox</Link> — connect Outlook or Gmail (Enterprise) to send and receive from the CRM. Replies auto-attach to the matching deal's activity timeline.</p>
-        <Step n="1" body={<>Visit <Link to="/app/crm/inbox/connect" className="text-accent hover:underline">/app/crm/inbox/connect</Link> to authorize Outlook or Gmail. Tokens are encrypted at rest.</>} />
-        <Step n="2" body={<>Set your signature at <Link to="/app/crm/inbox/signature" className="text-accent hover:underline">/app/crm/inbox/signature</Link>.</>} />
+        <p>Connect Outlook or Gmail (Enterprise) to send and receive from the CRM. Replies auto-attach to the matching deal's activity timeline.</p>
+        <Step n="1" body={<>Open <em>Inbox connections</em> from the user menu to authorize Outlook or Gmail. Tokens are encrypted at rest.</>} />
+        <Step n="2" body={<>Set your signature from <em>Profile &amp; signature</em> in the user menu.</>} />
         <Step n="3" body={<>Click <Code>Compose</Code> on any contact to draft. <Code>✨ Draft with AI</Code> generates a first pass; <Code>Coach</Code> rewrites against a goal; <Code>Chat</Code> opens the outreach copilot.</>} />
         <Tip>Lower-tier plans without inbox sync can still draft and copy — paste into your own client when sending.</Tip>
       </Section>
 
       <Section title="Activity timeline" anchor="activities">
-        <p><Link to="/app/crm/activities" className="text-accent hover:underline">/app/crm/activities</Link> — a unified feed of every interaction: emails, calls, meetings, notes, contract uploads, sequence steps, completed tasks. Filter by deal, rep, type, or date.</p>
+        <p>A unified feed of every interaction: emails, calls, meetings, notes, contract uploads, sequence steps, completed tasks. Filter by deal, rep, type, or date.</p>
       </Section>
 
       <Section title="Task Manager" anchor="tasks">
-        <p><Link to="/app/crm/tasks" className="text-accent hover:underline">/app/crm/tasks</Link> — every task across the workspace. Tasks created here for yourself appear in your <Link to="/app/todo" className="text-accent hover:underline">To-Do List</Link>; the two views stay in sync.</p>
+        <p>Every task across the workspace. Tasks created here for yourself appear in your To-Do List; the two views stay in sync.</p>
         <ul className="space-y-1.5 list-disc ml-4">
           <li>Quick-add bar at the top creates a task due today, Medium priority, in one Enter.</li>
           <li>Click <Code>+ Schedule Activity</Code> for the full form — type (Call, Email, Meeting, Follow-up, etc.), description, scheduled time, reminder, priority, linked deal.</li>
@@ -411,7 +411,7 @@ function Reference() {
       </Section>
 
       <Section title="Contracts" anchor="contracts">
-        <p><Link to="/app/crm/contracts" className="text-accent hover:underline">/app/crm/contracts</Link> — store the signed PDF (or DOCX, image, scan) for each deal. Pick the deal, attach the file, set a few fields (status, dates, value) and save. Anyone on the team can download it later.</p>
+        <p>Store the signed PDF (or DOCX, image, scan) for each deal. Pick the deal, attach the file, set a few fields (status, dates, value) and save. Anyone on the team can download it later.</p>
         <ul className="space-y-1.5 list-disc ml-4">
           <li>The deal drawer's <em>Contract</em> tab also lets you upload directly from inside a deal.</li>
           <li>Editing a contract row lets you change status, dates, or value without re-uploading the file.</li>
@@ -423,25 +423,25 @@ function Reference() {
       </Section>
 
       <Section title="Audit Log" anchor="audit">
-        <p><Link to="/app/crm/audit" className="text-accent hover:underline">/app/crm/audit</Link> (admin-only) — every write across the workspace: who edited which deal, when, and what changed. Use for compliance and to debug "who moved my deal?" disputes.</p>
+        <p>Admin-only — every write across the workspace: who edited which deal, when, and what changed. Use for compliance and to debug "who moved my deal?" disputes.</p>
       </Section>
 
       <Section title="Account Management" anchor="accounts">
         <p>For account managers running renewals on the book of business they own.</p>
         <ul className="space-y-1.5 list-disc ml-4">
-          <li><Link to="/app/accounts" className="text-accent hover:underline">/app/accounts</Link> — every active account with health score, ARR, days-to-renewal, last touch.</li>
-          <li><Link to="/app/accounts/renewals" className="text-accent hover:underline">/app/accounts/renewals</Link> — pipeline view of upcoming renewals by quarter.</li>
-          <li><Link to="/app/accounts" className="text-accent hover:underline">/app/accounts/[id]</Link> — single-account drill-in with contracts, contacts, activity.</li>
+          <li><strong className="text-text-primary">Accounts dashboard</strong> — every active account with health score, ARR, days-to-renewal, last touch.</li>
+          <li><strong className="text-text-primary">Renewal pipeline</strong> — pipeline view of upcoming renewals by quarter.</li>
+          <li><strong className="text-text-primary">Account detail</strong> — single-account drill-in with contracts, contacts, activity.</li>
         </ul>
       </Section>
 
       <Section title="Operations" anchor="ops">
         <p>Cross-cutting workspace tools.</p>
         <ul className="space-y-1.5 list-disc ml-4">
-          <li><strong className="text-text-primary"><Link to="/app/ops/team" className="text-accent hover:underline">Team</Link></strong> — invite reps, set roles (rep / admin / developer), revoke access.</li>
-          <li><strong className="text-text-primary"><Link to="/app/ops/newsletter" className="text-accent hover:underline">Newsletter</Link></strong> — send updates to your sponsor list with open/click tracking.</li>
-          <li><strong className="text-text-primary"><Link to="/app/ops/automations" className="text-accent hover:underline">Automations</Link></strong> — workflow rules (when X happens, do Y) — assign reps, set priority, create tasks, fire webhooks.</li>
-          <li><strong className="text-text-primary"><Link to="/app/ops/projects" className="text-accent hover:underline">Projects</Link></strong> — multi-step initiatives with subtasks, owners, and due dates. Use for activations or campaigns that span weeks.</li>
+          <li><strong className="text-text-primary">Team</strong> — invite reps, set roles (rep / admin / developer), revoke access.</li>
+          <li><strong className="text-text-primary">Newsletter</strong> — send updates to your sponsor list with open/click tracking.</li>
+          <li><strong className="text-text-primary">Automations</strong> — workflow rules (when X happens, do Y) — assign reps, set priority, create tasks, fire webhooks.</li>
+          <li><strong className="text-text-primary">Projects</strong> — multi-step initiatives with subtasks, owners, and due dates. Use for activations or campaigns that span weeks.</li>
         </ul>
       </Section>
 
@@ -455,18 +455,18 @@ function Reference() {
           <li><strong>Conference</strong> — Attendee Analytics.</li>
           <li><strong>Agency</strong> — Commission Tracker, Multi-Property View.</li>
         </ul>
-        <p>Set the property type in <Link to="/app/settings" className="text-accent hover:underline">Settings → Workspace</Link>.</p>
+        <p>Set the property type in <em>Settings → Workspace</em>.</p>
       </Section>
 
       <Section title="Add-ons" anchor="addons">
-        <p><Link to="/app/settings/addons" className="text-accent hover:underline">/app/settings/addons</Link> — toggle optional modules (Activations, VALORA valuations, Business Now intelligence). Each appears in the sidebar once enabled.</p>
+        <p>Toggle optional modules (Activations, VALORA valuations, Business Now intelligence) from <em>Settings → Add-ons</em>. Each appears in the sidebar once enabled.</p>
       </Section>
 
       <Section title="Settings" anchor="settings">
-        <p><Link to="/app/settings" className="text-accent hover:underline">/app/settings</Link> covers workspace name, industry type, terminology, do-not-contact list, custom fields, data export, and integrations.</p>
+        <p>Settings covers workspace name, industry type, terminology, do-not-contact list, custom fields, data export, and integrations.</p>
         <ul className="space-y-1.5 list-disc ml-4">
-          <li><Link to="/app/settings/billing" className="text-accent hover:underline">Billing</Link> — current plan, payment method, top-up extra prospect lookups.</li>
-          <li><Link to="/app/settings/addons" className="text-accent hover:underline">Add-ons</Link> — request access to modules outside your plan.</li>
+          <li><strong className="text-text-primary">Billing</strong> — current plan, payment method, top-up extra prospect lookups.</li>
+          <li><strong className="text-text-primary">Add-ons</strong> — request access to modules outside your plan.</li>
         </ul>
       </Section>
 
@@ -478,11 +478,11 @@ function Reference() {
           <li><strong>Pro</strong> — 500 lookups / mo</li>
           <li><strong>Enterprise</strong> — 2,500 lookups / mo + email integration</li>
         </ul>
-        <p>Need more? Buy +100 lookups for $15 from <Link to="/app/settings/billing" className="text-accent hover:underline">Settings → Billing</Link>.</p>
+        <p>Need more? Buy +100 lookups for $15 from <em>Settings → Billing</em>.</p>
       </Section>
 
       <Section title="Custom dashboards" anchor="custom-dashboard">
-        <p><Link to="/app/custom-dashboard" className="text-accent hover:underline">/app/custom-dashboard</Link> — request a bespoke dashboard tailored to your property's KPIs. The team builds it and it appears at <Code>/app/custom/&lt;slug&gt;</Code> for everyone in the workspace.</p>
+        <p>Request a bespoke dashboard tailored to your property's KPIs. The team builds it and it shows up in your workspace for everyone on the team.</p>
       </Section>
 
       <Section title="Reporting an issue" anchor="bug">

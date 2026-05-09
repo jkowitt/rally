@@ -2015,7 +2015,6 @@ const QA_PAGES = [
   { path: '/app/crm/pipeline', label: 'Deal Pipeline' },
   { path: '/app/crm/contracts', label: 'Contracts' },
   { path: '/app/crm/assets', label: 'Asset Catalog' },
-  { path: '/app/crm/fulfillment', label: 'Fulfillment Tracker' },
   { path: '/app/crm/activities', label: 'Activity Timeline' },
   { path: '/app/crm/tasks', label: 'Task Manager' },
   { path: '/app/crm/insights', label: 'AI Insights' },

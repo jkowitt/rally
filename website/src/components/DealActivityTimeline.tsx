@@ -13,7 +13,6 @@ type EventKind =
   | 'contract_created'
   | 'contract_archived'
   | 'contract_version'
-  | 'fulfillment'
   | 'task_done'
   | 'task_created'
 
@@ -26,8 +25,9 @@ interface TimelineEvent {
 }
 
 // Aggregates events across activities, contracts, contract_versions,
-// fulfillment_records, and tasks for a single deal, then renders
-// a unified chronological feed. Read-only.
+// and tasks for a single deal, then renders a unified chronological
+// feed. Read-only. (Fulfillment events used to live here too — that
+// surface was retired with the contract review features.)
 export default function DealActivityTimeline({ dealId, propertyId, limit = 20 }: DealActivityTimelineProps) {
   const [events, setEvents] = useState<TimelineEvent[]>([])
   // We track "loading" via a key that resets when dealId changes;
@@ -59,19 +59,12 @@ export default function DealActivityTimeline({ dealId, propertyId, limit = 20 }:
         .order('archived_at', { ascending: false })
         .limit(limit),
       supabase
-        .from('fulfillment_records')
-        .select('id, delivered, delivered_at, scheduled_date, contract_id, contract_benefits(benefit_description)')
-        .eq('deal_id', dealId)
-        .eq('delivered', true)
-        .order('delivered_at', { ascending: false })
-        .limit(limit),
-      supabase
         .from('tasks')
         .select('id, title, status, due_date, completed_at, created_at')
         .eq('deal_id', dealId)
         .order('created_at', { ascending: false })
         .limit(limit),
-    ]).then(([acts, contracts, versions, fulfill, tasks]) => {
+    ]).then(([acts, contracts, versions, tasks]) => {
       if (cancelled) return
       const merged: TimelineEvent[] = []
 
@@ -115,17 +108,6 @@ export default function DealActivityTimeline({ dealId, propertyId, limit = 20 }:
           when: v.archived_at as string,
           title: `Contract v${v.version_number} archived`,
           subtitle: (v.archived_reason as string) || 'Prior contract terms preserved',
-        })
-      }
-
-      for (const f of (fulfill.data || []) as Array<Record<string, unknown>>) {
-        const benefits = f.contract_benefits as { benefit_description?: string } | undefined
-        merged.push({
-          kind: 'fulfillment',
-          icon: '✓',
-          when: (f.delivered_at as string) || (f.scheduled_date as string),
-          title: 'Benefit delivered',
-          subtitle: benefits?.benefit_description || 'Benefit',
         })
       }
 
@@ -189,7 +171,7 @@ export default function DealActivityTimeline({ dealId, propertyId, limit = 20 }:
   if (events.length === 0) {
     return (
       <div className="bg-bg-card border border-border rounded-lg p-3 text-xs text-text-muted">
-        No activity yet. Logged calls, contract uploads, and fulfillment events will show up here.
+        No activity yet. Logged calls, contract uploads, and completed tasks will show up here.
       </div>
     )
   }

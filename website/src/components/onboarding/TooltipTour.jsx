@@ -4,9 +4,8 @@ import { useAuth } from '@/hooks/useAuth'
 
 const TOOLTIPS = [
   { selector: 'a[href="/app/crm/pipeline"]', title: 'Deal Pipeline', body: 'Your deals live here — drag and drop to update stages.' },
-  { selector: 'a[href="/app/crm/contracts"]', title: 'Contract Manager', body: 'Upload contracts here — AI extracts every benefit automatically.' },
+  { selector: 'a[href="/app/crm/contracts"]', title: 'Contracts', body: 'Upload signed contracts and link them to the matching deal.' },
   { selector: 'a[href="/app/crm/insights"]', title: 'AI Insights', body: 'Click here for AI-powered recommendations on any deal.' },
-  { selector: 'a[href="/app/crm/fulfillment"]', title: 'Fulfillment Tracker', body: 'Track delivery of every sponsor benefit here.' },
 ]
 
 // localStorage key — bumped version number to invalidate if the tour changes

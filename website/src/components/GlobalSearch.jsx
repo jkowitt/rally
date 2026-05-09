@@ -203,10 +203,9 @@ export default function GlobalSearch({ open, onClose }) {
   // shown when the search is empty so users can discover them.
   const QUICK_ACTIONS = [
     { id: 'goto-pipeline',  label: 'Go to Pipeline',           hint: 'Open the deal kanban',           keywords: 'pipeline deals kanban', run: () => navigate('/app/crm/pipeline') },
-    { id: 'goto-accounts',  label: 'Go to Account Management', hint: 'Contracts + fulfillment',         keywords: 'accounts contracts fulfillment', run: () => navigate('/app/accounts') },
+    { id: 'goto-accounts',  label: 'Go to Account Management', hint: 'Renewals + book of business',     keywords: 'accounts renewals', run: () => navigate('/app/accounts') },
     { id: 'goto-ops',       label: 'Go to Operations',         hint: 'Marketing, finance, team',        keywords: 'ops operations marketing finance team', run: () => navigate('/app/ops') },
     { id: 'goto-tasks',     label: 'Go to Tasks',              hint: 'Open task list',                  keywords: 'tasks todo to-do', run: () => navigate('/app/crm/tasks') },
-    { id: 'goto-fulfillment', label: 'Go to Fulfillment',      hint: 'Track delivered benefits',        keywords: 'fulfillment delivered benefits', run: () => navigate('/app/crm/fulfillment') },
     { id: 'goto-contracts', label: 'Go to Contracts',          hint: 'Upload + manage contracts',       keywords: 'contracts upload', run: () => navigate('/app/crm/contracts') },
     { id: 'create-deal',    label: 'Create new deal',          hint: 'Open the new deal form',          keywords: 'new deal create add', run: () => { navigate('/app/crm/pipeline'); setTimeout(() => emit('open-new-deal'), 60) } },
     { id: 'find-prospects', label: 'Find Prospects',           hint: 'AI-powered prospect search',      keywords: 'find prospects search ai', run: () => { navigate('/app/crm/pipeline'); setTimeout(() => emit('open-find-prospects'), 60) } },

@@ -97,7 +97,6 @@ const ROUTE_PROBES = [
   '/app/crm/contracts',
   '/app/crm/contracts', // repeat to catch flakiness
   '/app/crm/assets',
-  '/app/crm/fulfillment',
   '/app/crm/activities',
   '/app/crm/tasks',
   '/app/crm/insights',
@@ -105,7 +104,6 @@ const ROUTE_PROBES = [
   '/app/ops/team',
   '/app/ops/automations',
   '/app/crm/declined',
-  '/app/crm/migrate',
   '/app/sportify/events',
   '/app/valora',
   '/app/businessnow',

@@ -12,7 +12,7 @@ export default function BrandReport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('deals')
-        .select('*, deal_assets(*, assets(*)), contracts(*, contract_benefits(*)), fulfillment_records(*)')
+        .select('*, deal_assets(*, assets(*)), contracts(*)')
         .eq('id', dealId)
         .single()
       if (error) throw error
@@ -24,9 +24,6 @@ export default function BrandReport() {
   if (!deal) {
     return <div className="text-text-muted text-sm p-6">Loading report...</div>
   }
-
-  const deliveredCount = (deal.fulfillment_records || []).filter((r) => r.delivered).length
-  const totalFulfillment = deal.fulfillment_records?.length || 0
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -87,23 +84,6 @@ export default function BrandReport() {
           </table></div>
         </div>
       )}
-
-      {/* Fulfillment */}
-      <div className="bg-bg-surface border border-border rounded-lg p-6">
-        <h3 className="text-sm font-mono text-text-muted uppercase mb-3">Fulfillment Status</h3>
-        <div className="flex items-center gap-4 mb-4">
-          <div className="text-xl sm:text-2xl font-mono text-text-primary">{deliveredCount}/{totalFulfillment}</div>
-          <div className="flex-1 h-2 bg-bg-card rounded-full overflow-hidden">
-            <div
-              className="h-full bg-success rounded-full transition-all"
-              style={{ width: `${totalFulfillment > 0 ? (deliveredCount / totalFulfillment) * 100 : 0}%` }}
-            />
-          </div>
-          <span className="text-xs text-text-muted font-mono">
-            {totalFulfillment > 0 ? Math.round((deliveredCount / totalFulfillment) * 100) : 0}%
-          </span>
-        </div>
-      </div>
 
       {/* Contracts */}
       {deal.contracts?.length > 0 && (

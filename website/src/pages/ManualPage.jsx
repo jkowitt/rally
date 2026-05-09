@@ -9,7 +9,7 @@ import { useSeo } from '@/hooks/useSeo'
 export default function ManualPage() {
   useSeo({
     title: 'User Manual — Loud Legacy',
-    description: 'How to use every feature in the Loud Legacy CRM, prospecting, contracts, fulfillment, and operations modules.',
+    description: 'How to use every feature in the Loud Legacy CRM, prospecting, contracts, and operations modules.',
   })
 
   return (
@@ -31,7 +31,7 @@ export default function ManualPage() {
         <ul className="space-y-1.5 list-disc ml-4">
           <li><strong className="text-text-primary">Sidebar sections</strong> — Overview, Pipeline, Prospecting, Performance, Activity, Admin, plus any industry modules and add-ons your workspace has enabled.</li>
           <li><strong className="text-text-primary">Top bar</strong> — workspace name, global search (<Code>⌘K</Code> or <Code>Ctrl+K</Code>), API-usage pill, automation status, the bug-report button, the notifications bell, and your user menu.</li>
-          <li><strong className="text-text-primary">Mobile</strong> — the sidebar collapses behind the menu icon and the most-used pages get a sticky bottom nav (Home / Pipeline / Assets / Tasks / Accounts / Contracts / Fulfill / Ops / Team / Settings).</li>
+          <li><strong className="text-text-primary">Mobile</strong> — the sidebar collapses behind the menu icon and the most-used pages get a sticky bottom nav (Home / Pipeline / Assets / Tasks / Accounts / Contracts / Ops / Team / Settings).</li>
         </ul>
         <Tip>The user menu has a <Code>Help</Code> entry that opens this manual at any time, plus a link back to <Link to="/app" className="text-accent hover:underline">your Dashboard</Link>.</Tip>
       </Section>
@@ -57,7 +57,7 @@ export default function ManualPage() {
       <Section title="Deal Pipeline" anchor="pipeline">
         <p><Link to="/app/crm/pipeline" className="text-accent hover:underline">/app/crm/pipeline</Link> — kanban or table view of every deal in the workspace.</p>
         <Step n="1" body={<>Stages: <Code>Prospect</Code> → <Code>Proposal Sent</Code> → <Code>Negotiation</Code> → <Code>Contracted</Code> → <Code>In Fulfillment</Code> → <Code>Renewed</Code>. Drag cards between columns to advance the deal; the move is auto-logged in the activity timeline.</>} />
-        <Step n="2" body={<>Click any card to open the deal drawer with tabs for Overview, Contracts, Fulfillment, and Activity. Inline-edit name, value, contact, stage, priority, source, and start date.</>} />
+        <Step n="2" body={<>Click any card to open the deal drawer with tabs for Overview, Contracts, and Activity. Inline-edit name, value, contact, stage, priority, source, and start date.</>} />
         <Step n="3" body={<>Toggle to <Code>Table</Code> view (top-left of the board) for bulk edits — double-click a cell to inline-edit.</>} />
         <Step n="4" body={<>Click <Code>Find Prospects</Code> in the top right to open AI prospect search inline (covered below).</>} />
         <Step n="5" body={<>Use <Code>Share</Code> on any deal to generate a tokenized sponsor portal link — the prospect can review the deal without logging in.</>} />
@@ -142,7 +142,7 @@ export default function ManualPage() {
       </Section>
 
       <Section title="Activity timeline" anchor="activities">
-        <p><Link to="/app/crm/activities" className="text-accent hover:underline">/app/crm/activities</Link> — a unified feed of every interaction: emails, calls, meetings, notes, contract uploads, fulfillment events, sequence steps. Filter by deal, rep, type, or date.</p>
+        <p><Link to="/app/crm/activities" className="text-accent hover:underline">/app/crm/activities</Link> — a unified feed of every interaction: emails, calls, meetings, notes, contract uploads, sequence steps, completed tasks. Filter by deal, rep, type, or date.</p>
       </Section>
 
       <Section title="Task Manager" anchor="tasks">
@@ -158,17 +158,11 @@ export default function ManualPage() {
       </Section>
 
       <Section title="Contracts" anchor="contracts">
-        <p><Link to="/app/crm/contracts" className="text-accent hover:underline">/app/crm/contracts</Link> — drop a PDF, DOCX, or scan; AI extracts every benefit, deliverable, deadline, and value. The result lands attached to the matching deal.</p>
+        <p><Link to="/app/crm/contracts" className="text-accent hover:underline">/app/crm/contracts</Link> — store the signed PDF (or DOCX, image, scan) for each deal. Pick the deal, attach the file, set a few fields (status, dates, value) and save. Anyone on the team can download it later.</p>
         <ul className="space-y-1.5 list-disc ml-4">
-          <li>Re-uploads create a new <Code>contract_version</Code> so prior terms are preserved for audit.</li>
-          <li>Edit extracted benefits inline; corrections improve future extraction quality.</li>
-          <li><Link to="/app/crm/migrate" className="text-accent hover:underline">/app/crm/migrate</Link> bulk-imports a folder of legacy contracts in one pass.</li>
+          <li>The deal drawer's <em>Contract</em> tab also lets you upload directly from inside a deal.</li>
+          <li>Editing a contract row lets you change status, dates, or value without re-uploading the file.</li>
         </ul>
-      </Section>
-
-      <Section title="Fulfillment Tracker" anchor="fulfillment">
-        <p><Link to="/app/crm/fulfillment" className="text-accent hover:underline">/app/crm/fulfillment</Link> — every benefit on every active contract, with scheduled date, status, and proof-of-delivery slot. Click a row to mark delivered, attach a photo or link, and notify the sponsor.</p>
-        <Tip>The deal drawer's <em>Fulfillment</em> tab shows progress as <Code>X / Y</Code> delivered so account managers can see at a glance.</Tip>
       </Section>
 
       <Section title="Brand Report" anchor="brand-report">
@@ -184,7 +178,7 @@ export default function ManualPage() {
         <ul className="space-y-1.5 list-disc ml-4">
           <li><Link to="/app/accounts" className="text-accent hover:underline">/app/accounts</Link> — every active account with health score, ARR, days-to-renewal, last touch.</li>
           <li><Link to="/app/accounts/renewals" className="text-accent hover:underline">/app/accounts/renewals</Link> — pipeline view of upcoming renewals by quarter.</li>
-          <li><Link to="/app/accounts" className="text-accent hover:underline">/app/accounts/[id]</Link> — single-account drill-in with contracts, fulfillment, contacts, activity.</li>
+          <li><Link to="/app/accounts" className="text-accent hover:underline">/app/accounts/[id]</Link> — single-account drill-in with contracts, contacts, activity.</li>
         </ul>
       </Section>
 
@@ -288,7 +282,6 @@ function Toc() {
     ['activities', 'Activity timeline'],
     ['tasks', 'Task Manager'],
     ['contracts', 'Contracts'],
-    ['fulfillment', 'Fulfillment Tracker'],
     ['brand-report', 'Brand Report'],
     ['audit', 'Audit Log'],
     ['accounts', 'Account Management'],

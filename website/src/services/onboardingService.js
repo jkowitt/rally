@@ -5,7 +5,6 @@ const DEFAULT_CHECKLIST_ITEMS = [
   { key: 'contract_uploaded', label: 'Upload a contract', link: '/app/crm/contracts' },
   { key: 'asset_catalog_viewed', label: 'View your asset catalog', link: '/app/crm/assets' },
   { key: 'team_member_invited', label: 'Invite a team member', link: '/app/ops/team' },
-  { key: 'fulfillment_viewed', label: 'Set up your first fulfillment item', link: '/app/crm/fulfillment' },
   { key: 'ai_insights_run', label: 'Run your first AI Deal Insights', link: '/app/crm/insights' },
 ]
 

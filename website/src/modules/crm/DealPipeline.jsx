@@ -27,7 +27,7 @@ import {
 import { on, emit } from '@/lib/appEvents'
 import { useToast } from '@/components/Toast'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, parsePdfText, apolloEnrichCompany, hunterVerifyEmail, draftFirstTouchEmail, extractCompaniesFromText } from '@/lib/claude'
+import { enrichContact, searchProspects, suggestProspects, researchContacts, researchMoreContacts, apolloEnrichCompany, hunterVerifyEmail, draftFirstTouchEmail, extractCompaniesFromText } from '@/lib/claude'
 import { useComposeEmail } from '@/hooks/useComposeEmail'
 import { usePlanLimits } from '@/hooks/usePlanLimits'
 import UpgradeGate, { UsageBadge } from '@/components/UpgradeGate'
@@ -1123,14 +1123,14 @@ export default function DealPipeline() {
                 <tr>
                   <td colSpan={11} className="px-4 py-10 text-center">
                     <div className="text-text-muted text-sm mb-3">No active deals yet.</div>
-                    <a
-                      href="/app/crm/migrate"
+                    <button
+                      onClick={() => emit('open-new-deal')}
                       className="inline-block bg-accent text-bg-primary font-semibold px-4 py-2 rounded text-xs hover:opacity-90"
                     >
-                      Migrate from existing system →
-                    </a>
+                      Add your first deal →
+                    </button>
                     <div className="text-[10px] text-text-muted mt-2">
-                      Bringing contracts in from another system? Import them all at once.
+                      Or use Find Prospects in the top right to land starter deals.
                     </div>
                   </td>
                 </tr>
@@ -1509,30 +1509,6 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
     enabled: !!deal.id,
   })
 
-  // Fetch fulfillment records for this deal (or by contract if deal_id is null)
-  const { data: dealFulfillment } = useQuery({
-    queryKey: ['deal-fulfillment', deal.id, dealContracts],
-    queryFn: async () => {
-      // First try by deal_id
-      const { data: byDeal } = await supabase.from('fulfillment_records').select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_id, contract_benefits!fulfillment_records_benefit_id_fkey(benefit_description)').eq('deal_id', deal.id).order('scheduled_date')
-      let records = byDeal || []
-      // Also get fulfillment records linked to this deal's contracts (for deal-less records)
-      const contractIds = (dealContracts || []).map(c => c.id).filter(Boolean)
-      if (contractIds.length > 0) {
-        const { data: byContract } = await supabase.from('fulfillment_records').select('id, benefit_id, scheduled_date, delivered, delivered_date, contract_id, contract_benefits!fulfillment_records_benefit_id_fkey(benefit_description)').in('contract_id', contractIds).order('scheduled_date')
-        const existingIds = new Set(records.map(r => r.id))
-        for (const r of (byContract || [])) {
-          if (!existingIds.has(r.id)) records.push(r)
-        }
-      }
-      return records
-    },
-    enabled: !!deal.id,
-  })
-
-  const fulfillmentDelivered = (dealFulfillment || []).filter(f => f.delivered).length || 0
-  const fulfillmentTotal = dealFulfillment?.length || 0
-
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
       <div
@@ -1568,7 +1544,6 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           const tabs = [
             { id: 'overview',     label: 'Overview' },
             { id: 'contracts',    label: `Contracts${dealContracts?.length ? ` (${dealContracts.length})` : ''}` },
-            { id: 'fulfillment',  label: `Fulfillment${fulfillmentTotal ? ` (${fulfillmentDelivered}/${fulfillmentTotal})` : ''}` },
             { id: 'activity',     label: 'Activity' },
           ]
           return (
@@ -1929,43 +1904,9 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
           )}
           </>}
 
-          {activeTab === 'fulfillment' && <>
-          {/* Fulfillment */}
-          {dealFulfillment?.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
-                  Fulfillment ({fulfillmentDelivered}/{fulfillmentTotal} delivered)
-                </div>
-                <button onClick={() => { onClose(); navigate('/app/crm/fulfillment') }} className="text-[10px] text-accent hover:underline">View tracker &rarr;</button>
-              </div>
-              {/* Progress bar */}
-              <div className="w-full bg-bg-card rounded-full h-2 mb-2">
-                <div className={`h-2 rounded-full transition-all ${fulfillmentDelivered === fulfillmentTotal ? 'bg-success' : 'bg-accent'}`} style={{ width: `${fulfillmentTotal ? (fulfillmentDelivered / fulfillmentTotal) * 100 : 0}%` }} />
-              </div>
-              <div className="space-y-1.5">
-                {dealFulfillment.slice(0, 8).map(f => (
-                  <div key={f.id} className="flex items-center justify-between text-[11px] py-1 border-b border-border last:border-0">
-                    <span className={`truncate mr-2 ${f.delivered ? 'text-text-muted line-through' : 'text-text-secondary'}`}>
-                      {f.contract_benefits?.benefit_description || 'Fulfillment item'}
-                    </span>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {f.scheduled_date && <span className="text-[10px] text-text-muted font-mono">{f.scheduled_date}</span>}
-                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${f.delivered ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
-                        {f.delivered ? 'Delivered' : 'Pending'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {dealFulfillment.length > 8 && <div className="text-[10px] text-text-muted text-center py-1">+{dealFulfillment.length - 8} more items</div>}
-              </div>
-            </div>
-          )}
-          </>}
-
-          {activeTab === 'overview' && !dealContracts?.length && !dealAssets?.length && !dealFulfillment?.length && (
+          {activeTab === 'overview' && !dealContracts?.length && !dealAssets?.length && (
             <div className="bg-bg-card border border-border rounded-lg p-3 text-center space-y-2">
-              <div className="text-xs text-text-muted">No contracts, assets, or fulfillment linked yet.</div>
+              <div className="text-xs text-text-muted">No contracts or assets linked yet.</div>
               <div className="flex justify-center gap-3">
                 <button onClick={() => { onClose(); navigate('/app/crm/contracts') }} className="text-[10px] text-accent hover:underline">Upload contract</button>
                 <button onClick={() => { onClose(); navigate('/app/crm/assets') }} className="text-[10px] text-accent hover:underline">Add assets</button>
@@ -2406,139 +2347,32 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
     if (!file || !deal?.id) return
     setUploadingContract(true)
     try {
-      // Read as base64
+      // Read as base64 and store the file as-is. AI extraction +
+      // benefit/fulfillment/asset sync was retired — contracts are
+      // file storage now, nothing more.
       const base64 = await new Promise((resolve) => {
         const reader = new FileReader()
         reader.onload = () => resolve(reader.result.split(',')[1])
         reader.readAsDataURL(file)
       })
 
-      // Extract text if PDF
-      let contractText = ''
-      if (file.type === 'application/pdf') {
-        try {
-          // Load pdfjs from CDN
-          if (!window.pdfjsLib) {
-            await new Promise((resolve, reject) => {
-              const script = document.createElement('script')
-              script.src = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'
-              script.onload = resolve
-              script.onerror = reject
-              document.head.appendChild(script)
-            })
-            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
-          }
-          const arrayBuffer = await file.arrayBuffer()
-          const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i)
-            const content = await page.getTextContent()
-            contractText += content.items.map(item => item.str).join(' ') + '\n\n'
-          }
-        } catch (e) { console.warn(e) }
-      }
-
-      // Try to parse contract text with AI to extract benefits
-      let parsed = null
-      if (contractText) {
-        try {
-          const result = await parsePdfText(contractText)
-          parsed = result.parsed
-        } catch { /* parsing failed, continue without benefits */ }
-      }
-
-      // Create contract record
-      const { data: newContract } = await supabase.from('contracts').insert({
+      const { error } = await supabase.from('contracts').insert({
         property_id: propertyId,
         deal_id: deal.id,
         brand_name: form.brand_name,
         status: 'In Review',
-        contract_text: contractText || null,
-        ai_summary: parsed?.summary || null,
-        ai_extracted_benefits: parsed?.benefits || null,
         pdf_file_data: base64,
         pdf_file_name: file.name,
         pdf_content_type: file.type || 'application/pdf',
-        total_value: parsed?.total_value || form.value || null,
-        effective_date: parsed?.effective_date || (form.start_date ? `${form.start_date}-01-01` : null),
-        expiration_date: parsed?.expiration_date || (form.end_date ? `${form.end_date}-12-31` : null),
+        total_value: form.value || null,
+        effective_date: form.start_date ? `${form.start_date}-01-01` : null,
+        expiration_date: form.end_date ? `${form.end_date}-12-31` : null,
         created_by: profileId,
-      }).select().single()
-
-      // Auto-insert benefits + sync to assets and fulfillment
-      let benefitCount = 0
-      if (newContract && parsed?.benefits?.length > 0) {
-        const benefitRows = parsed.benefits.map(b => ({
-          contract_id: newContract.id,
-          benefit_description: b.description,
-          quantity: b.quantity || 1,
-          frequency: b.frequency || 'Per Season',
-          value: b.value || null,
-          fulfillment_auto_generated: false,
-        }))
-        const { data: insertedBenefits, error: benErr } = await supabase.from('contract_benefits').insert(benefitRows).select()
-        if (benErr) {
-          console.error('Benefits insert failed:', benErr)
-          toast({ title: 'Benefits could not be saved', description: benErr.message, type: 'warning' })
-        }
-        benefitCount = insertedBenefits?.length || 0
-
-        // Create fulfillment records
-        if (insertedBenefits?.length > 0) {
-          const { error: fulErr } = await supabase.from('fulfillment_records').insert(insertedBenefits.map(b => ({
-            deal_id: deal.id,
-            contract_id: newContract.id,
-            benefit_id: b.id,
-            scheduled_date: parsed.effective_date || null,
-            delivered: false,
-            auto_generated: true,
-          })))
-          if (fulErr) console.warn('Fulfillment insert error:', fulErr.message)
-        }
-
-        // Sync to asset catalog
-        if (insertedBenefits?.length > 0) {
-          try {
-            const guessCategory = (desc) => {
-              const d = (desc || '').toLowerCase()
-              if (d.includes('led') || d.includes('board')) return 'LED Board'
-              if (d.includes('jersey') || d.includes('patch')) return 'Jersey Patch'
-              if (d.includes('radio') || d.includes('announce')) return 'Radio Read'
-              if (d.includes('social')) return 'Social Post'
-              if (d.includes('naming') || d.includes('title')) return 'Title Sponsorship'
-              if (d.includes('sign') || d.includes('banner')) return 'Signage'
-              if (d.includes('hospitality') || d.includes('suite')) return 'Hospitality'
-              if (d.includes('email') || d.includes('newsletter')) return 'Email/Newsletter'
-              if (d.includes('print') || d.includes('program')) return 'Print Ad'
-              return 'Digital'
-            }
-            for (const b of insertedBenefits) {
-              const { error: assetErr } = await supabase.from('assets').insert({
-                property_id: propertyId,
-                name: b.benefit_description || 'Contract Benefit',
-                category: guessCategory(b.benefit_description),
-                quantity: b.quantity || 1,
-                base_price: b.value || null,
-                active: true,
-                from_contract: true,
-                source_contract_id: newContract.id,
-                sold_count: b.quantity || 1,
-                total_available: 0,
-              })
-              if (assetErr) console.warn('Asset insert error:', assetErr.message)
-            }
-          } catch (e) { console.warn('Asset sync error:', e) }
-        }
-      }
+      })
+      if (error) throw error
 
       queryClient.invalidateQueries({ queryKey: ['deal-contracts', deal.id] })
-      queryClient.invalidateQueries({ queryKey: ['assets', propertyId] })
-      queryClient.invalidateQueries({ queryKey: ['fulfillment-records'] })
-      toast({
-        title: 'Contract uploaded',
-        description: benefitCount > 0 ? `${benefitCount} benefits synced to Assets & Fulfillment` : undefined,
-        type: 'success'
-      })
+      toast({ title: 'Contract uploaded', type: 'success' })
     } catch (err) {
       toast({ title: 'Upload failed', description: err.message, type: 'error' })
     } finally {
@@ -3348,7 +3182,7 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
           {activeTab === 'contract' && (
             <>
               <div className="text-xs text-text-muted mb-3">
-                Upload contracts directly to this deal. PDFs are stored as-is and analyzed for benefits/assets.
+                Upload signed contracts directly to this deal. The file is stored as-is so anyone on the team can download it later.
               </div>
 
               {/* Upload button */}

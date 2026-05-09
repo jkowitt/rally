@@ -44,15 +44,6 @@ export default function AccountsDashboard() {
       const active = all.filter(c => !c.archived_at)
       const archived = all.filter(c => !!c.archived_at)
 
-      const { data: records } = await supabase
-        .from('fulfillment_records')
-        .select('id, delivered, contract_id')
-        .in('contract_id', all.map(c => c.id).filter(Boolean))
-
-      const recList = records || []
-      const delivered = recList.filter(r => r.delivered).length
-      const pending = recList.length - delivered
-
       const { data: versions } = await supabase
         .from('contract_versions')
         .select('id, contract_id, version_number, archived_at, archived_reason, snapshot')
@@ -65,9 +56,6 @@ export default function AccountsDashboard() {
         contracts: all.length,
         activeContracts: active.length,
         archivedContracts: (versions || []).length > 0 ? (versions || []).length : archived.length,
-        benefits: recList.length,
-        delivered,
-        pending,
       })
       setRecentContracts(active.slice(0, 8))
       setRecentVersions(versions || [])
@@ -87,22 +75,13 @@ export default function AccountsDashboard() {
       <div>
         <h1 className="text-2xl font-bold text-text-primary">Account Management</h1>
         <p className="text-sm text-text-muted mt-1">
-          Signed contracts, parsed benefits, and fulfillment status across all active accounts.
+          Signed contracts and renewal pipeline across all active accounts.
         </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <StatCard label="Active Contracts" value={stats.activeContracts} loading={loading} />
         <StatCard label="Archived Versions" value={stats.archivedContracts} loading={loading} />
-        <StatCard label="Total Benefits" value={stats.benefits} loading={loading} />
-        <StatCard label="Delivered" value={stats.delivered} loading={loading} accent="success" />
-        <StatCard label="Pending" value={stats.pending} loading={loading} accent="warning" />
-        <StatCard
-          label="Fulfillment %"
-          value={stats.benefits ? Math.round((stats.delivered / stats.benefits) * 100) + '%' : '—'}
-          loading={loading}
-          accent="accent"
-        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -130,20 +109,10 @@ export default function AccountsDashboard() {
           to="/app/crm/contracts"
           className="block rounded-lg bg-bg-surface border border-border p-5 hover:border-accent/40 transition-colors"
         >
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">Deliver</div>
+          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">Files</div>
           <div className="text-lg font-semibold text-text-primary">Contracts</div>
           <div className="text-sm text-text-muted mt-2">
-            Upload, parse benefits, version, and archive.
-          </div>
-        </Link>
-        <Link
-          to="/app/crm/fulfillment"
-          className="block rounded-lg bg-bg-surface border border-border p-5 hover:border-accent/40 transition-colors"
-        >
-          <div className="text-xs uppercase tracking-wider text-text-muted mb-1">Track</div>
-          <div className="text-lg font-semibold text-text-primary">Fulfillment</div>
-          <div className="text-sm text-text-muted mt-2">
-            Status of every benefit promised in every signed contract.
+            Upload signed contracts and keep them attached to each deal.
           </div>
         </Link>
       </div>
@@ -169,7 +138,7 @@ export default function AccountsDashboard() {
           {!loading && recentContracts.length === 0 && (
             <EmptyState
               title="No active contracts yet"
-              description="Sign a deal in the CRM and the contract will land here automatically — benefits parsed, fulfillment tracked, archives kept on every update."
+              description="Upload a signed contract from the CRM and it'll show up here, attached to its deal."
               className="border-0"
             />
           )}

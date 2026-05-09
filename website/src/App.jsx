@@ -50,8 +50,6 @@ const SystemHealth = lazyRetry(() => import('./pages/admin/SystemHealth'))
 const SalesVelocity = lazyRetry(() => import('./modules/crm/SalesVelocity'))
 const Accounts = lazyRetry(() => import('./modules/crm/Accounts'))
 const AuditLog = lazyRetry(() => import('./modules/crm/AuditLog'))
-const MigratePage = lazyRetry(() => import('./pages/contracts/MigratePage'))
-const FulfillmentTracker = lazyRetry(() => import('./modules/crm/FulfillmentTracker'))
 const AccountsDashboard = lazyRetry(() => import('./modules/accounts/AccountsDashboard'))
 const RenewalPipeline = lazyRetry(() => import('./modules/accounts/RenewalPipeline'))
 const AccountDetail = lazyRetry(() => import('./modules/accounts/AccountDetail'))
@@ -240,8 +238,6 @@ export default function App() {
                             <Route path="/crm/accounts" element={<Accounts />} />
                             <Route path="/crm/audit" element={<AuditLog />} />
                             <Route path="/crm/contracts" element={<ContractManager />} />
-                            <Route path="/crm/migrate" element={<MigratePage />} />
-                            <Route path="/crm/fulfillment" element={<FulfillmentTracker />} />
                             <Route path="/crm/report/:dealId" element={<BrandReport />} />
                             <Route path="/crm/declined" element={<DeclinedDeals />} />
                             <Route path="/crm/activities" element={<ActivityTimeline />} />

@@ -42,7 +42,6 @@ export function detectHub(pathname: string | null | undefined): HubId {
   if (!pathname) return 'crm'
   if (pathname.startsWith('/app/accounts')) return 'accounts'
   if (pathname.startsWith('/app/crm/contracts')) return 'accounts'
-  if (pathname.startsWith('/app/crm/fulfillment')) return 'accounts'
   if (pathname.startsWith('/app/marketing')) return 'ops'
   if (pathname.startsWith('/app/ops')) return 'ops'
   if (pathname.startsWith('/app/admin')) return 'ops'

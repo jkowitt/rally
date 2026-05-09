@@ -10,7 +10,7 @@ import { useUsageHeartbeat } from '@/hooks/useUsageHeartbeat'
 import { on } from '@/lib/appEvents'
 import {
   Home, LayoutGrid, Target, CheckSquare, Handshake,
-  FileText, Package, Settings, Users, SlidersHorizontal,
+  FileText, Settings, Users, SlidersHorizontal,
 } from 'lucide-react'
 
 const FeatureSuggestion = lazy(() => import('../FeatureSuggestion'))
@@ -137,7 +137,6 @@ function MobileBottomNav() {
     ] : []),
     { to: '/app/accounts', label: 'Accounts', icon: Handshake },
     { to: '/app/crm/contracts', label: 'Contracts', icon: FileText },
-    { to: '/app/crm/fulfillment', label: 'Fulfill', icon: Package },
     { to: '/app/ops', label: 'Ops', icon: Settings },
     { to: '/app/ops/team', label: 'Team', icon: Users },
     { to: '/app/settings', label: 'Settings', icon: SlidersHorizontal },

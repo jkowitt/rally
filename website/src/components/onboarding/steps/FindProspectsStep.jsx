@@ -1,66 +1,88 @@
 import { useNavigate } from 'react-router-dom'
 import { trackEvent } from '@/services/onboardingService'
 
-// FindProspectsStep — closes the onboarding flow by handing the
-// user off to the live Find Prospects UI. We don't try to inline
-// a search here because the real search lives behind a long-lived
-// modal with filters, ICP scoring, etc., and we don't want to
-// duplicate that UX. Instead we explain what they're about to do
-// and route them in.
+// FindProspectsStep — closes the onboarding flow. We don't try to
+// inline a real prospect search here because the UI lives behind a
+// long-lived modal with filters, ICP scoring, etc., and a stripped
+// version would just be a worse copy. Instead this screen sets
+// expectations, then hands the user off — either straight into the
+// search modal, or to one of three secondary destinations they're
+// likely to want to explore on their own.
 export default function FindProspectsStep({ onFinish, onSkip }) {
   const navigate = useNavigate()
 
-  function handleGo() {
-    trackEvent('find_prospects_opened_during_onboarding', {})
+  function go(path, eventName) {
+    if (eventName) trackEvent(eventName, {})
     onFinish() // mark step + complete onboarding
-    // /app/crm/pipeline auto-opens the Find Prospects modal when
-    // ?find=1 is set; this is the same query param the Find
-    // Prospects button on the pipeline uses.
-    navigate('/app/crm/pipeline?find=1')
+    navigate(path)
   }
 
   return (
     <div className="space-y-5">
-      <div className="text-center">
-        <div className="text-4xl mb-2">🎯</div>
-        <h2 className="text-xl sm:text-2xl font-bold text-text-primary mb-1">
-          Find your first prospects
+      <div>
+        <div className="text-[10px] font-mono uppercase tracking-widest text-accent mb-2">Step 3 — Prospects</div>
+        <h2 className="text-xl sm:text-2xl font-bold text-text-primary leading-tight">
+          Pick where to start
         </h2>
-        <p className="text-xs sm:text-sm text-text-secondary">
-          AI search returns real companies with verified contacts. Pick the ones that look like a fit and they drop straight into your pipeline.
+        <p className="text-sm text-text-secondary mt-2 leading-relaxed">
+          Most reps start with the AI prospect search — describe who you want to reach and the AI returns 10–20 named matches with an ICP score and the verified decision-makers at each. The other paths are equally valid; pick whichever maps to what you're trying to do today.
         </p>
       </div>
 
-      <div className="bg-bg-card border border-border rounded-lg p-4 space-y-2 text-xs text-text-secondary">
-        <div className="text-[10px] text-text-muted uppercase tracking-wider mb-2">What happens next</div>
-        <div className="flex items-start gap-2">
-          <span className="text-accent font-mono">1.</span>
-          <span>Describe who you want — industry, company size, region, anything.</span>
-        </div>
-        <div className="flex items-start gap-2">
-          <span className="text-accent font-mono">2.</span>
-          <span>The AI returns 10–20 named matches with ICP scores and decision-makers.</span>
-        </div>
-        <div className="flex items-start gap-2">
-          <span className="text-accent font-mono">3.</span>
-          <span>Click any result to add it to your pipeline as a Prospect deal.</span>
-        </div>
+      <div className="space-y-2">
+        <PathCard
+          accent
+          title="Find AI prospects"
+          body="Describe the ideal sponsor — industry, size, region, anything. Add the matches that fit straight into your pipeline."
+          cta="Open Find Prospects"
+          onClick={() => go('/app/crm/pipeline?find=1', 'find_prospects_opened_during_onboarding')}
+        />
+        <PathCard
+          title="Bulk add a list"
+          body="Have a CSV or a list of company names already? Paste it once and we enrich each row with firmographics + decision-makers."
+          cta="Open Bulk Add"
+          onClick={() => go('/app/crm/enrichment-queue', 'bulk_add_opened_during_onboarding')}
+        />
+        <PathCard
+          title="Run the pipeline you have"
+          body="Already added a deal in step 2? Open the board, drag it through stages, and use AI Insights to figure out the next move."
+          cta="Open Pipeline"
+          onClick={() => go('/app/crm/pipeline', 'pipeline_opened_during_onboarding')}
+        />
       </div>
 
-      <div className="space-y-2">
-        <button
-          onClick={handleGo}
-          className="w-full bg-accent text-bg-primary py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          Open Find Prospects →
-        </button>
+      <div className="pt-2 border-t border-border">
         <button
           onClick={onSkip}
           className="w-full text-[11px] text-text-muted hover:text-text-secondary py-1"
         >
-          I'll explore on my own
+          I'll explore on my own — show me the dashboard
         </button>
       </div>
     </div>
+  )
+}
+
+function PathCard({ accent, title, body, cta, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left rounded-lg border p-3 transition-colors ${
+        accent
+          ? 'border-accent/40 bg-accent/5 hover:border-accent'
+          : 'border-border bg-bg-card hover:border-accent/40'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className={`text-sm font-medium ${accent ? 'text-accent' : 'text-text-primary'}`}>{title}</div>
+          <div className="text-[12px] text-text-secondary mt-1 leading-relaxed">{body}</div>
+        </div>
+        <span className={`shrink-0 text-[11px] font-mono whitespace-nowrap ${accent ? 'text-accent' : 'text-text-muted'}`}>
+          {cta} →
+        </span>
+      </div>
+    </button>
   )
 }

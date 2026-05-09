@@ -4,6 +4,15 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { trackEvent } from '@/services/onboardingService'
 
+// CreateDealStep — second onboarding screen. Asks for the absolute
+// minimum to make a usable deal card (sponsor name) and treats the
+// other two fields as nice-to-haves with explicit "why we ask".
+// Reasons we kept it three fields:
+//   • brand_name — required, unique-ish, drives the card title
+//   • contact_name — anchors the relationship; everything else
+//     (email, role, linkedin) gets enriched on demand later
+//   • value — sets weighted-pipeline + win-rate KPIs from day one;
+//     ballpark is fine, the user can refine later
 export default function CreateDealStep({ onNext, onSkip }) {
   const { profile } = useAuth()
   const { toast } = useToast()
@@ -34,55 +43,91 @@ export default function CreateDealStep({ onNext, onSkip }) {
     setSaving(false)
   }
 
+  const inputClass = 'w-full bg-bg-surface border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent'
+
   return (
     <div className="space-y-5">
-      <div className="text-center">
-        <div className="text-4xl mb-2">💼</div>
-        <h2 className="text-xl sm:text-2xl font-bold text-text-primary mb-1">Add your first sponsor deal</h2>
-        <p className="text-xs sm:text-sm text-text-secondary">This takes 30 seconds. You can add full details later.</p>
+      <div>
+        <div className="text-[10px] font-mono uppercase tracking-widest text-accent mb-2">Step 2 — Pipeline</div>
+        <h2 className="text-xl sm:text-2xl font-bold text-text-primary leading-tight">
+          Drop in a deal you're already working
+        </h2>
+        <p className="text-sm text-text-secondary mt-2 leading-relaxed">
+          One deal in <em>Prospect</em> is enough — you'll move it through the pipeline as the conversation progresses.
+        </p>
       </div>
 
       <div className="space-y-3 bg-bg-card border border-border rounded-lg p-4">
-        <div>
-          <label className="text-[10px] text-text-muted uppercase tracking-wider block mb-1">Sponsor / Company Name *</label>
+        <Field
+          label="Sponsor / company name"
+          required
+          hint="Goes on the deal card. Required."
+        >
           <input
             value={form.brand_name}
             onChange={e => setForm(f => ({ ...f, brand_name: e.target.value }))}
             placeholder="e.g. Acme Bank"
-            className="w-full bg-bg-surface border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+            className={inputClass}
             autoFocus
           />
-        </div>
-        <div>
-          <label className="text-[10px] text-text-muted uppercase tracking-wider block mb-1">Contact Name</label>
+        </Field>
+        <Field
+          label="Primary contact"
+          hint="Anchor for the relationship. We'll enrich title + email later."
+        >
           <input
             value={form.contact_name}
             onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))}
             placeholder="e.g. Sarah Johnson"
-            className="w-full bg-bg-surface border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+            className={inputClass}
           />
-        </div>
-        <div>
-          <label className="text-[10px] text-text-muted uppercase tracking-wider block mb-1">Estimated Value ($)</label>
+        </Field>
+        <Field
+          label="Estimated value (USD)"
+          hint="Sets weighted pipeline + win-rate KPIs. Ballpark is fine."
+        >
           <input
             type="number"
             value={form.value}
             onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
             placeholder="50000"
-            className="w-full bg-bg-surface border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+            className={inputClass}
           />
+        </Field>
+        <div className="text-[10px] text-text-muted">
+          Stage starts at <span className="text-accent font-mono">Prospect</span>.
         </div>
-        <div className="text-[9px] text-text-muted">Stage will be set to <span className="text-accent">Prospect</span></div>
       </div>
 
       <div className="space-y-2">
-        <button onClick={handleCreate} disabled={saving || !form.brand_name.trim()} className="w-full bg-accent text-bg-primary py-3 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
-          {saving ? 'Adding...' : 'Add Deal & Continue →'}
+        <button
+          onClick={handleCreate}
+          disabled={saving || !form.brand_name.trim()}
+          className="w-full bg-accent text-bg-primary py-3 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+        >
+          {saving ? 'Adding…' : 'Add deal & continue →'}
         </button>
-        <button onClick={onSkip} className="w-full text-[11px] text-text-muted hover:text-text-secondary py-1">
-          I'll do this later
+        <button
+          onClick={onSkip}
+          className="w-full text-[11px] text-text-muted hover:text-text-secondary py-1"
+        >
+          Skip — I'll add deals later
         </button>
       </div>
+    </div>
+  )
+}
+
+function Field({ label, required, hint, children }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1">
+        <label className="text-[10px] text-text-muted uppercase tracking-wider">
+          {label}{required && ' *'}
+        </label>
+        {hint && <span className="text-[10px] text-text-muted/80 italic ml-2 truncate">{hint}</span>}
+      </div>
+      {children}
     </div>
   )
 }

@@ -1,31 +1,284 @@
 import { Link } from 'react-router-dom'
 import { useSeo } from '@/hooks/useSeo'
 
-// In-app user manual. The single source of truth for "how do I use
-// feature X?" — reachable from the user menu and from the AUTO/MANUAL
-// badge in the top bar. Keep sections in the same order they appear
-// in the sidebar so a user reading the manual can follow along by
-// scanning down the nav.
+// In-app user manual. Single source of truth for "how do I use X?".
+// Reachable from the user menu and from the AUTO/MANUAL badge in
+// the top bar. The shape — Quick Start → Playbooks → grouped TOC →
+// reference sections → FAQ — is deliberate: lets a brand-new rep
+// finish a useful flow in 5 minutes without reading the whole page,
+// while a returning user can ⌘F or click straight to the section
+// they need.
 export default function ManualPage() {
   useSeo({
     title: 'User Manual — Loud Legacy',
-    description: 'How to use every feature in the Loud Legacy CRM, prospecting, contracts, and operations modules.',
+    description: 'Quick start, common playbooks, and feature reference for the Loud Legacy CRM and prospecting tool.',
   })
 
   return (
-    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-8 sm:py-12 space-y-10">
+    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-8 sm:py-12 space-y-12">
       <header>
         <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted">User Manual</div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mt-2">
+        <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mt-2 leading-tight">
           How to work the platform
         </h1>
         <p className="text-text-secondary mt-3 leading-relaxed">
-          Every feature, in the order it shows up in the sidebar. Use the table of contents to jump to a section, or scroll top-to-bottom for a guided tour.
+          Loud Legacy is built around one job: turn the people you should be talking to into signed sponsors. This page covers the five-minute quick start, two end-to-end playbooks, every feature in the sidebar, and the questions that come up most.
         </p>
       </header>
 
-      <Toc />
+      <QuickStart />
 
+      <Playbooks />
+
+      <ContentsGrid />
+
+      <Reference />
+
+      <FAQ />
+
+      <footer className="border-t border-border pt-6">
+        <p className="text-xs text-text-muted">
+          Stuck on something this manual doesn't cover? Email{' '}
+          <a href="mailto:jason@loud-legacy.com" className="text-accent hover:underline">
+            jason@loud-legacy.com
+          </a>{' '}
+          or click the bug icon in the top bar.
+        </p>
+      </footer>
+    </div>
+  )
+}
+
+// ─── Quick Start ─────────────────────────────────────────────
+
+function QuickStart() {
+  return (
+    <section id="quick-start" className="scroll-mt-20">
+      <div className="bg-accent/5 border border-accent/30 rounded-xl p-5 sm:p-6">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
+          <h2 className="text-lg sm:text-xl font-semibold text-text-primary">
+            Quick start — 5 minutes
+          </h2>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-accent">~5 min</span>
+        </div>
+        <p className="text-sm text-text-secondary mb-4 leading-relaxed">
+          The shortest path from "just signed up" to "actively prospecting." Skip any step you've already done.
+        </p>
+        <ol className="space-y-3">
+          <QuickStep
+            n="1"
+            title="Add a deal you're already working"
+            body={<>Open <Link to="/app/crm/pipeline" className="text-accent hover:underline">Deal Pipeline</Link> → click <Code>+ New Deal</Code>. Sponsor name + value are enough.</>}
+          />
+          <QuickStep
+            n="2"
+            title="Run an AI prospect search"
+            body={<>Top right of the pipeline, click <Code>Find Prospects</Code>. Type a sentence describing who you want to reach. Add the matches that fit.</>}
+          />
+          <QuickStep
+            n="3"
+            title="Bulk-add a list you already have"
+            body={<>Open <Link to="/app/crm/enrichment-queue" className="text-accent hover:underline">Bulk Add</Link> → paste names or drop a CSV. Each row is enriched in the background.</>}
+          />
+          <QuickStep
+            n="4"
+            title="Schedule a follow-up"
+            body={<>From any deal, open the <em>Activity</em> tab → <Code>+ Schedule task</Code>. Tasks land in your <Link to="/app/todo" className="text-accent hover:underline">To-Do List</Link> at the right time.</>}
+          />
+          <QuickStep
+            n="5"
+            title="Open AI Insights on a stuck deal"
+            body={<>Pick any deal that's been quiet → <Link to="/app/crm/insights" className="text-accent hover:underline">AI Insights</Link> tells you what to do next based on stage, scoring, and history.</>}
+          />
+        </ol>
+      </div>
+    </section>
+  )
+}
+
+function QuickStep({ n, title, body }) {
+  return (
+    <li className="flex items-start gap-3">
+      <div className="shrink-0 w-7 h-7 rounded-full bg-accent text-bg-primary text-xs font-mono font-bold flex items-center justify-center">
+        {n}
+      </div>
+      <div className="flex-1 pt-0.5">
+        <div className="text-sm font-medium text-text-primary">{title}</div>
+        <div className="text-[12px] text-text-secondary mt-1 leading-relaxed">{body}</div>
+      </div>
+    </li>
+  )
+}
+
+// ─── Playbooks ───────────────────────────────────────────────
+
+function Playbooks() {
+  return (
+    <section id="playbooks" className="scroll-mt-20">
+      <div className="mb-4">
+        <h2 className="text-lg sm:text-xl font-semibold text-text-primary">Playbooks</h2>
+        <p className="text-sm text-text-secondary mt-1">
+          End-to-end workflows that span multiple features. Use these as the canonical "how do I do X" answers.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <Playbook
+          anchor="playbook-sponsor"
+          title="Sign your first sponsor end-to-end"
+          summary="From cold prospect to signed contract, using every tool the way it's meant to be used."
+          steps={[
+            <>Run <Link to="/app/crm/pipeline?find=1" className="text-accent hover:underline">Find Prospects</Link>. Add 5–10 fits to the pipeline as Prospect-stage deals.</>,
+            <>Use <Link to="/app/crm/sequences" className="text-accent hover:underline">Sequences</Link> to build a 4-step outreach (email → wait → LinkedIn → wait → follow-up). Enroll your new prospects.</>,
+            <>Approve each draft when it lands in your <Link to="/app/todo" className="text-accent hover:underline">To-Do list</Link>. The <Code>Coach</Code> button rewrites for tone and goal before you send.</>,
+            <>When a prospect replies, drag the deal from <Code>Prospect</Code> → <Code>Proposal Sent</Code>, then to <Code>Negotiation</Code> as the conversation progresses.</>,
+            <>Once verbal yes lands, drag to <Code>Contracted</Code>, upload the signed PDF in the deal's <em>Contract</em> tab, and run a <Link to="/app/crm/postmortems" className="text-accent hover:underline">Postmortem</Link> to capture what worked.</>,
+          ]}
+        />
+        <Playbook
+          anchor="playbook-stalled"
+          title="Recover a stalled deal"
+          summary="A deal hasn't moved in 14+ days. Here's how to figure out if it's salvageable and act on it."
+          steps={[
+            <>From the dashboard, click the <Code>Stale Deals</Code> KPI to filter the pipeline to dormant deals.</>,
+            <>Open the deal → <em>Activity</em> tab. Read the last few touches; check the timeline for what's missing (no contract, no recent email, etc.).</>,
+            <>Click <Link to="/app/crm/insights" className="text-accent hover:underline">AI Insights</Link> on the deal — the model recommends next-action based on similar closed-won deals.</>,
+            <>If the path is clear: schedule a task with a reminder, or compose a fresh email with the <Code>Coach</Code> goal set to "re-open conversation".</>,
+            <>If it's lost: drag to <Code>Declined</Code>, fill out a Postmortem so the team learns from it. Restore later if the buyer re-surfaces.</>,
+          ]}
+        />
+      </div>
+    </section>
+  )
+}
+
+function Playbook({ anchor, title, summary, steps }) {
+  return (
+    <details id={anchor} className="bg-bg-card border border-border rounded-lg open:border-accent/40 group scroll-mt-20">
+      <summary className="cursor-pointer list-none px-4 py-3 flex items-start justify-between gap-3 hover:bg-bg-surface/40 transition-colors rounded-lg">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-text-primary">{title}</div>
+          <div className="text-[12px] text-text-secondary mt-0.5 leading-relaxed">{summary}</div>
+        </div>
+        <span className="shrink-0 text-text-muted group-open:rotate-90 transition-transform text-sm">▸</span>
+      </summary>
+      <ol className="px-4 pb-4 pt-1 space-y-2 border-t border-border">
+        {steps.map((body, i) => (
+          <li key={i} className="flex items-start gap-3 text-sm text-text-secondary leading-relaxed">
+            <span className="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-accent/15 text-accent text-[10px] font-mono font-bold flex items-center justify-center">
+              {i + 1}
+            </span>
+            <div className="flex-1">{body}</div>
+          </li>
+        ))}
+      </ol>
+    </details>
+  )
+}
+
+// ─── Grouped Contents ────────────────────────────────────────
+
+function ContentsGrid() {
+  const groups = [
+    {
+      label: 'Get oriented',
+      items: [
+        ['navigation', 'Navigating the app'],
+        ['dashboard', 'Dashboard'],
+        ['todo', 'To-Do List'],
+      ],
+    },
+    {
+      label: 'Daily workflow',
+      items: [
+        ['pipeline', 'Deal Pipeline'],
+        ['find-prospects', 'Find Prospects (AI)'],
+        ['bulk-enrich', 'Bulk Add'],
+        ['sequences', 'Sequences'],
+        ['inbox', 'Inbox'],
+        ['tasks', 'Task Manager'],
+        ['activities', 'Activity timeline'],
+      ],
+    },
+    {
+      label: 'Insights & reporting',
+      items: [
+        ['velocity', 'Sales Velocity'],
+        ['analytics', 'Sales Analytics'],
+        ['insights', 'AI Insights'],
+        ['outreach-analytics', 'Outreach Analytics'],
+        ['postmortems', 'Postmortems'],
+        ['priority', 'Priority Queue'],
+        ['signals', 'Signal Radar'],
+        ['lookalikes', 'Lookalikes'],
+        ['relationships', 'Relationship Search'],
+      ],
+    },
+    {
+      label: 'Pipeline support',
+      items: [
+        ['assets', 'Asset Catalog'],
+        ['contracts', 'Contracts'],
+        ['declined', 'Declined deals'],
+        ['brand-report', 'Brand Report'],
+      ],
+    },
+    {
+      label: 'Account management',
+      items: [
+        ['accounts', 'Account Management'],
+      ],
+    },
+    {
+      label: 'Workspace',
+      items: [
+        ['ops', 'Operations (Team / Newsletter / Automations / Projects)'],
+        ['industry', 'Industry modules'],
+        ['addons', 'Add-ons'],
+        ['settings', 'Settings'],
+        ['plan', 'Plan + credits'],
+        ['custom-dashboard', 'Custom dashboards'],
+        ['audit', 'Audit Log'],
+      ],
+    },
+    {
+      label: 'Reference',
+      items: [
+        ['shortcuts', 'Keyboard shortcuts'],
+        ['bug', 'Reporting an issue'],
+        ['faq', 'FAQ'],
+      ],
+    },
+  ]
+
+  return (
+    <section aria-label="Contents" className="scroll-mt-20">
+      <h2 className="text-lg sm:text-xl font-semibold text-text-primary mb-3">Find what you need</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {groups.map(g => (
+          <div key={g.label} className="bg-bg-card border border-border rounded-lg p-4">
+            <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-2">
+              {g.label}
+            </div>
+            <ul className="space-y-1">
+              {g.items.map(([anchor, label]) => (
+                <li key={anchor}>
+                  <a href={`#${anchor}`} className="text-sm text-accent hover:underline">{label}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ─── Reference sections ──────────────────────────────────────
+
+function Reference() {
+  return (
+    <div className="space-y-10">
       <Section title="Navigating the app" anchor="navigation">
         <p>The left sidebar groups every feature by job-to-be-done; the top bar holds search, notifications, and account actions.</p>
         <ul className="space-y-1.5 list-disc ml-4">
@@ -33,11 +286,11 @@ export default function ManualPage() {
           <li><strong className="text-text-primary">Top bar</strong> — workspace name, global search (<Code>⌘K</Code> or <Code>Ctrl+K</Code>), API-usage pill, automation status, the bug-report button, the notifications bell, and your user menu.</li>
           <li><strong className="text-text-primary">Mobile</strong> — the sidebar collapses behind the menu icon and the most-used pages get a sticky bottom nav (Home / Pipeline / Assets / Tasks / Accounts / Contracts / Ops / Team / Settings).</li>
         </ul>
-        <Tip>The user menu has a <Code>Help</Code> entry that opens this manual at any time, plus a link back to <Link to="/app" className="text-accent hover:underline">your Dashboard</Link>.</Tip>
+        <Tip>The user menu has a <Code>User manual</Code> entry that opens this page from anywhere, plus a <Code>Replay setup</Code> entry for the first-login walkthrough.</Tip>
       </Section>
 
       <Section title="Dashboard" anchor="dashboard">
-        <p>The landing page after sign-in. Shows the workspace's pipeline, win-rate, weighted forecast, expiring deals, stale deals, today's tasks, and recent activity.</p>
+        <p>The landing page after sign-in. Shows the workspace's pipeline, win rate, weighted forecast, expiring deals, stale deals, today's tasks, and recent activity.</p>
         <ul className="space-y-1.5 list-disc ml-4">
           <li>Click any KPI card to drill into the underlying list (e.g. clicking <Code>Stale Deals</Code> filters the pipeline to deals with no activity in 14+ days).</li>
           <li>Use the gear in the top-right to <em>hide</em> or <em>reorder</em> dashboard cards. Settings persist per browser.</li>
@@ -68,7 +321,7 @@ export default function ManualPage() {
         <p><Link to="/app/crm/assets" className="text-accent hover:underline">/app/crm/assets</Link> — every sponsorable asset your property sells (logos on jersey, on-site signage, naming rights, social mentions, etc.).</p>
         <ul className="space-y-1.5 list-disc ml-4">
           <li>Add an asset with category, base price, quantity, and any default benefits.</li>
-          <li>Assets attached to a deal show in the deal's Overview tab and are auto-linked to contracts when one is uploaded.</li>
+          <li>Assets attached to a deal show in the deal's Overview tab.</li>
           <li>Use the catalog as the source of truth when building proposals — the deal form pulls from it.</li>
         </ul>
       </Section>
@@ -77,7 +330,7 @@ export default function ManualPage() {
         <p><Link to="/app/crm/declined" className="text-accent hover:underline">/app/crm/declined</Link> — deals you marked lost. Hidden from the active board but kept for retros and recovery. Click a deal to restore it to <Code>Prospect</Code> if the buyer comes back.</p>
       </Section>
 
-      <Section title="Find prospects (AI)" anchor="find-prospects">
+      <Section title="Find Prospects (AI)" anchor="find-prospects">
         <p>Open from <Code>Deal Pipeline → Find Prospects</Code>, the sidebar <em>Find Prospects</em> link, or the keyboard shortcut <Code>P</Code>.</p>
         <Step n="1" body={<>Type a sentence describing who you want to reach — industry, size, region, anything specific. Example: <em>"mid-market SaaS in the US, 50–250 employees, raised in the last 18 months"</em>.</>} />
         <Step n="2" body={<>The AI returns 10–20 named matches with an ICP score and the verified decision-maker(s) at each. Each lookup costs one credit from your monthly pool (see top-bar pill).</>} />
@@ -85,7 +338,7 @@ export default function ManualPage() {
         <Tip>Filters down the right side scope by industry, size, region, persona, and any saved ICP — apply them before searching to bias results.</Tip>
       </Section>
 
-      <Section title="Bulk add" anchor="bulk-enrich">
+      <Section title="Bulk Add" anchor="bulk-enrich">
         <p><Link to="/app/crm/enrichment-queue" className="text-accent hover:underline">/app/crm/enrichment-queue</Link> — paste a list or upload a CSV of companies and prospects. Each row is automatically enriched with firmographics + decision-makers in the background; click <Code>Add to CRM</Code> on any enriched row to turn it into a deal or contact.</p>
       </Section>
 
@@ -244,69 +497,76 @@ export default function ManualPage() {
           <Shortcut keys="?" desc="Show all shortcuts" />
         </div>
       </Section>
-
-      <footer className="border-t border-border pt-6">
-        <p className="text-xs text-text-muted">
-          Stuck on something this manual doesn't cover? Email{' '}
-          <a href="mailto:jason@loud-legacy.com" className="text-accent hover:underline">
-            jason@loud-legacy.com
-          </a>{' '}
-          or click the bug icon in the top bar.
-        </p>
-      </footer>
     </div>
   )
 }
 
-function Toc() {
+// ─── FAQ ─────────────────────────────────────────────────────
+
+function FAQ() {
   const items = [
-    ['navigation', 'Navigating the app'],
-    ['dashboard', 'Dashboard'],
-    ['todo', 'To-Do List'],
-    ['pipeline', 'Deal Pipeline'],
-    ['assets', 'Asset Catalog'],
-    ['declined', 'Declined deals'],
-    ['find-prospects', 'Find prospects (AI)'],
-    ['bulk-enrich', 'Bulk add'],
-    ['signals', 'Signal Radar'],
-    ['lookalikes', 'Lookalikes'],
-    ['relationships', 'Relationship Search'],
-    ['sequences', 'Sequences'],
-    ['priority', 'Priority Queue'],
-    ['outreach-analytics', 'Outreach Analytics'],
-    ['velocity', 'Sales Velocity'],
-    ['analytics', 'Sales Analytics'],
-    ['insights', 'AI Insights'],
-    ['postmortems', 'Postmortems'],
-    ['inbox', 'Inbox'],
-    ['activities', 'Activity timeline'],
-    ['tasks', 'Task Manager'],
-    ['contracts', 'Contracts'],
-    ['brand-report', 'Brand Report'],
-    ['audit', 'Audit Log'],
-    ['accounts', 'Account Management'],
-    ['ops', 'Operations'],
-    ['industry', 'Industry modules'],
-    ['addons', 'Add-ons'],
-    ['settings', 'Settings'],
-    ['plan', 'Plan + credits'],
-    ['custom-dashboard', 'Custom dashboards'],
-    ['bug', 'Reporting an issue'],
-    ['shortcuts', 'Keyboard shortcuts'],
+    {
+      q: 'Does an onboarding window pop up every time I sign in?',
+      a: 'No. The onboarding modal only auto-runs on your very first login. After that, you can re-open it from the user menu under "Replay setup" if you want to revisit the walkthrough.',
+    },
+    {
+      q: 'How do my To-Do list and Task Manager stay in sync?',
+      a: 'They share a single tasks table. A task you create in either view shows up in both immediately, and marking one Done removes it from both. New tasks default to "assigned to me" so they appear on your daily plan automatically.',
+    },
+    {
+      q: 'What happens if I run out of prospect lookups?',
+      a: 'The Find Prospects search will tell you when you hit the cap. You can buy +100 lookups for $15 from Settings → Billing, wait until next month for the cap to reset, or upgrade your plan for a higher monthly allowance.',
+    },
+    {
+      q: 'Can I pre-fill my company info during signup so I don\'t have to enter it again?',
+      a: 'You already do. Signup collects company name, city, state, and industry up front, and we stash that in your account so it survives email confirmation. The "One last step" prompt only fires for the rare cases where that metadata is missing.',
+    },
+    {
+      q: 'Is there an API or webhook layer for integrating with other tools?',
+      a: 'Webhooks, API keys, and if-this-then-that workflow rules are not user-facing right now while we focus on the core CRM. The underlying schema supports them — if you have an integration use-case, email jason@loud-legacy.com and we\'ll hand you an API key.',
+    },
+    {
+      q: 'How do contracts work? I don\'t see AI extraction or fulfillment tracking anymore.',
+      a: 'Contracts are file storage for now: pick the deal, upload the file, set status / dates / value, and save. The AI extraction + fulfillment tracking surface was creating more problems than it solved at launch — we\'ll likely revive it once the core flow is rock-solid.',
+    },
+    {
+      q: 'My pipeline is empty. Where do I start?',
+      a: 'Three options, fastest to slowest: (1) Open Find Prospects with a one-sentence ICP description and add the matches. (2) Open Bulk Add and paste a list or CSV you already have. (3) Click "+ New Deal" on the pipeline and add deals you\'re already working manually.',
+    },
+    {
+      q: 'How do I invite my team?',
+      a: 'Operations → Team. Enter their email, pick a role (rep, admin, or developer), and they get an invite link. Existing accounts get auto-attached to your workspace; new accounts go through a shorter signup flow.',
+    },
+    {
+      q: 'Can prospects see anything I do in the CRM?',
+      a: 'Only what you explicitly share. Click Share on any deal to generate a tokenized sponsor portal link — they can review the deal status without logging in. Everything else is gated by row-level security to your workspace.',
+    },
+    {
+      q: 'Where do I report bugs or request features?',
+      a: 'The bug icon in the top bar opens a capture modal that auto-includes the URL, browser, and module. You can also email jason@loud-legacy.com for anything bigger.',
+    },
   ]
   return (
-    <nav aria-label="Table of contents" className="bg-bg-card border border-border rounded-lg p-4">
-      <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-2">Contents</div>
-      <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm">
-        {items.map(([anchor, label]) => (
-          <li key={anchor}>
-            <a href={`#${anchor}`} className="text-accent hover:underline">{label}</a>
-          </li>
+    <section id="faq" className="scroll-mt-20">
+      <h2 className="text-lg sm:text-xl font-semibold text-text-primary mb-3">FAQ</h2>
+      <div className="bg-bg-card border border-border rounded-lg divide-y divide-border">
+        {items.map((it, i) => (
+          <details key={i} className="group">
+            <summary className="cursor-pointer list-none px-4 py-3 flex items-start justify-between gap-3 hover:bg-bg-surface/40 transition-colors">
+              <span className="text-sm font-medium text-text-primary">{it.q}</span>
+              <span className="shrink-0 text-text-muted group-open:rotate-90 transition-transform text-sm">▸</span>
+            </summary>
+            <div className="px-4 pb-4 text-[13px] text-text-secondary leading-relaxed">
+              {it.a}
+            </div>
+          </details>
         ))}
-      </ul>
-    </nav>
+      </div>
+    </section>
   )
 }
+
+// ─── Reusable bits ───────────────────────────────────────────
 
 function Section({ title, anchor, children }) {
   return (

@@ -34,35 +34,71 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-    <!-- Structured Data -->
+    <!-- Structured Data — three @types Google uses for branding:
+         • Organization gives Search the brand name + logo for the
+           SERP knowledge card (and feeds the favicon panel).
+         • WebSite gives Search the canonical site name + the
+           potential sitelinks search box.
+         • SoftwareApplication describes what the product is so
+           it qualifies for the "software" rich result.
+         Keep these in one @graph rather than three <script> blocks
+         so Google's parsers see them as a single connected entity. -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "Loud Legacy",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "description": "The operating system for revenue teams. Unified CRM, prospecting, and account management with AI-drafted outreach, multi-mailbox inbox, signal radar, and renewal pipeline.",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "featureList": [
-        "Deal pipeline + accounts + contacts + custom fields",
-        "Multi-mailbox inbox (Outlook + Gmail) with AI reply suggestions",
-        "Multi-step prospect sequences with A/B variant testing",
-        "Signal radar — job changes, funding rounds, EDGAR filings",
-        "AI account briefs, lookalikes, personality profiles",
-        "Renewal pipeline + account health scoring + QBR scheduling",
-        "Onboarding playbooks, fulfillment tracking, sponsor portal",
-        "Audit log, saved views, bulk edit, webhooks, public API",
-        "Stripe self-serve add-ons + Contact-Sales for premium modules"
-      ],
-      "creator": {
-        "@type": "Organization",
-        "name": "Loud Legacy"
-      }
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://loud-legacy.com/#organization",
+          "name": "Loud Legacy",
+          "url": "https://loud-legacy.com",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://loud-legacy.com/logo-loud-legacy.svg",
+            "width": 512,
+            "height": 512
+          },
+          "sameAs": [
+            "https://www.linkedin.com/company/loud-legacy"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "jason@loud-legacy.com",
+            "contactType": "customer support"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://loud-legacy.com/#website",
+          "url": "https://loud-legacy.com",
+          "name": "Loud Legacy",
+          "publisher": { "@id": "https://loud-legacy.com/#organization" }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Loud Legacy",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "description": "The AI-native CRM and prospecting platform. Unified pipeline, AI-grounded prospect generation, voice + meeting capture, sequences, signal radar, and renewal pipeline in one tool.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "AI morning brief grounded in closed-won patterns + recent activity",
+            "Deal pipeline + accounts + contacts + custom fields",
+            "AI prospect generation with verified decision-makers",
+            "Voice + meeting capture with auto-transcription and action-item extraction (Enterprise)",
+            "Multi-mailbox inbox (Outlook + Gmail) with AI reply suggestions",
+            "Multi-step prospect sequences with AI coach + A/B variants",
+            "Signal radar — job changes, funding rounds, EDGAR filings",
+            "Renewal pipeline + account health scoring",
+            "Sponsor portal + audit log + saved views + public API"
+          ],
+          "publisher": { "@id": "https://loud-legacy.com/#organization" }
+        }
+      ]
     }
     </script>
   </head>

@@ -10,6 +10,7 @@ import IntelligenceTourBanner from '@/components/IntelligenceTourBanner'
 import ResumeBanner from '@/components/onboarding/ResumeBanner'
 import UpgradeBanner from '@/components/upgrade/UpgradeBanner'
 import { TrialBanner } from '@/components/UpgradeGate'
+import AIBrief from '@/components/AIBrief'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts'
 import { useNavigate } from 'react-router-dom'
 
@@ -608,6 +609,10 @@ export default function Dashboard() {
     <div className="space-y-4 sm:space-y-6">
       <IntelligenceTourBanner />
       <CoachingNudges />
+      {/* AI morning brief — grounded in first-party data (closed-won
+          patterns, recent activity recordings, pipeline state, signals).
+          Cached per-user-per-day; rep can refresh on demand. */}
+      <AIBrief />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

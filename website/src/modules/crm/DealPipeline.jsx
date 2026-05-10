@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import ProspectingChatPanel from '@/components/ProspectingChatPanel'
 import DealActivityTimeline from '@/components/DealActivityTimeline'
+import ActivityCapture from '@/components/ActivityCapture'
 import BuyingCommittee from '@/components/BuyingCommittee'
 import AccountBrief from '@/components/AccountBrief'
 import CompanyResearchPanel from '@/components/CompanyResearchPanel'
@@ -1929,13 +1930,20 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
 
           {activeTab === 'activity' && (
             <ErrorBoundary>
-              <div className="flex justify-end mb-2">
-                <button
-                  onClick={() => { onClose(); navigate(`/app/crm/tasks?deal=${deal.id}&new=1`) }}
-                  className="text-xs bg-accent/10 border border-accent/30 text-accent px-3 py-1.5 rounded hover:bg-accent/20 transition-colors"
-                >
-                  + Schedule task
-                </button>
+              <div className="space-y-3 mb-3">
+                <ActivityCapture
+                  dealId={deal.id}
+                  propertyId={propertyId}
+                  userId={profile?.id}
+                />
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => { onClose(); navigate(`/app/crm/tasks?deal=${deal.id}&new=1`) }}
+                    className="text-xs bg-accent/10 border border-accent/30 text-accent px-3 py-1.5 rounded hover:bg-accent/20 transition-colors"
+                  >
+                    + Schedule task
+                  </button>
+                </div>
               </div>
               <DealActivityTimeline dealId={deal.id} propertyId={propertyId} />
             </ErrorBoundary>

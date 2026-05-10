@@ -143,7 +143,7 @@ export default function UserMenu() {
                 </div>
               </div>
             </button>
-            {(role === 'developer' || role === 'admin') && (
+            {role === 'developer' && (
               <MenuItem
                 to="/app/developer"
                 icon={BookOpen}

@@ -707,8 +707,8 @@ function Footer() {
         <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
           <span className="text-xs text-text-muted">&copy; {new Date().getFullYear()} Loud Legacy. All rights reserved.</span>
           <div className="flex gap-4 text-xs text-text-muted">
-            <span>Terms of Service</span>
-            <span>Privacy Policy</span>
+            <Link to="/legal/terms" className="hover:text-text-primary transition-colors">Terms of Service</Link>
+            <Link to="/legal/privacy" className="hover:text-text-primary transition-colors">Privacy Policy</Link>
           </div>
         </div>
       </div>

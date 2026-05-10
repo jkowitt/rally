@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import GlobalSearch from '../GlobalSearch'
@@ -89,8 +89,8 @@ export default function AppShell({ children }) {
         <footer className="hidden md:flex border-t border-border px-6 py-3 items-center justify-between text-xs text-text-muted">
           <span>&copy; {new Date().getFullYear()} Loud Legacy</span>
           <div className="flex gap-4">
-            <a href="/legal/terms" className="hover:text-text-secondary">Terms of Service</a>
-            <a href="/legal/privacy" className="hover:text-text-secondary">Privacy Policy</a>
+            <Link to="/legal/terms" className="hover:text-text-secondary">Terms of Service</Link>
+            <Link to="/legal/privacy" className="hover:text-text-secondary">Privacy Policy</Link>
             <a href="mailto:jason@loud-legacy.com" className="hover:text-text-secondary">Contact</a>
           </div>
         </footer>

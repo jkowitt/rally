@@ -28,6 +28,7 @@ function lazyRetry(fn) {
 const LandingPage = lazyRetry(() => import('./pages/LandingPage'))
 const LoginPage = lazyRetry(() => import('./modules/legal/LoginPage'))
 const ResetPasswordPage = lazyRetry(() => import('./pages/ResetPasswordPage'))
+const LegalPage = lazyRetry(() => import('./pages/legal/LegalPage'))
 const OutlookOAuthCallback = lazyRetry(() => import('./pages/auth/OutlookOAuthCallback'))
 const GmailOAuthCallback = lazyRetry(() => import('./pages/auth/GmailOAuthCallback'))
 const InboxView = lazyRetry(() => import('./modules/inbox/InboxView'))
@@ -182,6 +183,11 @@ export default function App() {
             <Route path="/compare/*" element={<CompareRouter />} />
             {/* Public pricing page (database-driven) */}
             <Route path="/pricing" element={<PricingPage />} />
+            {/* Public legal pages — read latest active doc from
+                the legal_documents table. Linked from the app
+                shell footer + LandingPage footer. */}
+            <Route path="/legal/terms" element={<LegalPage type="terms_of_service" />} />
+            <Route path="/legal/privacy" element={<LegalPage type="privacy_policy" />} />
             {/* Public unsubscribe (token-based, no login required) */}
             <Route path="/unsubscribe/:token" element={<UnsubscribePage />} />
             {/* Public Digest archive + individual articles */}

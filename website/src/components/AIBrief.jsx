@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
+import { useComposeEmail } from '@/hooks/useComposeEmail'
 import { humanError } from '@/lib/humanError'
-import { Sparkles, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react'
+import { Sparkles, RefreshCw, ChevronDown, ChevronRight, Send } from 'lucide-react'
 
 // AIBrief — the morning panel on the Dashboard that surfaces a
 // grounded, first-party summary of what to do today. Produced by
@@ -25,6 +26,7 @@ export default function AIBrief() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const compose = useComposeEmail()
   const [expanded, setExpanded] = useState({ prospects: true, emails: true, deals: true, renewals: false, signals: false })
 
   const userId = profile?.id
@@ -148,7 +150,7 @@ export default function AIBrief() {
             onToggle={() => toggle('prospects')}
           >
             {brief.prospects.map((p, i) => (
-              <ProspectCard key={i} prospect={p} navigate={navigate} propertyId={propertyId} userId={userId} toast={toast} />
+              <ProspectCard key={i} prospect={p} navigate={navigate} propertyId={propertyId} userId={userId} toast={toast} compose={compose} />
             ))}
           </Lane>
         )}
@@ -160,7 +162,7 @@ export default function AIBrief() {
             onToggle={() => toggle('emails')}
           >
             {brief.emails.map((e, i) => (
-              <EmailCard key={i} email={e} navigate={navigate} />
+              <EmailCard key={i} email={e} navigate={navigate} compose={compose} />
             ))}
           </Lane>
         )}
@@ -253,9 +255,9 @@ function Lane({ label, count, open, onToggle, children }) {
   )
 }
 
-function ProspectCard({ prospect, navigate, propertyId, userId, toast }) {
+function ProspectCard({ prospect, navigate, propertyId, userId, toast, compose }) {
   const [adding, setAdding] = useState(false)
-  async function addToPipeline() {
+  async function addAndCompose() {
     if (!propertyId) return
     setAdding(true)
     try {
@@ -268,7 +270,11 @@ function ProspectCard({ prospect, navigate, propertyId, userId, toast }) {
       }).select('id').single()
       if (error) throw error
       toast({ title: 'Added to pipeline', description: prospect.brand_name, type: 'success' })
-      navigate(`/app/crm/pipeline?deal=${data.id}`)
+      // Open compose pre-filled with the AI's first-touch draft so
+      // the rep can edit + send instead of retyping.
+      const subject = parseSubject(prospect.suggested_first_touch) || `Intro — ${prospect.brand_name}`
+      const body = stripSubjectLine(prospect.suggested_first_touch) || ''
+      compose.open({ dealId: data.id, defaultSubject: subject, defaultBody: body })
     } catch (e) {
       toast({ title: 'Could not add', description: humanError(e), type: 'error' })
     } finally {
@@ -285,11 +291,11 @@ function ProspectCard({ prospect, navigate, propertyId, userId, toast }) {
           )}
         </div>
         <button
-          onClick={addToPipeline}
+          onClick={addAndCompose}
           disabled={adding}
-          className="text-[11px] bg-accent/10 border border-accent/30 text-accent rounded px-2 py-1 hover:bg-accent/20 disabled:opacity-50"
+          className="text-[11px] inline-flex items-center gap-1 bg-accent text-bg-primary rounded px-2 py-1 hover:opacity-90 disabled:opacity-50"
         >
-          {adding ? 'Adding…' : '+ Add to pipeline'}
+          <Send className="w-3 h-3" /> {adding ? 'Adding…' : 'Add + draft'}
         </button>
       </div>
       {prospect.why_grounded && (
@@ -297,7 +303,7 @@ function ProspectCard({ prospect, navigate, propertyId, userId, toast }) {
       )}
       {prospect.suggested_first_touch && (
         <details className="mt-2">
-          <summary className="cursor-pointer text-[11px] text-accent hover:underline list-none">Suggested first email →</summary>
+          <summary className="cursor-pointer text-[11px] text-accent hover:underline list-none">Preview first email →</summary>
           <pre className="mt-1.5 bg-bg-surface border border-border rounded p-2 text-[11px] text-text-secondary whitespace-pre-wrap font-sans">{prospect.suggested_first_touch}</pre>
         </details>
       )}
@@ -305,7 +311,7 @@ function ProspectCard({ prospect, navigate, propertyId, userId, toast }) {
   )
 }
 
-function EmailCard({ email, navigate }) {
+function EmailCard({ email, navigate, compose }) {
   return (
     <div className="bg-bg-card border border-border rounded p-3">
       <div className="flex items-start justify-between gap-2 flex-wrap">
@@ -314,14 +320,29 @@ function EmailCard({ email, navigate }) {
           <div className="text-[11px] text-text-muted">to {email.recipient || 'unknown'}</div>
           {email.reason && <div className="text-[11px] text-text-secondary mt-1">{email.reason}</div>}
         </div>
-        {email.deal_id && (
-          <button
-            onClick={() => navigate(`/app/crm/pipeline?deal=${email.deal_id}`)}
-            className="text-[11px] text-accent hover:underline whitespace-nowrap"
-          >
-            Open deal →
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {email.body && (
+            <button
+              onClick={() => compose.open({
+                to: email.recipient || undefined,
+                defaultSubject: email.subject || '',
+                defaultBody: email.body,
+                dealId: email.deal_id || null,
+              })}
+              className="text-[11px] inline-flex items-center gap-1 bg-accent text-bg-primary rounded px-2 py-1 hover:opacity-90"
+            >
+              <Send className="w-3 h-3" /> Send
+            </button>
+          )}
+          {email.deal_id && (
+            <button
+              onClick={() => navigate(`/app/crm/pipeline?deal=${email.deal_id}`)}
+              className="text-[11px] text-accent hover:underline whitespace-nowrap"
+            >
+              Open deal →
+            </button>
+          )}
+        </div>
       </div>
       {email.body && (
         <details className="mt-2">
@@ -331,6 +352,19 @@ function EmailCard({ email, navigate }) {
       )}
     </div>
   )
+}
+
+// Parse "Subject: foo" out of an AI-drafted email so we can split
+// it into Compose's separate subject + body fields. The model
+// sometimes prepends the subject; sometimes it just dumps the body.
+function parseSubject(text) {
+  if (!text) return null
+  const m = text.match(/^\s*subject\s*:\s*(.+)$/im)
+  return m ? m[1].trim() : null
+}
+function stripSubjectLine(text) {
+  if (!text) return ''
+  return text.replace(/^\s*subject\s*:\s*.+\n+/im, '').trim()
 }
 
 function DealCard({ deal, navigate }) {

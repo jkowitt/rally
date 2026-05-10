@@ -10,6 +10,14 @@
 //   - activities (a regular timeline row)
 //   - tasks (one row per action item)
 //
+// Gating:
+//   • Enterprise-only. Recording + transcription is heavy
+//     compute and a key differentiator we sell as part of the
+//     enterprise tier. requireUser({ plan: 'enterprise' }) handles
+//     the 403; developers bypass for QA.
+//   • Per-user daily cap of 50 transcriptions, enforced via the
+//     check_rate_limit() RPC (24h window).
+//
 // Inputs (POST JSON):
 //   { recording_id: uuid }   - row already inserted by the client
 //                              with status='uploaded' and audio_path
@@ -28,6 +36,14 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const TRANSCRIBE_MODEL = Deno.env.get("WHISPER_MODEL") ?? "whisper-1";
 const EXTRACT_MODEL = Deno.env.get("CLAUDE_EXTRACT_MODEL") ?? "claude-sonnet-4-6";
+
+// Whisper API hard limit is 25MB. Keep a small buffer so a slightly
+// chunky webm doesn't reject server-side after the user already
+// uploaded it.
+const MAX_AUDIO_BYTES = 24 * 1024 * 1024;
+// Per-user daily transcription cap. Enterprise plan, but we still
+// don't want a runaway script blowing up our OpenAI bill.
+const DAILY_TRANSCRIBE_CAP = 50;
 
 const EXTRACT_SYSTEM = `You convert a sales conversation transcript into structured data for a CRM. The transcript may be a sales call, a cold outreach voicemail, an in-person meeting, or a recorded note. Output JSON ONLY (no prose, no fences):
 
@@ -54,7 +70,9 @@ interface Body { recording_id: string }
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const guard = await requireUser(req);
+  // Enterprise plan gate. requireUser handles the 403 + a friendly
+  // message naming the required plan. Developers bypass.
+  const guard = await requireUser(req, { plan: "enterprise" });
   if (!guard.ok) return guard.response;
   const { userId } = guard;
 
@@ -70,6 +88,24 @@ Deno.serve(async (req: Request) => {
   if (!body.recording_id) return jsonResponse({ success: false, error: "recording_id required" }, 400);
 
   const sb = createClient(SUPABASE_URL, SERVICE_KEY);
+
+  // Per-user daily rate limit. 24h sliding window via the existing
+  // check_rate_limit RPC. Returns false when the user is over cap.
+  try {
+    const { data: allowed } = await sb.rpc("check_rate_limit", {
+      p_scope: "transcribe_activity",
+      p_identifier: userId,
+      p_window_seconds: 24 * 60 * 60,
+      p_max_hits: DAILY_TRANSCRIBE_CAP,
+    });
+    if (allowed === false) {
+      return jsonResponse({
+        success: false,
+        error: "rate_limited",
+        message: `You've hit today's cap of ${DAILY_TRANSCRIBE_CAP} transcriptions. Resets in 24 hours.`,
+      }, 429);
+    }
+  } catch { /* RPC missing in dev; fail-open rather than block */ }
 
   // Load the recording row.
   const { data: rec, error: recErr } = await sb
@@ -93,6 +129,9 @@ Deno.serve(async (req: Request) => {
     const audioRes = await fetch(signed.signedUrl);
     if (!audioRes.ok) throw new Error(`Could not fetch audio: ${audioRes.status}`);
     const audioBlob = await audioRes.blob();
+    if (audioBlob.size > MAX_AUDIO_BYTES) {
+      throw new Error(`Audio file is ${(audioBlob.size / 1024 / 1024).toFixed(1)}MB; max is 24MB. Split longer recordings into shorter clips.`);
+    }
 
     // ─── Whisper transcription ──────────────────────────────
     const form = new FormData();
@@ -114,25 +153,32 @@ Deno.serve(async (req: Request) => {
     if (!transcript || transcript.length < 10) throw new Error("Empty transcript");
 
     // ─── Claude structured extraction ───────────────────────
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: EXTRACT_MODEL,
-        max_tokens: 1024,
-        system: EXTRACT_SYSTEM,
-        messages: [{ role: "user", content: transcript.slice(0, 12000) }],
-      }),
-    });
-    if (!claudeRes.ok) {
+    // One retry on transient 5xx — the Anthropic API rarely flakes
+    // but when it does a single retry usually succeeds.
+    let claudeJson: any = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: EXTRACT_MODEL,
+          max_tokens: 1024,
+          system: EXTRACT_SYSTEM,
+          messages: [{ role: "user", content: transcript.slice(0, 12000) }],
+        }),
+      });
+      if (claudeRes.ok) { claudeJson = await claudeRes.json(); break; }
       const t = await claudeRes.text();
+      if (claudeRes.status >= 500 && attempt === 0) {
+        await new Promise(r => setTimeout(r, 800));
+        continue;
+      }
       throw new Error(`Claude error ${claudeRes.status}: ${t.slice(0, 200)}`);
     }
-    const claudeJson = await claudeRes.json();
     const raw = claudeJson?.content?.[0]?.text || "{}";
     let extracted: Record<string, unknown> = {};
     try {
@@ -221,3 +267,4 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, error: msg }, 500);
   }
 });
+

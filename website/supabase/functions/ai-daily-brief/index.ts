@@ -64,6 +64,12 @@ Hard rules:
   • If the data is too thin to confidently produce N items, return fewer. Don't pad.
   • Output JSON only (no prose, no fences).`;
 
+// Stop list for the grounding validator. Common words that might
+// match the haystack by accident; require non-stop tokens to score.
+const STOP_WORDS = new Set([
+  "the","and","for","that","this","with","from","they","have","their","into","your","about","there","would","could","should","which","when","what","where","while","because","these","those","other","more","than","then","also","just","only","very","much","such","being","does","done","make","made","like","want","need","know","think","still","again","over","under","after","before","each","both","some","many","most","first","last","next","good","best","high","low","new","old","one","two","three","four","five","six","seven","eight","nine","ten",
+]);
+
 interface BodyShape { regenerate?: boolean }
 
 Deno.serve(async (req: Request) => {
@@ -97,6 +103,27 @@ Deno.serve(async (req: Request) => {
     if (existing?.payload) {
       return jsonResponse({ success: true, brief: existing.payload, cached: true });
     }
+  }
+
+  // Per-user rate limit on regenerations. The cached read above
+  // means a normal user pays one Claude call per day; this just
+  // protects against someone smashing the Refresh button.
+  if (body.regenerate) {
+    try {
+      const { data: allowed } = await sb.rpc("check_rate_limit", {
+        p_scope: "ai_brief_regenerate",
+        p_identifier: userId,
+        p_window_seconds: 24 * 60 * 60,
+        p_max_hits: 5,
+      });
+      if (allowed === false) {
+        return jsonResponse({
+          success: false,
+          error: "rate_limited",
+          message: "You've regenerated the brief 5 times today. Resets in 24h.",
+        }, 429);
+      }
+    } catch { /* RPC missing in dev; fail-open */ }
   }
 
   // Mark generating (upsert)
@@ -207,12 +234,57 @@ Deno.serve(async (req: Request) => {
       try { parsed = JSON.parse(clean); } catch { parsed = {}; }
     }
 
+    // ─── Validation pass ─────────────────────────────────────
+    // Hard rule from the system prompt: every prospect must
+    // reference SOMETHING in the input grounding. We can't reason
+    // about Claude's claim quality, but we CAN cheaply validate
+    // that the prospect's brand_name OR a phrase from why_grounded
+    // appears in CLOSED_WON, RECORDINGS, or SIGNALS. Items that
+    // fail this check are dropped — better to show fewer grounded
+    // items than to claim grounding we can't substantiate.
+    const groundingHaystack = [
+      ...grounding.CLOSED_WON.map(d => `${d.brand_name || ""} ${d.sub_industry || ""} ${d.contact_company || ""}`),
+      ...grounding.RECORDINGS.map(r => `${(r as any).summary || ""} ${((r as any).competitor_mentions || []).join(" ")}`),
+      ...grounding.SIGNALS.map(s => `${(s as any).title || ""} ${(s as any).description || ""}`),
+      ...grounding.PIPELINE.map(d => `${d.brand_name || ""} ${d.sub_industry || ""}`),
+      ...grounding.COMPETITORS,
+    ].join(" ").toLowerCase();
+
+    const isGrounded = (text?: string) => {
+      if (!text) return false;
+      // Pull the first 3 multi-word noun-ish chunks; require at
+      // least one to appear in the grounding haystack. Crude but
+      // catches obvious "Generic mid-market SaaS" hallucinations.
+      const tokens = text.toLowerCase().match(/[a-z][a-z0-9&\.\-]{2,}/g) || [];
+      const meaningful = tokens.filter(t => !STOP_WORDS.has(t)).slice(0, 12);
+      let hits = 0;
+      for (const t of meaningful) if (groundingHaystack.includes(t)) hits++;
+      return hits >= 2;
+    };
+
+    const validatedProspects = (Array.isArray(parsed.prospects) ? parsed.prospects : [])
+      .filter((p: any) => p && (
+        // Strong signal: brand_name appears in grounding (lookalike or signal hit)
+        isGrounded(p.brand_name) ||
+        // Or the AI's own justification cites grounding
+        isGrounded(p.why_grounded)
+      ))
+      .slice(0, 5);
+
+    const validatedEmails = (Array.isArray(parsed.emails) ? parsed.emails : [])
+      .filter((e: any) => e && e.deal_id && grounding.PIPELINE.some(d => d.id === e.deal_id))
+      .slice(0, 5);
+
+    const validatedDeals = (Array.isArray(parsed.deals_to_push) ? parsed.deals_to_push : [])
+      .filter((d: any) => d && d.deal_id && grounding.PIPELINE.some(p => p.id === d.deal_id))
+      .slice(0, 3);
+
     const payload = {
       generated_at: grounding.generated_at,
       model: MODEL,
-      prospects: Array.isArray(parsed.prospects) ? parsed.prospects.slice(0, 5) : [],
-      emails: Array.isArray(parsed.emails) ? parsed.emails.slice(0, 5) : [],
-      deals_to_push: Array.isArray(parsed.deals_to_push) ? parsed.deals_to_push.slice(0, 3) : [],
+      prospects: validatedProspects,
+      emails: validatedEmails,
+      deals_to_push: validatedDeals,
       renewal_risks: Array.isArray(parsed.renewal_risks) ? parsed.renewal_risks.slice(0, 3) : [],
       market_signals: Array.isArray(parsed.market_signals) ? parsed.market_signals.slice(0, 5) : [],
       data_volume: {
@@ -220,6 +292,11 @@ Deno.serve(async (req: Request) => {
         recordings: grounding.RECORDINGS.length,
         pipeline: grounding.PIPELINE.length,
         signals: grounding.SIGNALS.length,
+      },
+      validation: {
+        prospects_dropped: Math.max(0, (Array.isArray(parsed.prospects) ? parsed.prospects.length : 0) - validatedProspects.length),
+        emails_dropped: Math.max(0, (Array.isArray(parsed.emails) ? parsed.emails.length : 0) - validatedEmails.length),
+        deals_dropped: Math.max(0, (Array.isArray(parsed.deals_to_push) ? parsed.deals_to_push.length : 0) - validatedDeals.length),
       },
     };
 

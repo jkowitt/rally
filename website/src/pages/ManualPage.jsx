@@ -185,6 +185,7 @@ function ContentsGrid() {
       items: [
         ['navigation', 'Navigating the app'],
         ['dashboard', 'Dashboard'],
+        ['ai-brief', 'Morning AI Brief'],
         ['todo', 'To-Do List'],
       ],
     },
@@ -197,6 +198,7 @@ function ContentsGrid() {
         ['sequences', 'Sequences'],
         ['inbox', 'Inbox'],
         ['tasks', 'Task Manager'],
+        ['ai-capture', 'AI call capture (Enterprise)'],
         ['activities', 'Activity timeline'],
       ],
     },
@@ -410,6 +412,27 @@ function Reference() {
         <Tip>From a deal's <em>Activity</em> tab, click <Code>+ Schedule task</Code> to open Task Manager with that deal pre-selected.</Tip>
       </Section>
 
+      <Section title="Morning AI Brief" anchor="ai-brief">
+        <p>Every morning at ~8 AM Eastern an AI agent reads your closed-won pattern, recent activity, pipeline, and market signals to produce a five-lane brief: new prospects to add, emails to send, deals to push, renewal risks, and signals worth acting on. The brief is already warm when you open the app.</p>
+        <ul className="space-y-1.5 list-disc ml-4">
+          <li>Each prospect is grounded in a specific data point — a closed-won pattern, a recent recording theme, or a current signal — never a generic ICP description. Items the system can't substantiate are dropped before you ever see them.</li>
+          <li><Code>Add + draft</Code> on a prospect creates the deal AND opens Compose pre-filled with the AI's first-touch email so you can edit and send in one motion.</li>
+          <li><Code>Send</Code> on an outbound email card opens Compose with the subject and body pre-filled. Edit before sending.</li>
+          <li>Hit <Code>Refresh</Code> to regenerate (capped at 5 regens / day to keep API spend in check).</li>
+        </ul>
+      </Section>
+
+      <Section title="AI call &amp; meeting capture (Enterprise)" anchor="ai-capture">
+        <p>On any deal's Activity tab, record a sales call in the browser or drop a Zoom / Google Meet / Teams audio export. AI transcribes the file (Whisper), then extracts the activity type, summary, sentiment, buying-intent score, action items, contact updates, and competitor mentions (Claude). Action items become tasks automatically with sensible due dates.</p>
+        <ul className="space-y-1.5 list-disc ml-4">
+          <li><strong>Enterprise tier only.</strong> Lower tiers see the upgrade CTA.</li>
+          <li>Per-user daily cap of 50 transcriptions. Browser recording auto-stops at 30 minutes; for longer calls, split into segments.</li>
+          <li>Max file size: 24MB per recording. Whisper rejects larger files.</li>
+          <li>Audio files are kept for 90 days, then auto-deleted from storage. The transcript and extracted fields stay forever.</li>
+          <li>Each captured activity feeds tomorrow's morning brief — what your team heard yesterday becomes tomorrow's grounded recommendation.</li>
+        </ul>
+      </Section>
+
       <Section title="Contracts" anchor="contracts">
         <p>Store the signed PDF (or DOCX, image, scan) for each deal. Pick the deal, attach the file, set a few fields (status, dates, value) and save. Anyone on the team can download it later.</p>
         <ul className="space-y-1.5 list-disc ml-4">
@@ -544,6 +567,18 @@ function FAQ() {
     {
       q: 'Where do I report bugs or request features?',
       a: 'The bug icon in the top bar opens a capture modal that auto-includes the URL, browser, and module. You can also email jason@loud-legacy.com for anything bigger.',
+    },
+    {
+      q: 'Why is the morning AI Brief sometimes empty or short?',
+      a: 'The brief grounds every recommendation in your own data — closed-won deals, recent activity, recordings, signals. New accounts with thin history will see fewer items because the system would rather show 2 grounded prospects than 5 generic ones. Run a few prospect searches and log a couple of calls; the brief gets richer fast.',
+    },
+    {
+      q: 'Can I record sales calls on the free or starter plans?',
+      a: 'No. AI call capture (Whisper transcription + Claude extraction + auto-task creation) is on the Enterprise tier. Lower tiers can still log activities manually on the deal\'s Activity tab. The morning AI Brief is available on every plan.',
+    },
+    {
+      q: 'How long do you keep my recordings?',
+      a: 'Audio files are deleted from storage 90 days after upload. The transcript, summary, sentiment score, action items, and any other extracted fields stay attached to the activity row forever — those are what the AI Brief references in future days.',
     },
   ]
   return (

@@ -1,10 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
 import { humanError } from '@/lib/humanError'
-import { Mic, Upload, Square, Loader2, CheckCircle2 } from 'lucide-react'
+import { Mic, Upload, Square, Loader2, CheckCircle2, Lock } from 'lucide-react'
+
+// Whisper API hard-rejects files >25MB. Cap at 24MB on the client
+// so the user gets the error before they wait through an upload
+// that's going to fail anyway.
+const MAX_FILE_BYTES = 24 * 1024 * 1024
+// Roll our own client-side daily cap so we can fail fast instead of
+// waiting for the 429 round-trip. The server is the source of truth
+// (50/day) — this number just keeps the UI honest.
+const SOFT_CLIENT_CAP_HINT = 50
 
 // ActivityCapture — drop-in panel that records audio in the
 // browser OR accepts an audio/video file upload, then ships it
@@ -23,7 +33,7 @@ import { Mic, Upload, Square, Loader2, CheckCircle2 } from 'lucide-react'
 export default function ActivityCapture({ dealId, propertyId, userId, onPromoted }) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { profile } = useAuth()
+  const { profile, isDeveloper } = useAuth()
   const [recording, setRecording] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
@@ -40,6 +50,16 @@ export default function ActivityCapture({ dealId, propertyId, userId, onPromoted
   const effectivePropertyId = propertyId || profile?.property_id
   const effectiveUserId = userId || profile?.id
 
+  // Enterprise-only gate. Recording + transcription is heavy compute
+  // (Whisper + Claude) and a key differentiator on the enterprise
+  // tier. Developers always pass for QA. The CTA explains the value
+  // instead of just hiding the feature.
+  const plan = profile?.properties?.plan
+  const planAllowed = isDeveloper || plan === 'enterprise'
+  if (!planAllowed) {
+    return <PlanLockedCard />
+  }
+
   useEffect(() => () => {
     // Tear down stream + timer if the modal closes mid-recording.
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
@@ -48,20 +68,49 @@ export default function ActivityCapture({ dealId, propertyId, userId, onPromoted
 
   async function startRecording() {
     if (!effectivePropertyId) return
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast({
+        title: 'Recording not supported',
+        description: 'Your browser doesn\'t support in-browser recording. Use the Upload button to add a Zoom or audio file instead.',
+        type: 'warning',
+      })
+      return
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
-      const mr = new MediaRecorder(stream, mimeTypeFor() || undefined)
+      const opts = mimeTypeFor()
+      const mr = opts ? new MediaRecorder(stream, opts) : new MediaRecorder(stream)
       mediaRecorderRef.current = mr
       chunksRef.current = []
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       mr.onstop = handleStop
+      // Auto-stop at 30 minutes — beyond that the audio almost
+      // always exceeds the 24MB Whisper cap and the rep should
+      // chunk the call into shorter segments.
       mr.start()
       setRecording(true)
       setElapsed(0)
-      timerRef.current = setInterval(() => setElapsed(prev => prev + 1), 1000)
+      timerRef.current = setInterval(() => {
+        setElapsed(prev => {
+          const next = prev + 1
+          if (next >= 30 * 60) stopRecording()
+          return next
+        })
+      }, 1000)
     } catch (err) {
-      toast({ title: 'Microphone unavailable', description: humanError(err), type: 'error' })
+      const name = err?.name || ''
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        toast({
+          title: 'Microphone access blocked',
+          description: 'Allow microphone access in your browser settings, then try again. The icon usually lives next to the URL bar.',
+          type: 'warning',
+        })
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        toast({ title: 'No microphone detected', description: 'Plug one in or pick a different audio device, then try again.', type: 'warning' })
+      } else {
+        toast({ title: 'Recording failed', description: humanError(err), type: 'error' })
+      }
     }
   }
 
@@ -89,8 +138,13 @@ export default function ActivityCapture({ dealId, propertyId, userId, onPromoted
   async function handleFile(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 50 * 1024 * 1024) {
-      toast({ title: 'File too large', description: 'Max 50MB. Try splitting longer recordings.', type: 'warning' })
+    if (file.size > MAX_FILE_BYTES) {
+      const mb = (file.size / 1024 / 1024).toFixed(1)
+      toast({
+        title: `File is ${mb}MB — too large`,
+        description: 'Whisper caps audio at 24MB per file. Split longer recordings (Zoom can export shorter segments) or compress the audio.',
+        type: 'warning',
+      })
       return
     }
     await processBlob(file, file.type || 'application/octet-stream', 'file_upload')
@@ -99,6 +153,15 @@ export default function ActivityCapture({ dealId, propertyId, userId, onPromoted
 
   async function processBlob(blob, mime, source) {
     if (!effectivePropertyId) return
+    if (blob.size > MAX_FILE_BYTES) {
+      const mb = (blob.size / 1024 / 1024).toFixed(1)
+      toast({
+        title: `Recording is ${mb}MB — too large`,
+        description: 'Audio above 24MB exceeds the Whisper cap. Try a shorter recording.',
+        type: 'warning',
+      })
+      return
+    }
     setUploading(true)
     setLastResult(null)
     try {
@@ -134,7 +197,27 @@ export default function ActivityCapture({ dealId, propertyId, userId, onPromoted
         body: { recording_id: row.id },
       })
       if (fnErr) throw fnErr
-      if (!result?.success) throw new Error(result?.error || 'Transcription failed')
+      if (!result?.success) {
+        // Translate the structured errors the function returns into
+        // copy that points the rep at the next action.
+        if (result?.error === 'rate_limited') {
+          toast({
+            title: 'Daily transcription cap hit',
+            description: result.message || `You've used all ${SOFT_CLIENT_CAP_HINT} of today's transcriptions. Resets in 24h.`,
+            type: 'warning',
+          })
+          return
+        }
+        if (result?.error === 'plan_required') {
+          toast({
+            title: 'Enterprise plan required',
+            description: result.message || 'Audio capture is part of the Enterprise tier.',
+            type: 'warning',
+          })
+          return
+        }
+        throw new Error(result?.error || 'Transcription failed')
+      }
 
       setLastResult(result)
       toast({
@@ -263,4 +346,33 @@ function formatTime(sec) {
   const m = Math.floor(sec / 60)
   const s = String(sec % 60).padStart(2, '0')
   return `${m}:${s}`
+}
+
+// Shown in place of the recorder when the user isn't on the
+// enterprise plan. Sells the value and points at billing without
+// hiding the feature entirely — buyers in mid-market need to see
+// what they're missing to upgrade.
+function PlanLockedCard() {
+  return (
+    <div className="bg-bg-card border border-accent/30 rounded-lg p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-full bg-accent/15 text-accent flex items-center justify-center shrink-0">
+          <Lock className="w-4 h-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-mono uppercase tracking-widest text-accent">Enterprise feature</div>
+          <h3 className="text-sm font-semibold text-text-primary mt-0.5">AI call + meeting capture</h3>
+          <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+            Record a sales call in the browser or drop a Zoom export. The AI transcribes it, summarizes the key moments, scores buying intent, and creates the right tasks automatically. Available on the Enterprise plan.
+          </p>
+          <Link
+            to="/app/settings/billing"
+            className="inline-block mt-2 text-[11px] bg-accent text-bg-primary rounded px-3 py-1.5 font-semibold hover:opacity-90"
+          >
+            See plans →
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
 }

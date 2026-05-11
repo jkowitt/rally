@@ -200,6 +200,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data?.user) {
       await fetchProfile(data.user.id)
       logLogin(data.user.id, email, true)
+      // Stamp profiles.last_login so Dev Tools can show last-active
+      // per user without scanning login_history, and so the
+      // ai-brief-cron's "active in last 7 days" filter works.
+      // Non-blocking — login flow shouldn't fail if the write does.
+      supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', data.user.id).then(() => {})
       logAudit({
         action: 'login',
         entityType: 'session',

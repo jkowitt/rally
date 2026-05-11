@@ -19,6 +19,22 @@ const ChangeLog = lazy(() => import('./ChangeLog'))
 const ROLES = ['developer', 'admin', 'rep']
 const PLANS = ['free', 'starter', 'pro', 'enterprise']
 
+// Compact relative-time formatter for the Users tab. Returns "5m
+// ago" / "2h ago" / "3d ago" / a date past a week. Used so the
+// "last login" timestamp reads at a glance instead of forcing the
+// dev to parse an ISO string.
+function formatRelative(iso) {
+  if (!iso) return ''
+  const t = new Date(iso).getTime()
+  if (!t) return ''
+  const ago = Date.now() - t
+  if (ago < 60_000) return 'just now'
+  if (ago < 3_600_000) return `${Math.floor(ago / 60_000)}m ago`
+  if (ago < 86_400_000) return `${Math.floor(ago / 3_600_000)}h ago`
+  if (ago < 7 * 86_400_000) return `${Math.floor(ago / 86_400_000)}d ago`
+  return new Date(iso).toLocaleDateString()
+}
+
 // Descriptions for hidden developer flags — shown inline next to the
 // toggle so it's obvious what flipping each one does. Keep in sync with
 // HIDDEN_MODULES in src/hooks/useFeatureFlags.jsx.
@@ -1318,6 +1334,11 @@ export default function DeveloperDashboard() {
                     <span>{p.properties?.name || 'No company'}</span>
                     {p.properties?.city && <span>{p.properties.city}{p.properties.state ? `, ${p.properties.state}` : ''}</span>}
                     {p.properties?.type && <span className="text-[10px] font-mono">{p.properties.type}</span>}
+                    <span className="text-[10px] font-mono" title={p.last_login || ''}>
+                      {p.last_login
+                        ? `last login ${formatRelative(p.last_login)}`
+                        : 'never signed in'}
+                    </span>
                   </div>
                 </div>
                 <div className="flex gap-2 shrink-0 flex-wrap">

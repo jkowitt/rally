@@ -186,6 +186,7 @@ function ContentsGrid() {
         ['navigation', 'Navigating the app'],
         ['dashboard', 'Dashboard'],
         ['ai-brief', 'Morning AI Brief'],
+        ['ai-research', 'AI deal research'],
         ['todo', 'To-Do List'],
       ],
     },
@@ -418,7 +419,18 @@ function Reference() {
           <li>Each prospect is grounded in a specific data point — a closed-won pattern, a recent recording theme, or a current signal — never a generic ICP description. Items the system can't substantiate are dropped before you ever see them.</li>
           <li><Code>Add + draft</Code> on a prospect creates the deal AND opens Compose pre-filled with the AI's first-touch email so you can edit and send in one motion.</li>
           <li><Code>Send</Code> on an outbound email card opens Compose with the subject and body pre-filled. Edit before sending.</li>
-          <li>Hit <Code>Refresh</Code> to regenerate (capped at 5 regens / day to keep API spend in check).</li>
+          <li>The brief auto-marks itself as <em>dirty</em> when something material changes — a new signal lands on one of your accounts, a recording finishes processing, you complete a task. You'll see a "New activity since this brief was generated — Refresh" banner so you know it's stale. Click it to rebuild on demand; the morning cron will also pick it up automatically.</li>
+          <li>Hit <Code>Refresh</Code> to regenerate manually (capped at 5 user-initiated regens / day to keep API spend in check; dirty-trigger regens aren't counted).</li>
+        </ul>
+      </Section>
+
+      <Section title="AI deal research (background agent)" anchor="ai-research">
+        <p>A background agent runs every two hours and picks active deals that haven't been researched in the last 14 days. For each, it reads the deal's activities, recordings, signals, and a set of comparable closed-won deals, then produces a structured brief: a headline, a 2–3 sentence situation summary, up to five talking points, up to three red flags, and up to three comparable wins.</p>
+        <p>The brief renders at the top of every deal's <em>Overview</em> tab. Click <Code>Refresh</Code> to force a regenerate; click <Code>Run research now</Code> if a deal has never been touched by the agent and you want a brief before the next cron pass.</p>
+        <ul className="space-y-1.5 list-disc ml-4">
+          <li>Every talking point cites a specific data point — a signal, a quote from a recording summary, a comparable win. Generic suggestions are dropped during validation.</li>
+          <li>Comparable wins link directly to the matching deal so you can open it inline.</li>
+          <li>Low-data deals (no activities, recordings, or signals) get a "thin data" warning — the brief is still produced but with low confidence.</li>
         </ul>
       </Section>
 

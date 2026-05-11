@@ -109,7 +109,7 @@ function WelcomeGate() {
                   animate={{ opacity: 1 }}
                   className="text-text-secondary text-sm mt-4"
                 >
-                  AI-powered prospecting + a CRM built for revenue teams. Discover decision-makers, run your pipeline, and personalize outreach — all in one place. <span className="text-text-primary">Free to start, $29/mo Starter</span>.
+                  The AI-native CRM + prospecting platform. Background research agent, voice + meeting capture, and a morning brief that surfaces your day's work before you open the app. <span className="text-text-primary">Free to start, $39/mo Starter, $99/mo Pro</span>.
                 </motion.p>
               </div>
 
@@ -546,12 +546,12 @@ function AISection() {
 // pitch (no more VALORA, contracts, "exclusively for sports").
 function WhyLoudLegacy() {
   const points = [
-    { title: 'Per-workspace, not per-seat', desc: 'Every plan includes a team — Starter ships with 3 seats, Pro with 10. No surprise bills when you add a teammate.' },
-    { title: 'Verified contact intelligence', desc: 'Real decision-maker names, verified emails, and LinkedIn profiles from industry-leading databases. Not guesses — actual contacts.' },
-    { title: 'AI prospecting that actually works', desc: 'Describe who you want and the AI returns named companies with ICP scores, decision-makers, and one-click pipeline add. No CSVs, no manual research.' },
-    { title: 'Pipeline you can trust', desc: 'Drag-and-drop CRM, weighted forecasts, stale-deal alerts, and a full activity timeline so nothing falls through the cracks.' },
-    { title: 'Mobile-first design', desc: 'Full functionality on your phone. Click-to-call contacts, manage your pipeline, and update deals from anywhere.' },
-    { title: 'Free forever to start', desc: 'A real free tier — not a 14-day trial. Try the CRM and AI prospecting with no credit card. Upgrade only when you outgrow it.' },
+    { title: 'One tool, not three', desc: 'Replaces HubSpot Sales Pro + Apollo + Outreach. Most teams pay $300+/seat for these stitched together. Pro is $99 — and AI sees both halves of your funnel.' },
+    { title: 'AI grounded in your data', desc: 'Every recommendation cites a specific data point — a closed-won pattern, a recent call, a signal that just fired. Generic ICP suggestions get filtered out before you see them.' },
+    { title: 'Background research agent', desc: 'A background agent reads your deals every two hours and produces talking points, red flags, and comparable wins for the next conversation. You walk in prepared without doing the homework.' },
+    { title: 'AI call + meeting capture', desc: 'Record a sales call in the browser or drop a Zoom export. AI transcribes, summarizes, and turns commitments into tasks automatically. Enterprise tier.' },
+    { title: 'Pipeline you can trust', desc: 'Drag-and-drop CRM, weighted forecasts, stale-deal alerts, full activity timeline. The fundamentals are solid before you add the AI on top.' },
+    { title: 'Free forever to start', desc: 'A real free tier — not a 14-day trial. Try the CRM, AI Brief, and prospecting with no credit card. Upgrade when you outgrow the caps.' },
   ]
 
   return (
@@ -559,8 +559,8 @@ function WhyLoudLegacy() {
       <div className="max-w-6xl mx-auto">
         <SectionHeader
           tag="Why Us"
-          title="Built for revenue teams that ship"
-          description="Generic CRMs charge per seat and bury prospecting behind upgrades. Loud Legacy bundles them, prices for accessibility, and scales with the team."
+          title="The AI runs your revenue motion. You approve the work."
+          description="Most CRMs make you do the work and call the AI a feature. We flip it: every morning the agent surfaces 5 prospects, 5 emails to send, and the deals that need a push — you approve, click, ship."
         />
 
         <motion.div

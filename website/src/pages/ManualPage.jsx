@@ -506,14 +506,15 @@ function Reference() {
       </Section>
 
       <Section title="Plan + credits" anchor="plan">
-        <p>The pill in the top bar (<Code>X / Y</Code> with a person icon) shows your prospect-lookup usage this month vs. your plan's cap.</p>
-        <ul className="space-y-1 ml-4 list-disc">
-          <li><strong>Free</strong> — 10 lookups / mo</li>
-          <li><strong>Starter</strong> — 100 lookups / mo</li>
-          <li><strong>Pro</strong> — 500 lookups / mo</li>
-          <li><strong>Enterprise</strong> — 2,500 lookups / mo + email integration</li>
+        <p>The pill in the top bar (<Code>X / Y</Code> with a person icon) shows your AI prospect-lookup usage this month vs. your plan's cap.</p>
+        <ul className="space-y-1.5 ml-4 list-disc">
+          <li><strong>Free</strong> — $0/mo · 1 user, 25 deals, 10 lookups/mo · AI Brief on-demand</li>
+          <li><strong>Starter</strong> — $39/mo ($31 annual) · up to 5 users, 500 deals, 100 lookups/mo · daily AI Brief + lookalikes + signal radar</li>
+          <li><strong>Pro</strong> — $99/mo ($79 annual) · unlimited users, unlimited deals, 500 lookups/mo · background research agent, AI sequence builder, email coach, bulk add</li>
+          <li><strong>Enterprise</strong> — $249/mo ($199 annual) · 2,500 lookups/mo · AI call + meeting capture, full inbox integration, SSO, dedicated CSM</li>
         </ul>
-        <p>Need more? Buy +100 lookups for $15 from <em>Settings → Billing</em>.</p>
+        <p>Annual plans save 20% (billed yearly). Need more lookups? Top up with +100 for $15 from <em>Settings → Billing</em>.</p>
+        <Tip>Pro replaces what most teams pay for HubSpot Sales Pro ($90) + Apollo ($99) separately — one tool, $99/seat, and the AI sees both halves of your funnel.</Tip>
       </Section>
 
       <Section title="Custom dashboards" anchor="custom-dashboard">

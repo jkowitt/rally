@@ -52,12 +52,23 @@ Deno.serve(async (req: Request) => {
 
   // Skip users that already have today's brief — saves API spend on
   // re-runs of the cron and on users who already opened the app.
+  // EXCEPT: if their brief is dirty (a new signal / recording /
+  // task completion happened since it was generated), regen it.
   const { data: alreadyBriefed } = await sb.from("ai_briefs")
-    .select("user_id")
+    .select("user_id, generated_at, dirty_since")
     .eq("brief_date", today)
     .eq("status", "ready");
-  const briefedSet = new Set((alreadyBriefed || []).map(r => r.user_id));
-  const todo = users.filter(u => !briefedSet.has(u.id));
+
+  const cleanBriefedSet = new Set<string>();
+  for (const r of (alreadyBriefed || [])) {
+    const dirtyAt = r.dirty_since ? new Date(r.dirty_since as string).getTime() : 0;
+    const generatedAt = r.generated_at ? new Date(r.generated_at as string).getTime() : 0;
+    if (!dirtyAt || dirtyAt <= generatedAt) {
+      cleanBriefedSet.add(r.user_id as string);
+    }
+    // Otherwise the brief is dirty — fall through and regenerate.
+  }
+  const todo = users.filter(u => !cleanBriefedSet.has(u.id));
 
   let success = 0;
   let failed = 0;
@@ -69,13 +80,17 @@ Deno.serve(async (req: Request) => {
   for (let i = 0; i < todo.length; i += CONCURRENCY) {
     const batch = todo.slice(i, i + CONCURRENCY);
     const results = await Promise.allSettled(batch.map(async (u) => {
+      // regenerate=true so dirty briefs get rebuilt; the cached-
+      // brief short-circuit inside ai-daily-brief already skips
+      // users whose brief is clean — this branch only includes
+      // dirty + first-time-today users.
       const r = await fetch(`${SUPABASE_URL}/functions/v1/ai-daily-brief`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${SERVICE_KEY}`,
         },
-        body: JSON.stringify({ user_id: u.id, regenerate: false }),
+        body: JSON.stringify({ user_id: u.id, regenerate: true }),
       });
       if (!r.ok) {
         const t = await r.text();

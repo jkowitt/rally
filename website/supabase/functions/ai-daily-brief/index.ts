@@ -92,7 +92,9 @@ Deno.serve(async (req: Request) => {
   const propertyId = profile?.property_id;
   if (!propertyId) return jsonResponse({ success: false, error: "User has no property" }, 400);
 
-  // Return cached brief if today's already exists and not regenerating.
+  // Return cached brief if today's already exists, the caller
+  // isn't asking for a regen, AND it hasn't been marked dirty by
+  // a new signal / recording / task completion since generation.
   if (!body.regenerate) {
     const { data: existing } = await sb.from("ai_briefs")
       .select("*")
@@ -101,7 +103,15 @@ Deno.serve(async (req: Request) => {
       .eq("status", "ready")
       .maybeSingle();
     if (existing?.payload) {
-      return jsonResponse({ success: true, brief: existing.payload, cached: true });
+      const dirtyAt = existing.dirty_since ? new Date(existing.dirty_since as string).getTime() : 0;
+      const generatedAt = existing.generated_at ? new Date(existing.generated_at as string).getTime() : 0;
+      const isDirty = dirtyAt > 0 && dirtyAt > generatedAt;
+      if (!isDirty) {
+        return jsonResponse({ success: true, brief: existing.payload, cached: true });
+      }
+      // Fall through and regenerate when dirty. We don't apply the
+      // 5/day rate limit on this branch — dirty triggers are
+      // automatic, not user-initiated.
     }
   }
 
@@ -307,6 +317,10 @@ Deno.serve(async (req: Request) => {
       payload,
       status: "ready",
       generated_at: new Date().toISOString(),
+      // Clear the dirty flag — we just regenerated based on the
+      // latest data. The triggers will re-stamp it next time
+      // something changes.
+      dirty_since: null,
     }, { onConflict: "user_id,brief_date" });
 
     return jsonResponse({ success: true, brief: payload, cached: false });

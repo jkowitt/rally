@@ -7,6 +7,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import ProspectingChatPanel from '@/components/ProspectingChatPanel'
 import DealActivityTimeline from '@/components/DealActivityTimeline'
 import ActivityCapture from '@/components/ActivityCapture'
+import DealResearchPanel from '@/components/DealResearchPanel'
 import BuyingCommittee from '@/components/BuyingCommittee'
 import AccountBrief from '@/components/AccountBrief'
 import CompanyResearchPanel from '@/components/CompanyResearchPanel'
@@ -1582,6 +1583,13 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
 
         <div className="p-4 sm:p-5 space-y-4">
           {activeTab === 'overview' && <>
+          {/* AI research brief — produced by the background agent
+              (ai-research-runner) and refreshed on demand. Renders
+              talking points, red flags, and comparable wins above
+              the rest of the Overview so it's the first thing the
+              rep sees when they open a deal. */}
+          <DealResearchPanel dealId={deal.id} />
+
           {/* Value + Dates */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">            <div className="bg-bg-card border border-border rounded-lg p-3 text-center">
               <div className="text-[10px] text-text-muted font-mono">Value</div>

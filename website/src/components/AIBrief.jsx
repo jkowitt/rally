@@ -129,6 +129,14 @@ export default function AIBrief() {
     (brief.renewal_risks?.length || 0) +
     (brief.market_signals?.length || 0)
 
+  // Dirty = a signal / recording / task completion has changed
+  // the picture since this brief was generated. Show a small
+  // inline banner inviting a rebuild rather than auto-regenerating
+  // (saves API spend; rep gets to decide if they care).
+  const dirtyAt = row?.dirty_since ? new Date(row.dirty_since).getTime() : 0
+  const generatedAt = brief?.generated_at ? new Date(brief.generated_at).getTime() : 0
+  const isDirty = dirtyAt > 0 && dirtyAt > generatedAt
+
   if (total === 0) {
     return (
       <BriefShell onRefresh={() => generate.mutate({ regenerate: true })} loading={generate.isPending}>
@@ -141,6 +149,19 @@ export default function AIBrief() {
 
   return (
     <BriefShell onRefresh={() => generate.mutate({ regenerate: true })} loading={generate.isPending} generatedAt={brief.generated_at}>
+      {isDirty && !generate.isPending && (
+        <div className="px-5 py-2.5 bg-warning/10 border-b border-warning/30 flex items-center justify-between gap-3">
+          <div className="text-[11px] text-warning leading-relaxed">
+            <strong>New activity since this brief was generated.</strong> Refresh to pull in the latest signals and recordings.
+          </div>
+          <button
+            onClick={() => generate.mutate({ regenerate: true })}
+            className="text-[11px] bg-warning/20 hover:bg-warning/30 text-warning rounded px-2.5 py-1 font-medium shrink-0"
+          >
+            Refresh now
+          </button>
+        </div>
+      )}
       <div className="divide-y divide-border">
         {brief.prospects?.length > 0 && (
           <Lane

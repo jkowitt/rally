@@ -19,7 +19,7 @@ export default function PricingPage() {
 
   useSeo({
     title: 'Pricing — Loud Legacy',
-    description: 'Free CRM and AI prospecting. Paid plans from $29/month — cheaper than one seat of HubSpot.',
+    description: 'AI-native CRM + prospecting. Free to start. Pro at $99/seat replaces HubSpot Sales Pro + Apollo combined. Enterprise at $249 adds AI call + meeting capture.',
     canonical: 'https://loud-legacy.com/pricing',
   })
 
@@ -30,10 +30,10 @@ export default function PricingPage() {
       {/* Hero */}
       <header className="max-w-5xl mx-auto px-5 sm:px-8 pt-20 pb-10 text-center">
         <h1 className="text-3xl sm:text-5xl font-bold leading-tight">
-          Simple pricing for revenue teams.
+          One tool, not three. Half the price.
         </h1>
         <p className="text-sm sm:text-lg text-text-secondary mt-4 max-w-2xl mx-auto">
-          CRM and AI prospecting on every plan. Free forever to start. Email integration unlocks on Enterprise.
+          AI-native CRM + prospecting + outreach. Pro at <strong className="text-text-primary">$99/seat</strong> replaces what most teams pay $189/seat for (HubSpot Sales Pro + Apollo combined) — and the AI sees both halves of your funnel.
         </p>
         <div className="mt-6 inline-flex items-center gap-1 bg-bg-card border border-border rounded-lg p-1">
           <button
@@ -50,7 +50,7 @@ export default function PricingPage() {
               billing === 'annual' ? 'bg-accent text-bg-primary font-semibold' : 'text-text-secondary'
             }`}
           >
-            Annual <span className="text-[9px] opacity-70 ml-1">2 months free</span>
+            Annual <span className="text-[9px] opacity-70 ml-1">save 20%</span>
           </button>
         </div>
       </header>

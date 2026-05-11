@@ -13,11 +13,14 @@ import CustomFieldsEditor from '@/components/CustomFieldsEditor'
 // the upgrade-eligibility ("recommended", "Current Plan" highlight)
 // and per-user counts that the marketing data file doesn't carry.
 // Update both files together when pricing changes.
+// Keep in sync with src/data/plans.ts (the canonical source for
+// marketing surfaces). This array carries the in-app billing card
+// shape — short feature bullets sized for a compact tile.
 const PLANS = [
-  { id: 'free',       name: 'Free',       price: '$0',   period: 'forever',  users: 1,           features: ['1 user · 100 contacts · 25 deals', '10 prospect lookups / month', 'Drag-and-drop CRM pipeline', 'AI prospect search (5 results / query)', 'CSV import + activity timeline'] },
-  { id: 'starter',    name: 'Starter',    price: '$29',  period: '/month',   users: 3,           features: ['Everything in Free', '3 users · 2,500 contacts · 500 deals', '100 prospect lookups / month (pooled)', 'Custom deal stages + pipelines', 'Lookalike companies + ICP filters', 'Weighted forecast + stale-deal alerts'] },
-  { id: 'pro',        name: 'Pro',        price: '$79',  period: '/month',   users: 10,          features: ['Everything in Starter', '10 users · 25,000 contacts · unlimited deals', '500 prospect lookups / month (pooled)', 'Bulk paste + CSV with AI enrichment', 'Outreach sequences + reply-intent', 'Outreach copilot + email coach', 'Custom dashboards + role-based permissions'], recommended: true },
-  { id: 'enterprise', name: 'Enterprise', price: '$249', period: '/month',   users: 'Unlimited', features: ['Everything in Pro', 'Unlimited users · contacts · deals', '2,500 prospect lookups / month (pooled)', 'Outlook + Gmail full inbox sync', 'Send from CRM with open + click tracking', 'AI reply suggestions + auto-log to deals', 'Priority support + custom onboarding'] },
+  { id: 'free',       name: 'Free',       price: '$0',   period: 'forever',  users: 1,           features: ['1 user · 100 contacts · 25 deals', '10 AI prospect lookups / month', 'Drag-and-drop CRM pipeline', 'Morning AI Brief (on-demand)', 'CSV import + activity timeline'] },
+  { id: 'starter',    name: 'Starter',    price: '$39',  period: '/month',   users: 5,           features: ['Everything in Free', 'Up to 5 users · 2,500 contacts · 500 deals', '100 AI prospect lookups / month (pooled)', 'Daily AI Brief with live refresh', 'Lookalikes + ICP filters + signal radar', 'Weighted forecast + stale-deal alerts'] },
+  { id: 'pro',        name: 'Pro',        price: '$99',  period: '/month',   users: 'Unlimited', features: ['Everything in Starter', 'Unlimited users · 25,000 contacts · unlimited deals', '500 AI prospect lookups / month (pooled)', 'Background AI research agent on every deal', 'AI sequence builder + email coach + outreach copilot', 'Bulk add + CSV with AI enrichment', 'Custom dashboards + role-based permissions'], recommended: true },
+  { id: 'enterprise', name: 'Enterprise', price: '$249', period: '/month',   users: 'Unlimited', features: ['Everything in Pro', 'Unlimited users · contacts · deals', '2,500 AI prospect lookups / month (pooled)', 'AI call + meeting capture (Whisper + Claude)', 'Outlook + Gmail full inbox sync + send-from-CRM', 'AI reply suggestions + auto-log to deals', 'SSO, audit log, dedicated CSM'] },
 ]
 
 export default function Settings() {

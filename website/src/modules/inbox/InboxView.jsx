@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -8,7 +8,7 @@ import { useToast } from '@/components/Toast'
 import { humanError } from '@/lib/humanError'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { Button, Card, EmptyState, Badge } from '@/components/ui'
-import { Mail, Inbox as InboxIcon, Send, Reply, Sparkles, RefreshCw } from 'lucide-react'
+import { Mail, Inbox as InboxIcon, Send, Reply, Sparkles, RefreshCw, MessagesSquare, List } from 'lucide-react'
 import EmailCoachPanel from '@/components/EmailCoachPanel'
 import { draftReplyEmail, classifyReplyIntent, draftReplyVariants } from '@/lib/claude'
 
@@ -34,7 +34,18 @@ const INTENT_META = {
 export default function InboxView() {
   const { profile } = useAuth()
   const [folder, setFolder] = useState('inbox')   // 'inbox' | 'sent'
+  // View mode: flat list of messages, or grouped into conversations
+  // by provider thread_id. Persists in localStorage so a rep who
+  // prefers one stays in it across sessions.
+  const [view, setView] = useState(() => {
+    try { return localStorage.getItem('ll_inbox_view') === 'flat' ? 'flat' : 'conversation' }
+    catch { return 'conversation' }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('ll_inbox_view', view) } catch { /* ignore */ }
+  }, [view])
   const [selected, setSelected] = useState(null)
+  const [selectedThreadKey, setSelectedThreadKey] = useState(null)
   const [search, setSearch] = useState('')
   const [intentFilter, setIntentFilter] = useState('all')
   const [syncing, setSyncing] = useState(false)
@@ -174,6 +185,62 @@ export default function InboxView() {
     enabled: !!profile?.property_id,
   })
 
+  // Group flat messages into conversation threads. Falls back to
+  // message_id when a row has no thread_id so a singleton message
+  // still renders as a 1-message thread. Threads are sorted by
+  // their most-recent message; messages inside a thread go
+  // oldest-to-newest so reading top-to-bottom matches the actual
+  // conversation order.
+  const threads = useMemo(() => {
+    if (!messages.length) return []
+    const byKey = new Map()
+    for (const m of messages) {
+      const key = m.thread_id || `solo:${m.message_id || m.id}`
+      const entry = byKey.get(key)
+      if (entry) {
+        entry.messages.push(m)
+      } else {
+        byKey.set(key, { key, messages: [m] })
+      }
+    }
+    const list = Array.from(byKey.values()).map(t => {
+      t.messages.sort((a, b) => new Date(a.received_at || 0).getTime() - new Date(b.received_at || 0).getTime())
+      const last = t.messages[t.messages.length - 1]
+      const first = t.messages[0]
+      // Dedupe participants by lowercased email.
+      const participants = new Map()
+      for (const m of t.messages) {
+        const add = (email, name) => {
+          if (!email) return
+          const k = email.toLowerCase()
+          if (!participants.has(k)) participants.set(k, { email, name })
+        }
+        add(m.from_email, m.from_name)
+        for (const to of (m.to_emails || [])) add(to, null)
+      }
+      return {
+        key: t.key,
+        subject: first.subject || last.subject || '(no subject)',
+        messages: t.messages,
+        last,
+        first,
+        participants: Array.from(participants.values()),
+        unread_count: t.messages.filter(m => m.is_read === false).length,
+      }
+    })
+    list.sort((a, b) => new Date(b.last.received_at || 0).getTime() - new Date(a.last.received_at || 0).getTime())
+    return list
+  }, [messages])
+
+  // When folder/view/search/intent changes, drop any stale selection
+  // so the right pane doesn't show a message that's no longer in
+  // the filtered list.
+  useEffect(() => { setSelected(null); setSelectedThreadKey(null) }, [folder, view, search, intentFilter])
+
+  const selectedThread = view === 'conversation' && selectedThreadKey
+    ? threads.find(t => t.key === selectedThreadKey)
+    : null
+
   return (
     <div className="space-y-4">
       <Breadcrumbs items={[
@@ -244,6 +311,26 @@ export default function InboxView() {
           <FolderTab id="inbox" label="Inbox" icon={InboxIcon} active={folder === 'inbox'} onClick={() => setFolder('inbox')} />
           <FolderTab id="sent" label="Sent" icon={Send} active={folder === 'sent'} onClick={() => setFolder('sent')} />
         </div>
+        {/* View toggle: flat list of every message vs. grouped by
+            provider thread_id. Conversation is the default — better
+            mental model for inbox triage — but flat is one tap away
+            for users who prefer it. */}
+        <div className="flex gap-1 bg-bg-card rounded-lg p-1 w-fit">
+          <FolderTab
+            id="conversation"
+            label="Conversation"
+            icon={MessagesSquare}
+            active={view === 'conversation'}
+            onClick={() => setView('conversation')}
+          />
+          <FolderTab
+            id="flat"
+            label="Flat"
+            icon={List}
+            active={view === 'flat'}
+            onClick={() => setView('flat')}
+          />
+        </div>
         <input
           type="search"
           value={search}
@@ -294,7 +381,7 @@ export default function InboxView() {
               className="border-0"
             />
           )}
-          {!isLoading && messages.length > 0 && (
+          {!isLoading && messages.length > 0 && view === 'flat' && (
             <ul className="divide-y divide-border max-h-[70vh] overflow-y-auto">
               {messages.map(m => (
                 <li key={m.id}>
@@ -326,18 +413,160 @@ export default function InboxView() {
               ))}
             </ul>
           )}
+          {!isLoading && threads.length > 0 && view === 'conversation' && (
+            <ul className="divide-y divide-border max-h-[70vh] overflow-y-auto">
+              {threads.map(t => (
+                <li key={t.key}>
+                  <button
+                    onClick={() => setSelectedThreadKey(t.key)}
+                    className={`w-full text-left p-3 hover:bg-bg-card transition-colors ${
+                      selectedThreadKey === t.key ? 'bg-bg-card border-l-2 border-accent' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-sm text-text-primary font-medium truncate">
+                        {t.participants.slice(0, 3).map(p => p.name || p.email).join(', ') || '(unknown)'}
+                      </div>
+                      {t.messages.length > 1 && (
+                        <Badge tone="info" className="shrink-0 text-[9px]">{t.messages.length}</Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-text-secondary truncate mt-0.5">
+                      {t.subject}
+                    </div>
+                    <div className="text-[11px] text-text-muted truncate mt-0.5">
+                      {t.last.preview}
+                    </div>
+                    <div className="text-[10px] text-text-muted font-mono mt-1">
+                      {t.last.received_at ? new Date(t.last.received_at).toLocaleString() : ''}
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
 
         <Card padding="lg" className="md:col-span-2">
-          {selected ? (
+          {view === 'conversation' && selectedThread && (
+            <ThreadView thread={selectedThread} />
+          )}
+          {view === 'flat' && selected && (
             <MessageDetail message={selected} />
-          ) : (
+          )}
+          {!selected && !selectedThread && (
             <div className="text-sm text-text-muted text-center py-12">
-              Pick a message on the left to read it.
+              {view === 'conversation'
+                ? 'Pick a conversation on the left to read the thread.'
+                : 'Pick a message on the left to read it.'}
             </div>
           )}
         </Card>
       </div>
+    </div>
+  )
+}
+
+// Renders a single conversation thread chronologically with a top-
+// level Reply button + per-message reply, so the rep can reply to
+// the latest message or any earlier one in the chain. Reuses the
+// existing MessageDetail for each message so AI intent + Suggest
+// reply + Email coach keep working unchanged.
+function ThreadView({ thread }) {
+  const composeEmail = useComposeEmail()
+  const last = thread.last
+  function openReply(message) {
+    const replyTo = message.is_sent
+      ? (message.to_emails?.[0] || '')
+      : (message.from_email || '')
+    const subj = (message.subject || '').replace(/^(re:\s*)+/i, '').trim()
+    composeEmail.open({
+      to: replyTo,
+      defaultSubject: `Re: ${subj}`,
+      defaultBody: '',
+      inReplyToMessageId: message.message_id,
+      threadId: message.thread_id,
+      provider: message.provider,
+    })
+  }
+
+  return (
+    <div className="space-y-4">
+      <header className="flex items-start justify-between gap-3 pb-3 border-b border-border">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-text-primary truncate">{thread.subject}</h2>
+          <div className="text-[11px] text-text-muted mt-0.5 truncate">
+            {thread.participants.map(p => p.name || p.email).join(' · ') || ''}
+            {thread.messages.length > 1 && (
+              <span className="ml-2 text-text-secondary">{thread.messages.length} messages</span>
+            )}
+          </div>
+        </div>
+        <Button size="sm" onClick={() => openReply(last)} title="Reply to the latest message in this thread">
+          <Reply className="w-3.5 h-3.5" /> Reply
+        </Button>
+      </header>
+
+      <div className="space-y-3">
+        {thread.messages.map((m, idx) => (
+          <ThreadMessage
+            key={m.id}
+            message={m}
+            expanded={idx === thread.messages.length - 1}
+            onReply={() => openReply(m)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ThreadMessage({ message, expanded: defaultExpanded, onReply }) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
+  // The latest message in a thread is expanded by default; older
+  // messages collapse to a one-line preview the user can click to
+  // expand, so a 20-message thread doesn't fill the screen.
+  return (
+    <div className={`border rounded-lg transition-colors ${expanded ? 'border-border bg-bg-card/40' : 'border-border'}`}>
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="w-full text-left px-3 py-2 flex items-start justify-between gap-3 hover:bg-bg-card/40 transition-colors"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-text-primary font-medium truncate">
+              {message.is_sent ? 'You' : (message.from_name || message.from_email || '(unknown)')}
+            </span>
+            <Badge tone={message.is_sent ? 'neutral' : (message.provider === 'gmail' ? 'danger' : 'info')} className="text-[9px]">
+              {message.is_sent ? 'sent' : message.provider}
+            </Badge>
+            <span className="text-[10px] font-mono text-text-muted">
+              {message.received_at ? new Date(message.received_at).toLocaleString() : ''}
+            </span>
+          </div>
+          {!expanded && (
+            <div className="text-[11px] text-text-muted truncate mt-0.5">{message.preview}</div>
+          )}
+        </div>
+        <span className="text-text-muted text-sm shrink-0">{expanded ? '▾' : '▸'}</span>
+      </button>
+      {expanded && (
+        <div className="border-t border-border px-3 pb-3 pt-2">
+          {/* Reuse MessageDetail for the body + intent + suggest-reply
+              + coach plumbing. The detail's own Reply button does the
+              same thing as the top-level Reply, just contextually for
+              this specific message in the chain. */}
+          <MessageDetail message={message} />
+          <div className="pt-2 mt-2 border-t border-border flex justify-end">
+            <button
+              onClick={onReply}
+              className="text-[11px] text-accent hover:underline inline-flex items-center gap-1"
+            >
+              <Reply className="w-3 h-3" /> Reply to this message
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

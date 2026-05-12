@@ -5,6 +5,11 @@ import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui'
 import { humanError } from '@/lib/humanError'
 import {
+  Bold, Italic, Underline as UnderlineIcon, Link2, Image as ImageIcon,
+  List as ListIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight,
+  Type, Palette, Eraser,
+} from 'lucide-react'
+import {
   getEffectiveSignatures,
   saveProfileSignature,
   saveProviderSignature,
@@ -172,7 +177,12 @@ export default function SignatureSettings() {
       )}
 
       <div className="space-y-2">
-        <div className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Editor — paste rich HTML or drop image files</div>
+        <div className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Editor</div>
+        <SignatureToolbar
+          editorRef={editorRef}
+          onChange={() => setCurrentHtml(editorRef.current?.innerHTML || '')}
+          onInsertImage={handleImageFile}
+        />
         <div
           ref={editorRef}
           contentEditable
@@ -182,10 +192,11 @@ export default function SignatureSettings() {
           onDragOver={(e) => e.preventDefault()}
           onInput={(e) => setCurrentHtml(e.currentTarget.innerHTML)}
           dangerouslySetInnerHTML={{ __html: currentHtml }}
-          className="bg-bg-card border border-border rounded p-3 min-h-[160px] text-sm text-text-primary focus:outline-none focus:border-accent prose-sm"
+          className="bg-bg-card border border-border rounded p-3 min-h-[200px] text-sm text-text-primary focus:outline-none focus:border-accent"
+          style={{ lineHeight: 1.5 }}
         />
         <div className="text-[10px] text-text-muted">
-          Drop or paste an image to insert it inline (encoded as base64; keep under 1 MB).
+          Use the toolbar above for formatting + links + logos. You can also drop or paste an image directly into the editor (encoded inline; keep under 1 MB so emails stay deliverable).
         </div>
       </div>
 
@@ -219,4 +230,206 @@ export default function SignatureSettings() {
       </div>
     </div>
   )
+}
+
+// SignatureToolbar — formatting controls above the contentEditable.
+// Uses document.execCommand for the bold / italic / underline /
+// list / alignment actions — still the simplest cross-browser
+// path for rich-text editing inside a contentEditable, even though
+// the API is technically deprecated. Wraps it so a future swap to
+// a proper editor (Tiptap, Slate, Lexical) is one component away.
+//
+// Buttons:
+//   • Heading size (small / normal / large)
+//   • Bold / Italic / Underline
+//   • Text color (24-color palette)
+//   • Bullet + numbered list
+//   • Alignment (left / center / right)
+//   • Insert link (prompts for URL, applies to selection)
+//   • Insert image (file picker → base64 inline)
+//   • Clear formatting
+function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
+  const fileRef = useRef(null)
+  const [colorOpen, setColorOpen] = useState(false)
+
+  function focusEditor() {
+    editorRef.current?.focus()
+  }
+
+  function exec(command, value) {
+    focusEditor()
+    // execCommand only operates on the active selection; if the
+    // editor never had focus we'd silently no-op. Refocus first.
+    document.execCommand(command, false, value)
+    onChange?.()
+  }
+
+  function insertHTML(html) {
+    focusEditor()
+    document.execCommand('insertHTML', false, html)
+    onChange?.()
+  }
+
+  function insertLink() {
+    const url = window.prompt('Link URL (https://…):', 'https://')
+    if (!url || url === 'https://') return
+    // Validate-ish: prepend https:// when the user types a domain
+    // without scheme so we don't end up with relative paths.
+    const finalUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`
+    // If the user has a selection we link it; otherwise we insert
+    // a new anchor with the URL as visible text.
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      exec('createLink', finalUrl)
+      // execCommand creates an anchor without target=_blank.
+      // Walk the editor and bolt that on so signature links open
+      // in a new tab from email clients that render them.
+      const anchors = editorRef.current?.querySelectorAll('a[href]') || []
+      anchors.forEach(a => { a.target = '_blank'; a.rel = 'noopener' })
+      onChange?.()
+    } else {
+      insertHTML(`<a href="${finalUrl}" target="_blank" rel="noopener">${finalUrl.replace(/^https?:\/\//, '')}</a>`)
+    }
+  }
+
+  function setColor(hex) {
+    exec('foreColor', hex)
+    setColorOpen(false)
+  }
+
+  return (
+    <div className="bg-bg-card border border-border rounded flex items-center gap-1 p-1 flex-wrap">
+      {/* Heading sizes — fontSize 1-7 in execCommand. */}
+      <select
+        onChange={(e) => { if (e.target.value) { exec('fontSize', e.target.value); e.target.value = '' } }}
+        className="bg-bg-surface border border-border rounded px-1.5 py-1 text-[11px] text-text-secondary focus:outline-none"
+        defaultValue=""
+        title="Text size"
+      >
+        <option value="" disabled>Size</option>
+        <option value="2">Small</option>
+        <option value="3">Normal</option>
+        <option value="4">Large</option>
+        <option value="5">Heading</option>
+      </select>
+
+      <Divider />
+
+      <ToolBtn title="Bold (⌘B)" onClick={() => exec('bold')}><Bold className="w-3.5 h-3.5" /></ToolBtn>
+      <ToolBtn title="Italic (⌘I)" onClick={() => exec('italic')}><Italic className="w-3.5 h-3.5" /></ToolBtn>
+      <ToolBtn title="Underline (⌘U)" onClick={() => exec('underline')}><UnderlineIcon className="w-3.5 h-3.5" /></ToolBtn>
+
+      <Divider />
+
+      <div className="relative">
+        <ToolBtn title="Text color" onClick={() => setColorOpen(v => !v)}>
+          <Palette className="w-3.5 h-3.5" />
+        </ToolBtn>
+        {colorOpen && (
+          <div className="absolute z-20 mt-1 left-0 bg-bg-surface border border-border rounded p-2 shadow-2xl grid grid-cols-6 gap-1">
+            {[
+              '#0f172a','#334155','#475569','#64748b','#94a3b8','#cbd5e1',
+              '#dc2626','#ea580c','#d97706','#ca8a04','#65a30d','#16a34a',
+              '#0d9488','#0284c7','#2563eb','#4f46e5','#7c3aed','#c026d3',
+              '#db2777','#e11d48','#ffffff','#f59e0b','#10b981','#3b82f6',
+            ].map(c => (
+              <button
+                key={c}
+                onClick={() => setColor(c)}
+                className="w-5 h-5 rounded border border-border hover:scale-110 transition-transform"
+                style={{ background: c }}
+                aria-label={`Color ${c}`}
+                title={c}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <Divider />
+
+      <ToolBtn title="Bulleted list" onClick={() => exec('insertUnorderedList')}><ListIcon className="w-3.5 h-3.5" /></ToolBtn>
+      <ToolBtn title="Numbered list" onClick={() => exec('insertOrderedList')}><ListOrdered className="w-3.5 h-3.5" /></ToolBtn>
+
+      <Divider />
+
+      <ToolBtn title="Align left" onClick={() => exec('justifyLeft')}><AlignLeft className="w-3.5 h-3.5" /></ToolBtn>
+      <ToolBtn title="Align center" onClick={() => exec('justifyCenter')}><AlignCenter className="w-3.5 h-3.5" /></ToolBtn>
+      <ToolBtn title="Align right" onClick={() => exec('justifyRight')}><AlignRight className="w-3.5 h-3.5" /></ToolBtn>
+
+      <Divider />
+
+      <ToolBtn title="Insert link" onClick={insertLink}><Link2 className="w-3.5 h-3.5" /></ToolBtn>
+      <ToolBtn title="Insert image / logo" onClick={() => fileRef.current?.click()}><ImageIcon className="w-3.5 h-3.5" /></ToolBtn>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) onInsertImage(f)
+          if (fileRef.current) fileRef.current.value = ''
+        }}
+        className="hidden"
+      />
+
+      <Divider />
+
+      <ToolBtn title="Clear formatting" onClick={() => exec('removeFormat')}><Eraser className="w-3.5 h-3.5" /></ToolBtn>
+
+      <div className="flex-1" />
+
+      {/* Quick-insert templates so a brand-new user gets a
+          professional signature with one click instead of staring
+          at a blank editor. They can edit / replace after insert. */}
+      <select
+        onChange={(e) => {
+          if (!e.target.value) return
+          const tpl = SIGNATURE_TEMPLATES[e.target.value]
+          if (tpl) {
+            // Replace the entire editor body — these are starter
+            // skeletons, not appendable snippets.
+            if (editorRef.current) {
+              editorRef.current.innerHTML = tpl
+              onChange?.()
+            }
+          }
+          e.target.value = ''
+        }}
+        className="bg-bg-surface border border-border rounded px-2 py-1 text-[11px] text-text-secondary focus:outline-none"
+        defaultValue=""
+        title="Insert a starter signature template"
+      >
+        <option value="" disabled>Insert template…</option>
+        <option value="minimal">Minimal</option>
+        <option value="contact">With contact info</option>
+        <option value="social">With social links</option>
+        <option value="logo">With logo placeholder</option>
+      </select>
+    </div>
+  )
+}
+
+function ToolBtn({ title, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="text-text-secondary hover:text-accent hover:bg-bg-surface p-1.5 rounded transition-colors"
+    >
+      {children}
+    </button>
+  )
+}
+
+function Divider() {
+  return <div className="w-px h-5 bg-border mx-0.5" />
+}
+
+const SIGNATURE_TEMPLATES = {
+  minimal: `<p><strong>Your Name</strong><br/>Title · Company</p>`,
+  contact: `<p><strong>Your Name</strong><br/>Title · Company<br/><a href="mailto:you@example.com" target="_blank" rel="noopener">you@example.com</a> · +1 (555) 555-0100</p>`,
+  social: `<p><strong>Your Name</strong><br/>Title · Company<br/><a href="mailto:you@example.com" target="_blank" rel="noopener">you@example.com</a></p><p style="font-size:11px;color:#64748b;"><a href="https://www.linkedin.com/in/yourname" target="_blank" rel="noopener">LinkedIn</a> · <a href="https://twitter.com/yourhandle" target="_blank" rel="noopener">Twitter</a> · <a href="https://example.com" target="_blank" rel="noopener">example.com</a></p>`,
+  logo: `<table cellpadding="0" cellspacing="0" style="border:0;"><tr><td style="padding-right:12px;vertical-align:middle;"><img src="" alt="Logo" style="height:48px;width:auto;display:block;" /></td><td style="vertical-align:middle;border-left:2px solid #cbd5e1;padding-left:12px;"><strong>Your Name</strong><br/><span style="color:#64748b;">Title · Company</span><br/><a href="mailto:you@example.com" target="_blank" rel="noopener">you@example.com</a> · +1 (555) 555-0100</td></tr></table>`,
 }

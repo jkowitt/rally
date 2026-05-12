@@ -242,6 +242,7 @@ function ContentsGrid() {
         ['plan', 'Plan + credits'],
         ['custom-dashboard', 'Custom dashboards'],
         ['audit', 'Audit Log'],
+        ['restricted-companies', 'Restricted companies (admin)'],
       ],
     },
     {
@@ -459,6 +460,17 @@ function Reference() {
 
       <Section title="Audit Log" anchor="audit">
         <p>Admin-only — every write across the workspace: who edited which deal, when, and what changed. Use for compliance and to debug "who moved my deal?" disputes.</p>
+      </Section>
+
+      <Section title="Restricted companies (admin only)" anchor="restricted-companies">
+        <p>Admin-only block list for HQ-managed accounts. Companies you add here can't be added to any rep's pipeline — the database enforces this regardless of how a rep tries (new-deal form, Find Prospects, Bulk Add, sequence enrollment).</p>
+        <ul className="space-y-1.5 list-disc ml-4">
+          <li><strong className="text-text-primary">Fuzzy name matching.</strong> "Acme", "Acme Inc.", "ACME Corp.", "acme corporation" all collide on the same normalized form. Add aliases only for genuinely different names (DBA, prior trade name, parent agency).</li>
+          <li><strong className="text-text-primary">Single-rep assignment.</strong> Set a restriction's <em>assigned to</em> field and that rep alone can work the account — everyone else still gets the block.</li>
+          <li><strong className="text-text-primary">Audit trail.</strong> Every blocked attempt is logged with the rep, the brand they tried, and the matched restriction. Page shows the 20 most recent.</li>
+          <li><strong className="text-text-primary">Rep-facing UX.</strong> The new-deal form pre-checks against the list on field blur and shows a banner before save, so reps don't fill out a 20-field form just to hit a save error. The trigger is still the source of truth.</li>
+        </ul>
+        <Tip>Use this for national accounts handled centrally, agency-of-record deals, parent-company relationships with active procurement, or anything you want kept off the rep floor.</Tip>
       </Section>
 
       <Section title="Account Management" anchor="accounts">

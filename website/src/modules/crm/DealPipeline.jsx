@@ -458,7 +458,22 @@ export default function DealPipeline() {
       setShowForm(false)
       setEditingDeal(null)
     },
-    onError: (err) => toast({ title: 'Error saving deal', description: err.message, type: 'error' }),
+    onError: (err) => {
+      // The restricted_companies trigger raises with a "restricted_company:" prefix.
+      // Translate it into a friendlier toast so the rep gets actionable
+      // copy instead of the raw exception text.
+      const msg = String(err?.message || '')
+      if (msg.includes('restricted_company:')) {
+        const brand = msg.split('restricted_company:')[1]?.split('is a managed account')[0]?.trim() || 'This company'
+        toast({
+          title: `${brand} is a managed account`,
+          description: 'Reps can\'t add this company directly. Contact your admin to request access or assignment.',
+          type: 'warning',
+        })
+      } else {
+        toast({ title: 'Error saving deal', description: err.message, type: 'error' })
+      }
+    },
   })
 
   const deleteMutation = useMutation({
@@ -1985,6 +2000,13 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
   const [enrichResult, setEnrichResult] = useState(null)
   const [aiResearching, setAiResearching] = useState(false)
   const [aiResearchingMore, setAiResearchingMore] = useState(false)
+  // Pre-submit restriction check. When the rep blurs the brand
+  // name field we ask the DB whether the typed company is
+  // restricted — if so, show a warning before they keep filling
+  // out the rest of the form, so a 20-field form-fill doesn't end
+  // in a save error. Server-side trigger is still the source of
+  // truth; this is just UX.
+  const [restrictionWarning, setRestrictionWarning] = useState(null)
 
   // Fetch available assets for proposal
   const { data: availableAssets } = useQuery({
@@ -2427,7 +2449,15 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
           <input
             placeholder="Brand / Company Name"
             value={form.brand_name}
-            onChange={(e) => setForm({ ...form, brand_name: e.target.value })}
+            onChange={(e) => { setForm({ ...form, brand_name: e.target.value }); if (restrictionWarning) setRestrictionWarning(null) }}
+            onBlur={async () => {
+              const v = (form.brand_name || '').trim()
+              if (v.length < 2) { setRestrictionWarning(null); return }
+              try {
+                const { data } = await supabase.rpc('check_brand_restriction', { p_brand_name: v })
+                setRestrictionWarning(data || null)
+              } catch { /* RPC missing in dev; skip */ }
+            }}
             className="flex-1 bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
           />
           <button
@@ -2474,6 +2504,26 @@ function DealForm({ deal, dealContacts, propertyId, profileId, onSave, onCancel,
             {enriching === 'company' ? '...' : '✦ Enrich'}
           </button>
         </div>
+
+        {/* Restricted-company warning. Rendered after onBlur of the
+            brand input. The DB trigger is the source of truth; this
+            block just gives the rep early UX feedback so they don't
+            fill out a 20-field form to hit a save error. */}
+        {restrictionWarning && (
+          <div className={`mt-2 rounded p-2.5 text-xs ${restrictionWarning.blocked ? 'bg-danger/10 border border-danger/30' : 'bg-info/10 border border-info/30'}`}>
+            <div className={`font-medium mb-0.5 ${restrictionWarning.blocked ? 'text-danger' : 'text-info'}`}>
+              {restrictionWarning.blocked
+                ? `${restrictionWarning.brand_name} is a managed account`
+                : `${restrictionWarning.brand_name} is a managed account — assigned to you`}
+            </div>
+            <div className="text-text-secondary">
+              {restrictionWarning.blocked
+                ? 'Reps can\'t add this company directly. Contact your admin to request access or assignment before saving.'
+                : 'You\'ve been given access to this account. Save the deal as normal; other reps still can\'t.'}
+              {restrictionWarning.reason && <span className="text-text-muted"> — {restrictionWarning.reason}</span>}
+            </div>
+          </div>
+        )}
 
         {/* Duplicate detection — soft warning when a brand_name
             matches an open deal already in the pipeline. */}

@@ -51,6 +51,7 @@ const SystemHealth = lazyRetry(() => import('./pages/admin/SystemHealth'))
 const SalesVelocity = lazyRetry(() => import('./modules/crm/SalesVelocity'))
 const Accounts = lazyRetry(() => import('./modules/crm/Accounts'))
 const AuditLog = lazyRetry(() => import('./modules/crm/AuditLog'))
+const RestrictedCompanies = lazyRetry(() => import('./modules/crm/RestrictedCompanies'))
 const AccountsDashboard = lazyRetry(() => import('./modules/accounts/AccountsDashboard'))
 const RenewalPipeline = lazyRetry(() => import('./modules/accounts/RenewalPipeline'))
 const AccountDetail = lazyRetry(() => import('./modules/accounts/AccountDetail'))
@@ -243,6 +244,7 @@ export default function App() {
                             <Route path="/crm/velocity" element={<SalesVelocity />} />
                             <Route path="/crm/accounts" element={<Accounts />} />
                             <Route path="/crm/audit" element={<AuditLog />} />
+                            <Route path="/crm/restricted-companies" element={<RestrictedCompanies />} />
                             <Route path="/crm/contracts" element={<ContractManager />} />
                             <Route path="/crm/report/:dealId" element={<BrandReport />} />
                             <Route path="/crm/declined" element={<DeclinedDeals />} />

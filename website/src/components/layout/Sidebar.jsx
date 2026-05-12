@@ -10,7 +10,8 @@ import { emit } from '@/lib/appEvents'
 import { Lightbulb, Sparkles } from 'lucide-react'
 import AdditionalFeaturesPanel from '@/components/AdditionalFeaturesPanel'
 
-function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
+function getCrmSections(t, propertyType, flags, moduleLabels, addons, role) {
+  const isAdmin = role === 'admin' || role === 'developer' || role === 'businessops'
   const industryItems = []
   if (propertyType === 'nonprofit') {
     industryItems.push({ to: '/app/industry/impact', label: 'Impact Metrics' })
@@ -90,6 +91,10 @@ function getCrmSections(t, propertyType, flags, moduleLabels, addons) {
       label: 'Admin',
       items: [
         { to: '/app/crm/audit', label: 'Audit Log' },
+        // Restricted Companies is admin-only — surface in sidebar
+        // only for admins/developers/businessops. Reps could find
+        // the route by URL but the page server-redirects them.
+        ...(isAdmin ? [{ to: '/app/crm/restricted-companies', label: 'Restricted Companies' }] : []),
       ],
     },
   ]
@@ -163,7 +168,7 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
   // One unified sidebar everywhere. Every feature stays visible
   // regardless of which hub tab is active — the hub pill is now
   // a visual context indicator, not a sidebar filter.
-  const navSections = getCrmSections(t, propertyType, flags, moduleLabels, addons)
+  const navSections = getCrmSections(t, propertyType, flags, moduleLabels, addons, role)
 
   const width = mobile ? 'w-[280px]' : collapsed ? 'w-16' : 'w-[220px]'
   const showLabels = mobile || !collapsed

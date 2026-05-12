@@ -90,7 +90,17 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          <button onClick={() => navigate('/app')} className="md:hidden font-mono font-bold text-accent text-xs cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</button>
+          <button
+            onClick={() => navigate('/app')}
+            className="md:hidden cursor-pointer hover:opacity-80 transition-opacity"
+            aria-label="Loud Legacy — Home"
+          >
+            <img
+              src="/logo-loud-legacy.svg"
+              alt="Loud Legacy"
+              className="h-5 w-auto"
+            />
+          </button>
 
           {profile?.properties?.name && (
             <span className="hidden md:inline text-sm text-text-primary font-medium">

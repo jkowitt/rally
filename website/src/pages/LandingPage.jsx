@@ -87,14 +87,13 @@ function WelcomeGate() {
               className="mx-auto max-w-lg text-center space-y-6"
             >
               <div>
-                <motion.span
+                <motion.img
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="font-mono font-bold text-accent text-2xl inline-block"
-                  style={{ letterSpacing: '0.08em', wordSpacing: '-0.3em' }}
-                >
-                  LOUD LEGACY
-                </motion.span>
+                  src="/logo-loud-legacy.svg"
+                  alt="Loud Legacy"
+                  className="h-10 sm:h-12 w-auto"
+                />
                 <motion.h1
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -270,14 +269,13 @@ function WelcomeGate() {
               className="mx-auto max-w-lg text-center space-y-8"
             >
               <div>
-                <motion.span
+                <motion.img
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="font-mono font-bold text-accent text-2xl inline-block"
-                  style={{ letterSpacing: '0.08em', wordSpacing: '-0.3em' }}
-                >
-                  LOUD LEGACY
-                </motion.span>
+                  src="/logo-loud-legacy.svg"
+                  alt="Loud Legacy"
+                  className="h-10 sm:h-12 w-auto"
+                />
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -319,7 +317,13 @@ function Nav({ onLogoClick }) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-bg-primary/80 backdrop-blur-lg border-b border-border/50">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <button onClick={onLogoClick} className="font-mono font-bold text-accent text-base cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</button>
+        <button
+          onClick={onLogoClick}
+          className="cursor-pointer hover:opacity-80 transition-opacity"
+          aria-label="Loud Legacy — Home"
+        >
+          <img src="/logo-loud-legacy.svg" alt="Loud Legacy" className="h-6 w-auto" />
+        </button>
         <div className="hidden md:flex items-center gap-8 text-sm text-text-secondary">
           <a href="#how-it-works" className="hover:text-text-primary transition-colors">How It Works</a>
           <a href="#ai" className="hover:text-text-primary transition-colors">AI</a>
@@ -682,7 +686,7 @@ function Footer() {
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
           <div className="md:col-span-2">
-            <span className="font-mono font-bold text-accent text-sm " style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</span>
+            <img src="/logo-loud-legacy.svg" alt="Loud Legacy" className="h-6 w-auto" />
             <p className="text-text-secondary text-sm mt-3 max-w-md leading-relaxed">
               The operating suite for partnership sales teams — sports, entertainment, conferences, nonprofits, media, and more.
             </p>

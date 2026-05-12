@@ -65,8 +65,8 @@ export default function LegalPage({ type }) {
           >
             ← Back
           </button>
-          <Link to="/" className="font-mono font-bold text-accent text-sm" style={{ letterSpacing: '0.08em', wordSpacing: '-0.3em' }}>
-            LOUD LEGACY
+          <Link to="/" aria-label="Loud Legacy — Home">
+            <img src="/logo-loud-legacy.svg" alt="Loud Legacy" className="h-6 w-auto" />
           </Link>
           <Link to="/login" className="text-xs text-text-muted hover:text-accent">
             Sign in

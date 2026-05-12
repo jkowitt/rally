@@ -198,6 +198,7 @@ function ContentsGrid() {
         ['bulk-enrich', 'Bulk Add'],
         ['sequences', 'Sequences'],
         ['inbox', 'Inbox'],
+        ['compose', 'Composing emails'],
         ['signature', 'Email signature'],
         ['tasks', 'Task Manager'],
         ['ai-capture', 'AI call capture (Enterprise)'],
@@ -316,9 +317,10 @@ function Reference() {
         <p>Kanban or table view of every deal in the workspace.</p>
         <Step n="1" body={<>Stages: <Code>Prospect</Code> → <Code>Proposal Sent</Code> → <Code>Negotiation</Code> → <Code>Contracted</Code> → <Code>In Fulfillment</Code> → <Code>Renewed</Code>. Drag cards between columns to advance the deal; the move is auto-logged in the activity timeline.</>} />
         <Step n="2" body={<>Click any card to open the deal drawer with tabs for Overview, Contracts, and Activity. Inline-edit name, value, contact, stage, priority, source, and start date.</>} />
-        <Step n="3" body={<>Toggle to <Code>Table</Code> view (top-left of the board) for bulk edits — double-click a cell to inline-edit.</>} />
-        <Step n="4" body={<>Click <Code>Find Prospects</Code> in the top right to open AI prospect search inline (covered below).</>} />
-        <Step n="5" body={<>Use <Code>Share</Code> on any deal to generate a tokenized sponsor portal link — the prospect can review the deal without logging in.</>} />
+        <Step n="3" body={<>In the deal viewer's <em>Overview</em>, click <Code>+ Add contact</Code> next to the Contacts header to add a new contact (name / email / title / phone) without leaving the viewer. The new contact auto-links to this deal and to the company name.</>} />
+        <Step n="4" body={<>Toggle to <Code>Table</Code> view (top-left of the board) for bulk edits — double-click a cell to inline-edit.</>} />
+        <Step n="5" body={<>Click <Code>Find Prospects</Code> in the top right to open AI prospect search inline (covered below).</>} />
+        <Step n="6" body={<>Use <Code>Share</Code> on any deal to generate a tokenized sponsor portal link — the prospect can review the deal without logging in.</>} />
         <Tip>Stale deals (no activity in 14+ days) are tagged <Code>STALE</Code> automatically. The Dashboard surfaces these so they don't rot.</Tip>
       </Section>
 
@@ -362,8 +364,9 @@ function Reference() {
       <Section title="Sequences" anchor="sequences">
         <p>Multi-step outreach campaigns (email → wait 3 days → LinkedIn → wait 5 days → call, etc.).</p>
         <Step n="1" body={<>Click <Code>New sequence</Code> and either build steps manually or let the AI Sequence Builder draft them from a goal ("warm intro → discovery call").</>} />
-        <Step n="2" body={<>Enroll deals or contacts into the sequence. Each step generates a draft you must approve before it sends.</>} />
-        <Step n="3" body={<>Approved drafts land in your To-Do List at the scheduled time. Click <Code>Done</Code> to mark sent.</>} />
+        <Step n="2" body={<>Below the steps, click <Code>Enroll deal</Code> to push existing deals into the cadence. Search by brand name, pick the contact to enroll, save. Each step generates a draft you must approve before it sends.</>} />
+        <Step n="3" body={<>The <em>Enrolled deals</em> list shows the status of every enrollment: <Code>Untouched</Code> means the runner hasn't sent any step yet (the rep hasn't approved the first draft), <Code>Step N/M</Code> shows progress, <Code>Paused</Code>, <Code>Completed</Code>. The header counts active enrollments + how many are still untouched so you know what's stuck.</>} />
+        <Step n="4" body={<>Approved drafts land in your To-Do List at the scheduled time. Click <Code>Done</Code> to mark sent.</>} />
         <Tip>The AI <Code>Coach</Code> button on every draft scores the message and rewrites it against a chosen goal (more concise, push for meeting, more human).</Tip>
       </Section>
 
@@ -399,6 +402,16 @@ function Reference() {
         <Step n="4" body={<>Toggle between <Code>Conversation</Code> view (default — messages grouped by thread, list shows participants + message count, click to expand the whole chain) and <Code>Flat</Code> view (every message as its own row). Choice persists per device.</>} />
         <Step n="5" body={<>Inside a conversation, click <Code>Reply</Code> at the top to reply to the latest message, or expand an earlier message and click <Code>Reply to this message</Code> to reply to that one specifically. Threading is preserved — the reply lands in the same Gmail/Outlook conversation, not as a standalone email.</>} />
         <Tip>Lower-tier plans without inbox sync can still draft and copy — paste into your own client when sending.</Tip>
+      </Section>
+
+      <Section title="Composing emails" anchor="compose">
+        <p>The compose modal is reachable from any contact, deal, the inbox, the AI Brief, or the dashboard.</p>
+        <ul className="space-y-1.5 list-disc ml-4">
+          <li><strong className="text-text-primary">Contact picker in the To / Cc fields.</strong> Start typing a name, email, or company — matching workspace contacts appear as a dropdown. Click (or Enter / arrow-keys) to pick. Multiple recipients via comma still works; pick one, comma, pick another.</li>
+          <li><strong className="text-text-primary">Reply with threading.</strong> Reply from the inbox conversation view and the reply lands in the same Gmail/Outlook thread, not as a standalone email.</li>
+          <li><strong className="text-text-primary">AI draft + Coach + Chat.</strong> ✨ Draft with AI writes a first pass; Coach rewrites against a goal; Chat opens the outreach copilot.</li>
+          <li><strong className="text-text-primary">Signature</strong> — auto-appended from your saved signature (see below).</li>
+        </ul>
       </Section>
 
       <Section title="Email signature" anchor="signature">

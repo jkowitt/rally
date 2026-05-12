@@ -76,11 +76,20 @@ export default function TodoList() {
   })
 
   // ─── Mark draft sent ────────────────────────────────────
+  // When the rep marks a queued draft as sent, we need to:
+  //   1. Flip the draft itself to status='sent'
+  //   2. Mark the underlying tasks row Done so it disappears from
+  //      Task Manager + this list
+  //   3. Drop an activities row on the deal so the timeline shows
+  //      the touch — matches what the autosend runner does
   const markSent = useMutation({
     mutationFn: async (draftId) => {
       const { data: row } = await supabase
         .from('prospect_sequence_drafts')
-        .select('task_id')
+        .select(`
+          task_id, subject, body, method,
+          enrollment:prospect_sequence_enrollments(deal_id, contact_id, contacts(email))
+        `)
         .eq('id', draftId)
         .maybeSingle()
       await supabase.from('prospect_sequence_drafts')
@@ -90,6 +99,23 @@ export default function TodoList() {
         await supabase.from('tasks')
           .update({ status: 'Done', completed_at: new Date().toISOString() })
           .eq('id', row.task_id)
+      }
+      // Activity log mirror — gives the deal's Activity Timeline
+      // the same touchpoint that an autosend would have created.
+      if (row?.enrollment?.deal_id) {
+        try {
+          await supabase.from('activities').insert({
+            property_id: profile?.property_id,
+            deal_id: row.enrollment.deal_id,
+            contact_email: row.enrollment?.contacts?.email || null,
+            activity_type: row.method === 'phone' ? 'Call' : row.method === 'linkedin' ? 'LinkedIn Message' : 'Email',
+            subject: row.subject || `${row.method || 'Email'} sent`,
+            description: (row.body || '').slice(0, 1000),
+            occurred_at: new Date().toISOString(),
+            created_by: profile?.id,
+            source: 'sequence',
+          })
+        } catch { /* activities table may not exist in dev — non-blocking */ }
       }
     },
     onSuccess: () => {

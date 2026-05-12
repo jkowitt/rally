@@ -301,6 +301,40 @@ async function processEnrollment(sb: any, e: Enrollment) {
     variantId: variant.variantId,
   });
 
+  // 6b. Mirror the send into the activities table so the deal's
+  // Activity Timeline and the Activities page reflect the touch
+  // immediately — same surface that manual logged calls / emails
+  // already populate. Non-blocking: a failure here shouldn't
+  // unwind the send.
+  try {
+    await sb.from("activities").insert({
+      property_id: e.property_id,
+      deal_id: e.deal_id,
+      contact_email: contact.email,
+      activity_type: "Email",
+      subject,
+      description: body.slice(0, 1000),
+      occurred_at: new Date().toISOString(),
+      created_by: enrollerId,
+      source: "sequence",
+    });
+  } catch (err) {
+    console.warn("[sequence-runner] activity insert failed:", (err as Error)?.message || err);
+  }
+
+  // 6c. Auto-complete any pending sequence task tied to this
+  // (enrollment, step) so the rep's To-Do list reflects that the
+  // step actually fired — was previously left dangling.
+  try {
+    await sb.from("prospect_sequence_tasks")
+      .update({ completed: true, completed_at: new Date().toISOString() })
+      .eq("enrollment_id", e.id)
+      .eq("step_index", e.current_step)
+      .eq("completed", false);
+  } catch (err) {
+    console.warn("[sequence-runner] sequence task update failed:", (err as Error)?.message || err);
+  }
+
   // 7. Advance enrollment.
   await advance(sb, e);
   return { sent: true, provider, messageId };

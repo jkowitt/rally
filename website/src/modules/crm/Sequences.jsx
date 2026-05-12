@@ -343,6 +343,10 @@ function EnrolledDeals({ sequenceId, propertyId, stepCount }) {
 
   const untouchedCount = enrollments.filter(e => isUntouched(e)).length
   const activeCount = enrollments.filter(e => !e.completed && !e.paused).length
+  // Reply-paused = the auto-pause trigger fired because a real
+  // (non-auto-) reply landed in the inbox. Surface separately so
+  // the rep can pull the deal out of the sequence quickly.
+  const replied = enrollments.filter(e => e.paused && e.paused_reason === 'replied')
 
   return (
     <div className="pt-3 border-t border-border space-y-2">
@@ -355,6 +359,9 @@ function EnrolledDeals({ sequenceId, propertyId, stepCount }) {
               {untouchedCount > 0 && (
                 <> · <span className="text-warning">{untouchedCount} untouched</span></>
               )}
+              {replied.length > 0 && (
+                <> · <span className="text-success">{replied.length} replied</span></>
+              )}
             </span>
           )}
         </div>
@@ -362,6 +369,21 @@ function EnrolledDeals({ sequenceId, propertyId, stepCount }) {
           <Plus className="w-3.5 h-3.5" /> Enroll deal
         </Button>
       </div>
+
+      {/* Reply pile-up banner. When the auto-pause trigger has
+          fired on one or more enrollments we surface them at the
+          top so the rep can decide "engage in the live thread,
+          leave paused" vs. "pull out of sequence entirely." */}
+      {replied.length > 0 && (
+        <div className="bg-success/10 border border-success/30 rounded p-2.5 text-[11px]">
+          <div className="text-success font-medium mb-1">
+            {replied.length} {replied.length === 1 ? 'enrollment' : 'enrollments'} paused after a reply
+          </div>
+          <div className="text-text-secondary">
+            The contact responded to a sequence email, so the cadence is paused while you take over the conversation. <strong className="text-text-primary">Auto-replies (out-of-office, vacation, autoresponders) don't trigger this.</strong> Use <span className="bg-bg-card border border-border rounded px-1 py-0.5 font-mono text-[10px]">Pull out</span> below to fully unenroll the deal once you've handled the reply.
+          </div>
+        </div>
+      )}
 
       {stepCount === 0 && enrollments.length === 0 && (
         <p className="text-[11px] text-text-muted">Add at least one step above before enrolling deals.</p>
@@ -408,47 +430,68 @@ function EnrollmentRow({ enrollment, stepCount, onUnenroll }) {
   const c = enrollment.contact
   const d = enrollment.deal
   const untouched = isUntouched(enrollment)
+  const replied = enrollment.paused && enrollment.paused_reason === 'replied'
+  // Reply-paused gets a success tone (engagement is a good thing);
+  // other pauses (bounced / unsubscribed / DNC) stay warning/danger.
   const tone = enrollment.completed ? 'success'
+    : replied ? 'success'
     : enrollment.paused ? 'warning'
     : untouched ? 'warning'
     : 'info'
   const label = enrollment.completed ? 'Completed'
+    : replied ? 'Replied — paused'
     : enrollment.paused ? `Paused${enrollment.paused_reason ? ` (${enrollment.paused_reason})` : ''}`
     : untouched ? 'Untouched'
     : `Step ${enrollment.current_step}${stepCount ? `/${stepCount}` : ''}`
 
   return (
-    <li className="bg-bg-card border border-border rounded p-2.5 flex items-center justify-between gap-3 flex-wrap">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge tone={tone}>{label}</Badge>
-          {d?.brand_name && (
-            <Link to={`/app/crm/pipeline?deal=${d.id}`} className="text-sm font-medium text-text-primary hover:text-accent truncate">
-              {d.brand_name}
-            </Link>
-          )}
-          {c && (
-            <span className="text-[11px] text-text-muted truncate">
-              {[c.first_name, c.last_name].filter(Boolean).join(' ') || c.email}
-              {c.position && <span className="text-text-secondary"> · {c.position}</span>}
-            </span>
-          )}
+    <li className={`border rounded p-2.5 ${replied ? 'bg-success/5 border-success/30' : 'bg-bg-card border-border'}`}>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge tone={tone}>{label}</Badge>
+            {d?.brand_name && (
+              <Link to={`/app/crm/pipeline?deal=${d.id}`} className="text-sm font-medium text-text-primary hover:text-accent truncate">
+                {d.brand_name}
+              </Link>
+            )}
+            {c && (
+              <span className="text-[11px] text-text-muted truncate">
+                {[c.first_name, c.last_name].filter(Boolean).join(' ') || c.email}
+                {c.position && <span className="text-text-secondary"> · {c.position}</span>}
+              </span>
+            )}
+          </div>
+          <div className="text-[10px] font-mono text-text-muted mt-0.5 flex gap-3 flex-wrap">
+            <span>enrolled {new Date(enrollment.enrolled_at).toLocaleDateString()}</span>
+            {enrollment.last_sent_at && <span>last sent {new Date(enrollment.last_sent_at).toLocaleDateString()}</span>}
+            {enrollment.paused_at && replied && (
+              <span>replied {new Date(enrollment.paused_at).toLocaleDateString()}</span>
+            )}
+            {enrollment.next_send_at && !enrollment.completed && !enrollment.paused && (
+              <span>next {new Date(enrollment.next_send_at).toLocaleDateString()}</span>
+            )}
+          </div>
         </div>
-        <div className="text-[10px] font-mono text-text-muted mt-0.5 flex gap-3 flex-wrap">
-          <span>enrolled {new Date(enrollment.enrolled_at).toLocaleDateString()}</span>
-          {enrollment.last_sent_at && <span>last sent {new Date(enrollment.last_sent_at).toLocaleDateString()}</span>}
-          {enrollment.next_send_at && !enrollment.completed && !enrollment.paused && (
-            <span>next {new Date(enrollment.next_send_at).toLocaleDateString()}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          {replied && (
+            <button
+              onClick={() => { if (confirm(`Pull ${d?.brand_name || 'this deal'} out of the sequence completely?`)) onUnenroll() }}
+              className="text-[11px] bg-success/15 border border-success/40 text-success rounded px-2.5 py-1 font-medium hover:bg-success/25"
+              title="Unenroll — the contact replied, take over the conversation manually"
+            >
+              Pull out
+            </button>
           )}
+          <button
+            onClick={() => { if (confirm(`Unenroll ${d?.brand_name || 'this deal'} from the sequence?`)) onUnenroll() }}
+            className="text-text-muted hover:text-danger text-xs"
+            title="Unenroll"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
-      <button
-        onClick={() => { if (confirm(`Unenroll ${d?.brand_name || 'this deal'} from the sequence?`)) onUnenroll() }}
-        className="text-text-muted hover:text-danger text-xs shrink-0"
-        title="Unenroll"
-      >
-        <X className="w-3.5 h-3.5" />
-      </button>
     </li>
   )
 }

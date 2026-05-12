@@ -197,6 +197,7 @@ function ContentsGrid() {
         ['find-prospects', 'Find Prospects (AI)'],
         ['bulk-enrich', 'Bulk Add'],
         ['sequences', 'Sequences'],
+        ['auto-pause-on-reply', 'Auto-pause on reply'],
         ['inbox', 'Inbox'],
         ['compose', 'Composing emails'],
         ['signature', 'Email signature'],
@@ -365,9 +366,18 @@ function Reference() {
         <p>Multi-step outreach campaigns (email → wait 3 days → LinkedIn → wait 5 days → call, etc.).</p>
         <Step n="1" body={<>Click <Code>New sequence</Code> and either build steps manually or let the AI Sequence Builder draft them from a goal ("warm intro → discovery call").</>} />
         <Step n="2" body={<>Below the steps, click <Code>Enroll deal</Code> to push existing deals into the cadence. Search by brand name, pick the contact to enroll, save. Each step generates a draft you must approve before it sends.</>} />
-        <Step n="3" body={<>The <em>Enrolled deals</em> list shows the status of every enrollment: <Code>Untouched</Code> means the runner hasn't sent any step yet (the rep hasn't approved the first draft), <Code>Step N/M</Code> shows progress, <Code>Paused</Code>, <Code>Completed</Code>. The header counts active enrollments + how many are still untouched so you know what's stuck.</>} />
-        <Step n="4" body={<>Approved drafts land in your To-Do List at the scheduled time. Click <Code>Done</Code> to mark sent.</>} />
+        <Step n="3" body={<>The <em>Enrolled deals</em> list shows the status of every enrollment: <Code>Untouched</Code> (runner hasn't sent any step yet), <Code>Step N/M</Code> (in progress), <Code>Replied — paused</Code> (a real reply landed in the inbox; cadence paused so you can take over), <Code>Paused</Code> (bounced / unsubscribed / DNC), <Code>Completed</Code>. The header counts active + untouched + replied.</>} />
+        <Step n="4" body={<>Approved drafts land in your To-Do List at the scheduled time. Click <Code>Done</Code> to mark sent. Every send — whether autosent by the runner or manually marked sent from the To-Do — drops an activity row on the deal's timeline.</>} />
         <Tip>The AI <Code>Coach</Code> button on every draft scores the message and rewrites it against a chosen goal (more concise, push for meeting, more human).</Tip>
+      </Section>
+
+      <Section title="Auto-pause on reply" anchor="auto-pause-on-reply">
+        <p>When a contact you've enrolled actually replies to a sequence email, the cadence auto-pauses so the runner doesn't keep firing follow-ups while you're in an active conversation. The enrollment turns into a <Code>Replied — paused</Code> row in the sequence editor, and a banner at the top of the enrolled-deals list summarizes how many are waiting on your attention.</p>
+        <ul className="space-y-1.5 list-disc ml-4">
+          <li><strong className="text-text-primary">Auto-replies are filtered.</strong> Out-of-office, vacation responders, "I'm out until Monday," and bounce-style messages don't count as real replies — the cadence keeps going. Detection uses subject-line patterns ("Automatic reply:", "Out of Office:", "Vacation reply:") and body-leading phrases ("I'm currently out of the office…", "Thanks for your message — I'm on leave…").</li>
+          <li><strong className="text-text-primary">Pull out completely.</strong> On any <em>Replied — paused</em> row, click <Code>Pull out</Code> to fully unenroll the contact + deal from the sequence. The task list and to-do list update automatically.</li>
+          <li><strong className="text-text-primary">Resume manually.</strong> If you'd rather keep the contact in the cadence after the reply (e.g. the reply was "send me more info"), use the regular unpause flow — but most teams prefer to take over from the inbox.</li>
+        </ul>
       </Section>
 
       <Section title="Priority Queue" anchor="priority">

@@ -177,7 +177,17 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
     <aside className={`fixed top-0 left-0 h-screen bg-bg-surface border-r border-border flex flex-col transition-all duration-200 z-40 ${width}`}>
       <div className="h-14 flex items-center justify-between px-4 border-b border-border">
         {showLabels && (
-          <button onClick={() => navigate('/app')} className="font-mono font-bold text-accent text-sm cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</button>
+          <button
+            onClick={() => navigate('/app')}
+            className="block cursor-pointer hover:opacity-80 transition-opacity"
+            aria-label="Loud Legacy — Home"
+          >
+            <img
+              src="/logo-loud-legacy.svg"
+              alt="Loud Legacy"
+              className="h-7 w-auto"
+            />
+          </button>
         )}
         <button
           onClick={onToggle}

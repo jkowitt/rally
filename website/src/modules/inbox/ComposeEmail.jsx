@@ -302,13 +302,11 @@ export default function ComposeEmail({
                 </button>
               )}
             </div>
-            <input
-              type="email"
-              multiple
+            <RecipientField
               value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="recipient@example.com (comma-separate multiple)"
-              className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent mt-1"
+              onChange={setTo}
+              placeholder="recipient@example.com (comma-separate or pick a contact)"
+              propertyId={profile?.property_id}
               autoFocus
             />
           </div>
@@ -325,13 +323,11 @@ export default function ComposeEmail({
                   Remove Cc
                 </button>
               </div>
-              <input
-                type="email"
-                multiple
+              <RecipientField
                 value={cc}
-                onChange={(e) => setCc(e.target.value)}
-                placeholder="cc@example.com (comma-separate multiple)"
-                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent mt-1"
+                onChange={setCc}
+                placeholder="cc@example.com (comma-separate or pick a contact)"
+                propertyId={profile?.property_id}
               />
             </div>
           )}
@@ -573,6 +569,125 @@ export default function ComposeEmail({
           recipient_title: tonePersonality?.position || tonePersonality?.title || '',
         }}
       />
+    </div>
+  )
+}
+
+// RecipientField — email input with an autocomplete dropdown that
+// searches the workspace's contacts table by name + email + company.
+// Comma-separated multi-recipient still works (the underlying input
+// accepts any text); the picker just makes it one click instead of
+// remembering an email address. Selecting a contact appends its
+// email to whatever's already in the field, so the rep can build
+// up multiple recipients from the picker, paste, or both.
+function RecipientField({ value, onChange, placeholder, propertyId, autoFocus }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [highlight, setHighlight] = useState(0)
+  const inputRef = useRef(null)
+  const debounceRef = useRef(null)
+
+  // Live search the contacts table. Debounce 180ms so each
+  // keystroke doesn't fire a request. Pulls top 8 contacts that
+  // match the trailing token (the part the user is currently
+  // typing after the last comma) — so "alice@x.com, bo" returns
+  // contacts whose name/email starts with "bo".
+  useEffect(() => {
+    if (!propertyId) { setResults([]); return }
+    // Extract the active token — everything after the last comma.
+    const tokens = (value || '').split(',')
+    const active = (tokens[tokens.length - 1] || '').trim()
+    setQuery(active)
+    if (active.length < 2) { setResults([]); return }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      const like = `%${active.replace(/[%_]/g, '')}%`
+      const { data } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name, email, company, position')
+        .eq('property_id', propertyId)
+        .not('email', 'is', null)
+        .or(`email.ilike.${like},first_name.ilike.${like},last_name.ilike.${like},company.ilike.${like}`)
+        .order('updated_at', { ascending: false, nullsFirst: false })
+        .limit(8)
+      setResults(data || [])
+      setHighlight(0)
+    }, 180)
+    return () => clearTimeout(debounceRef.current)
+  }, [value, propertyId])
+
+  function pick(contact) {
+    if (!contact?.email) return
+    // Replace the active (trailing) token with the picked email,
+    // preserving any earlier comma-separated recipients.
+    const tokens = (value || '').split(',').map(t => t.trim()).filter(Boolean)
+    if (tokens.length > 0) tokens.pop()
+    tokens.push(contact.email)
+    const next = tokens.join(', ') + ', '
+    onChange(next)
+    setOpen(false)
+    setResults([])
+    inputRef.current?.focus()
+  }
+
+  function onKeyDown(e) {
+    if (!open || results.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlight(h => Math.min(h + 1, results.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlight(h => Math.max(h - 1, 0))
+    } else if (e.key === 'Enter' && results[highlight]) {
+      e.preventDefault()
+      pick(results[highlight])
+    } else if (e.key === 'Escape') {
+      setOpen(false)
+    }
+  }
+
+  return (
+    <div className="relative mt-1">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}   /* let click register */
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        autoComplete="off"
+        className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+      />
+      {open && results.length > 0 && (
+        <ul className="absolute z-30 mt-1 left-0 right-0 bg-bg-surface border border-border rounded-lg shadow-2xl max-h-64 overflow-y-auto">
+          {results.map((c, i) => (
+            <li key={c.id}>
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); pick(c) }}
+                onMouseEnter={() => setHighlight(i)}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-3 ${i === highlight ? 'bg-bg-card' : 'hover:bg-bg-card/60'}`}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-text-primary truncate">
+                    {[c.first_name, c.last_name].filter(Boolean).join(' ') || c.email}
+                  </div>
+                  <div className="text-[11px] text-text-muted truncate">
+                    {c.email}
+                    {c.position && <span className="text-text-secondary"> · {c.position}</span>}
+                    {c.company && <span className="text-text-secondary"> · {c.company}</span>}
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-accent shrink-0">↵</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

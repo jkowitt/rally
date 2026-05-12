@@ -1324,7 +1324,46 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
   const [activeTab, setActiveTab] = useState('overview')
   const [warmPathContact, setWarmPathContact] = useState(null)
   const [personalityContact, setPersonalityContact] = useState(null)
+  // Inline "+ Add contact" UX. When the rep wants to add someone to
+  // an existing deal they used to have to: click Edit, scroll to
+  // the Contacts tab, click + Add, fill the form, click Save. This
+  // collapses that to a single inline form inside the read-only
+  // DealViewer's Contacts section.
+  const [addingContact, setAddingContact] = useState(false)
+  const [newContact, setNewContact] = useState({ first_name: '', last_name: '', email: '', position: '', phone: '' })
+  const [savingContact, setSavingContact] = useState(false)
   const queryClient = useQueryClient()
+
+  async function saveNewContact() {
+    if (!newContact.first_name.trim() && !newContact.email.trim()) {
+      toast({ title: 'Name or email required', type: 'warning' })
+      return
+    }
+    setSavingContact(true)
+    try {
+      const { error } = await supabase.from('contacts').insert({
+        property_id: deal.property_id,
+        deal_id: deal.id,
+        first_name: newContact.first_name.trim() || '',
+        last_name: newContact.last_name.trim() || null,
+        email: newContact.email.trim() || null,
+        position: newContact.position.trim() || null,
+        phone: newContact.phone.trim() || null,
+        company: deal.brand_name || null,
+        is_primary: contacts.length === 0,
+      })
+      if (error) throw error
+      queryClient.invalidateQueries({ queryKey: ['contacts', deal.property_id] })
+      queryClient.invalidateQueries({ queryKey: ['deal-contacts', deal.id] })
+      toast({ title: 'Contact added', type: 'success' })
+      setAddingContact(false)
+      setNewContact({ first_name: '', last_name: '', email: '', position: '', phone: '' })
+    } catch (err) {
+      toast({ title: 'Could not add contact', description: humanError(err), type: 'error' })
+    } finally {
+      setSavingContact(false)
+    }
+  }
   const viewerPlanLimits = usePlanLimits()
   const propertyId = deal.property_id
   const priorityColor = { High: 'text-danger', Medium: 'text-warning', Low: 'text-text-muted' }
@@ -1622,7 +1661,76 @@ function DealViewer({ deal, contacts, onClose, onEdit, userNameMap = {} }) {
 
           {/* Contacts */}
           <div>
-            <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">Contacts ({contacts.length || (deal.contact_name ? 1 : 0)})</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider">Contacts ({contacts.length || (deal.contact_name ? 1 : 0)})</div>
+              {!addingContact && (
+                <button
+                  onClick={() => setAddingContact(true)}
+                  className="text-[11px] text-accent hover:underline inline-flex items-center gap-1"
+                  title="Add a contact to this deal without leaving the viewer"
+                >
+                  + Add contact
+                </button>
+              )}
+            </div>
+
+            {addingContact && (
+              <div className="bg-bg-card border border-accent/30 rounded-lg p-3 mb-2 space-y-2">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-accent">New contact</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    placeholder="First name"
+                    value={newContact.first_name}
+                    onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
+                    className="bg-bg-surface border border-border rounded px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                    autoFocus
+                  />
+                  <input
+                    placeholder="Last name"
+                    value={newContact.last_name}
+                    onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
+                    className="bg-bg-surface border border-border rounded px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={newContact.email}
+                  onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                  className="w-full bg-bg-surface border border-border rounded px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    placeholder="Title / position"
+                    value={newContact.position}
+                    onChange={(e) => setNewContact({ ...newContact, position: e.target.value })}
+                    className="bg-bg-surface border border-border rounded px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                  />
+                  <input
+                    placeholder="Phone"
+                    value={newContact.phone}
+                    onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+                    className="bg-bg-surface border border-border rounded px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    onClick={() => { setAddingContact(false); setNewContact({ first_name: '', last_name: '', email: '', position: '', phone: '' }) }}
+                    className="text-[11px] text-text-muted hover:text-text-primary px-2 py-1"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveNewContact}
+                    disabled={savingContact || (!newContact.first_name.trim() && !newContact.email.trim())}
+                    className="text-[11px] bg-accent text-bg-primary rounded px-3 py-1 font-semibold hover:opacity-90 disabled:opacity-50"
+                  >
+                    {savingContact ? 'Saving…' : 'Save contact'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {contacts.length > 0 ? (
               <div className="space-y-2">
                 {contacts.map((c, i) => (

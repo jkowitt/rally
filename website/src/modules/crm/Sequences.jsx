@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -296,7 +296,327 @@ function SequenceEditor({ sequence, onDelete }) {
           </Button>
         )
       )}
+
+      {/* Enrolled deals — every deal that's been pushed into this
+          cadence, with a status badge so the rep can see at a
+          glance which deals are stuck at step 0 (untouched) vs.
+          mid-flow vs. done. Big lever for tracking who actually
+          needs nudging. */}
+      <EnrolledDeals sequenceId={sequence.id} propertyId={sequence.property_id} stepCount={steps.length} />
     </Card>
+  )
+}
+
+function EnrolledDeals({ sequenceId, propertyId, stepCount }) {
+  const { toast } = useToast()
+  const qc = useQueryClient()
+  const [enrolling, setEnrolling] = useState(false)
+
+  const { data: enrollments = [], isLoading } = useQuery({
+    queryKey: ['sequence-enrollments', sequenceId],
+    enabled: !!sequenceId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('prospect_sequence_enrollments')
+        .select(`
+          id, current_step, last_sent_at, next_send_at, completed, paused, paused_reason, enrolled_at,
+          contact:contact_id (id, first_name, last_name, email, position),
+          deal:deal_id (id, brand_name, stage, value)
+        `)
+        .eq('sequence_id', sequenceId)
+        .order('enrolled_at', { ascending: false })
+      return data || []
+    },
+  })
+
+  const unenroll = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('prospect_sequence_enrollments').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sequence-enrollments', sequenceId] })
+      toast({ title: 'Unenrolled', type: 'success' })
+    },
+    onError: (e) => toast({ title: 'Could not unenroll', description: humanError(e), type: 'error' }),
+  })
+
+  const untouchedCount = enrollments.filter(e => isUntouched(e)).length
+  const activeCount = enrollments.filter(e => !e.completed && !e.paused).length
+
+  return (
+    <div className="pt-3 border-t border-border space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-semibold text-text-primary">
+          Enrolled deals
+          {enrollments.length > 0 && (
+            <span className="ml-2 text-[11px] font-mono text-text-muted">
+              {activeCount} active
+              {untouchedCount > 0 && (
+                <> · <span className="text-warning">{untouchedCount} untouched</span></>
+              )}
+            </span>
+          )}
+        </div>
+        <Button size="sm" variant="secondary" onClick={() => setEnrolling(true)} disabled={stepCount === 0}>
+          <Plus className="w-3.5 h-3.5" /> Enroll deal
+        </Button>
+      </div>
+
+      {stepCount === 0 && enrollments.length === 0 && (
+        <p className="text-[11px] text-text-muted">Add at least one step above before enrolling deals.</p>
+      )}
+
+      {isLoading && <div className="text-[11px] text-text-muted">Loading enrollments…</div>}
+
+      {!isLoading && enrollments.length === 0 && stepCount > 0 && (
+        <p className="text-[11px] text-text-muted">No deals enrolled yet. Click <em>Enroll deal</em> to push existing pipeline into this sequence.</p>
+      )}
+
+      {enrollments.length > 0 && (
+        <ul className="space-y-1.5">
+          {enrollments.map(e => (
+            <EnrollmentRow key={e.id} enrollment={e} stepCount={stepCount} onUnenroll={() => unenroll.mutate(e.id)} />
+          ))}
+        </ul>
+      )}
+
+      {enrolling && (
+        <EnrollDealDialog
+          sequenceId={sequenceId}
+          propertyId={propertyId}
+          onClose={() => setEnrolling(false)}
+          onEnrolled={() => {
+            qc.invalidateQueries({ queryKey: ['sequence-enrollments', sequenceId] })
+            setEnrolling(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// "Untouched" = the runner hasn't actually sent a step yet. We key
+// on last_sent_at being null AND current_step === 0 so an enrollment
+// the user manually nudged with current_step++ but never sent
+// doesn't get falsely marked untouched.
+function isUntouched(e) {
+  return !e.last_sent_at && (e.current_step ?? 0) === 0 && !e.completed && !e.paused
+}
+
+function EnrollmentRow({ enrollment, stepCount, onUnenroll }) {
+  const c = enrollment.contact
+  const d = enrollment.deal
+  const untouched = isUntouched(enrollment)
+  const tone = enrollment.completed ? 'success'
+    : enrollment.paused ? 'warning'
+    : untouched ? 'warning'
+    : 'info'
+  const label = enrollment.completed ? 'Completed'
+    : enrollment.paused ? `Paused${enrollment.paused_reason ? ` (${enrollment.paused_reason})` : ''}`
+    : untouched ? 'Untouched'
+    : `Step ${enrollment.current_step}${stepCount ? `/${stepCount}` : ''}`
+
+  return (
+    <li className="bg-bg-card border border-border rounded p-2.5 flex items-center justify-between gap-3 flex-wrap">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge tone={tone}>{label}</Badge>
+          {d?.brand_name && (
+            <Link to={`/app/crm/pipeline?deal=${d.id}`} className="text-sm font-medium text-text-primary hover:text-accent truncate">
+              {d.brand_name}
+            </Link>
+          )}
+          {c && (
+            <span className="text-[11px] text-text-muted truncate">
+              {[c.first_name, c.last_name].filter(Boolean).join(' ') || c.email}
+              {c.position && <span className="text-text-secondary"> · {c.position}</span>}
+            </span>
+          )}
+        </div>
+        <div className="text-[10px] font-mono text-text-muted mt-0.5 flex gap-3 flex-wrap">
+          <span>enrolled {new Date(enrollment.enrolled_at).toLocaleDateString()}</span>
+          {enrollment.last_sent_at && <span>last sent {new Date(enrollment.last_sent_at).toLocaleDateString()}</span>}
+          {enrollment.next_send_at && !enrollment.completed && !enrollment.paused && (
+            <span>next {new Date(enrollment.next_send_at).toLocaleDateString()}</span>
+          )}
+        </div>
+      </div>
+      <button
+        onClick={() => { if (confirm(`Unenroll ${d?.brand_name || 'this deal'} from the sequence?`)) onUnenroll() }}
+        className="text-text-muted hover:text-danger text-xs shrink-0"
+        title="Unenroll"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </li>
+  )
+}
+
+function EnrollDealDialog({ sequenceId, propertyId, onClose, onEnrolled }) {
+  const { toast } = useToast()
+  const [search, setSearch] = useState('')
+  const [picked, setPicked] = useState(null)   // { deal, contacts }
+  const [contactId, setContactId] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  // Search active deals by brand name. Only show deals that aren't
+  // already enrolled in this sequence — easier path than letting
+  // the user pick a dup and then erroring on the unique constraint.
+  const { data: deals = [] } = useQuery({
+    queryKey: ['enroll-deal-search', propertyId, search],
+    enabled: !!propertyId,
+    queryFn: async () => {
+      let q = supabase
+        .from('deals')
+        .select('id, brand_name, stage, value')
+        .eq('property_id', propertyId)
+        .not('stage', 'in', '(Declined)')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      if (search.trim()) q = q.ilike('brand_name', `%${search.trim().replace(/[%_]/g, '')}%`)
+      const { data } = await q
+      return data || []
+    },
+  })
+
+  // When a deal is picked, fetch its contacts so the rep can pick
+  // which one to enroll. Enrollment requires a contact (the
+  // sequence runner sends to a specific email).
+  const { data: contactsForDeal } = useQuery({
+    queryKey: ['enroll-deal-contacts', picked?.id],
+    enabled: !!picked?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name, email, position, is_primary')
+        .eq('deal_id', picked.id)
+        .order('is_primary', { ascending: false })
+        .order('created_at', { ascending: false })
+      return data || []
+    },
+  })
+
+  // Auto-pick the primary contact when contacts load so the rep
+  // doesn't have to click the dropdown for the most common case.
+  useEffect(() => {
+    if (contactsForDeal && contactsForDeal.length > 0 && !contactId) {
+      const primary = contactsForDeal.find(c => c.is_primary) || contactsForDeal[0]
+      setContactId(primary.id)
+    }
+  }, [contactsForDeal, contactId])
+
+  async function handleEnroll() {
+    if (!picked || !contactId) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('prospect_sequence_enrollments').insert({
+        sequence_id: sequenceId,
+        property_id: propertyId,
+        contact_id: contactId,
+        deal_id: picked.id,
+        current_step: 0,
+        completed: false,
+        paused: false,
+      })
+      if (error) {
+        // Unique constraint (sequence_id, contact_id) — friendly message.
+        if (/duplicate key/.test(error.message)) {
+          throw new Error('That contact is already enrolled in this sequence.')
+        }
+        throw error
+      }
+      toast({ title: 'Deal enrolled', description: picked.brand_name, type: 'success' })
+      onEnrolled?.()
+    } catch (e) {
+      toast({ title: 'Enrollment failed', description: humanError(e), type: 'error' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-bg-surface border border-border rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <h2 className="text-base font-semibold text-text-primary">Enroll a deal in this sequence</h2>
+          <button onClick={onClose} className="text-text-muted hover:text-text-primary p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-3">
+          {!picked && (
+            <>
+              <input
+                autoFocus
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search deals by brand name…"
+                className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+              />
+              <ul className="divide-y divide-border max-h-72 overflow-y-auto bg-bg-card border border-border rounded">
+                {deals.length === 0 && <li className="px-3 py-2 text-xs text-text-muted">No deals match.</li>}
+                {deals.map(d => (
+                  <li key={d.id}>
+                    <button
+                      onClick={() => setPicked(d)}
+                      className="w-full text-left px-3 py-2 hover:bg-bg-surface/60 transition-colors"
+                    >
+                      <div className="text-sm text-text-primary font-medium truncate">{d.brand_name || '(unnamed)'}</div>
+                      <div className="text-[11px] text-text-muted font-mono">
+                        {d.stage}{d.value ? ` · $${Number(d.value).toLocaleString()}` : ''}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {picked && (
+            <>
+              <div className="bg-bg-card border border-border rounded p-3">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted">Picked deal</div>
+                <div className="text-sm font-semibold text-text-primary mt-0.5">{picked.brand_name}</div>
+                <button onClick={() => { setPicked(null); setContactId('') }} className="text-[11px] text-accent hover:underline mt-1">Change deal</button>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-mono uppercase tracking-widest text-text-muted">Enroll which contact?</label>
+                {(contactsForDeal || []).length === 0 ? (
+                  <div className="bg-warning/5 border border-warning/30 rounded p-2 text-[11px] text-warning mt-1">
+                    This deal has no contacts with an email. Add one from the deal viewer first, then come back.
+                  </div>
+                ) : (
+                  <select
+                    value={contactId}
+                    onChange={(e) => setContactId(e.target.value)}
+                    className="w-full bg-bg-card border border-border rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent mt-1"
+                  >
+                    <option value="">— Pick a contact —</option>
+                    {(contactsForDeal || []).filter(c => c.email).map(c => (
+                      <option key={c.id} value={c.id}>
+                        {[c.first_name, c.last_name].filter(Boolean).join(' ') || c.email}
+                        {c.position ? ` · ${c.position}` : ''}
+                        {c.is_primary ? ' (primary)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-border flex items-center justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleEnroll} disabled={!picked || !contactId || saving}>
+            {saving ? 'Enrolling…' : 'Enroll'}
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 }
 

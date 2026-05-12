@@ -57,6 +57,24 @@ export default function SignatureSettings() {
   const currentHtml = html[tab] || ''
   const setCurrentHtml = (v) => setHtml(prev => ({ ...prev, [tab]: v }))
 
+  // Imperatively sync the editor's innerHTML when content changes
+  // come from outside typing — tab switch, gmail-import, template
+  // insert, raw-HTML edit. Critically, SKIP the DOM write while
+  // the editor is focused (the user is mid-keystroke). Previously
+  // we used dangerouslySetInnerHTML, which React re-applied on
+  // every render and reset the caret to position 0 — so each
+  // letter typed got prepended instead of appended. With this
+  // pattern the contentEditable owns its own DOM during typing
+  // and React only reaches in when a different code path needs
+  // to swap content wholesale.
+  useEffect(() => {
+    const el = editorRef.current
+    if (!el) return
+    if (document.activeElement === el) return
+    if (el.innerHTML === currentHtml) return
+    el.innerHTML = currentHtml
+  }, [currentHtml, tab, loading])
+
   // contentEditable paste handler — accepts rich HTML (with images)
   // from Gmail / Outlook / Apple Mail and keeps formatting. We also
   // support drag-and-drop image files and convert them inline to
@@ -191,7 +209,6 @@ export default function SignatureSettings() {
           onDrop={onDrop}
           onDragOver={(e) => e.preventDefault()}
           onInput={(e) => setCurrentHtml(e.currentTarget.innerHTML)}
-          dangerouslySetInnerHTML={{ __html: currentHtml }}
           className="bg-bg-card border border-border rounded p-3 min-h-[200px] text-sm text-text-primary focus:outline-none focus:border-accent"
           style={{ lineHeight: 1.5 }}
         />

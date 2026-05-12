@@ -198,6 +198,7 @@ function ContentsGrid() {
         ['bulk-enrich', 'Bulk Add'],
         ['sequences', 'Sequences'],
         ['inbox', 'Inbox'],
+        ['signature', 'Email signature'],
         ['tasks', 'Task Manager'],
         ['ai-capture', 'AI call capture (Enterprise)'],
         ['activities', 'Activity timeline'],
@@ -393,9 +394,24 @@ function Reference() {
       <Section title="Inbox" anchor="inbox">
         <p>Connect Outlook or Gmail (Enterprise) to send and receive from the CRM. Replies auto-attach to the matching deal's activity timeline.</p>
         <Step n="1" body={<>Open <em>Inbox connections</em> from the user menu to authorize Outlook or Gmail. Tokens are encrypted at rest.</>} />
-        <Step n="2" body={<>Set your signature from <em>Profile &amp; signature</em> in the user menu.</>} />
+        <Step n="2" body={<>Set your signature from <em>Profile &amp; signature</em> in the user menu (rich-text editor with bold/italic/link/image/color/list/alignment — and starter templates).</>} />
         <Step n="3" body={<>Click <Code>Compose</Code> on any contact to draft. <Code>✨ Draft with AI</Code> generates a first pass; <Code>Coach</Code> rewrites against a goal; <Code>Chat</Code> opens the outreach copilot.</>} />
+        <Step n="4" body={<>Toggle between <Code>Conversation</Code> view (default — messages grouped by thread, list shows participants + message count, click to expand the whole chain) and <Code>Flat</Code> view (every message as its own row). Choice persists per device.</>} />
+        <Step n="5" body={<>Inside a conversation, click <Code>Reply</Code> at the top to reply to the latest message, or expand an earlier message and click <Code>Reply to this message</Code> to reply to that one specifically. Threading is preserved — the reply lands in the same Gmail/Outlook conversation, not as a standalone email.</>} />
         <Tip>Lower-tier plans without inbox sync can still draft and copy — paste into your own client when sending.</Tip>
+      </Section>
+
+      <Section title="Email signature" anchor="signature">
+        <p>From the user menu open <em>Profile &amp; signature</em>. The editor is a full WYSIWYG — anything Gmail or Outlook's signature builder can do, you can do here.</p>
+        <ul className="space-y-1.5 list-disc ml-4">
+          <li><strong className="text-text-primary">Formatting toolbar</strong> — heading sizes, bold / italic / underline, text color (24-swatch palette), bulleted + numbered lists, left / center / right alignment.</li>
+          <li><strong className="text-text-primary">Links</strong> — select text → click the link icon → paste a URL. Auto-adds <Code>target="_blank"</Code> so links open in a new tab from any email client.</li>
+          <li><strong className="text-text-primary">Logo + images</strong> — click the image icon and pick a file from your machine. Inlined as base64 so the email is self-contained and shows the logo even when the recipient's client blocks remote images. Keep under 1MB for deliverability.</li>
+          <li><strong className="text-text-primary">Starter templates</strong> — pick one from the right-side dropdown for a professional skeleton (minimal, with contact info, with social links, or with logo + table layout). Edit from there.</li>
+          <li><strong className="text-text-primary">Per-provider overrides</strong> — set a different signature for Outlook vs. Gmail using the tabs. Default falls through when a provider-specific one is blank.</li>
+          <li><strong className="text-text-primary">Import from Gmail</strong> — pulls whatever you already have configured in Gmail's settings, no copy/paste needed.</li>
+        </ul>
+        <Tip>Power users can hit the "Raw HTML (advanced)" disclosure under the editor to edit the markup directly — useful for fine-tuning table layouts or pasting from external HTML editors.</Tip>
       </Section>
 
       <Section title="Activity timeline" anchor="activities">

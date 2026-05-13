@@ -362,7 +362,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-bg-primary flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-6 sm:mb-8">
-          <h1 onClick={() => navigate('/')} className="font-mono font-bold text-accent text-xl sm:text-2xl cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD LEGACY</h1>
+          <h1 onClick={() => navigate('/')} className="font-mono font-bold text-accent text-xl sm:text-2xl cursor-pointer hover:opacity-80 transition-opacity" style={{letterSpacing:'0.08em',wordSpacing:'-0.3em'}}>LOUD CRM</h1>
           <p className="text-text-muted text-xs sm:text-sm mt-1">The operating system for revenue teams</p>
         </div>
 

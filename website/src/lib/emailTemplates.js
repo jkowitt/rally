@@ -6,7 +6,7 @@ export function welcomeEmail(userName, propertyName) {
     body: `
       <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;color:#333;">
         <div style="background:#080A0F;padding:24px;text-align:center;">
-          <h1 style="color:#E8B84B;font-family:monospace;font-size:20px;margin:0;">LOUD LEGACY</h1>
+          <h1 style="color:#E8B84B;font-family:monospace;font-size:20px;margin:0;">LOUD CRM</h1>
         </div>
         <div style="padding:32px 24px;background:#0F1218;color:#F0F2F8;">
           <h2 style="margin:0 0 16px;">Welcome, ${userName}!</h2>
@@ -36,7 +36,7 @@ export function inviteEmail(inviterName, propertyName, inviteUrl, role) {
     body: `
       <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
         <div style="background:#080A0F;padding:24px;text-align:center;">
-          <h1 style="color:#E8B84B;font-family:monospace;font-size:20px;margin:0;">LOUD LEGACY</h1>
+          <h1 style="color:#E8B84B;font-family:monospace;font-size:20px;margin:0;">LOUD CRM</h1>
         </div>
         <div style="padding:32px 24px;background:#0F1218;color:#F0F2F8;">
           <h2 style="margin:0 0 16px;">You've been invited!</h2>
@@ -57,7 +57,7 @@ export function contractExpiringEmail(brandName, expirationDate, daysLeft) {
     body: `
       <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
         <div style="background:#080A0F;padding:24px;text-align:center;">
-          <h1 style="color:#E8B84B;font-family:monospace;font-size:20px;margin:0;">LOUD LEGACY</h1>
+          <h1 style="color:#E8B84B;font-family:monospace;font-size:20px;margin:0;">LOUD CRM</h1>
         </div>
         <div style="padding:32px 24px;background:#0F1218;color:#F0F2F8;">
           <h2 style="margin:0 0 16px;">Contract Expiring Soon</h2>

@@ -23,7 +23,7 @@ export function generateFulfillmentReport({ dealName, logoUrl, benefits, deliver
   if (logoUrl) {
     try { slide1.addImage({ path: logoUrl, x: 7.5, y: 0.5, w: 2, h: 1.2 }) } catch (e) { console.warn(e) }
   }
-  slide1.addText('LOUD LEGACY', { x: 0.8, y: 6.5, w: 3, h: 0.4, fontSize: 10, color: textMuted, fontFace: 'Courier New' })
+  slide1.addText('LOUD CRM', { x: 0.8, y: 6.5, w: 3, h: 0.4, fontSize: 10, color: textMuted, fontFace: 'Courier New' })
 
   // SLIDE 2: Summary
   const slide2 = pptx.addSlide()
@@ -80,7 +80,7 @@ export function generateFulfillmentReport({ dealName, logoUrl, benefits, deliver
   if (logoUrl) {
     try { slideLast.addImage({ path: logoUrl, x: 4, y: 4, w: 2, h: 1.2 }) } catch (e) { console.warn(e) }
   }
-  slideLast.addText('Powered by LOUD LEGACY', { x: 0.5, y: 6.5, w: 9, h: 0.4, fontSize: 10, color: textMuted, align: 'center', fontFace: 'Courier New' })
+  slideLast.addText('Powered by LOUD CRM', { x: 0.5, y: 6.5, w: 9, h: 0.4, fontSize: 10, color: textMuted, align: 'center', fontFace: 'Courier New' })
 
   return pptx
 }

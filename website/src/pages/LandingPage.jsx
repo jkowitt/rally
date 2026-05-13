@@ -546,7 +546,7 @@ function AISection() {
   )
 }
 
-/* ─── WHY LOUD LEGACY ─── */
+/* ─── WHY LOUD CRM ─── */
 // Three-pillar positioning: CRM, Prospecting, Tools.
 function WhyLoudCRM() {
   const points = [

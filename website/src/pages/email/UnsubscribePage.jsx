@@ -53,7 +53,7 @@ export default function UnsubscribePage() {
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-bg-card border border-border rounded-lg p-8 text-center">
-        <Link to="/" className="font-mono font-bold text-accent text-lg">LOUD LEGACY</Link>
+        <Link to="/" className="font-mono font-bold text-accent text-lg">LOUD CRM</Link>
 
         {state.phase === 'loading' && <div className="mt-6 text-sm text-text-muted">Verifying…</div>}
 

@@ -262,7 +262,7 @@ function TopNav() {
   return (
     <div className="border-b border-border">
       <div className="max-w-5xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
-        <Link to="/" className="font-mono font-bold text-accent text-base">LOUD LEGACY</Link>
+        <Link to="/" className="font-mono font-bold text-accent text-base">LOUD CRM</Link>
         <nav className="flex items-center gap-4 text-xs">
           <Link to="/compare" className="text-text-secondary hover:text-accent">Compare</Link>
           <Link to="/#pricing" className="text-text-secondary hover:text-accent">Pricing</Link>

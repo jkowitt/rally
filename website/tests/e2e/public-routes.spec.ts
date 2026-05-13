@@ -60,16 +60,14 @@ test.describe('Public routes', () => {
   })
 
   test('/digest/:slug handles missing slugs gracefully', async ({ page }) => {
-    // A slug that definitely does not exist — should NOT 500, should render
-    // something (either a not-found message or redirect)
+    // A slug that definitely does not exist — the app redirects to /digest
     const resp = await page.goto('/digest/this-slug-does-not-exist-xyz-' + Date.now())
     // Any non-500 is acceptable here
     expect(resp?.status() ?? 200).toBeLessThan(500)
-    // Wait for the SPA to render — the app redirects to / or shows a not-found UI
-    await page.waitForFunction(
-      () => (document.getElementById('root')?.textContent || '').trim().length > 5,
-      { timeout: 15_000 },
-    )
+    // The DigestArticle component redirects to /digest when slug is not found.
+    // Wait for that redirect to complete, then verify the archive page rendered.
+    await page.waitForURL(/\/digest\/?$/, { timeout: 15_000 })
+    await waitForHydration(page)
     const body = await page.locator('body').innerText()
     expect(body.length).toBeGreaterThan(50)
   })

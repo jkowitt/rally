@@ -9,11 +9,11 @@
     .label { font-size: 12px; color: #8B92A8; margin-bottom: 8px; }
     button { background: #E8B84B; color: #080A0F; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; margin: 4px; }
     button:hover { opacity: 0.9; }
-    h1 { font-family: 'Courier New', monospace; color: #E8B84B; letter-spacing: 3px; word-spacing: -4px; }
+    h1 { font-family: 'Arial Black', Arial, sans-serif; color: #E8B84B; letter-spacing: 3px; font-weight: 900; }
   </style>
 </head>
 <body>
-  <h1>LOUD LEGACY</h1>
+  <h1>LOUD CRM</h1>
   <p style="color:#8B92A8;font-size:14px;">Click to download logo in each format</p>
 
   <div class="preview">
@@ -50,22 +50,26 @@
 
       const isIcon = canvasId === 'icon'
       const fontSize = isIcon ? 72 : 80
-      ctx.font = `bold ${fontSize}px 'Courier New', Courier, monospace`
+      ctx.font = `900 ${fontSize}px 'Arial Black', Arial, sans-serif`
       ctx.fillStyle = textColor || '#E8B84B'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
 
       if (isIcon) {
-        ctx.fillText('LL', c.width/2, c.height/2)
+        ctx.fillText('LC', c.width/2, c.height/2)
         // Subtle border
         ctx.strokeStyle = textColor || '#E8B84B'
         ctx.lineWidth = 3
         ctx.strokeRect(40, 40, c.width-80, c.height-80)
       } else {
-        // Draw with tighter spacing
-        const text = 'LOUD LEGACY'
-        ctx.letterSpacing = '3px'
-        ctx.fillText(text, c.width/2, c.height/2)
+        // Top line
+        ctx.strokeStyle = textColor || '#E8B84B'
+        ctx.lineWidth = 3
+        ctx.beginPath(); ctx.moveTo(40, 60); ctx.lineTo(c.width-40, 60); ctx.stroke()
+        // Text
+        ctx.fillText('LOUD CRM', c.width/2, c.height/2)
+        // Bottom line
+        ctx.beginPath(); ctx.moveTo(40, c.height-60); ctx.lineTo(c.width-40, c.height-60); ctx.stroke()
       }
     }
 
@@ -79,7 +83,7 @@
       const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png'
       const ext = format === 'jpeg' ? 'jpg' : 'png'
       const a = document.createElement('a')
-      a.download = `loud-legacy-logo-${canvasId}.${ext}`
+      a.download = `loud-crm-logo-${canvasId}.${ext}`
       a.href = c.toDataURL(mime, 0.95)
       a.click()
     }

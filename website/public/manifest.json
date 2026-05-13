@@ -1,7 +1,7 @@
 {
   "name": "Loud CRM",
   "short_name": "LoudCRM",
-  "description": "Loud CRM: Grow Your Business Loud — CRM, Prospecting, and Tools in one workspace",
+  "description": "Loud CRM: Grow Your Business Loudly — CRM, Prospecting, and Tools in one workspace",
   "start_url": "/app",
   "display": "standalone",
   "background_color": "#0D1117",

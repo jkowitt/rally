@@ -688,7 +688,7 @@ function Footer() {
           <div className="md:col-span-2">
             <img src="/logo-loud-legacy.svg" alt="Loud CRM" className="h-6 w-auto" />
             <p className="text-text-secondary text-sm mt-3 max-w-md leading-relaxed">
-              Loud CRM: Grow Your Business Loud. CRM, Prospecting, and Tools in one workspace for revenue teams ready to grow.
+              Loud CRM: Grow Your Business Loudly. CRM, Prospecting, and Tools in one workspace for revenue teams ready to grow.
             </p>
           </div>
           <div>

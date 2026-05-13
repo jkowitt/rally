@@ -13,7 +13,7 @@ feature flag. Nothing in this feature ships to users.
    the Outlook mailbox you want to connect.
 2. In the left sidebar → **Microsoft Entra ID** → **App registrations** → **+ New registration**.
 3. Fill in:
-   - **Name**: `Loud Legacy — Dev Outlook Integration`
+   - **Name**: `Loud CRM — Dev Outlook Integration`
    - **Supported account types**: *Accounts in any organizational directory and personal Microsoft accounts*
      (this is the `common` tenant and lets you connect both a work and personal mailbox).
    - **Redirect URI** → platform **Web** → `https://loud-legacy.com/dev/outlook/callback`

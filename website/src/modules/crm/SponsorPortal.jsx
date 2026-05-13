@@ -406,7 +406,7 @@ export default function SponsorPortal() {
       {/* Footer */}
       <footer className="border-t border-border py-6 mt-8">
         <div className="text-center text-xs text-text-muted font-mono">
-          Powered by <span className="text-[#E8B84B]">Loud Legacy</span>
+          Powered by <span className="text-[#E8B84B]">Loud CRM</span>
         </div>
       </footer>
     </div>

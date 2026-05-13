@@ -17,10 +17,10 @@ export default function LegalPage({ type }) {
   const navigate = useNavigate()
 
   useSeo({
-    title: `${title} — Loud Legacy`,
+    title: `${title} — Loud CRM`,
     description: isTerms
-      ? 'The terms of service governing use of the Loud Legacy CRM and prospecting platform.'
-      : 'How Loud Legacy collects, uses, and protects your data.',
+      ? 'The terms of service governing use of the Loud CRM CRM and prospecting platform.'
+      : 'How Loud CRM collects, uses, and protects your data.',
   })
 
   const [doc, setDoc] = useState(null)
@@ -65,8 +65,8 @@ export default function LegalPage({ type }) {
           >
             ← Back
           </button>
-          <Link to="/" aria-label="Loud Legacy — Home">
-            <img src="/logo-loud-legacy.svg" alt="Loud Legacy" className="h-6 w-auto" />
+          <Link to="/" aria-label="Loud CRM — Home">
+            <img src="/logo-loud-legacy.svg" alt="Loud CRM" className="h-6 w-auto" />
           </Link>
           <Link to="/login" className="text-xs text-text-muted hover:text-accent">
             Sign in

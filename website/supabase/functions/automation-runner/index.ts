@@ -91,7 +91,7 @@ async function runDailyDigest(sb: any) {
     await sb.functions.invoke("send-email", {
       body: {
         to: admin.email,
-        subject: `Loud Legacy Daily — ${new Date().toLocaleDateString()}`,
+        subject: `Loud CRM Daily — ${new Date().toLocaleDateString()}`,
         body: buildDigestHtml(newSignups.data || [], hotLeads.data || [], churnRisks.data || []),
       },
     })
@@ -122,7 +122,7 @@ async function runWeeklyReport(sb: any) {
     await sb.functions.invoke("send-email", {
       body: {
         to: admin.email,
-        subject: `Loud Legacy Weekly — Week of ${new Date().toLocaleDateString()}`,
+        subject: `Loud CRM Weekly — Week of ${new Date().toLocaleDateString()}`,
         body: `<h2>Weekly Summary</h2><p>New signups: ${signups.count || 0}</p><p>Total paying: ${conversions.count || 0}</p>`,
       },
     })

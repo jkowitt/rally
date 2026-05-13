@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 
 /**
- * Jason's personal Loud Legacy outreach pipeline. This data is STRICTLY
+ * Jason's personal Loud CRM outreach pipeline. This data is STRICTLY
  * isolated from customer CRM data — it's for his own BD prospecting and
  * never mixes with Van Wagner client records.
  */

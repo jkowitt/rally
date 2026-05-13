@@ -257,7 +257,7 @@ export async function runFullAutoQA(schedule = 'manual') {
       const { data: aiData, error: aiInvokeErr } = await supabase.functions.invoke('contract-ai', {
         body: {
           action: 'code_assistant',
-          prompt: `You are auditing the Loud Legacy CRM platform. Your job is to diagnose problems and suggest improvements that are GROUNDED in the actual codebase below. You are forbidden from inventing file paths, table names, column names, hook names, or function names that are not in the GROUNDED FACTS section.
+          prompt: `You are auditing the Loud CRM CRM platform. Your job is to diagnose problems and suggest improvements that are GROUNDED in the actual codebase below. You are forbidden from inventing file paths, table names, column names, hook names, or function names that are not in the GROUNDED FACTS section.
 
 ═══════════════════════════════════════
 GROUNDED FACTS — these are the ONLY entities you may reference by exact name

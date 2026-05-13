@@ -1,4 +1,4 @@
-// Loud Legacy — Service Worker for scheduled activity notifications
+// Loud CRM — Service Worker for scheduled activity notifications
 const CACHE_NAME = 'll-notifications-v1'
 
 // Install

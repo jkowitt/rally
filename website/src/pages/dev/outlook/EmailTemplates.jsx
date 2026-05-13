@@ -48,7 +48,7 @@ export default function EmailTemplates() {
           <div>
             <Link to="/dev" className="text-[10px] text-text-muted hover:text-accent">← /dev</Link>
             <h1 className="text-xl font-semibold mt-1">Outreach Templates</h1>
-            <p className="text-[11px] text-text-muted">Personal templates for Loud Legacy BD prospecting</p>
+            <p className="text-[11px] text-text-muted">Personal templates for Loud CRM BD prospecting</p>
           </div>
           <button onClick={() => setEditing('new')} className="text-xs px-3 py-1.5 bg-accent text-bg-primary rounded font-semibold">
             + New Template

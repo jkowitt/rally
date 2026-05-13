@@ -234,7 +234,7 @@ where lower(e.email) = lower(p.email)
 insert into email_lists (name, description, list_type, tags, is_public)
 select
   'The Digest Subscribers',
-  'Everyone subscribed to The Digest by Loud Legacy Ventures. Auto-enrolled from platform signups and landing page form submissions.',
+  'Everyone subscribed to The Digest by Loud CRM Ventures. Auto-enrolled from platform signups and landing page form submissions.',
   'newsletter',
   array['digest'],
   false

@@ -120,7 +120,7 @@ export default function TeamManager() {
         await supabase.functions.invoke('send-email', {
           body: {
             to: inviteEmail.trim(),
-            subject: `${profile?.full_name || 'Your teammate'} invited you to ${profile?.properties?.name || 'their team'} on Loud Legacy`,
+            subject: `${profile?.full_name || 'Your teammate'} invited you to ${profile?.properties?.name || 'their team'} on Loud CRM`,
             body: `<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
               <div style="background:#080A0F;padding:24px;text-align:center;">
                 <h1 style="color:#E8B84B;font-family:monospace;font-size:20px;margin:0;">LOUD LEGACY</h1>

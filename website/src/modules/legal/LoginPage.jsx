@@ -599,7 +599,7 @@ export default function LoginPage() {
         {mode === 'onboard' && (
           <div className="bg-bg-surface border border-border rounded-lg p-5 sm:p-6 space-y-5 text-center">
             <div className="text-4xl">🎉</div>
-            <h2 className="text-lg font-semibold text-text-primary">Welcome to Loud Legacy!</h2>
+            <h2 className="text-lg font-semibold text-text-primary">Welcome to Loud CRM!</h2>
             <p className="text-sm text-text-secondary">
               <span className="text-accent font-medium">{companyName}</span> is set up and ready to go.
             </p>

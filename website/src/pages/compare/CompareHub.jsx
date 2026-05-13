@@ -14,8 +14,8 @@ export default function CompareHub() {
         '@type': 'CollectionPage',
         '@id': canonical,
         url: canonical,
-        name: 'Loud Legacy Comparisons',
-        description: 'Side-by-side comparisons of Loud Legacy vs Airtable, SponsorCX, HubSpot, Monday.com, spreadsheets, and Notion for sponsorship management.',
+        name: 'Loud CRM Comparisons',
+        description: 'Side-by-side comparisons of Loud CRM vs Airtable, SponsorCX, HubSpot, Monday.com, spreadsheets, and Notion for sponsorship management.',
       },
       {
         '@type': 'ItemList',
@@ -31,8 +31,8 @@ export default function CompareHub() {
   }
 
   useSeo({
-    title: 'Loud Legacy Comparisons — Sponsorship CRM Alternatives',
-    description: 'Honest side-by-side comparisons of Loud Legacy vs Airtable, SponsorCX, HubSpot, Monday.com, spreadsheets, and Notion. See which sponsorship CRM fits your team.',
+    title: 'Loud CRM Comparisons — Sponsorship CRM Alternatives',
+    description: 'Honest side-by-side comparisons of Loud CRM vs Airtable, SponsorCX, HubSpot, Monday.com, spreadsheets, and Notion. See which sponsorship CRM fits your team.',
     canonical,
     schema,
   })
@@ -54,13 +54,13 @@ export default function CompareHub() {
       {/* Hero */}
       <header className="max-w-4xl mx-auto px-5 sm:px-8 pt-12 sm:pt-20 pb-10 text-center">
         <div className="text-[10px] font-mono uppercase tracking-widest text-accent mb-3">
-          Loud Legacy vs the alternatives
+          Loud CRM vs the alternatives
         </div>
         <h1 className="text-3xl sm:text-5xl font-bold leading-tight">
           Which sponsorship CRM is right for you?
         </h1>
         <p className="text-sm sm:text-base text-text-secondary mt-4 max-w-2xl mx-auto leading-relaxed">
-          Honest side-by-side comparisons of Loud Legacy against the tools sponsorship teams
+          Honest side-by-side comparisons of Loud CRM against the tools sponsorship teams
           actually consider — Airtable, SponsorCX, HubSpot, Monday, spreadsheets, and Notion.
           We'll tell you when the other tool wins.
         </p>
@@ -83,7 +83,7 @@ export default function CompareHub() {
               to={`/compare/${c.slug}`}
               className="bg-bg-card border border-border rounded-lg p-6 hover:border-accent/50 hover:bg-bg-surface transition-all group"
             >
-              <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted">Loud Legacy vs</div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted">Loud CRM vs</div>
               <div className="text-xl font-bold text-text-primary mt-1 group-hover:text-accent transition-colors">
                 {c.competitor}
               </div>
@@ -134,7 +134,7 @@ export default function CompareHub() {
 
       <footer className="border-t border-border py-10 text-center">
         <div className="text-[10px] text-text-muted">
-          © {new Date().getFullYear()} Loud Legacy · <Link to="/" className="hover:text-accent">Home</Link> · <Link to="/compare" className="hover:text-accent">Compare</Link> · <Link to="/#pricing" className="hover:text-accent">Pricing</Link>
+          © {new Date().getFullYear()} Loud CRM · <Link to="/" className="hover:text-accent">Home</Link> · <Link to="/compare" className="hover:text-accent">Compare</Link> · <Link to="/#pricing" className="hover:text-accent">Pricing</Link>
         </div>
       </footer>
     </div>

@@ -7,7 +7,7 @@ export function generateICalEvent(event) {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Loud Legacy//Sports Events//EN',
+    'PRODID:-//Loud CRM//Sports Events//EN',
     'BEGIN:VEVENT',
     `UID:${uid}`,
     `DTSTART:${dtStart}`,
@@ -40,10 +40,10 @@ export function generateICalFeed(events) {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Loud Legacy//Sports Events//EN',
+    'PRODID:-//Loud CRM//Sports Events//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    'X-WR-CALNAME:Loud Legacy Events',
+    'X-WR-CALNAME:Loud CRM Events',
     vevents,
     'END:VCALENDAR',
   ].join('\r\n')

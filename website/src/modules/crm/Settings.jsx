@@ -497,7 +497,7 @@ function UsageOverageSection({ propertyId, currentPlan }) {
 
 /**
  * Email preferences — opt in/out of The Digest and other marketing
- * emails from Loud Legacy. Backed by the email_subscribers table:
+ * emails from Loud CRM. Backed by the email_subscribers table:
  * each row has a status field ('active', 'unsubscribed', 'bounced')
  * and the user is identified by their profile email address.
  *
@@ -787,7 +787,7 @@ function EmailPreferencesSection({ userEmail }) {
     <div className="bg-bg-surface border border-border rounded-lg p-4 sm:p-5">
       <h2 className="text-sm font-mono text-text-muted uppercase mb-1">Email Preferences</h2>
       <p className="text-xs text-text-muted mb-4">
-        Manage the marketing emails you receive from Loud Legacy. Transactional
+        Manage the marketing emails you receive from Loud CRM. Transactional
         emails (login, security, billing) cannot be turned off.
       </p>
 

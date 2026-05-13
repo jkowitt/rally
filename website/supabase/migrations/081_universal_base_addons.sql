@@ -89,7 +89,7 @@ insert into addon_catalog (key, name, short_description, long_description, categ
     'features', '✨', 'Contact sales', 12),
   ('dedicated_csm', 'Dedicated Success Manager',
     'Human-led onboarding, QBR support, and adoption coaching.',
-    'A named contact at Loud Legacy who runs your kickoff, attends your first 3 QBRs, and coaches your team on adoption.',
+    'A named contact at Loud CRM who runs your kickoff, attends your first 3 QBRs, and coaches your team on adoption.',
     'service', '🤝', 'Contact sales', 13),
   ('premium_support', '24/7 Premium Support',
     'SLA-backed support with named contacts.',

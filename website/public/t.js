@@ -1,5 +1,5 @@
 // ============================================================
-// Loud Legacy — Self-hosted Analytics Tracker (t.js)
+// Loud CRM — Self-hosted Analytics Tracker (t.js)
 // ============================================================
 // ~1.5KB minified. No cookies. No PII. No third-party domains.
 // GDPR-compliant by design — no consent banner needed.

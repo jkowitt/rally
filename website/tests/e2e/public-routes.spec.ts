@@ -16,7 +16,7 @@ test.describe('Public routes', () => {
   test('landing page renders', async ({ page }) => {
     await page.goto('/')
     // Don't lock to specific copy — just verify the shell rendered
-    await expect(page).toHaveTitle(/Loud Legacy|Rally|Sponsorship/i)
+    await expect(page).toHaveTitle(/Loud CRM|Rally|Sponsorship/i)
     // Some form of CTA or subscribe button should be on the page
     const body = await page.locator('body').innerText()
     expect(body.length).toBeGreaterThan(200) // not a blank page

@@ -555,7 +555,7 @@ create policy "outlook_sync_log_dev_delete" on outlook_sync_log
 -- ========================
 -- 4. PERSONAL OUTREACH PROSPECTS
 -- ========================
--- IMPORTANT: This table is strictly for Loud Legacy business
+-- IMPORTANT: This table is strictly for Loud CRM business
 -- development outreach. It MUST NOT reference or mix with any
 -- customer (Van Wagner, etc.) CRM data. No property_id,
 -- no deal_id, no contact_id — fully isolated.
@@ -689,7 +689,7 @@ on conflict (module) do nothing;
 -- ========================
 -- 8. CONTACT LAST-CONTACTED COLUMN
 -- ========================
--- Used by sync to update the standard Loud Legacy contact card.
+-- Used by sync to update the standard Loud CRM contact card.
 -- Adds the column only if it isn't already there.
 do $$
 begin
@@ -1803,7 +1803,7 @@ values
    2900, '📈', array['starter','pro'], array['custom_dashboard'], '{}'::jsonb, 2),
 
   ('white_label', 'White Label', 'Your branding on the platform for agency clients',
-   'Replace Loud Legacy branding with your own. Custom domain, custom logo, custom accent colors, white-labeled client portals.',
+   'Replace Loud CRM branding with your own. Custom domain, custom logo, custom accent colors, white-labeled client portals.',
    9900, '🏷️', array['pro'], array['white_label'], '{}'::jsonb, 3),
 
   ('api_access', 'API Access', 'Direct API for custom integrations and automations',
@@ -1828,7 +1828,7 @@ insert into pricing_page_config (config_key, config_value, config_type, descript
 values
   ('hero_headline', 'Simple, Transparent Pricing', 'text', 'Main H1', 'hero', 1),
   ('hero_subheadline', 'The sponsorship CRM your competitors pay $15,000 a year for. Starting at $39 a month.', 'text', 'Subtitle under H1', 'hero', 2),
-  ('comparison_callout', 'Legacy enterprise sponsorship CRMs charge $15,000+/year. Loud Legacy Pro is $199/month. Same category. 18 AI features they don''t have. 1/10th the price.', 'text', 'Callout box text', 'hero', 3),
+  ('comparison_callout', 'Legacy enterprise sponsorship CRMs charge $15,000+/year. Loud CRM Pro is $199/month. Same category. 18 AI features they don''t have. 1/10th the price.', 'text', 'Callout box text', 'hero', 3),
   ('annual_billing_banner', 'Save 2 months with annual billing', 'text', 'Banner above toggle', 'hero', 4),
   ('comparison_callout_enabled', 'true', 'boolean', 'Show comparison callout box', 'sections', 1),
   ('faq_enabled', 'true', 'boolean', 'Show FAQ section', 'sections', 2),
@@ -1844,11 +1844,11 @@ on conflict (config_key) do nothing;
 -- FAQs
 insert into pricing_page_faqs (question, answer, display_order)
 values
-  ('Why is Loud Legacy so much cheaper than legacy sponsorship CRMs?',
-   'Legacy sponsorship CRMs were built for an era before AI automation made it possible to dramatically reduce the cost of sophisticated software. We built Loud Legacy from the ground up with AI at the core, which means we can deliver more features at a fraction of the cost.',
+  ('Why is Loud CRM so much cheaper than legacy sponsorship CRMs?',
+   'Legacy sponsorship CRMs were built for an era before AI automation made it possible to dramatically reduce the cost of sophisticated software. We built Loud CRM from the ground up with AI at the core, which means we can deliver more features at a fraction of the cost.',
    1),
   ('What are AI credits?',
-   'AI credits power the AI features in Loud Legacy — contract parsing, deal insights, prospect discovery, email drafting, and more. Every plan includes monthly credits. Heavy users can purchase additional credit packs that never expire.',
+   'AI credits power the AI features in Loud CRM — contract parsing, deal insights, prospect discovery, email drafting, and more. Every plan includes monthly credits. Heavy users can purchase additional credit packs that never expire.',
    2),
   ('Can I change plans anytime?',
    'Yes. Upgrade instantly. Downgrade at the end of your billing period. No lock-in contracts.',
@@ -2068,18 +2068,18 @@ create policy "migration_sponsors_all" on contract_migration_sponsors
 -- Update the comparison callout
 update pricing_page_config
 set
-  config_value = 'Legacy enterprise sponsorship CRMs charge $15,000+/year. Loud Legacy Pro is $199/month. Same category. 18 AI features they don''t have. 1/10th the price.',
+  config_value = 'Legacy enterprise sponsorship CRMs charge $15,000+/year. Loud CRM Pro is $199/month. Same category. 18 AI features they don''t have. 1/10th the price.',
   updated_at = now()
 where config_key = 'comparison_callout'
-  and config_value = 'SponsorCX charges $15,000/year. Loud Legacy Pro is $199/month. Same category. 18 AI features they don''t have. 1/10th the price.';
+  and config_value = 'SponsorCX charges $15,000/year. Loud CRM Pro is $199/month. Same category. 18 AI features they don''t have. 1/10th the price.';
 
--- Update the "Why is Loud Legacy so much cheaper" FAQ
+-- Update the "Why is Loud CRM so much cheaper" FAQ
 update pricing_page_faqs
 set
-  question = 'Why is Loud Legacy so much cheaper than legacy sponsorship CRMs?',
-  answer = 'Legacy sponsorship CRMs were built for an era before AI automation made it possible to dramatically reduce the cost of sophisticated software. We built Loud Legacy from the ground up with AI at the core, which means we can deliver more features at a fraction of the cost.',
+  question = 'Why is Loud CRM so much cheaper than legacy sponsorship CRMs?',
+  answer = 'Legacy sponsorship CRMs were built for an era before AI automation made it possible to dramatically reduce the cost of sophisticated software. We built Loud CRM from the ground up with AI at the core, which means we can deliver more features at a fraction of the cost.',
   updated_at = now()
-where question = 'Why is Loud Legacy so much cheaper than SponsorCX?';
+where question = 'Why is Loud CRM so much cheaper than SponsorCX?';
 
 -- ============================================================
 -- DONE
@@ -2447,7 +2447,7 @@ end $$;
 -- ============================================================
 -- MIGRATION 062 — DIGEST MANAGEMENT SYSTEM
 -- ============================================================
--- "The Digest by Loud Legacy Ventures" — monthly editorial
+-- "The Digest by Loud CRM Ventures" — monthly editorial
 -- newsletter/article living at loud-legacy.com/digest.
 --
 -- Deliberately does NOT create a new subscribers table — the
@@ -2482,7 +2482,7 @@ create table if not exists digest_issues (
   slug text not null unique,       -- URL-safe: e.g. "february-2026-real-estate-trends"
   title text not null,
   subtitle text,
-  author text default 'Loud Legacy Ventures',
+  author text default 'Loud CRM Ventures',
 
   -- Body — stored as Markdown, rendered to HTML at display time
   body_markdown text not null default '',

@@ -9,7 +9,7 @@ import DigestSignupForm from '@/components/digest/DigestSignupForm'
  *
  * Branded with the Digest identity (coral #D85A30 / dark #1a1a18
  * / off-white #F1EFE8 / Georgia serif) — distinct from the main
- * Loud Legacy dark theme. This brand is scoped to /digest/*
+ * Loud CRM dark theme. This brand is scoped to /digest/*
  * routes only via inline styles so it doesn't leak.
  */
 export default function DigestArchive() {
@@ -18,7 +18,7 @@ export default function DigestArchive() {
   const [loading, setLoading] = useState(true)
 
   useSeo({
-    title: 'The Digest — Loud Legacy Ventures',
+    title: 'The Digest — Loud CRM Ventures',
     description: 'Monthly essays on real estate, sports, marketing, and general business. One deeply-researched article a month.',
     canonical: 'https://loud-legacy.com/digest',
   })
@@ -46,7 +46,7 @@ export default function DigestArchive() {
             The Digest
           </div>
           <div style={{ fontSize: '11px', color: '#7a7a75', marginTop: '6px' }}>
-            by Loud Legacy Ventures
+            by Loud CRM Ventures
           </div>
           <h1 className="mt-8 sm:mt-10" style={{ fontSize: '44px', lineHeight: '1.1', fontWeight: 700 }}>
             Monthly essays on<br />
@@ -129,7 +129,7 @@ export default function DigestArchive() {
                   </p>
                 )}
                 <div className="mt-4" style={{ fontSize: '12px', color: '#7a7a75' }}>
-                  {i.author || 'Loud Legacy Ventures'}
+                  {i.author || 'Loud CRM Ventures'}
                   {i.view_count > 0 && ` · ${i.view_count} reads`}
                   <span style={{ color: '#D85A30', marginLeft: '8px' }}>Read →</span>
                 </div>
@@ -166,7 +166,7 @@ function DigestFooter() {
   return (
     <footer style={{ borderTop: '1px solid #d4d0c3', marginTop: '40px' }}>
       <div className="max-w-4xl mx-auto px-5 sm:px-8 py-10 text-center" style={{ fontSize: '11px', color: '#7a7a75' }}>
-        © {new Date().getFullYear()} Loud Legacy Ventures ·{' '}
+        © {new Date().getFullYear()} Loud CRM Ventures ·{' '}
         <Link to="/" style={{ color: '#7a7a75' }}>Home</Link> ·{' '}
         <Link to="/digest" style={{ color: '#7a7a75' }}>The Digest</Link>
       </div>

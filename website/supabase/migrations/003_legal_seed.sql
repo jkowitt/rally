@@ -11,10 +11,10 @@ insert into legal_documents (type, version, content, effective_date) values
 Last Updated: 2026-04-01
 
 1. ACCEPTANCE OF TERMS
-By accessing or using the Loud Legacy platform ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Service.
+By accessing or using the Loud CRM platform ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Service.
 
 2. DESCRIPTION OF SERVICE
-Loud Legacy provides a sports business operating suite including CRM, event management, valuation tools, and business intelligence features for college athletic departments and minor league sports partnership sales teams.
+Loud CRM provides a sports business operating suite including CRM, event management, valuation tools, and business intelligence features for college athletic departments and minor league sports partnership sales teams.
 
 3. USER ACCOUNTS
 You are responsible for maintaining the confidentiality of your account credentials. You agree to notify us immediately of any unauthorized use of your account.
@@ -26,10 +26,10 @@ You agree not to: (a) use the Service for any illegal purpose; (b) attempt to ga
 Your use of the Service is also governed by our Privacy Policy. By using the Service, you consent to the collection and use of your data as described in the Privacy Policy.
 
 6. INTELLECTUAL PROPERTY
-All content, features, and functionality of the Service are owned by Loud Legacy and are protected by intellectual property laws.
+All content, features, and functionality of the Service are owned by Loud CRM and are protected by intellectual property laws.
 
 7. LIMITATION OF LIABILITY
-The Service is provided "as is" without warranty of any kind. Loud Legacy shall not be liable for any indirect, incidental, special, or consequential damages.
+The Service is provided "as is" without warranty of any kind. Loud CRM shall not be liable for any indirect, incidental, special, or consequential damages.
 
 8. TERMINATION
 We may terminate or suspend your access to the Service at any time, without prior notice, for conduct that we believe violates these Terms.

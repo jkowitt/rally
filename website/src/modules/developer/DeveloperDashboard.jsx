@@ -1814,7 +1814,7 @@ export default function DeveloperDashboard() {
           </Panel>
 
           {/* The Digest — editorial newsletter management */}
-          <Panel title="The Digest by Loud Legacy Ventures">
+          <Panel title="The Digest by Loud CRM Ventures">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="text-xs text-text-secondary max-w-lg">
                 Monthly editorial newsletter. AI research, rich text editor, image library,

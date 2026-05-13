@@ -31,7 +31,7 @@ serve(async (req) => {
           Authorization: `Bearer ${resendKey}`,
         },
         body: JSON.stringify({
-          from: "Loud Legacy <noreply@loud-legacy.com>",
+          from: "Loud CRM <noreply@loud-legacy.com>",
           to: ["jason@loud-legacy.com"],
           subject: `Contact Form: ${name} - ${property_name || "General"}`,
           text: `Name: ${name}\nEmail: ${email}\nProperty: ${property_name || "N/A"}\n\nMessage:\n${message}`,

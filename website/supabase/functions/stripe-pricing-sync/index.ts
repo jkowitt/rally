@@ -56,7 +56,7 @@ async function syncPlan(sb: any, planKey: string) {
     return json({ success: true, note: "Free plan — no Stripe price needed" });
   }
 
-  const product = STRIPE_PRODUCT_ID || await getOrCreateProduct(`Loud Legacy ${plan.display_name}`);
+  const product = STRIPE_PRODUCT_ID || await getOrCreateProduct(`Loud CRM ${plan.display_name}`);
   const updates: any = { updated_at: new Date().toISOString() };
 
   if (plan.monthly_price_cents > 0) {
@@ -85,7 +85,7 @@ async function syncPlan(sb: any, planKey: string) {
 async function syncAddon(sb: any, addonKey: string) {
   const { data: addon } = await sb.from("addons").select("*").eq("addon_key", addonKey).single();
   if (!addon) return json({ success: false, error: "Addon not found" });
-  const product = STRIPE_PRODUCT_ID || await getOrCreateProduct(`Loud Legacy Addon: ${addon.display_name}`);
+  const product = STRIPE_PRODUCT_ID || await getOrCreateProduct(`Loud CRM Addon: ${addon.display_name}`);
 
   const updates: any = { updated_at: new Date().toISOString() };
   if (addon.monthly_price_cents > 0) {
@@ -111,7 +111,7 @@ async function syncAddon(sb: any, addonKey: string) {
 async function syncCreditPack(sb: any, packKey: string) {
   const { data: pack } = await sb.from("ai_credit_packs").select("*").eq("pack_key", packKey).single();
   if (!pack) return json({ success: false, error: "Pack not found" });
-  const product = STRIPE_PRODUCT_ID || await getOrCreateProduct(`Loud Legacy Credits: ${pack.display_name}`);
+  const product = STRIPE_PRODUCT_ID || await getOrCreateProduct(`Loud CRM Credits: ${pack.display_name}`);
 
   const updates: any = { updated_at: new Date().toISOString() };
   if (pack.monthly_price_cents > 0) {

@@ -57,7 +57,7 @@ Deno.serve(async (req: Request) => {
         ? `\n\nUser Feature Requests (consider these for improvements):\n${suggestions.map((s, i) => `${i + 1}. [${s.category}] ${s.title}: ${s.description} (priority: ${s.priority}, votes: ${s.upvotes})`).join("\n")}`
         : "";
 
-      const prompt = `You are a senior software engineer performing a daily code health check on a React + Supabase CRM platform called "Loud Legacy." Analyze the platform and provide a structured report.
+      const prompt = `You are a senior software engineer performing a daily code health check on a React + Supabase CRM platform called "Loud CRM." Analyze the platform and provide a structured report.
 
 The platform is a multi-industry partnership/sponsorship CRM with these modules:
 - Deal Pipeline (kanban, contacts, multi-year revenue)

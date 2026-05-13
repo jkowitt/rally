@@ -9,7 +9,7 @@ const corsHeaders = {
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY") ?? "";
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? "noreply@loud-legacy.com";
-const FROM_NAME = Deno.env.get("FROM_NAME") ?? "Loud Legacy";
+const FROM_NAME = Deno.env.get("FROM_NAME") ?? "Loud CRM";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });

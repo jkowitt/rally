@@ -1,7 +1,7 @@
 -- ============================================================
 -- MIGRATION 062 — DIGEST MANAGEMENT SYSTEM
 -- ============================================================
--- "The Digest by Loud Legacy Ventures" — monthly editorial
+-- "The Digest by Loud CRM Ventures" — monthly editorial
 -- newsletter/article living at loud-legacy.com/digest.
 --
 -- Deliberately does NOT create a new subscribers table — the
@@ -36,7 +36,7 @@ create table if not exists digest_issues (
   slug text not null unique,       -- URL-safe: e.g. "february-2026-real-estate-trends"
   title text not null,
   subtitle text,
-  author text default 'Loud Legacy Ventures',
+  author text default 'Loud CRM Ventures',
 
   -- Body — stored as Markdown, rendered to HTML at display time
   body_markdown text not null default '',

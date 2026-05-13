@@ -50,7 +50,7 @@ export default function UpgradeOffer() {
         await supabase.functions.invoke('send-email', {
           body: {
             to: form.recipient_email,
-            subject: form.offer_type === 'trial_21' ? 'Your Loud Legacy 21-day Enterprise trial' : 'Unlock Pro on Loud Legacy',
+            subject: form.offer_type === 'trial_21' ? 'Your Loud CRM 21-day Enterprise trial' : 'Unlock Pro on Loud CRM',
             body: buildEmailBody(form),
           },
         })
@@ -67,9 +67,9 @@ export default function UpgradeOffer() {
 
   function buildEmailBody(f) {
     const base = f.offer_type === 'trial_21'
-      ? `You're invited to a 21-day Enterprise trial of Loud Legacy. Full access to every module, unlimited deals, AI insights, contract parsing, and priority support — no credit card required.`
-      : `Unlock the full Loud Legacy platform with Pro. Unlimited deals, AI insights on every deal, advanced modules, and priority support.`
-    return `${f.custom_message ? f.custom_message + '\n\n' : ''}${base}\n\n${f.stripe_link ? `Activate: ${f.stripe_link}` : 'Reply to this email to get started.'}\n\n— Jason\nLoud Legacy`
+      ? `You're invited to a 21-day Enterprise trial of Loud CRM. Full access to every module, unlimited deals, AI insights, contract parsing, and priority support — no credit card required.`
+      : `Unlock the full Loud CRM platform with Pro. Unlimited deals, AI insights on every deal, advanced modules, and priority support.`
+    return `${f.custom_message ? f.custom_message + '\n\n' : ''}${base}\n\n${f.stripe_link ? `Activate: ${f.stripe_link}` : 'Reply to this email to get started.'}\n\n— Jason\nLoud CRM`
   }
 
   return (

@@ -180,11 +180,11 @@ export default function Sidebar({ collapsed, onToggle, mobile }) {
           <button
             onClick={() => navigate('/app')}
             className="block cursor-pointer hover:opacity-80 transition-opacity"
-            aria-label="Loud Legacy — Home"
+            aria-label="Loud CRM — Home"
           >
             <img
               src="/logo-loud-legacy.svg"
-              alt="Loud Legacy"
+              alt="Loud CRM"
               className="h-7 w-auto"
             />
           </button>

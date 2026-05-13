@@ -6,7 +6,7 @@ import OutreachComposer from '@/components/dev/OutreachComposer'
 
 /**
  * /dev/outlook/outreach
- * Personal BD pipeline for Loud Legacy outreach.
+ * Personal BD pipeline for Loud CRM outreach.
  */
 export default function OutlookOutreach() {
   const { profile } = useAuth()
@@ -44,7 +44,7 @@ export default function OutlookOutreach() {
           <div>
             <Link to="/dev" className="text-[10px] text-text-muted hover:text-accent">← /dev</Link>
             <h1 className="text-xl font-semibold mt-1">Outreach Pipeline</h1>
-            <p className="text-[11px] text-text-muted">Personal Loud Legacy BD prospecting. Isolated from customer CRM.</p>
+            <p className="text-[11px] text-text-muted">Personal Loud CRM BD prospecting. Isolated from customer CRM.</p>
           </div>
           <div className="flex gap-2">
             <button onClick={() => setShowNew(true)} className="text-xs px-3 py-1.5 border border-border rounded hover:border-accent/50">+ Prospect</button>

@@ -166,7 +166,7 @@ export default function RelatedArticles({ currentIssue, maxResults = 3 }) {
                 textDecoration: 'none',
               }}
             >
-              See Loud Legacy pricing →
+              See Loud CRM pricing →
             </Link>
           )}
           {showCompareLink && (
@@ -179,7 +179,7 @@ export default function RelatedArticles({ currentIssue, maxResults = 3 }) {
                 textDecoration: 'none',
               }}
             >
-              Compare Loud Legacy to alternatives →
+              Compare Loud CRM to alternatives →
             </Link>
           )}
         </div>

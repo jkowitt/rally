@@ -18,7 +18,7 @@ const BASE_HTML = (content, options = {}) => `<!DOCTYPE html>
         ${content}
       </td></tr>
       <tr><td style="padding:20px 32px;border-top:1px solid #2a2a2a;font-size:11px;color:#888;text-align:center;">
-        Loud Legacy, ${options.address || '123 Main St, City, ST 00000'}<br>
+        Loud CRM, ${options.address || '123 Main St, City, ST 00000'}<br>
         <a href="{{unsubscribe_url}}" style="color:#E8B84B;text-decoration:underline;">Unsubscribe</a>
         &nbsp;·&nbsp;
         <a href="https://loud-legacy.com" style="color:#888;">loud-legacy.com</a>
@@ -44,7 +44,7 @@ const SEED_TEMPLATES = [
   {
     name: 'Product Announcement',
     category: 'promotional',
-    subject_line: 'New in Loud Legacy: {{feature_name}}',
+    subject_line: 'New in Loud CRM: {{feature_name}}',
     preview_text: 'We just shipped something you\'ll want to see.',
     html_content: BASE_HTML(`
       <h1 style="margin:0 0 16px;color:#E8B84B;">New: {{feature_name}}</h1>
@@ -56,11 +56,11 @@ const SEED_TEMPLATES = [
   {
     name: 'Free Trial Welcome',
     category: 'transactional',
-    subject_line: 'Welcome to Loud Legacy — start here',
+    subject_line: 'Welcome to Loud CRM — start here',
     preview_text: 'Your 14-day free trial is ready. Here\'s the fastest path to value.',
     html_content: BASE_HTML(`
       <h1 style="margin:0 0 16px;color:#E8B84B;">Welcome, {{first_name}} 👋</h1>
-      <p>Your Loud Legacy trial is live. The single fastest way to see value is to upload one sponsorship contract — our AI will parse every benefit in about 30 seconds.</p>
+      <p>Your Loud CRM trial is live. The single fastest way to see value is to upload one sponsorship contract — our AI will parse every benefit in about 30 seconds.</p>
       <p style="margin:24px 0;"><a href="https://loud-legacy.com/app/crm/contracts" style="background:#E8B84B;color:#0a0a0a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;">Upload your first contract</a></p>
     `),
   },
@@ -68,11 +68,11 @@ const SEED_TEMPLATES = [
     name: 'Upgrade Offer',
     category: 'promotional',
     subject_line: "You're ready for Pro, {{first_name}}",
-    preview_text: 'Based on how you\'re using Loud Legacy, here\'s why Pro makes sense.',
+    preview_text: 'Based on how you\'re using Loud CRM, here\'s why Pro makes sense.',
     html_content: BASE_HTML(`
       <h1 style="margin:0 0 16px;color:#E8B84B;">Ready for Pro?</h1>
       <p>Hi {{first_name}},</p>
-      <p>Your team at {{organization}} has been using Loud Legacy well. Here's why Pro is the next step:</p>
+      <p>Your team at {{organization}} has been using Loud CRM well. Here's why Pro is the next step:</p>
       <ul><li>Unlimited deals</li><li>Full automation engine</li><li>Team seats</li></ul>
       <p style="margin:24px 0;"><a href="https://loud-legacy.com/#pricing" style="background:#E8B84B;color:#0a0a0a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;">Upgrade now</a></p>
     `),
@@ -80,12 +80,12 @@ const SEED_TEMPLATES = [
   {
     name: 'Case Study',
     category: 'newsletter',
-    subject_line: 'How {{case_org}} manages {{case_count}} sponsors with Loud Legacy',
+    subject_line: 'How {{case_org}} manages {{case_count}} sponsors with Loud CRM',
     preview_text: 'Real numbers from a real team.',
     html_content: BASE_HTML(`
       <h1 style="margin:0 0 16px;color:#E8B84B;">A case study worth reading</h1>
       <p>Hi {{first_name}},</p>
-      <p>{{case_org}} runs their entire sponsorship program on Loud Legacy. Here's what their team did and what they measured.</p>
+      <p>{{case_org}} runs their entire sponsorship program on Loud CRM. Here's what their team did and what they measured.</p>
       <p style="margin:24px 0;"><a href="https://loud-legacy.com/case-studies" style="background:#E8B84B;color:#0a0a0a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;">Read the case study</a></p>
     `),
   },
@@ -97,7 +97,7 @@ const SEED_TEMPLATES = [
     html_content: BASE_HTML(`
       <h1 style="margin:0 0 16px;color:#E8B84B;">Still there?</h1>
       <p>Hi {{first_name}},</p>
-      <p>We haven't seen you in Loud Legacy lately. No pressure — just wanted to make sure the tool's still useful to your team at {{organization}}.</p>
+      <p>We haven't seen you in Loud CRM lately. No pressure — just wanted to make sure the tool's still useful to your team at {{organization}}.</p>
       <p>If something specific is blocking you, hit reply and tell me. I read everything.</p>
       <p>— Jason</p>
     `),
@@ -110,7 +110,7 @@ const SEED_TEMPLATES = [
     html_content: BASE_HTML(`
       <h1 style="margin:0 0 16px;color:#E8B84B;">Hidden feature alert</h1>
       <p>Hi {{first_name}},</p>
-      <p>Most people start in the deal pipeline. But the fastest way to get value from Loud Legacy is the contract uploader — drop any sponsorship PDF and AI pulls every benefit in 30 seconds.</p>
+      <p>Most people start in the deal pipeline. But the fastest way to get value from Loud CRM is the contract uploader — drop any sponsorship PDF and AI pulls every benefit in 30 seconds.</p>
       <p style="margin:24px 0;"><a href="https://loud-legacy.com/app/crm/contracts" style="background:#E8B84B;color:#0a0a0a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;">Try it now</a></p>
     `),
   },

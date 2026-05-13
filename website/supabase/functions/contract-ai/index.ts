@@ -246,7 +246,7 @@ async function callClaudeAdvanced(
   return data.content?.[0]?.text || "";
 }
 
-const CODE_SYSTEM_PROMPT = `You are a senior full-stack developer and AI coding assistant for the Loud Legacy CRM platform. You have deep expertise in the entire codebase and tech stack.
+const CODE_SYSTEM_PROMPT = `You are a senior full-stack developer and AI coding assistant for the Loud CRM CRM platform. You have deep expertise in the entire codebase and tech stack.
 
 ## Tech Stack
 - React 18 with lazy loading (React.lazy + Suspense)

@@ -82,19 +82,19 @@ function buildHtml(issue: any, siteUrl: string): string {
     <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#F1EFE8;">
       <tr><td style="padding:0 0 24px;text-align:center;">
         <div style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#1a1a18;">The Digest</div>
-        <div style="font-family:Georgia,serif;font-size:11px;color:#7a7a75;margin-top:4px;">by Loud Legacy Ventures</div>
+        <div style="font-family:Georgia,serif;font-size:11px;color:#7a7a75;margin-top:4px;">by Loud CRM Ventures</div>
       </td></tr>
       ${issue.featured_image_url ? `<tr><td style="padding:0 0 24px;"><img src="${issue.featured_image_url}" alt="${esc(issue.featured_image_alt || issue.title)}" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;" /></td></tr>` : ""}
       <tr><td style="padding:0 0 8px;"><h1 style="font-family:Georgia,serif;font-size:32px;line-height:1.2;font-weight:700;color:#1a1a18;margin:0;">${esc(issue.title)}</h1></td></tr>
       ${issue.subtitle ? `<tr><td style="padding:0 0 16px;"><p style="font-family:Georgia,serif;font-size:18px;line-height:1.5;color:#5a5a55;margin:0;font-style:italic;">${esc(issue.subtitle)}</p></td></tr>` : ""}
-      <tr><td style="padding:0 0 24px;"><div style="font-family:Georgia,serif;font-size:12px;color:#7a7a75;">${esc(issue.author || "Loud Legacy Ventures")}${publishDate ? " · " + publishDate : ""}</div></td></tr>
+      <tr><td style="padding:0 0 24px;"><div style="font-family:Georgia,serif;font-size:12px;color:#7a7a75;">${esc(issue.author || "Loud CRM Ventures")}${publishDate ? " · " + publishDate : ""}</div></td></tr>
       <tr><td style="padding:0 0 24px;"><p style="font-family:Georgia,serif;font-size:17px;line-height:1.7;color:#1a1a18;margin:0;">${esc(preview)}</p></td></tr>
       <tr><td style="padding:8px 0 40px;" align="center">
         <a href="${articleUrl}?utm_source=digest&utm_medium=email&utm_campaign=${encodeURIComponent(issue.slug)}" style="display:inline-block;background:#D85A30;color:#F1EFE8;text-decoration:none;font-family:Georgia,serif;font-size:16px;font-weight:600;padding:14px 32px;border-radius:2px;">Read Full Article →</a>
       </td></tr>
       <tr><td style="padding:0 0 32px;border-top:1px solid #d4d0c3;"></td></tr>
       <tr><td style="padding:0;font-family:Georgia,serif;font-size:12px;line-height:1.6;color:#7a7a75;text-align:center;">
-        <p style="margin:0 0 8px;">You're receiving this because you subscribed to The Digest by Loud Legacy Ventures.</p>
+        <p style="margin:0 0 8px;">You're receiving this because you subscribed to The Digest by Loud CRM Ventures.</p>
         <p style="margin:0 0 8px;">
           <a href="{{unsubscribe_url}}" style="color:#7a7a75;text-decoration:underline;">Unsubscribe</a>
           &nbsp;·&nbsp;
@@ -175,7 +175,7 @@ Deno.serve(async (req: Request) => {
         .from("email_lists")
         .insert({
           name: "The Digest Subscribers",
-          description: "Subscribers to The Digest by Loud Legacy Ventures",
+          description: "Subscribers to The Digest by Loud CRM Ventures",
           list_type: "newsletter",
           tags: ["digest"],
         })
@@ -222,7 +222,7 @@ Deno.serve(async (req: Request) => {
             name: `Digest: ${issue.title}`,
             subject_line: issue.title,
             preview_text: excerpt(issue.body_markdown, 120),
-            from_name: "The Digest by Loud Legacy",
+            from_name: "The Digest by Loud CRM",
             from_email: "digest@loud-legacy.com",
             reply_to_email: "digest@loud-legacy.com",
             html_content: html,

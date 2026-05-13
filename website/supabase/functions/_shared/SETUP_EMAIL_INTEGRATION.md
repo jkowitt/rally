@@ -21,7 +21,7 @@ the routes resolve but the OAuth flows return errors.
 If Outlook isn't already registered:
 
 1. Go to <https://entra.microsoft.com> → App registrations → New registration
-2. Name: "Loud Legacy Inbox"
+2. Name: "Loud CRM Inbox"
 3. Supported account types: **Multitenant + personal Microsoft accounts**
 4. Redirect URI (Web): `https://yourdomain.com/auth/outlook/callback`
 5. Register
@@ -44,7 +44,7 @@ OUTLOOK_TOKEN_SECRET=<32-byte random hex string for AES-GCM>
 
 ### 2. Google Cloud (Gmail)
 
-1. Go to <https://console.cloud.google.com> → create project "Loud Legacy"
+1. Go to <https://console.cloud.google.com> → create project "Loud CRM"
 2. **APIs & Services → Library** → enable **Gmail API**
 3. **OAuth consent screen** → External → fill in app name, support email,
    developer contact → save

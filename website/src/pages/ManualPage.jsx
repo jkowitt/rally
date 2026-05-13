@@ -10,8 +10,8 @@ import { useSeo } from '@/hooks/useSeo'
 // they need.
 export default function ManualPage() {
   useSeo({
-    title: 'User Manual — Loud Legacy',
-    description: 'Quick start, common playbooks, and feature reference for the Loud Legacy CRM and prospecting tool.',
+    title: 'User Manual — Loud CRM',
+    description: 'Quick start, common playbooks, and feature reference for the Loud CRM CRM and prospecting tool.',
   })
 
   return (
@@ -22,7 +22,7 @@ export default function ManualPage() {
           How to work the platform
         </h1>
         <p className="text-text-secondary mt-3 leading-relaxed">
-          Loud Legacy is built around one job: turn the people you should be talking to into signed sponsors. This page covers the five-minute quick start, two end-to-end playbooks, every feature in the sidebar, and the questions that come up most.
+          Loud CRM is built around one job: turn the people you should be talking to into signed sponsors. This page covers the five-minute quick start, two end-to-end playbooks, every feature in the sidebar, and the questions that come up most.
         </p>
       </header>
 

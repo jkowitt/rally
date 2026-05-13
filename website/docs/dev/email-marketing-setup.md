@@ -40,7 +40,7 @@ setup from `supabase/functions/send-email`. Required env vars in
 ```
 RESEND_API_KEY=<your resend api key>
 FROM_EMAIL=noreply@yourdomain.com
-FROM_NAME=Loud Legacy
+FROM_NAME=Loud CRM
 
 # Optional fallback
 SENDGRID_API_KEY=<your sendgrid api key>

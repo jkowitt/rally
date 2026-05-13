@@ -47,8 +47,8 @@ export default function DigestArticle() {
     '@type': 'Article',
     headline: issue.title,
     description: issue.meta_description || issue.subtitle || digest.excerpt(issue.body_markdown, 160),
-    author: { '@type': 'Organization', name: issue.author || 'Loud Legacy Ventures' },
-    publisher: { '@type': 'Organization', name: 'Loud Legacy Ventures' },
+    author: { '@type': 'Organization', name: issue.author || 'Loud CRM Ventures' },
+    publisher: { '@type': 'Organization', name: 'Loud CRM Ventures' },
     datePublished: issue.published_at,
     dateModified: issue.updated_at,
     image: issue.featured_image_url || undefined,
@@ -113,7 +113,7 @@ export default function DigestArticle() {
 
         {/* Byline */}
         <div className="mt-6 pb-6" style={{ borderBottom: '1px solid #d4d0c3', fontSize: '13px', color: '#7a7a75' }}>
-          <span style={{ fontWeight: 600, color: '#1a1a18' }}>{issue.author || 'Loud Legacy Ventures'}</span>
+          <span style={{ fontWeight: 600, color: '#1a1a18' }}>{issue.author || 'Loud CRM Ventures'}</span>
           {readMins && ` · ${readMins} min read`}
         </div>
 
@@ -257,7 +257,7 @@ function DigestFooter() {
   return (
     <footer style={{ borderTop: '1px solid #d4d0c3', marginTop: '40px' }}>
       <div className="max-w-4xl mx-auto px-5 sm:px-8 py-10 text-center" style={{ fontSize: '11px', color: '#7a7a75' }}>
-        © {new Date().getFullYear()} Loud Legacy Ventures ·{' '}
+        © {new Date().getFullYear()} Loud CRM Ventures ·{' '}
         <Link to="/" style={{ color: '#7a7a75' }}>Home</Link> ·{' '}
         <Link to="/digest" style={{ color: '#7a7a75' }}>The Digest</Link>
       </div>

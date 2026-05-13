@@ -14,11 +14,11 @@ const SEED_TEMPLATES = [
     subject: 'Quick question about sponsor tracking at {{organization}}',
     body: `Hi {{first_name}},
 
-I run Loud Legacy — it's a sponsor CRM built for conference and event teams. Most orgs I talk to are still tracking sponsor relationships in spreadsheets, bouncing between Outlook, calendars, and shared drives to pull a report when someone asks "how's that renewal going?"
+I run Loud CRM — it's a sponsor CRM built for conference and event teams. Most orgs I talk to are still tracking sponsor relationships in spreadsheets, bouncing between Outlook, calendars, and shared drives to pull a report when someone asks "how's that renewal going?"
 
 {{industry_pain_point}}
 
-I built this because I was living that chaos myself. Loud Legacy reads your contracts, tracks fulfillment, auto-builds brand reports, and pulls sponsor communication history into one timeline.
+I built this because I was living that chaos myself. Loud CRM reads your contracts, tracks fulfillment, auto-builds brand reports, and pulls sponsor communication history into one timeline.
 
 Worth 15 minutes to see if it'd move the needle at {{organization}}?
 
@@ -34,7 +34,7 @@ Worth 15 minutes to see if it'd move the needle at {{organization}}?
 
 Quick question — how does {{organization}} currently track which sponsor assets are sold, which are delivered, and which contracts are up for renewal?
 
-If the answer is "a spreadsheet and a lot of hope," you're not alone. I built Loud Legacy for teams exactly like yours: AI contract parsing, asset catalog, renewal pipeline, and an auto-generated brand report at the end of each season.
+If the answer is "a spreadsheet and a lot of hope," you're not alone. I built Loud CRM for teams exactly like yours: AI contract parsing, asset catalog, renewal pipeline, and an auto-generated brand report at the end of each season.
 
 {{industry_pain_point}}
 
@@ -77,7 +77,7 @@ If none of those times work, just reply with three windows and I'll make one fit
     name: 'Post-Demo Follow-up',
     stage: 'post_demo',
     industry: 'both',
-    subject: 'Following up — Loud Legacy demo + next steps',
+    subject: 'Following up — Loud CRM demo + next steps',
     body: `Hi {{first_name}},
 
 Thanks for the time today. Quick recap of what we covered:
@@ -99,7 +99,7 @@ Happy to jump on a second call with your team if that helps. Otherwise, hit repl
     subject: 'Still thinking it over?',
     body: `Hi {{first_name}},
 
-Saw you started a Loud Legacy trial but haven't converted yet. Totally fine — just checking in.
+Saw you started a Loud CRM trial but haven't converted yet. Totally fine — just checking in.
 
 Is there something specific blocking you? Missing feature, pricing, timing, integration gap? I actually want to know — I use that feedback to prioritize the roadmap.
 

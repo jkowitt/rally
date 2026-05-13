@@ -159,10 +159,10 @@ export default function ComparisonPage({ slug }) {
         </ul>
       </section>
 
-      {/* Loud Legacy advantages */}
+      {/* Loud CRM advantages */}
       <section className="max-w-5xl mx-auto px-5 sm:px-8 py-10">
         <SectionHeading
-          eyebrow="Where Loud Legacy wins"
+          eyebrow="Where Loud CRM wins"
           title={`Why sponsorship teams choose ${LOUD_LEGACY.name}`}
         />
         <ul className="mt-6 space-y-2">
@@ -215,7 +215,7 @@ export default function ComparisonPage({ slug }) {
 
       {/* Other comparisons */}
       <section className="max-w-5xl mx-auto px-5 sm:px-8 py-10 border-t border-border">
-        <SectionHeading eyebrow="Keep comparing" title="Other Loud Legacy comparisons" />
+        <SectionHeading eyebrow="Keep comparing" title="Other Loud CRM comparisons" />
         <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
           {otherComparisons.map(c => (
             <Link
@@ -279,7 +279,7 @@ function Footer() {
   return (
     <footer className="border-t border-border mt-10 py-10 text-center">
       <div className="text-[10px] text-text-muted">
-        © {new Date().getFullYear()} Loud Legacy · <Link to="/" className="hover:text-accent">Home</Link> · <Link to="/compare" className="hover:text-accent">Compare</Link> · <Link to="/#pricing" className="hover:text-accent">Pricing</Link>
+        © {new Date().getFullYear()} Loud CRM · <Link to="/" className="hover:text-accent">Home</Link> · <Link to="/compare" className="hover:text-accent">Compare</Link> · <Link to="/#pricing" className="hover:text-accent">Pricing</Link>
       </div>
     </footer>
   )

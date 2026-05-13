@@ -48,36 +48,36 @@ create policy "seo_meta_dev_write" on seo_meta
 insert into seo_meta (page_path, title, description, og_title, og_description, robots, json_ld) values
 (
   '/',
-  'Loud Legacy — AI Sponsorship CRM | Contract Parsing in 30 Seconds',
+  'Loud CRM — AI Sponsorship CRM | Contract Parsing in 30 Seconds',
   'Upload any sponsor contract. AI extracts every benefit in 30 seconds. The sponsorship CRM built for teams drowning in spreadsheets.',
-  'Loud Legacy — AI Sponsorship CRM',
+  'Loud CRM — AI Sponsorship CRM',
   'Upload any sponsor contract. AI extracts every benefit in 30 seconds. $39/mo — not $15K/year.',
   'index,follow',
-  '{"@context":"https://schema.org","@type":"WebSite","name":"Loud Legacy","url":"https://loud-legacy.com","description":"AI-powered sponsorship CRM for sports teams, event organizers, and partnership agencies.","potentialAction":{"@type":"SearchAction","target":"https://loud-legacy.com/digest?q={search_term_string}","query-input":"required name=search_term_string"}}'::jsonb
+  '{"@context":"https://schema.org","@type":"WebSite","name":"Loud CRM","url":"https://loud-legacy.com","description":"AI-powered sponsorship CRM for sports teams, event organizers, and partnership agencies.","potentialAction":{"@type":"SearchAction","target":"https://loud-legacy.com/digest?q={search_term_string}","query-input":"required name=search_term_string"}}'::jsonb
 ),
 (
   '/pricing',
-  'Pricing — Loud Legacy | Free, Starter $39/mo, Pro $199/mo',
+  'Pricing — Loud CRM | Free, Starter $39/mo, Pro $199/mo',
   'Simple, transparent pricing. Start free, upgrade when you need more. AI credits, contract parsing, and verified contacts included.',
-  'Loud Legacy Pricing',
+  'Loud CRM Pricing',
   'Start free. Upgrade when ready. No surprise charges.',
   'index,follow',
-  '{"@context":"https://schema.org","@type":"WebPage","name":"Loud Legacy Pricing","description":"Plans and pricing for Loud Legacy sponsorship CRM."}'::jsonb
+  '{"@context":"https://schema.org","@type":"WebPage","name":"Loud CRM Pricing","description":"Plans and pricing for Loud CRM sponsorship CRM."}'::jsonb
 ),
 (
   '/digest',
-  'The Digest by Loud Legacy Ventures — Monthly Business Newsletter',
+  'The Digest by Loud CRM Ventures — Monthly Business Newsletter',
   'One good article a month on sponsorship, real estate, sports business, and marketing. Subscribe free.',
-  'The Digest by Loud Legacy Ventures',
+  'The Digest by Loud CRM Ventures',
   'One good article a month. No spam.',
   'index,follow',
-  '{"@context":"https://schema.org","@type":"CollectionPage","name":"The Digest Archive","description":"Monthly editorial newsletter by Loud Legacy Ventures."}'::jsonb
+  '{"@context":"https://schema.org","@type":"CollectionPage","name":"The Digest Archive","description":"Monthly editorial newsletter by Loud CRM Ventures."}'::jsonb
 ),
 (
   '/compare',
-  'Compare Loud Legacy vs Alternatives — Feature Comparison',
-  'See how Loud Legacy stacks up against other sponsorship CRM tools. Feature-by-feature comparison.',
-  'Loud Legacy vs Alternatives',
+  'Compare Loud CRM vs Alternatives — Feature Comparison',
+  'See how Loud CRM stacks up against other sponsorship CRM tools. Feature-by-feature comparison.',
+  'Loud CRM vs Alternatives',
   'Feature-by-feature comparison with other tools.',
   'index,follow',
   '{}'::jsonb
@@ -115,8 +115,8 @@ begin
     '@type', 'Article',
     'headline', new.title,
     'description', coalesce(new.meta_description, new.subtitle, v_excerpt),
-    'author', jsonb_build_object('@type', 'Organization', 'name', coalesce(new.author, 'Loud Legacy Ventures')),
-    'publisher', jsonb_build_object('@type', 'Organization', 'name', 'Loud Legacy Ventures'),
+    'author', jsonb_build_object('@type', 'Organization', 'name', coalesce(new.author, 'Loud CRM Ventures')),
+    'publisher', jsonb_build_object('@type', 'Organization', 'name', 'Loud CRM Ventures'),
     'datePublished', to_char(coalesce(new.published_at, now()), 'YYYY-MM-DD'),
     'url', v_site_url || v_path,
     'mainEntityOfPage', v_site_url || v_path,
@@ -129,7 +129,7 @@ begin
     json_ld, auto_generated, last_generated_at
   ) values (
     v_path,
-    new.title || ' — The Digest by Loud Legacy',
+    new.title || ' — The Digest by Loud CRM',
     coalesce(new.meta_description, new.subtitle, v_excerpt),
     new.title,
     coalesce(new.subtitle, v_excerpt),

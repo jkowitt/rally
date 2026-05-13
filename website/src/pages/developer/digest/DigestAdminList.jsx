@@ -146,7 +146,7 @@ export default function DigestAdminList() {
                 <h3 className="text-sm font-semibold text-text-primary mt-1">{i.title}</h3>
                 {i.subtitle && <p className="text-[11px] text-text-secondary mt-0.5 line-clamp-1">{i.subtitle}</p>}
                 <div className="text-[10px] text-text-muted mt-1.5">
-                  {i.author || 'Loud Legacy Ventures'}
+                  {i.author || 'Loud CRM Ventures'}
                   {i.published_at && ` · published ${new Date(i.published_at).toLocaleDateString()}`}
                   {!i.published_at && ` · updated ${new Date(i.updated_at || i.created_at).toLocaleDateString()}`}
                   {i.view_count > 0 && ` · ${i.view_count} views`}

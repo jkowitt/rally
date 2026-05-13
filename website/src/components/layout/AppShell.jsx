@@ -87,7 +87,7 @@ export default function AppShell({ children }) {
           {children}
         </main>
         <footer className="hidden md:flex border-t border-border px-6 py-3 items-center justify-between text-xs text-text-muted">
-          <span>&copy; {new Date().getFullYear()} Loud Legacy</span>
+          <span>&copy; {new Date().getFullYear()} Loud CRM</span>
           <div className="flex gap-4">
             <Link to="/legal/terms" className="hover:text-text-secondary">Terms of Service</Link>
             <Link to="/legal/privacy" className="hover:text-text-secondary">Privacy Policy</Link>

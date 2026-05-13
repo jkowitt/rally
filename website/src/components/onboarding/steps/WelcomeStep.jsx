@@ -12,7 +12,7 @@ export default function WelcomeStep({ onNext, userName }) {
           {firstName ? `Hi ${firstName}, let's get` : `Let's get`} your CRM ready in two minutes.
         </h2>
         <p className="text-sm text-text-secondary mt-3 leading-relaxed">
-          Loud Legacy is built around one job: <strong className="text-text-primary">turn the people you should be talking to into signed sponsors</strong>. The next two steps drop a real deal into your pipeline and run an AI prospect search so the app isn't empty when you land on it.
+          Loud CRM is built around one job: <strong className="text-text-primary">find the right prospects, close them fast, and grow your business loud</strong>. The next two steps drop a real deal into your pipeline and run an AI prospect search so the app isn't empty when you land on it.
         </p>
       </div>
 

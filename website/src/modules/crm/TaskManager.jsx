@@ -342,7 +342,7 @@ export default function TaskManager() {
     setNotifPermission(result)
     if (result === 'granted') {
       toast({ title: 'Push notifications enabled', type: 'success' })
-      sendNotification('Loud Legacy', 'You will now receive task reminders', 'test')
+      sendNotification('Loud CRM', 'You will now receive task reminders', 'test')
     } else if (result === 'denied') {
       toast({ title: 'Notifications blocked', description: 'Enable in browser settings', type: 'warning' })
     }

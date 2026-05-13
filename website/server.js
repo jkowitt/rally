@@ -316,7 +316,7 @@ app.use(async (req, res, next) => {
 <article>
 <h1>${escHtml(article.title)}</h1>
 ${article.subtitle ? `<p><em>${escHtml(article.subtitle)}</em></p>` : ''}
-<p>By ${escHtml(article.author || 'Loud Legacy Ventures')}${article.published_at ? ` · ${new Date(article.published_at).toLocaleDateString()}` : ''}</p>
+<p>By ${escHtml(article.author || 'Loud CRM Ventures')}${article.published_at ? ` · ${new Date(article.published_at).toLocaleDateString()}` : ''}</p>
 <div>${escHtml(plainText)}</div>
 </article>
 </noscript>`
@@ -351,7 +351,7 @@ app.use((_req, res) => {
 })
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Loud Legacy running on port ${PORT}`)
+  console.log(`Loud CRM running on port ${PORT}`)
 })
 
 // ── Helpers ───────────────────────────────────────────────

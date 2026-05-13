@@ -69,7 +69,7 @@ export default function ClaudeTerminal() {
           body: {
             action: 'edit_contract',
             contract_text: 'RESPOND_ONLY',
-            instructions: `You are a senior full-stack developer for the Loud Legacy CRM (React 18, Vite, Tailwind v4, Supabase). ${contextMsgs ? `Previous conversation:\n${contextMsgs}\n\n` : ''}User request: "${userMsg}"\n\nProvide ONLY your response with actionable code. Show file paths and exact changes. Do not include any preamble or repeat the question.`,
+            instructions: `You are a senior full-stack developer for the Loud CRM CRM (React 18, Vite, Tailwind v4, Supabase). ${contextMsgs ? `Previous conversation:\n${contextMsgs}\n\n` : ''}User request: "${userMsg}"\n\nProvide ONLY your response with actionable code. Show file paths and exact changes. Do not include any preamble or repeat the question.`,
           },
         })
         if (fbErr) throw fbErr

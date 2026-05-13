@@ -202,7 +202,7 @@ function GettingStarted() {
           <li>• <strong className="text-text-primary">Unsubscribe:</strong> every email includes a one-click token-based unsubscribe link and a proper List-Unsubscribe header for Gmail/Outlook compliance.</li>
           <li>• <strong className="text-text-primary">Tracking:</strong> opens and clicks are captured with a tracking pixel + redirect links. You can turn both off per-campaign in campaign settings.</li>
           <li>• <strong className="text-text-primary">Suppression list:</strong> bounced and complained addresses are added to a global suppression list automatically. They'll never receive another email, even across lists.</li>
-          <li>• <strong className="text-text-primary">Templates:</strong> save any campaign as a template to reuse. The Digest by Loud Legacy uses the same pipeline.</li>
+          <li>• <strong className="text-text-primary">Templates:</strong> save any campaign as a template to reuse. The Digest by Loud CRM uses the same pipeline.</li>
         </ul>
       </div>
     </div>

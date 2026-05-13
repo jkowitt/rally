@@ -2,7 +2,7 @@
 
 export function welcomeEmail(userName, propertyName) {
   return {
-    subject: `Welcome to Loud Legacy, ${userName}!`,
+    subject: `Welcome to Loud CRM, ${userName}!`,
     body: `
       <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;color:#333;">
         <div style="background:#080A0F;padding:24px;text-align:center;">
@@ -23,7 +23,7 @@ export function welcomeEmail(userName, propertyName) {
           </div>
         </div>
         <div style="padding:16px 24px;background:#080A0F;text-align:center;">
-          <p style="color:#555D75;font-size:11px;margin:0;">Loud Legacy — Sports Business Operating Suite</p>
+          <p style="color:#555D75;font-size:11px;margin:0;">Loud CRM — Sports Business Operating Suite</p>
         </div>
       </div>
     `,
@@ -32,7 +32,7 @@ export function welcomeEmail(userName, propertyName) {
 
 export function inviteEmail(inviterName, propertyName, inviteUrl, role) {
   return {
-    subject: `${inviterName} invited you to ${propertyName} on Loud Legacy`,
+    subject: `${inviterName} invited you to ${propertyName} on Loud CRM`,
     body: `
       <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
         <div style="background:#080A0F;padding:24px;text-align:center;">

@@ -34,11 +34,11 @@ values (
   $$LOUD LEGACY VENTURES — TERMS OF SERVICE
 Version 2.0 — Effective 2026-04-15
 
-By creating an account on Loud Legacy (the "Platform"), you agree to these Terms of Service ("Terms"). Please read them in full.
+By creating an account on Loud CRM (the "Platform"), you agree to these Terms of Service ("Terms"). Please read them in full.
 
 1. SERVICE DESCRIPTION
 
-Loud Legacy Ventures ("we", "us", or "Loud Legacy") operates the Platform, a software-as-a-service CRM and operating suite for sponsorship sales teams, event organizers, nonprofits, real estate operators, media companies, and other partnership-driven businesses. The Platform includes but is not limited to: CRM pipeline management, contract parsing, AI-assisted prospect research, email marketing, newsletter publishing, and integrations with third-party services.
+Loud CRM Ventures ("we", "us", or "Loud CRM") operates the Platform, a software-as-a-service CRM and operating suite for sponsorship sales teams, event organizers, nonprofits, real estate operators, media companies, and other partnership-driven businesses. The Platform includes but is not limited to: CRM pipeline management, contract parsing, AI-assisted prospect research, email marketing, newsletter publishing, and integrations with third-party services.
 
 2. ACCOUNT REGISTRATION
 
@@ -75,7 +75,7 @@ These emails cannot be turned off as long as you maintain an active account. Uns
 
 6.2 THE DIGEST — MARKETING NEWSLETTER (AUTO-SUBSCRIBED, EASY OPT-OUT)
 
-When you create an account, you are automatically subscribed to The Digest by Loud Legacy Ventures, our monthly editorial newsletter. The Digest covers sponsorship trends, industry analysis, product updates, and other content relevant to partnership-driven businesses. Issues are typically published once per month.
+When you create an account, you are automatically subscribed to The Digest by Loud CRM Ventures, our monthly editorial newsletter. The Digest covers sponsorship trends, industry analysis, product updates, and other content relevant to partnership-driven businesses. Issues are typically published once per month.
 
 By accepting these Terms, you consent to:
   - Receiving The Digest by email at the address tied to your account
@@ -118,7 +118,7 @@ The Platform is provided "as is" and "as available." We make no warranties, expr
 
 11. LIMITATION OF LIABILITY
 
-To the maximum extent permitted by law, Loud Legacy Ventures will not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Platform. Our total liability to you for any claim will not exceed the amount you paid us in the twelve (12) months preceding the claim.
+To the maximum extent permitted by law, Loud CRM Ventures will not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Platform. Our total liability to you for any claim will not exceed the amount you paid us in the twelve (12) months preceding the claim.
 
 12. CHANGES TO THESE TERMS
 
@@ -131,7 +131,7 @@ These Terms are governed by the laws of the State of New York, USA, without rega
 14. CONTACT
 
 Questions, complaints, or requests related to these Terms should be sent to:
-  Loud Legacy Ventures
+  Loud CRM Ventures
   Email: founder@loud-legacy.com
 
 By checking the confirmation box and clicking "Accept & Continue," you acknowledge that you have read, understood, and agree to be bound by these Terms of Service. Your acceptance is recorded in our database with a timestamp and the version number above.

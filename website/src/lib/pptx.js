@@ -4,8 +4,8 @@ import PptxGenJS from 'pptxgenjs'
 export function generateFulfillmentReport({ dealName, logoUrl, benefits, deliveredItems, dateRange }) {
   const pptx = new PptxGenJS()
   pptx.layout = 'LAYOUT_16x9'
-  pptx.author = 'Loud Legacy'
-  pptx.company = 'Loud Legacy'
+  pptx.author = 'Loud CRM'
+  pptx.company = 'Loud CRM'
   pptx.subject = `${dealName} Fulfillment Recap`
 
   const gold = 'E8B84B'

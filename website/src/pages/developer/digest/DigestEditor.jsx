@@ -551,7 +551,7 @@ function DigestPreview({ issue }) {
       <h1 className="text-3xl sm:text-4xl font-bold mt-2 leading-tight">{issue.title || 'Untitled'}</h1>
       {issue.subtitle && <p className="text-lg italic text-[#5a5a55] mt-3 leading-snug">{issue.subtitle}</p>}
       <div className="text-xs text-[#7a7a75] mt-4">
-        {issue.author || 'Loud Legacy Ventures'}
+        {issue.author || 'Loud CRM Ventures'}
         {issue.published_at && ' · ' + new Date(issue.published_at).toLocaleDateString()}
         {issue.body_markdown && ' · ' + digest.readingTime(issue.body_markdown) + ' min read'}
       </div>

@@ -1,4 +1,4 @@
-# AI Model Tiering — Rally / Loud Legacy
+# AI Model Tiering — Rally / Loud CRM
 
 This document explains **which Claude model each edge function uses and why**. When a new snapshot ships and you need to upgrade, use this as your map.
 

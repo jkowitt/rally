@@ -18,7 +18,7 @@ export default function PricingPage() {
   const [billing, setBilling] = useState('monthly') // 'monthly' | 'annual'
 
   useSeo({
-    title: 'Pricing — Loud Legacy',
+    title: 'Pricing — Loud CRM',
     description: 'AI-native CRM + prospecting. Free to start. Pro at $99/seat replaces HubSpot Sales Pro + Apollo combined. Enterprise at $249 adds AI call + meeting capture.',
     canonical: 'https://loud-legacy.com/pricing',
   })
@@ -265,8 +265,8 @@ function TopNav() {
   return (
     <nav className="border-b border-border/50 bg-bg-primary/80 backdrop-blur sticky top-0 z-20">
       <div className="max-w-6xl mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
-        <Link to="/" aria-label="Loud Legacy — Home">
-          <img src="/logo-loud-legacy.svg" alt="Loud Legacy" className="h-6 w-auto" />
+        <Link to="/" aria-label="Loud CRM — Home">
+          <img src="/logo-loud-legacy.svg" alt="Loud CRM" className="h-6 w-auto" />
         </Link>
         <div className="flex items-center gap-3">
           <Link to="/login" className="text-xs text-text-muted hover:text-text-primary">Sign in</Link>

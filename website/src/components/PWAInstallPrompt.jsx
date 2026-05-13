@@ -42,7 +42,7 @@ export default function PWAInstallPrompt() {
       <div className="flex items-start gap-3">
         <div className="text-2xl">📱</div>
         <div className="flex-1">
-          <div className="text-sm font-medium text-text-primary">Install Loud Legacy</div>
+          <div className="text-sm font-medium text-text-primary">Install Loud CRM</div>
           <p className="text-xs text-text-muted mt-0.5">Add to your home screen for a native app experience</p>
           <div className="flex gap-2 mt-3">
             <button onClick={handleInstall} className="bg-accent text-bg-primary px-4 py-1.5 rounded text-xs font-medium hover:opacity-90">

@@ -41,7 +41,7 @@ export default function BusinessOps() {
     <div className="space-y-4 sm:space-y-6">
       <div>
         <h1 className="text-xl sm:text-2xl font-semibold text-text-primary">Business Ops</h1>
-        <p className="text-text-secondary text-xs sm:text-sm mt-1">Internal operations for Loud Legacy</p>
+        <p className="text-text-secondary text-xs sm:text-sm mt-1">Internal operations for Loud CRM</p>
       </div>
 
       {/* Mobile: dropdown, Desktop: tabs */}

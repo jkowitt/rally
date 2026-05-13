@@ -1,7 +1,7 @@
 {
-  "name": "Loud Legacy",
-  "short_name": "LoudLegacy",
-  "description": "Sports business CRM — pipeline, contracts, assets, fulfillment, valuations",
+  "name": "Loud CRM",
+  "short_name": "LoudCRM",
+  "description": "Loud CRM: Grow Your Business Loud — CRM, Prospecting, and Tools in one workspace",
   "start_url": "/app",
   "display": "standalone",
   "background_color": "#0D1117",

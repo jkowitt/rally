@@ -30,9 +30,9 @@ export default function ClaudeAssistant() {
     // Build context based on current page
     const pageContext = `Current page: ${window.location.pathname}`
     const modeInstructions = {
-      ask: 'Answer the question about the Loud Legacy platform, its features, codebase, or business operations.',
-      code: `Generate specific code changes for the Loud Legacy platform (React 18 + Vite + Tailwind + Supabase). Show file paths, old code, and new code.`,
-      qa: `Analyze this from a QA perspective. Identify potential issues, edge cases, and testing recommendations for the Loud Legacy platform.`,
+      ask: 'Answer the question about the Loud CRM platform, its features, codebase, or business operations.',
+      code: `Generate specific code changes for the Loud CRM platform (React 18 + Vite + Tailwind + Supabase). Show file paths, old code, and new code.`,
+      qa: `Analyze this from a QA perspective. Identify potential issues, edge cases, and testing recommendations for the Loud CRM platform.`,
       report: `Generate a business report or analysis based on the request. Use data-driven insights and actionable recommendations.`,
     }
 
@@ -64,7 +64,7 @@ export default function ClaudeAssistant() {
           body: {
             action: 'edit_contract',
             contract_text: 'RESPOND_ONLY',
-            instructions: `You are a helpful AI assistant for the Loud Legacy CRM platform (React 18, Vite, Tailwind, Supabase). ${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `Recent conversation:\n${contextMsgs}\n\n` : ''}User says: "${userMsg}"\n\nProvide ONLY your response. Do not include any preamble, system text, or repeat the question.`,
+            instructions: `You are a helpful AI assistant for the Loud CRM platform (React 18, Vite, Tailwind, Supabase). ${modeInstructions[mode]}\n\n${pageContext}\n${contextMsgs ? `Recent conversation:\n${contextMsgs}\n\n` : ''}User says: "${userMsg}"\n\nProvide ONLY your response. Do not include any preamble, system text, or repeat the question.`,
           },
         })
         if (fbErr) throw fbErr

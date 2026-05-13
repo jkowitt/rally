@@ -179,7 +179,7 @@ export default function QATestSuite({ profiles }) {
         const { data, error } = await supabase.functions.invoke('contract-ai', {
           body: {
             action: 'code_assistant',
-            prompt: `You are performing automated QA on the Loud Legacy CRM platform. Analyze whether this feature is correctly implemented based on your knowledge of the codebase.
+            prompt: `You are performing automated QA on the Loud CRM CRM platform. Analyze whether this feature is correctly implemented based on your knowledge of the codebase.
 
 TEST CASE:
 - Module: ${tc.module}

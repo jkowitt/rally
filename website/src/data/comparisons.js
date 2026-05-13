@@ -25,9 +25,9 @@ const FEATURE_ROWS = [
   { id: 'sponsorship_specific', label: 'Built specifically for sponsorships', category: 'fit' },
 ]
 
-// Loud Legacy values (same on every page)
+// Loud CRM values (same on every page)
 const LOUD_LEGACY = {
-  name: 'Loud Legacy',
+  name: 'Loud CRM',
   tagline: 'AI sponsorship CRM purpose-built for sports, events, and entertainment',
   features: {
     ai_contract: true,
@@ -55,11 +55,11 @@ export const COMPARISONS = [
   {
     slug: 'loud-legacy-vs-airtable',
     competitor: 'Airtable',
-    h1: 'Loud Legacy vs Airtable for Sponsorship Management',
-    metaTitle: 'Loud Legacy vs Airtable — Sponsorship CRM Comparison 2025',
-    metaDescription: 'Airtable is a flexible spreadsheet-database hybrid. Loud Legacy is a purpose-built sponsorship CRM with AI contract parsing. Side-by-side comparison of features, pricing, and when each wins.',
-    keyword: 'Loud Legacy vs Airtable sponsorship',
-    summary: 'Airtable is a powerful general-purpose database. Loud Legacy is a turn-key sponsorship CRM. If you want to build your own sponsorship system from scratch, Airtable is excellent. If you want AI contract parsing, renewal alerts, and brand reports out of the box, Loud Legacy saves months of template-building.',
+    h1: 'Loud CRM vs Airtable for Sponsorship Management',
+    metaTitle: 'Loud CRM vs Airtable — Sponsorship CRM Comparison 2025',
+    metaDescription: 'Airtable is a flexible spreadsheet-database hybrid. Loud CRM is a purpose-built sponsorship CRM with AI contract parsing. Side-by-side comparison of features, pricing, and when each wins.',
+    keyword: 'Loud CRM vs Airtable sponsorship',
+    summary: 'Airtable is a powerful general-purpose database. Loud CRM is a turn-key sponsorship CRM. If you want to build your own sponsorship system from scratch, Airtable is excellent. If you want AI contract parsing, renewal alerts, and brand reports out of the box, Loud CRM saves months of template-building.',
     competitorStrengths: [
       'Extraordinary flexibility — model virtually any workflow',
       'Rich formula engine and scripting for power users',
@@ -76,7 +76,7 @@ export const COMPARISONS = [
       'Purpose-built UI for sponsorship workflows, not a generic grid',
     ],
     whoShouldChoose: {
-      loudLegacy: 'Teams that want a working sponsorship CRM today without hiring a consultant to build it. If you manage sponsorship deals, assets, or fulfillment as a core part of your job, Loud Legacy pays for itself in the first renewal cycle.',
+      loudLegacy: 'Teams that want a working sponsorship CRM today without hiring a consultant to build it. If you manage sponsorship deals, assets, or fulfillment as a core part of your job, Loud CRM pays for itself in the first renewal cycle.',
       competitor: 'Operations teams with strong database skills who want to build a custom system from the ground up — or who need to track things well beyond sponsorships (inventory, hiring, content calendars, etc.) in one place.',
     },
     features: {
@@ -104,11 +104,11 @@ export const COMPARISONS = [
   {
     slug: 'loud-legacy-vs-sponsorcx',
     competitor: 'SponsorCX',
-    h1: 'Loud Legacy vs SponsorCX — Sponsorship CRM Alternative',
-    metaTitle: 'SponsorCX Alternative — Loud Legacy vs SponsorCX 2025',
-    metaDescription: 'SponsorCX is enterprise sponsorship software at $15K+/year. Loud Legacy offers AI contract parsing, asset tracking, and brand reports starting at $39/mo. See the full comparison.',
+    h1: 'Loud CRM vs SponsorCX — Sponsorship CRM Alternative',
+    metaTitle: 'SponsorCX Alternative — Loud CRM vs SponsorCX 2025',
+    metaDescription: 'SponsorCX is enterprise sponsorship software at $15K+/year. Loud CRM offers AI contract parsing, asset tracking, and brand reports starting at $39/mo. See the full comparison.',
     keyword: 'SponsorCX alternative',
-    summary: 'SponsorCX is the established enterprise player for major league teams with six-figure CRM budgets. Loud Legacy is built for the rest of the market — minor league teams, conferences, venues, and agencies who need the same capabilities at 1/30th the price and without a 12-month implementation.',
+    summary: 'SponsorCX is the established enterprise player for major league teams with six-figure CRM budgets. Loud CRM is built for the rest of the market — minor league teams, conferences, venues, and agencies who need the same capabilities at 1/30th the price and without a 12-month implementation.',
     competitorStrengths: [
       'Deep enterprise customization and professional services',
       'Established relationships with MLB, NBA, NHL, and NFL teams',
@@ -154,11 +154,11 @@ export const COMPARISONS = [
   {
     slug: 'loud-legacy-vs-hubspot',
     competitor: 'HubSpot',
-    h1: 'Loud Legacy vs HubSpot for Sponsorship Teams',
-    metaTitle: 'HubSpot vs Loud Legacy — Sponsorship CRM Comparison',
-    metaDescription: 'HubSpot is the leading general-purpose sales CRM. Loud Legacy is purpose-built for sponsorship teams with AI contract parsing and asset tracking. Compare features, pricing, and fit.',
+    h1: 'Loud CRM vs HubSpot for Sponsorship Teams',
+    metaTitle: 'HubSpot vs Loud CRM — Sponsorship CRM Comparison',
+    metaDescription: 'HubSpot is the leading general-purpose sales CRM. Loud CRM is purpose-built for sponsorship teams with AI contract parsing and asset tracking. Compare features, pricing, and fit.',
     keyword: 'HubSpot alternative sponsorship CRM',
-    summary: 'HubSpot is the best general sales CRM on the market. Loud Legacy is the best sponsorship CRM. If your sales team sells software, services, or products, HubSpot is almost always the right answer. If your team sells sponsorships, HubSpot forces you to bend a B2B pipeline into sponsorship-shaped holes — and it never fits.',
+    summary: 'HubSpot is the best general sales CRM on the market. Loud CRM is the best sponsorship CRM. If your sales team sells software, services, or products, HubSpot is almost always the right answer. If your team sells sponsorships, HubSpot forces you to bend a B2B pipeline into sponsorship-shaped holes — and it never fits.',
     competitorStrengths: [
       'Best-in-class marketing automation and email campaigns',
       'Massive integration marketplace (1,000+ apps)',
@@ -176,8 +176,8 @@ export const COMPARISONS = [
       'VALORA media valuation engine included',
     ],
     whoShouldChoose: {
-      loudLegacy: 'Sponsorship teams who have tried to use a general CRM and ended up building custom fields, creating workarounds, and still losing track of fulfillment. If the word "benefit" doesn\'t mean the same thing to you as it does to HubSpot\'s docs, Loud Legacy is built for you.',
-      competitor: 'B2B sales teams selling products or services through a traditional pipeline. If you run a marketing automation program or need deep email campaign tooling, HubSpot is unbeatable. You can also run Loud Legacy alongside HubSpot if your broader sales org needs a general CRM.',
+      loudLegacy: 'Sponsorship teams who have tried to use a general CRM and ended up building custom fields, creating workarounds, and still losing track of fulfillment. If the word "benefit" doesn\'t mean the same thing to you as it does to HubSpot\'s docs, Loud CRM is built for you.',
+      competitor: 'B2B sales teams selling products or services through a traditional pipeline. If you run a marketing automation program or need deep email campaign tooling, HubSpot is unbeatable. You can also run Loud CRM alongside HubSpot if your broader sales org needs a general CRM.',
     },
     features: {
       ai_contract: false,
@@ -204,11 +204,11 @@ export const COMPARISONS = [
   {
     slug: 'loud-legacy-vs-monday',
     competitor: 'Monday.com',
-    h1: 'Loud Legacy vs Monday.com for Sponsorship Tracking',
-    metaTitle: 'Monday.com vs Loud Legacy — Sponsorship Management Compared',
-    metaDescription: 'Monday.com is a visual work management platform. Loud Legacy is a sponsorship CRM with AI contract parsing and brand reports. Compare fit, features, and cost.',
+    h1: 'Loud CRM vs Monday.com for Sponsorship Tracking',
+    metaTitle: 'Monday.com vs Loud CRM — Sponsorship Management Compared',
+    metaDescription: 'Monday.com is a visual work management platform. Loud CRM is a sponsorship CRM with AI contract parsing and brand reports. Compare fit, features, and cost.',
     keyword: 'Monday.com sponsorship CRM alternative',
-    summary: 'Monday.com is a gorgeous work management tool that can be configured for almost anything. Loud Legacy is a sponsorship system, not a work management canvas. Monday wins on visual project boards. Loud Legacy wins the moment you upload a contract PDF.',
+    summary: 'Monday.com is a gorgeous work management tool that can be configured for almost anything. Loud CRM is a sponsorship system, not a work management canvas. Monday wins on visual project boards. Loud CRM wins the moment you upload a contract PDF.',
     competitorStrengths: [
       'Beautiful visual boards with board views, timelines, Kanban, and Gantt',
       'Excellent for cross-functional project management',
@@ -226,7 +226,7 @@ export const COMPARISONS = [
       'Sponsorship vocabulary throughout — "activation," "benefit," "impressions"',
     ],
     whoShouldChoose: {
-      loudLegacy: 'Sponsorship teams who want their contracts, assets, deals, and reports in one purpose-built system. If you ever find yourself building a Monday board that tries to represent sponsorship benefits as tasks, stop and try Loud Legacy.',
+      loudLegacy: 'Sponsorship teams who want their contracts, assets, deals, and reports in one purpose-built system. If you ever find yourself building a Monday board that tries to represent sponsorship benefits as tasks, stop and try Loud CRM.',
       competitor: 'Teams that need a shared work-management tool across multiple departments. Monday is excellent if your sponsorship work is just one of many things your team tracks, and you value visual flexibility over domain-specific features.',
     },
     features: {
@@ -254,11 +254,11 @@ export const COMPARISONS = [
   {
     slug: 'loud-legacy-vs-spreadsheets',
     competitor: 'Spreadsheets',
-    h1: 'Loud Legacy vs Spreadsheets for Sponsorship Management',
-    metaTitle: 'Spreadsheets vs Loud Legacy — Why Sponsorship Teams Upgrade',
-    metaDescription: 'Most sponsorship teams still run on Excel or Google Sheets. Loud Legacy replaces the spreadsheet chaos with AI contract parsing, asset tracking, and auto-generated brand reports at $39/mo.',
+    h1: 'Loud CRM vs Spreadsheets for Sponsorship Management',
+    metaTitle: 'Spreadsheets vs Loud CRM — Why Sponsorship Teams Upgrade',
+    metaDescription: 'Most sponsorship teams still run on Excel or Google Sheets. Loud CRM replaces the spreadsheet chaos with AI contract parsing, asset tracking, and auto-generated brand reports at $39/mo.',
     keyword: 'sponsorship spreadsheet alternative',
-    summary: 'Almost every sponsorship team starts in a spreadsheet. It works — until it doesn\'t. Spreadsheets don\'t read contracts, don\'t alert you before a renewal, don\'t track fulfillment, and don\'t generate brand reports. Loud Legacy does all four in under an hour of onboarding.',
+    summary: 'Almost every sponsorship team starts in a spreadsheet. It works — until it doesn\'t. Spreadsheets don\'t read contracts, don\'t alert you before a renewal, don\'t track fulfillment, and don\'t generate brand reports. Loud CRM does all four in under an hour of onboarding.',
     competitorStrengths: [
       'Free (Google Sheets) or already owned (Excel)',
       'Universal — everyone knows how to use one',
@@ -277,7 +277,7 @@ export const COMPARISONS = [
       'Version history, audit trail, and RLS-secured per-tenant data',
     ],
     whoShouldChoose: {
-      loudLegacy: 'Any sponsorship team tracking more than 10 deals or more than $100K in sponsorship revenue. The moment your spreadsheet has three tabs, conditional formatting, and a "master version," you\'ve outgrown it. Loud Legacy pays for itself the first time you don\'t miss a renewal.',
+      loudLegacy: 'Any sponsorship team tracking more than 10 deals or more than $100K in sponsorship revenue. The moment your spreadsheet has three tabs, conditional formatting, and a "master version," you\'ve outgrown it. Loud CRM pays for itself the first time you don\'t miss a renewal.',
       competitor: 'Hobby leagues, student organizations, or anyone managing 1–5 sponsor relationships informally. If your entire sponsorship program fits on one screen without scrolling, a spreadsheet is fine for now.',
     },
     features: {
@@ -305,11 +305,11 @@ export const COMPARISONS = [
   {
     slug: 'loud-legacy-vs-notion',
     competitor: 'Notion',
-    h1: 'Loud Legacy vs Notion for Sponsorship Teams',
-    metaTitle: 'Notion vs Loud Legacy — Sponsorship CRM Comparison 2025',
-    metaDescription: 'Notion is a flexible docs-and-databases workspace. Loud Legacy is a purpose-built sponsorship CRM with AI contract parsing. Compare features, fit, and which tool wins where.',
+    h1: 'Loud CRM vs Notion for Sponsorship Teams',
+    metaTitle: 'Notion vs Loud CRM — Sponsorship CRM Comparison 2025',
+    metaDescription: 'Notion is a flexible docs-and-databases workspace. Loud CRM is a purpose-built sponsorship CRM with AI contract parsing. Compare features, fit, and which tool wins where.',
     keyword: 'Notion sponsorship CRM',
-    summary: 'Notion is the best "all-in-one workspace" on the market — docs, wikis, databases, and project pages in one place. Loud Legacy is a sponsorship CRM. If you want a wiki + CRM hybrid and are willing to build, Notion is great. If you want sponsorship deals, contracts, and reports working out of the box, Loud Legacy is the faster path.',
+    summary: 'Notion is the best "all-in-one workspace" on the market — docs, wikis, databases, and project pages in one place. Loud CRM is a sponsorship CRM. If you want a wiki + CRM hybrid and are willing to build, Notion is great. If you want sponsorship deals, contracts, and reports working out of the box, Loud CRM is the faster path.',
     competitorStrengths: [
       'Best-in-class docs and wiki experience',
       'Flexible databases with linked relations',

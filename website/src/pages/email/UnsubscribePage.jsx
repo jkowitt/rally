@@ -13,7 +13,7 @@ export default function UnsubscribePage() {
   const [reason, setReason] = useState('')
 
   useEffect(() => {
-    document.title = 'Unsubscribe — Loud Legacy'
+    document.title = 'Unsubscribe — Loud CRM'
     ;(async () => {
       const { data } = await supabase.functions.invoke('email-marketing-unsubscribe', {
         body: null,
@@ -67,7 +67,7 @@ export default function UnsubscribePage() {
         {state.phase === 'already' && (
           <>
             <div className="mt-6 text-lg font-semibold">You're already unsubscribed</div>
-            <div className="text-sm text-text-muted mt-2">{state.email} will not receive any more marketing emails from Loud Legacy.</div>
+            <div className="text-sm text-text-muted mt-2">{state.email} will not receive any more marketing emails from Loud CRM.</div>
             <Link to="/" className="inline-block mt-4 text-accent hover:underline text-xs">← Back to homepage</Link>
           </>
         )}
@@ -75,7 +75,7 @@ export default function UnsubscribePage() {
         {state.phase === 'confirm' && (
           <>
             <div className="mt-6 text-lg font-semibold">Unsubscribe {state.firstName || ''}?</div>
-            <div className="text-sm text-text-muted mt-2">{state.email} will no longer receive marketing emails from Loud Legacy. Transactional emails (account, billing) will still be sent.</div>
+            <div className="text-sm text-text-muted mt-2">{state.email} will no longer receive marketing emails from Loud CRM. Transactional emails (account, billing) will still be sent.</div>
             <div className="mt-6">
               <label className="text-[11px] text-text-muted block mb-1 text-left">Optional: tell us why</label>
               <select value={reason} onChange={e => setReason(e.target.value)} className="w-full bg-bg-surface border border-border rounded px-2 py-2 text-sm">

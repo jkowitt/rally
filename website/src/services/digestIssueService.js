@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { renderMarkdown, renderCitations, slugify, excerpt, readingTime } from '@/lib/digestMarkdown'
 
 /**
- * "The Digest by Loud Legacy Ventures" — editorial newsletter
+ * "The Digest by Loud CRM Ventures" — editorial newsletter
  * management. Separate from the internal daily-digest admin
  * reports (src/services/digestService.js) which is an unrelated
  * feature with the same "digest" word.
@@ -192,7 +192,7 @@ export function generateDigestEmailHtml(issue, siteUrl = 'https://loud-legacy.co
     <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#F1EFE8;">
       <tr><td style="padding:0 0 24px;text-align:center;">
         <div style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#1a1a18;">The Digest</div>
-        <div style="font-family:Georgia,serif;font-size:11px;color:#7a7a75;margin-top:4px;">by Loud Legacy Ventures</div>
+        <div style="font-family:Georgia,serif;font-size:11px;color:#7a7a75;margin-top:4px;">by Loud CRM Ventures</div>
       </td></tr>
       ${issue.featured_image_url ? `
       <tr><td style="padding:0 0 24px;">
@@ -207,7 +207,7 @@ export function generateDigestEmailHtml(issue, siteUrl = 'https://loud-legacy.co
       </td></tr>` : ''}
       <tr><td style="padding:0 0 24px;">
         <div style="font-family:Georgia,serif;font-size:12px;color:#7a7a75;">
-          ${escapeForHtml(issue.author || 'Loud Legacy Ventures')}${publishDate ? ' · ' + publishDate : ''}${readMins ? ' · ' + readMins + ' min read' : ''}
+          ${escapeForHtml(issue.author || 'Loud CRM Ventures')}${publishDate ? ' · ' + publishDate : ''}${readMins ? ' · ' + readMins + ' min read' : ''}
         </div>
       </td></tr>
       <tr><td style="padding:0 0 24px;">
@@ -221,14 +221,14 @@ export function generateDigestEmailHtml(issue, siteUrl = 'https://loud-legacy.co
       </td></tr>
       <tr><td style="padding:0 0 32px;border-top:1px solid #d4d0c3;"></td></tr>
       <tr><td style="padding:0;font-family:Georgia,serif;font-size:12px;line-height:1.6;color:#7a7a75;text-align:center;">
-        <p style="margin:0 0 8px;">You're receiving this because you subscribed to The Digest by Loud Legacy Ventures.</p>
+        <p style="margin:0 0 8px;">You're receiving this because you subscribed to The Digest by Loud CRM Ventures.</p>
         <p style="margin:0 0 8px;">
           <a href="{{unsubscribe_url}}" style="color:#7a7a75;text-decoration:underline;">Unsubscribe</a>
           &nbsp;·&nbsp;
           <a href="${siteUrl}/digest" style="color:#7a7a75;text-decoration:underline;">The Digest Archive</a>
         </p>
         <p style="margin:8px 0 0;font-size:11px;color:#a5a198;">
-          Loud Legacy Ventures · [Physical address placeholder]
+          Loud CRM Ventures · [Physical address placeholder]
         </p>
       </td></tr>
     </table>
@@ -259,7 +259,7 @@ export async function sendDigestEmail(issueId, userId) {
       .from('email_lists')
       .insert({
         name: 'The Digest Subscribers',
-        description: 'Subscribers to The Digest by Loud Legacy Ventures',
+        description: 'Subscribers to The Digest by Loud CRM Ventures',
         list_type: 'newsletter',
         tags: ['digest'],
         created_by: userId,
@@ -275,7 +275,7 @@ export async function sendDigestEmail(issueId, userId) {
       name: `Digest: ${issue.title}`,
       subject_line: issue.title,
       preview_text: excerpt(issue.body_markdown, 120),
-      from_name: 'The Digest by Loud Legacy',
+      from_name: 'The Digest by Loud CRM',
       from_email: 'digest@loud-legacy.com',
       reply_to_email: 'digest@loud-legacy.com',
       html_content: html,
@@ -324,7 +324,7 @@ export async function sendTestEmail(issueId, testEmail) {
       html,
       text: excerpt(issue.body_markdown, 2000),
       from_email: 'digest@loud-legacy.com',
-      from_name: 'The Digest by Loud Legacy',
+      from_name: 'The Digest by Loud CRM',
     },
   })
   return error ? { success: false, error: error.message } : { success: true }
@@ -467,7 +467,7 @@ async function sendWelcomeEmail(email, firstName) {
     <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
       <tr><td style="text-align:center;padding:0 0 32px;">
         <div style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#1a1a18;">The Digest</div>
-        <div style="font-size:11px;color:#7a7a75;margin-top:4px;">by Loud Legacy Ventures</div>
+        <div style="font-size:11px;color:#7a7a75;margin-top:4px;">by Loud CRM Ventures</div>
       </td></tr>
       <tr><td>
         <h1 style="font-size:28px;line-height:1.2;margin:0 0 16px;">${greeting}.</h1>
@@ -478,7 +478,7 @@ async function sendWelcomeEmail(email, firstName) {
         </p>
         <p style="font-size:13px;color:#7a7a75;margin:32px 0 0;text-align:center;">
           <a href="{{unsubscribe_url}}" style="color:#7a7a75;">Unsubscribe</a>
-          &nbsp;·&nbsp; Loud Legacy Ventures
+          &nbsp;·&nbsp; Loud CRM Ventures
         </p>
       </td></tr>
     </table>
@@ -492,9 +492,9 @@ async function sendWelcomeEmail(email, firstName) {
       to: email,
       subject: 'Welcome to The Digest',
       html,
-      text: `${greeting}.\n\nThanks for subscribing to The Digest by Loud Legacy Ventures. Your first issue will land when it's ready.\n\nBrowse past issues: https://loud-legacy.com/digest`,
+      text: `${greeting}.\n\nThanks for subscribing to The Digest by Loud CRM Ventures. Your first issue will land when it's ready.\n\nBrowse past issues: https://loud-legacy.com/digest`,
       from_email: 'digest@loud-legacy.com',
-      from_name: 'The Digest by Loud Legacy',
+      from_name: 'The Digest by Loud CRM',
     },
   })
 }

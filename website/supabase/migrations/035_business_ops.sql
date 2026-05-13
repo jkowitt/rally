@@ -1,5 +1,5 @@
 -- ============================================================
--- BUSINESS OPS — Internal operating system for running Loud Legacy
+-- BUSINESS OPS — Internal operating system for running Loud CRM
 -- Only accessible to businessops permission
 -- ============================================================
 

@@ -151,7 +151,7 @@ export default function CustomDashboard() {
       </div>
 
       <div className="text-center text-[10px] text-text-muted font-mono py-4">
-        Powered by Loud Legacy &middot; Custom Dashboard for {dashboard.name}
+        Powered by Loud CRM &middot; Custom Dashboard for {dashboard.name}
       </div>
     </div>
   )

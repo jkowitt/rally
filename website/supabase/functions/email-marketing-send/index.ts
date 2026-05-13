@@ -19,15 +19,15 @@ import { requireEmailMarketing, corsHeaders, jsonResponse } from "../_shared/ema
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY") ?? "";
 const FROM_EMAIL_DEFAULT = Deno.env.get("FROM_EMAIL") ?? "noreply@loud-legacy.com";
-const FROM_NAME_DEFAULT = Deno.env.get("FROM_NAME") ?? "Loud Legacy";
+const FROM_NAME_DEFAULT = Deno.env.get("FROM_NAME") ?? "Loud CRM";
 const APP_URL = Deno.env.get("APP_URL") ?? "https://loud-legacy.com";
 // CAN-SPAM requires a physical mailing address in every commercial email.
 // Set this in Supabase edge function secrets:
-//   supabase secrets set FROM_PHYSICAL_ADDRESS="Loud Legacy Ventures, 123 Main St, City, ST 12345"
-// If unset, we fall back to a generic Loud Legacy line which satisfies
+//   supabase secrets set FROM_PHYSICAL_ADDRESS="Loud CRM Ventures, 123 Main St, City, ST 12345"
+// If unset, we fall back to a generic Loud CRM line which satisfies
 // the letter of CAN-SPAM (identifies the sender) but NOT the full spirit
 // (no physical address). Setting the env var is the correct long-term fix.
-const FROM_PHYSICAL_ADDRESS = Deno.env.get("FROM_PHYSICAL_ADDRESS") ?? "Loud Legacy Ventures";
+const FROM_PHYSICAL_ADDRESS = Deno.env.get("FROM_PHYSICAL_ADDRESS") ?? "Loud CRM Ventures";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -142,7 +142,7 @@ async function handleCampaignBatch(sb: any, campaignId: string) {
       if (!personalized.includes(unsubUrl)) {
         const fallbackFooter = `
 <div style="margin-top:32px;padding:16px;border-top:1px solid #d4d0c3;text-align:center;font-family:Georgia,serif;font-size:11px;color:#7a7a75;line-height:1.6;">
-  You're receiving this because you subscribed to updates from Loud Legacy Ventures.<br/>
+  You're receiving this because you subscribed to updates from Loud CRM Ventures.<br/>
   <a href="${unsubUrl}" style="color:#D85A30;text-decoration:underline;">Unsubscribe</a>
   &nbsp;·&nbsp;
   <a href="${APP_URL}/app/settings" style="color:#7a7a75;text-decoration:underline;">Email preferences</a>

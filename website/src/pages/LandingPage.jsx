@@ -40,7 +40,7 @@ export default function LandingPage() {
               Prospecting. Restore from git history if needed. */}
           <HowItWorks />
           <AISection />
-          <WhyLoudLegacy />
+          <WhyLoudCRM />
           <CTA />
           <SponsorsSection />
           <Footer />
@@ -91,7 +91,7 @@ function WelcomeGate() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   src="/logo-loud-legacy.svg"
-                  alt="Loud Legacy"
+                  alt="Loud CRM"
                   className="block mx-auto w-auto h-20 sm:h-24 mb-8"
                 />
                 <motion.h1
@@ -99,16 +99,16 @@ function WelcomeGate() {
                   animate={{ opacity: 1 }}
                   className="text-text-primary text-2xl sm:text-3xl font-bold mt-4 leading-tight"
                 >
-                  Find your next customer.
+                  Grow Your Business
                   <br />
-                  <span className="text-accent">Close them in one workspace.</span>
+                  <span className="text-accent">Loud.</span>
                 </motion.h1>
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="text-text-secondary text-sm mt-4"
                 >
-                  The AI-native CRM + prospecting platform. Background research agent, voice + meeting capture, and a morning brief that surfaces your day's work before you open the app. <span className="text-text-primary">Free to start, $39/mo Starter, $99/mo Pro</span>.
+                  The CRM, Prospecting, and Tools platform built for revenue teams. Find prospects, close deals, and grow your business — all in one workspace. <span className="text-text-primary">Free to start, $39/mo Starter, $99/mo Pro</span>.
                 </motion.p>
               </div>
 
@@ -141,12 +141,12 @@ function WelcomeGate() {
                 className="grid grid-cols-3 gap-2 pt-6 mt-6 border-t border-border"
               >
                 <div className="text-center">
-                  <div className="text-base font-bold text-text-primary">AI</div>
-                  <div className="text-[9px] text-text-muted uppercase tracking-wider">Prospecting</div>
+                  <div className="text-base font-bold text-text-primary">CRM</div>
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider">Pipeline</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-base font-bold text-text-primary">∞</div>
-                  <div className="text-[9px] text-text-muted uppercase tracking-wider">Pipeline</div>
+                  <div className="text-base font-bold text-text-primary">AI</div>
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider">Prospecting</div>
                 </div>
                 <div className="text-center">
                   <div className="text-base font-bold text-accent">$0</div>
@@ -273,7 +273,7 @@ function WelcomeGate() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   src="/logo-loud-legacy.svg"
-                  alt="Loud Legacy"
+                  alt="Loud CRM"
                   className="block mx-auto w-auto h-20 sm:h-24 mb-8"
                 />
                 <motion.p
@@ -320,9 +320,9 @@ function Nav({ onLogoClick }) {
         <button
           onClick={onLogoClick}
           className="cursor-pointer hover:opacity-80 transition-opacity"
-          aria-label="Loud Legacy — Home"
+          aria-label="Loud CRM — Home"
         >
-          <img src="/logo-loud-legacy.svg" alt="Loud Legacy" className="h-6 w-auto" />
+          <img src="/logo-loud-legacy.svg" alt="Loud CRM" className="h-6 w-auto" />
         </button>
         <div className="hidden md:flex items-center gap-8 text-sm text-text-secondary">
           <a href="#how-it-works" className="hover:text-text-primary transition-colors">How It Works</a>
@@ -362,20 +362,20 @@ function Hero() {
       >
         <motion.div variants={fadeUp} className="inline-block mb-6">
           <span className="text-xs font-mono text-accent bg-accent/10 px-3 py-1.5 rounded-full tracking-wider uppercase">
-            CRM + AI Prospecting
+            CRM · Prospecting · Tools
           </span>
         </motion.div>
 
         <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl font-bold leading-[1.05] tracking-tight">
-          Find your next customer.{' '}
-          <span className="text-accent inline-block">Close them in one workspace.</span>
+          Grow Your Business{' '}
+          <span className="text-accent inline-block">Loud.</span>
         </motion.h1>
 
         <motion.p
           variants={fadeUp}
           className="text-lg md:text-xl text-text-secondary mt-6 max-w-2xl mx-auto leading-relaxed"
         >
-          AI prospecting and a drag-and-drop CRM — built for revenue teams who want pipeline, contacts, and outreach in one place.
+          Loud CRM gives you the CRM, Prospecting, and Tools to find your next customer, close the deal, and grow your business — all in one workspace.
         </motion.p>
 
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
@@ -396,12 +396,12 @@ function Hero() {
         {/* Stats bar */}
         <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 mt-16 max-w-lg mx-auto">
           <div>
-            <div className="text-2xl font-mono font-bold text-accent">AI</div>
-            <div className="text-xs text-text-muted mt-0.5">Prospecting</div>
+            <div className="text-2xl font-mono font-bold text-accent">CRM</div>
+            <div className="text-xs text-text-muted mt-0.5">Pipeline &amp; Contacts</div>
           </div>
           <div>
-            <div className="text-2xl font-mono font-bold text-accent">∞</div>
-            <div className="text-xs text-text-muted mt-0.5">Pipeline</div>
+            <div className="text-2xl font-mono font-bold text-accent">AI</div>
+            <div className="text-xs text-text-muted mt-0.5">Prospecting</div>
           </div>
           <div>
             <div className="text-2xl font-mono font-bold text-accent">$0</div>
@@ -416,11 +416,11 @@ function Hero() {
 /* ─── HOW IT WORKS ─── */
 function HowItWorks() {
   const steps = [
-    { num: '01', title: 'Set up your property', desc: 'Add your team, sport, and conference. Invite your sales staff with role-based access. Admins set revenue goals and monitor team performance.' },
-    { num: '02', title: 'Build your asset catalog', desc: '22 sponsorship asset categories — LED boards to VIP experiences. Set pricing, track inventory, and see what\'s sold, pitched, and available.' },
-    { num: '03', title: 'Find and close sponsors', desc: 'AI discovers prospects with verified contacts and LinkedIn profiles. Move deals through your pipeline, attach assets, and generate contracts in clicks.' },
-    { num: '04', title: 'Upload contracts & track fulfillment', desc: 'Upload PDF or Word contracts — AI extracts benefits automatically. Fulfillment tracker shows exactly what\'s been delivered and what\'s outstanding.' },
-    { num: '05', title: 'Execute events & prove value', desc: 'Run of show, sponsor activations, broadcast tracking, and media valuations — everything you need to deliver and prove ROI.' },
+    { num: '01', title: 'Set up your workspace', desc: 'Create your account, invite your team with role-based access, and configure your pipeline stages. Admins set revenue goals and monitor team performance in minutes.' },
+    { num: '02', title: 'CRM — Build your pipeline', desc: 'Add deals, contacts, and accounts to your drag-and-drop pipeline. Track every stage from first touch to closed-won. Upload contracts and let AI extract the details automatically.' },
+    { num: '03', title: 'Prospecting — Find your next customer', desc: 'AI discovers prospects with verified decision-maker contacts and LinkedIn profiles. Signal Radar surfaces job changes, funding rounds, and buying triggers. Bulk Add lets you enrich entire lists at once.' },
+    { num: '04', title: 'Tools — Close faster', desc: 'Multi-step outreach sequences with AI coaching, Priority Queue to focus on the hottest leads, Outreach Analytics to see what\'s working, and Sales Velocity to forecast your pipeline.' },
+    { num: '05', title: 'Grow loud', desc: 'AI morning brief surfaces your day\'s work before you open the app. Deal Insights and Sales Analytics show you exactly where to push. Renewals and account management keep revenue compounding.' },
   ]
 
   return (
@@ -429,7 +429,7 @@ function HowItWorks() {
         <SectionHeader
           tag="Getting Started"
           title="Up and running in minutes"
-          description="Loud Legacy is designed to be adopted incrementally. Start with CRM, unlock modules as you grow."
+          description="Loud CRM is designed to be adopted incrementally. Start with CRM, Prospecting, and Tools — unlock more as you grow."
         />
 
         <motion.div
@@ -472,8 +472,8 @@ function AISection() {
       <div className="max-w-6xl mx-auto">
         <SectionHeader
           tag="AI + Verified Data"
-          title="Intelligence that does the work for you"
-          description="AI reads your contracts, finds your prospects, values your assets, and writes your briefings. Verified contact databases ensure the data is real."
+          title="Intelligence built into every pillar"
+          description="AI powers your CRM, Prospecting, and Tools — reading your deals, finding your next customers, and surfacing the actions that move revenue forward."
         />
 
         <motion.div
@@ -485,34 +485,34 @@ function AISection() {
         >
           {[
             {
-              title: 'Contract Analysis',
-              desc: 'Upload a PDF or Word document and AI instantly extracts sponsor info, benefits, revenue by year, and contact details. Multi-year contracts are automatically broken down with per-year revenue tracking.',
-              tag: 'Contracts',
-            },
-            {
-              title: 'Prospect Intelligence',
-              desc: 'Search for prospects and AI discovers decision-makers with names, titles, emails, and LinkedIn profiles. Company firmographics — revenue, headcount, industry — enriched from verified databases.',
+              title: 'CRM — AI Deal Intelligence',
+              desc: 'Upload a PDF or Word contract and AI instantly extracts deal info, contacts, and revenue by year. Background research agent reads your deals every two hours and surfaces talking points, red flags, and comparable wins.',
               tag: 'CRM',
             },
             {
-              title: 'Media Valuations',
-              desc: 'AI calculates estimated media value from broadcast data and market benchmarks, then classifies each asset as below, fair, or above market price. Pricing recommendations tell you exactly when to raise rates.',
-              tag: 'VALORA',
+              title: 'Prospecting — Find Decision-Makers',
+              desc: 'Search for prospects and AI discovers decision-makers with names, titles, emails, and LinkedIn profiles. Company firmographics — revenue, headcount, industry — enriched from verified databases.',
+              tag: 'Prospecting',
             },
             {
-              title: 'Daily Intelligence',
-              desc: 'AI monitors your pipeline for stale deals, hot opportunities, and expiring contracts. Weekly sports business newsletters and daily afternoon digests keep your team informed on industry trends.',
-              tag: 'Business Now',
+              title: 'Tools — Signal Radar',
+              desc: 'AI monitors job changes, funding rounds, and buying triggers across your prospect universe. Signal Radar surfaces the right moment to reach out — before your competitors do.',
+              tag: 'Tools',
             },
             {
-              title: 'Email & Outreach',
-              desc: 'AI drafts follow-up emails, proposal messages, and meeting notes based on your deal context. Pipeline forecasting predicts 30/60/90 day revenue with best-case and worst-case scenarios.',
-              tag: 'Insights',
+              title: 'Tools — Outreach Sequences',
+              desc: 'Build multi-step outreach cadences with AI coaching. A/B test subject lines, track open and reply rates, and let the AI suggest the next best action for every prospect in your pipeline.',
+              tag: 'Tools',
             },
             {
-              title: 'Verified Data',
+              title: 'CRM — AI Morning Brief',
+              desc: 'Every morning, AI surfaces 5 prospects to reach out to, 5 emails to send, and the deals that need a push — grounded in your closed-won patterns and recent activity. You approve, click, ship.',
+              tag: 'CRM',
+            },
+            {
+              title: 'Prospecting — Verified Data',
               desc: 'Integrated with industry-leading contact databases for verified executive emails, direct phone numbers, and real LinkedIn profiles. Email verification confirms deliverability before you send.',
-              tag: 'Enrichment',
+              tag: 'Prospecting',
             },
           ].map((item, i) => (
             <motion.div
@@ -547,10 +547,8 @@ function AISection() {
 }
 
 /* ─── WHY LOUD LEGACY ─── */
-// Industry-agnostic. Bullets reflect the CRM + Prospecting
-// positioning rather than the old sports/sponsorship-specific
-// pitch (no more VALORA, contracts, "exclusively for sports").
-function WhyLoudLegacy() {
+// Three-pillar positioning: CRM, Prospecting, Tools.
+function WhyLoudCRM() {
   const points = [
     { title: 'One tool, not three', desc: 'Replaces HubSpot Sales Pro + Apollo + Outreach. Most teams pay $300+/seat for these stitched together. Pro is $99 — and AI sees both halves of your funnel.' },
     { title: 'AI grounded in your data', desc: 'Every recommendation cites a specific data point — a closed-won pattern, a recent call, a signal that just fired. Generic ICP suggestions get filtered out before you see them.' },
@@ -564,9 +562,9 @@ function WhyLoudLegacy() {
     <section className="py-24 px-6 border-t border-border">
       <div className="max-w-6xl mx-auto">
         <SectionHeader
-          tag="Why Us"
-          title="The AI runs your revenue motion. You approve the work."
-          description="Most CRMs make you do the work and call the AI a feature. We flip it: every morning the agent surfaces 5 prospects, 5 emails to send, and the deals that need a push — you approve, click, ship."
+          tag="Why Loud CRM"
+          title="CRM, Prospecting, and Tools — built to grow your business loud."
+          description="Most revenue teams stitch together three separate tools and pay $300+/seat. Loud CRM gives you everything in one workspace — and the AI does the heavy lifting so you can focus on closing."
         />
 
         <motion.div
@@ -609,10 +607,10 @@ function CTA() {
         className="max-w-2xl mx-auto text-center"
       >
         <motion.h2 variants={fadeUp} className="text-3xl md:text-4xl font-bold text-text-primary">
-          Ready to modernize your revenue team?
+          Ready to grow your business loud?
         </motion.h2>
         <motion.p variants={fadeUp} className="text-text-secondary mt-4 leading-relaxed">
-          Loud Legacy is built for teams who are ready to move beyond spreadsheets and disconnected tools.
+          Loud CRM is built for teams who are ready to move beyond spreadsheets and disconnected tools.
           Start free — no credit card required.
         </motion.p>
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
@@ -652,7 +650,7 @@ function SponsorsSection() {
             <EditableText contentKey="sponsors_eyebrow" fallback="Partners & Sponsors" tag="span" />
           </div>
           <h3 className="text-xl text-text-primary font-semibold">
-            <EditableText contentKey="sponsors_headline" fallback="Loud Legacy is proudly supported by" tag="span" />
+            <EditableText contentKey="sponsors_headline" fallback="Loud CRM is proudly supported by" tag="span" />
           </h3>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 items-center">
@@ -688,9 +686,9 @@ function Footer() {
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
           <div className="md:col-span-2">
-            <img src="/logo-loud-legacy.svg" alt="Loud Legacy" className="h-6 w-auto" />
+            <img src="/logo-loud-legacy.svg" alt="Loud CRM" className="h-6 w-auto" />
             <p className="text-text-secondary text-sm mt-3 max-w-md leading-relaxed">
-              The operating suite for partnership sales teams — sports, entertainment, conferences, nonprofits, media, and more.
+              Loud CRM: Grow Your Business Loud. CRM, Prospecting, and Tools in one workspace for revenue teams ready to grow.
             </p>
           </div>
           <div>
@@ -711,7 +709,7 @@ function Footer() {
         </div>
 
         <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-          <span className="text-xs text-text-muted">&copy; {new Date().getFullYear()} Loud Legacy. All rights reserved.</span>
+          <span className="text-xs text-text-muted">&copy; {new Date().getFullYear()} Loud CRM. All rights reserved.</span>
           <div className="flex gap-4 text-xs text-text-muted">
             <Link to="/legal/terms" className="hover:text-text-primary transition-colors">Terms of Service</Link>
             <Link to="/legal/privacy" className="hover:text-text-primary transition-colors">Privacy Policy</Link>

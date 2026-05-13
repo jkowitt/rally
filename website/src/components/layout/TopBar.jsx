@@ -93,11 +93,11 @@ export default function TopBar({ onMenuToggle, mobileMenuOpen }) {
           <button
             onClick={() => navigate('/app')}
             className="md:hidden cursor-pointer hover:opacity-80 transition-opacity"
-            aria-label="Loud Legacy — Home"
+            aria-label="Loud CRM — Home"
           >
             <img
               src="/logo-loud-legacy.svg"
-              alt="Loud Legacy"
+              alt="Loud CRM"
               className="h-5 w-auto"
             />
           </button>

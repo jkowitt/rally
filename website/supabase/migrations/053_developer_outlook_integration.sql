@@ -121,7 +121,7 @@ create policy "outlook_sync_log_dev_delete" on outlook_sync_log
 -- ========================
 -- 4. PERSONAL OUTREACH PROSPECTS
 -- ========================
--- IMPORTANT: This table is strictly for Loud Legacy business
+-- IMPORTANT: This table is strictly for Loud CRM business
 -- development outreach. It MUST NOT reference or mix with any
 -- customer (Van Wagner, etc.) CRM data. No property_id,
 -- no deal_id, no contact_id — fully isolated.
@@ -255,7 +255,7 @@ on conflict (module) do nothing;
 -- ========================
 -- 8. CONTACT LAST-CONTACTED COLUMN
 -- ========================
--- Used by sync to update the standard Loud Legacy contact card.
+-- Used by sync to update the standard Loud CRM contact card.
 -- Adds the column only if it isn't already there.
 do $$
 begin

@@ -1,22 +1,22 @@
-<!-- Loud Legacy wordmark — heavy gold "LOUD LEGACY" hugged tight
-     between two 3px gold rules. Transparent background.
-     viewBox 3.6:1 so an <img> with a fixed height scales width
-     automatically.
+<!-- Loud Legacy wordmark — heavy gold "LOUD LEGACY" between two
+     3px gold rules. Transparent background. viewBox 4.2:1 with a
+     wide pad so the wordmark + rules sit cleanly inside.
 
-     IMPORTANT: textLength + lengthAdjust pin the text to a known
-     pixel width regardless of the font that actually renders.
-     Without this, browsers that haven't loaded IBM Plex Sans yet
-     fall back to a wider system sans, the text overflows the
-     viewBox, and the L and Y get clipped at the edges. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 110" preserveAspectRatio="xMidYMid meet">
-  <line x1="12" y1="12" x2="388" y2="12" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" />
-  <text x="200" y="78"
+     Belt-and-suspenders against clipping: textLength=430 with
+     lengthAdjust=spacingAndGlyphs pins the rendered text to that
+     pixel width regardless of which font actually rendered
+     (IBM Plex 900, system fallback, RSS readers, email clients,
+     Search Console previews). The text then sits comfortably
+     centered with 35px clearance on each side. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" preserveAspectRatio="xMidYMid meet">
+  <line x1="14" y1="14" x2="486" y2="14" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" />
+  <text x="250" y="85"
         text-anchor="middle"
         font-family="'IBM Plex Sans', 'Helvetica Neue', Arial, system-ui, sans-serif"
         font-weight="900"
         font-size="62"
-        textLength="356"
+        textLength="430"
         lengthAdjust="spacingAndGlyphs"
         fill="#E8B84B">LOUD LEGACY</text>
-  <line x1="12" y1="98" x2="388" y2="98" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" />
+  <line x1="14" y1="106" x2="486" y2="106" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" />
 </svg>

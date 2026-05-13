@@ -1,12 +1,13 @@
 <!-- Loud Legacy wordmark — heavy gold "LOUD LEGACY" hugged tight
-     between two horizontal rules. Transparent background so the
-     logo sits on any surface (dark sidebar, dark marketing pages,
-     anywhere). viewBox is 3.6:1 — width follows automatically when
-     you control the height with CSS (h-7, h-12, etc.).
+     between two 3px gold rules. Transparent background.
+     viewBox 3.6:1 so an <img> with a fixed height scales width
+     automatically.
 
-     IBM Plex Sans 900 is the closest match to the reference; system
-     ultra-bold sans is the fallback. The rules use 3px strokes and
-     extend slightly past the text on both sides. -->
+     IMPORTANT: textLength + lengthAdjust pin the text to a known
+     pixel width regardless of the font that actually renders.
+     Without this, browsers that haven't loaded IBM Plex Sans yet
+     fall back to a wider system sans, the text overflows the
+     viewBox, and the L and Y get clipped at the edges. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 110" preserveAspectRatio="xMidYMid meet">
   <line x1="12" y1="12" x2="388" y2="12" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" />
   <text x="200" y="78"
@@ -14,7 +15,8 @@
         font-family="'IBM Plex Sans', 'Helvetica Neue', Arial, system-ui, sans-serif"
         font-weight="900"
         font-size="62"
-        letter-spacing="4"
+        textLength="356"
+        lengthAdjust="spacingAndGlyphs"
         fill="#E8B84B">LOUD LEGACY</text>
   <line x1="12" y1="98" x2="388" y2="98" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" />
 </svg>

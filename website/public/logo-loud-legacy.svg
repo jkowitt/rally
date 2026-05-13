@@ -1,22 +1,23 @@
-<!-- Loud Legacy wordmark — heavy gold "LOUD LEGACY" between two
-     3px gold rules. Transparent background. viewBox 4.2:1 with a
-     wide pad so the wordmark + rules sit cleanly inside.
+<!-- Loud Legacy wordmark — bulletproof version.
+     Arial Black is the primary font (available on every OS, no
+     network dependency) so the rendered text width is the same
+     across every browser, every device, every load state. The
+     viewBox is sized 4.6:1 with ~80px of clearance on each side
+     of the natural Arial Black text width — even if a future
+     browser substitutes a 30% wider fallback, the wordmark
+     still fits.
 
-     Belt-and-suspenders against clipping: textLength=430 with
-     lengthAdjust=spacingAndGlyphs pins the rendered text to that
-     pixel width regardless of which font actually rendered
-     (IBM Plex 900, system fallback, RSS readers, email clients,
-     Search Console previews). The text then sits comfortably
-     centered with 35px clearance on each side. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" preserveAspectRatio="xMidYMid meet">
-  <line x1="14" y1="14" x2="486" y2="14" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" />
-  <text x="250" y="85"
+     overflow="visible" on the <svg> root is a belt-and-suspenders
+     guarantee against any renderer that might otherwise clip
+     content to the viewport. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 130" overflow="visible" preserveAspectRatio="xMidYMid meet">
+  <line x1="20" y1="14" x2="580" y2="14" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" />
+  <text x="300" y="88"
         text-anchor="middle"
-        font-family="'IBM Plex Sans', 'Helvetica Neue', Arial, system-ui, sans-serif"
+        font-family="'Arial Black', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif"
         font-weight="900"
         font-size="62"
-        textLength="430"
-        lengthAdjust="spacingAndGlyphs"
+        letter-spacing="2"
         fill="#E8B84B">LOUD LEGACY</text>
-  <line x1="14" y1="106" x2="486" y2="106" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" />
+  <line x1="20" y1="106" x2="580" y2="106" stroke="#E8B84B" stroke-width="3" stroke-linecap="round" />
 </svg>

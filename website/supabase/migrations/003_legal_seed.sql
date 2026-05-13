@@ -79,3 +79,4 @@ We will notify you of material changes to this Privacy Policy via the Service or
 For privacy-related inquiries, contact jason@loud-legacy.com.',
   '2026-04-01'
 );
+-- trigger deploy 2026-05-13T18:01:24Z

@@ -1,5 +1,16 @@
 import { test, expect } from '@playwright/test'
 
+/** Wait for the React SPA to hydrate: #root must have non-empty text content. */
+async function waitForHydration(page: import('@playwright/test').Page, timeout = 15_000) {
+  await page.waitForFunction(
+    () => {
+      const root = document.getElementById('root')
+      return root && (root.innerText || root.textContent || '').trim().length > 10
+    },
+    { timeout },
+  )
+}
+
 /**
  * Auth-gated route smoke tests for hub navigation.
  *
@@ -42,6 +53,7 @@ test.describe('Hub routes (auth-gated)', () => {
       expect(resp?.status() ?? 200, 'should not be a server error').toBeLessThan(500)
       // Either the URL became /login, or the page is showing the login form
       await page.waitForURL(/\/(login|$)/, { timeout: 10_000 })
+      await waitForHydration(page)
       const body = await page.locator('body').innerText()
       // Login page should have an email field somewhere
       expect(body.toLowerCase()).toMatch(/email|sign in|log in|login/)

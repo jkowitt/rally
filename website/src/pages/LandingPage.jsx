@@ -92,7 +92,7 @@ function WelcomeGate() {
                   animate={{ opacity: 1 }}
                   src="/logo-loud-legacy.svg"
                   alt="Loud Legacy"
-                  className="h-10 sm:h-12 w-auto"
+                  className="block mx-auto w-auto h-20 sm:h-24 mb-8"
                 />
                 <motion.h1
                   initial={{ opacity: 0 }}
@@ -274,7 +274,7 @@ function WelcomeGate() {
                   animate={{ opacity: 1 }}
                   src="/logo-loud-legacy.svg"
                   alt="Loud Legacy"
-                  className="h-10 sm:h-12 w-auto"
+                  className="block mx-auto w-auto h-20 sm:h-24 mb-8"
                 />
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -328,6 +328,8 @@ function Nav({ onLogoClick }) {
           <a href="#how-it-works" className="hover:text-text-primary transition-colors">How It Works</a>
           <a href="#ai" className="hover:text-text-primary transition-colors">AI</a>
           <Link to="/pricing" className="hover:text-text-primary transition-colors">Pricing</Link>
+          <Link to="/legal/privacy" className="hover:text-text-primary transition-colors">Privacy</Link>
+          <Link to="/legal/terms" className="hover:text-text-primary transition-colors">Terms</Link>
           <a href="#contact" className="hover:text-text-primary transition-colors">Contact</a>
         </div>
         <Link

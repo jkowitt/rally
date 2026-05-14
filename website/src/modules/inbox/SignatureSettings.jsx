@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/Toast'
@@ -7,7 +7,7 @@ import { humanError } from '@/lib/humanError'
 import {
   Bold, Italic, Underline as UnderlineIcon, Link2, Image as ImageIcon,
   List as ListIcon, ListOrdered, AlignLeft, AlignCenter, AlignRight,
-  Type, Palette, Eraser,
+  Type, Palette, Eraser, Upload, X,
 } from 'lucide-react'
 import {
   getEffectiveSignatures,
@@ -16,20 +16,99 @@ import {
   importGmailSignature,
 } from '@/services/emailSignatureService'
 
-// /app/crm/inbox/signature
-//
-// Edit the email signature that gets auto-appended to outgoing
-// CRM emails. Three tiers:
-//   • Default (profile.email_signature_html) — used when no
-//     per-provider override is set.
-//   • Outlook override — applied only when sending via Outlook.
-//   • Gmail override   — applied only when sending via Gmail.
-//
-// Reps with Gmail connected can hit "Import from Gmail" to pull
-// whatever signature Gmail already has configured. Outlook has no
-// equivalent API, so the user pastes from their Outlook Options
-// panel (Ctrl+A / Cmd+A inside the signature box, then Cmd+C, then
-// Cmd+V here).
+// ─── Logo drag-and-drop zone ────────────────────────────────────────────────
+// Rendered above the contentEditable editor when the "With logo" template is
+// active. Lets the user drop or click-to-upload their logo; on upload the
+// placeholder <img src=""> in the editor is replaced with the real base64
+// image, auto-sized to 48 px height for a clean, professional look.
+// The zone disappears once a logo has been placed (the user can still swap it
+// via the toolbar image button or by dropping a new file into the editor).
+
+const LOGO_PLACEHOLDER_MARKER = 'data-sig-logo-placeholder="1"'
+
+function LogoDropZone({ editorRef, onLogoPlaced }) {
+  const [dragging, setDragging] = useState(false)
+  const fileRef = useRef(null)
+
+  function processFile(file) {
+    if (!file || !file.type.startsWith('image/')) return
+    if (file.size > 1024 * 1024) return // silently skip — editor handles toast
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '')
+      const el = editorRef.current
+      if (!el) return
+      // Find the placeholder img and replace its src + remove the marker
+      const placeholder = el.querySelector('img[data-sig-logo-placeholder]')
+      if (placeholder) {
+        placeholder.src = dataUrl
+        placeholder.removeAttribute('data-sig-logo-placeholder')
+        placeholder.style.height = '48px'
+        placeholder.style.width = 'auto'
+        placeholder.style.maxWidth = '160px'
+        placeholder.style.display = 'block'
+        placeholder.alt = 'Logo'
+      } else {
+        // No placeholder — insert at cursor / end
+        el.focus()
+        document.execCommand('insertHTML', false,
+          `<img src="${dataUrl}" alt="Logo" style="height:48px;width:auto;max-width:160px;display:block;" />`)
+      }
+      onLogoPlaced()
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function onDrop(e) {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer?.files?.[0]
+    if (file) processFile(file)
+  }
+
+  function onFileChange(e) {
+    const file = e.target.files?.[0]
+    if (file) processFile(file)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  return (
+    <div
+      onDragEnter={(e) => { e.preventDefault(); setDragging(true) }}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={onDrop}
+      onClick={() => fileRef.current?.click()}
+      className={`
+        flex items-center justify-center gap-2 cursor-pointer rounded-lg border-2 border-dashed
+        px-4 py-3 text-xs font-medium transition-colors select-none
+        ${dragging
+          ? 'border-accent bg-amber-50 text-amber-700'
+          : 'border-slate-300 bg-slate-50 text-slate-500 hover:border-accent hover:bg-amber-50 hover:text-amber-700'}
+      `}
+    >
+      <Upload className="w-4 h-4 flex-shrink-0" />
+      <span>
+        {dragging ? 'Drop logo here' : 'Drop your logo here, or click to upload'}
+      </span>
+      <span className="text-slate-400 font-normal">· PNG, JPG, SVG · max 1 MB · auto-sized to 48 px</span>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        onChange={onFileChange}
+        className="hidden"
+      />
+    </div>
+  )
+}
+
+// ─── Detect whether the current editor HTML has an unfilled logo placeholder ─
+function hasLogoPlaceholder(html) {
+  return html.includes('data-sig-logo-placeholder')
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 export default function SignatureSettings() {
   const { profile } = useAuth()
   const { toast } = useToast()
@@ -39,6 +118,7 @@ export default function SignatureSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [logoPlaced, setLogoPlaced] = useState(false)
   const editorRef = useRef(null)
 
   useEffect(() => {
@@ -55,18 +135,22 @@ export default function SignatureSettings() {
   }, [profile?.id])
 
   const currentHtml = html[tab] || ''
-  const setCurrentHtml = (v) => setHtml(prev => ({ ...prev, [tab]: v }))
+  const setCurrentHtml = useCallback((v) => {
+    setHtml(prev => ({ ...prev, [tab]: v }))
+    // Hide the drop zone once the placeholder is gone
+    if (!hasLogoPlaceholder(v)) setLogoPlaced(true)
+  }, [tab])
 
-  // Imperatively sync the editor's innerHTML when content changes
-  // come from outside typing — tab switch, gmail-import, template
-  // insert, raw-HTML edit. Critically, SKIP the DOM write while
-  // the editor is focused (the user is mid-keystroke). Previously
-  // we used dangerouslySetInnerHTML, which React re-applied on
-  // every render and reset the caret to position 0 — so each
-  // letter typed got prepended instead of appended. With this
-  // pattern the contentEditable owns its own DOM during typing
-  // and React only reaches in when a different code path needs
-  // to swap content wholesale.
+  // Show the drop zone when the logo template is active and logo not yet placed
+  const showLogoZone = hasLogoPlaceholder(currentHtml) && !logoPlaced
+
+  // Reset logoPlaced whenever the tab changes or new content is loaded
+  useEffect(() => {
+    setLogoPlaced(false)
+  }, [tab])
+
+  // Imperatively sync the editor's innerHTML when content changes come from
+  // outside typing — tab switch, gmail-import, template insert, raw-HTML edit.
   useEffect(() => {
     const el = editorRef.current
     if (!el) return
@@ -75,10 +159,7 @@ export default function SignatureSettings() {
     el.innerHTML = currentHtml
   }, [currentHtml, tab, loading])
 
-  // contentEditable paste handler — accepts rich HTML (with images)
-  // from Gmail / Outlook / Apple Mail and keeps formatting. We also
-  // support drag-and-drop image files and convert them inline to
-  // base64 so the email is self-contained when sent.
+  // contentEditable paste handler
   function onPaste(e) {
     const dt = e.clipboardData
     if (!dt) return
@@ -87,8 +168,6 @@ export default function SignatureSettings() {
       Array.from(dt.files).forEach(handleImageFile)
       return
     }
-    // Default behaviour for HTML pastes: let the browser drop it in.
-    // We'll re-read innerHTML in onInput.
   }
 
   function onDrop(e) {
@@ -201,6 +280,19 @@ export default function SignatureSettings() {
           onChange={() => setCurrentHtml(editorRef.current?.innerHTML || '')}
           onInsertImage={handleImageFile}
         />
+
+        {/* Logo drag-and-drop zone — shown only when the "With logo" template
+            has been inserted and the placeholder has not yet been filled */}
+        {showLogoZone && (
+          <LogoDropZone
+            editorRef={editorRef}
+            onLogoPlaced={() => {
+              setLogoPlaced(true)
+              setCurrentHtml(editorRef.current?.innerHTML || '')
+            }}
+          />
+        )}
+
         <div
           ref={editorRef}
           contentEditable
@@ -249,22 +341,7 @@ export default function SignatureSettings() {
   )
 }
 
-// SignatureToolbar — formatting controls above the contentEditable.
-// Uses document.execCommand for the bold / italic / underline /
-// list / alignment actions — still the simplest cross-browser
-// path for rich-text editing inside a contentEditable, even though
-// the API is technically deprecated. Wraps it so a future swap to
-// a proper editor (Tiptap, Slate, Lexical) is one component away.
-//
-// Buttons:
-//   • Heading size (small / normal / large)
-//   • Bold / Italic / Underline
-//   • Text color (24-color palette)
-//   • Bullet + numbered list
-//   • Alignment (left / center / right)
-//   • Insert link (prompts for URL, applies to selection)
-//   • Insert image (file picker → base64 inline)
-//   • Clear formatting
+// ─── SignatureToolbar ────────────────────────────────────────────────────────
 function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
   const fileRef = useRef(null)
   const [colorOpen, setColorOpen] = useState(false)
@@ -275,8 +352,6 @@ function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
 
   function exec(command, value) {
     focusEditor()
-    // execCommand only operates on the active selection; if the
-    // editor never had focus we'd silently no-op. Refocus first.
     document.execCommand(command, false, value)
     onChange?.()
   }
@@ -290,17 +365,10 @@ function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
   function insertLink() {
     const url = window.prompt('Link URL (https://…):', 'https://')
     if (!url || url === 'https://') return
-    // Validate-ish: prepend https:// when the user types a domain
-    // without scheme so we don't end up with relative paths.
     const finalUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`
-    // If the user has a selection we link it; otherwise we insert
-    // a new anchor with the URL as visible text.
     const sel = window.getSelection()
     if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
       exec('createLink', finalUrl)
-      // execCommand creates an anchor without target=_blank.
-      // Walk the editor and bolt that on so signature links open
-      // in a new tab from email clients that render them.
       const anchors = editorRef.current?.querySelectorAll('a[href]') || []
       anchors.forEach(a => { a.target = '_blank'; a.rel = 'noopener' })
       onChange?.()
@@ -316,7 +384,6 @@ function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
 
   return (
     <div className="bg-slate-50 border border-slate-200 rounded flex items-center gap-1 p-1 flex-wrap">
-      {/* Heading sizes — fontSize 1-7 in execCommand. */}
       <select
         onChange={(e) => { if (e.target.value) { exec('fontSize', e.target.value); e.target.value = '' } }}
         className="bg-white border border-slate-200 rounded px-1.5 py-1 text-[11px] text-slate-700 focus:outline-none"
@@ -396,16 +463,11 @@ function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
 
       <div className="flex-1" />
 
-      {/* Quick-insert templates so a brand-new user gets a
-          professional signature with one click instead of staring
-          at a blank editor. They can edit / replace after insert. */}
       <select
         onChange={(e) => {
           if (!e.target.value) return
           const tpl = SIGNATURE_TEMPLATES[e.target.value]
           if (tpl) {
-            // Replace the entire editor body — these are starter
-            // skeletons, not appendable snippets.
             if (editorRef.current) {
               editorRef.current.innerHTML = tpl
               onChange?.()
@@ -421,7 +483,7 @@ function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
         <option value="minimal">Minimal</option>
         <option value="contact">With contact info</option>
         <option value="social">With social links</option>
-        <option value="logo">With logo placeholder</option>
+        <option value="logo">With logo</option>
       </select>
     </div>
   )
@@ -444,9 +506,13 @@ function Divider() {
   return <div className="w-px h-5 bg-slate-200 mx-0.5" />
 }
 
+// ─── Signature templates ─────────────────────────────────────────────────────
+// The "logo" template uses data-sig-logo-placeholder="1" on the <img> so the
+// LogoDropZone can find and replace it. The placeholder renders as a visible
+// dashed box via inline styles so the user can see where the logo will go.
 const SIGNATURE_TEMPLATES = {
   minimal: `<p><strong>Your Name</strong><br/>Title · Company</p>`,
   contact: `<p><strong>Your Name</strong><br/>Title · Company<br/><a href="mailto:you@example.com" target="_blank" rel="noopener">you@example.com</a> · +1 (555) 555-0100</p>`,
   social: `<p><strong>Your Name</strong><br/>Title · Company<br/><a href="mailto:you@example.com" target="_blank" rel="noopener">you@example.com</a></p><p style="font-size:11px;color:#64748b;"><a href="https://www.linkedin.com/in/yourname" target="_blank" rel="noopener">LinkedIn</a> · <a href="https://twitter.com/yourhandle" target="_blank" rel="noopener">Twitter</a> · <a href="https://example.com" target="_blank" rel="noopener">example.com</a></p>`,
-  logo: `<table cellpadding="0" cellspacing="0" style="border:0;"><tr><td style="padding-right:12px;vertical-align:middle;"><img src="" alt="Logo" style="height:48px;width:auto;display:block;" /></td><td style="vertical-align:middle;border-left:2px solid #cbd5e1;padding-left:12px;"><strong>Your Name</strong><br/><span style="color:#64748b;">Title · Company</span><br/><a href="mailto:you@example.com" target="_blank" rel="noopener">you@example.com</a> · +1 (555) 555-0100</td></tr></table>`,
+  logo: `<table cellpadding="0" cellspacing="0" style="border:0;font-family:Arial,sans-serif;"><tr><td style="padding-right:14px;vertical-align:middle;"><img src="" alt="Logo" data-sig-logo-placeholder="1" style="height:48px;width:auto;max-width:160px;display:block;border:2px dashed #cbd5e1;border-radius:4px;padding:6px;min-width:80px;min-height:40px;background:#f8fafc;" /></td><td style="vertical-align:middle;border-left:2px solid #e2e8f0;padding-left:14px;"><strong style="font-size:14px;color:#0f172a;">Your Name</strong><br/><span style="font-size:12px;color:#64748b;">Title · Company</span><br/><a href="mailto:you@example.com" target="_blank" rel="noopener" style="font-size:12px;color:#2563eb;text-decoration:none;">you@example.com</a><span style="font-size:12px;color:#94a3b8;"> · +1 (555) 555-0100</span></td></tr></table>`,
 }

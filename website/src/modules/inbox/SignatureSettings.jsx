@@ -209,7 +209,7 @@ export default function SignatureSettings() {
           onDrop={onDrop}
           onDragOver={(e) => e.preventDefault()}
           onInput={(e) => setCurrentHtml(e.currentTarget.innerHTML)}
-          className="bg-bg-card border border-border rounded p-3 min-h-[200px] text-sm text-text-primary focus:outline-none focus:border-accent"
+          className="bg-white border border-slate-200 rounded p-4 min-h-[200px] text-sm text-slate-900 focus:outline-none focus:border-accent shadow-inner"
           style={{ lineHeight: 1.5 }}
         />
         <div className="text-[10px] text-text-muted">
@@ -217,25 +217,25 @@ export default function SignatureSettings() {
         </div>
       </div>
 
-      <details className="bg-bg-card border border-border rounded p-3">
+      <details className="bg-slate-50 border border-slate-200 rounded p-3">
         <summary className="cursor-pointer text-[11px] text-text-muted">Raw HTML (advanced)</summary>
         <textarea
           value={currentHtml}
           onChange={(e) => setCurrentHtml(e.target.value)}
           rows={6}
-          className="mt-2 w-full bg-bg-surface border border-border rounded px-2 py-1.5 text-[11px] font-mono text-text-secondary"
+          className="mt-2 w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-[11px] font-mono text-slate-700"
         />
       </details>
 
       {tab === 'default' && (
-        <details className="bg-bg-card border border-border rounded p-3">
+        <details className="bg-slate-50 border border-slate-200 rounded p-3">
           <summary className="cursor-pointer text-[11px] text-text-muted">Plain-text fallback (sent when client strips HTML)</summary>
           <textarea
             value={plain}
             onChange={(e) => setPlain(e.target.value)}
             rows={4}
             placeholder={'Jane Doe\nVP Sales · Acme Corp\nme@acme.com · +1 (555) 555-0100'}
-            className="mt-2 w-full bg-bg-surface border border-border rounded px-2 py-1.5 text-[11px] text-text-secondary"
+            className="mt-2 w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-[11px] text-slate-700"
           />
         </details>
       )}
@@ -315,11 +315,11 @@ function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
   }
 
   return (
-    <div className="bg-bg-card border border-border rounded flex items-center gap-1 p-1 flex-wrap">
+    <div className="bg-slate-50 border border-slate-200 rounded flex items-center gap-1 p-1 flex-wrap">
       {/* Heading sizes — fontSize 1-7 in execCommand. */}
       <select
         onChange={(e) => { if (e.target.value) { exec('fontSize', e.target.value); e.target.value = '' } }}
-        className="bg-bg-surface border border-border rounded px-1.5 py-1 text-[11px] text-text-secondary focus:outline-none"
+        className="bg-white border border-slate-200 rounded px-1.5 py-1 text-[11px] text-slate-700 focus:outline-none"
         defaultValue=""
         title="Text size"
       >
@@ -343,7 +343,7 @@ function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
           <Palette className="w-3.5 h-3.5" />
         </ToolBtn>
         {colorOpen && (
-          <div className="absolute z-20 mt-1 left-0 bg-bg-surface border border-border rounded p-2 shadow-2xl grid grid-cols-6 gap-1">
+          <div className="absolute z-20 mt-1 left-0 bg-white border border-slate-200 rounded p-2 shadow-2xl grid grid-cols-6 gap-1">
             {[
               '#0f172a','#334155','#475569','#64748b','#94a3b8','#cbd5e1',
               '#dc2626','#ea580c','#d97706','#ca8a04','#65a30d','#16a34a',
@@ -353,7 +353,7 @@ function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
               <button
                 key={c}
                 onClick={() => setColor(c)}
-                className="w-5 h-5 rounded border border-border hover:scale-110 transition-transform"
+                className="w-5 h-5 rounded border border-slate-300 hover:scale-110 transition-transform"
                 style={{ background: c }}
                 aria-label={`Color ${c}`}
                 title={c}
@@ -413,7 +413,7 @@ function SignatureToolbar({ editorRef, onChange, onInsertImage }) {
           }
           e.target.value = ''
         }}
-        className="bg-bg-surface border border-border rounded px-2 py-1 text-[11px] text-text-secondary focus:outline-none"
+        className="bg-white border border-slate-200 rounded px-2 py-1 text-[11px] text-slate-700 focus:outline-none"
         defaultValue=""
         title="Insert a starter signature template"
       >
@@ -433,7 +433,7 @@ function ToolBtn({ title, onClick, children }) {
       type="button"
       onClick={onClick}
       title={title}
-      className="text-text-secondary hover:text-accent hover:bg-bg-surface p-1.5 rounded transition-colors"
+      className="text-slate-500 hover:text-accent hover:bg-slate-100 p-1.5 rounded transition-colors"
     >
       {children}
     </button>
@@ -441,7 +441,7 @@ function ToolBtn({ title, onClick, children }) {
 }
 
 function Divider() {
-  return <div className="w-px h-5 bg-border mx-0.5" />
+  return <div className="w-px h-5 bg-slate-200 mx-0.5" />
 }
 
 const SIGNATURE_TEMPLATES = {
